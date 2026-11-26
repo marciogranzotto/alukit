@@ -196,6 +196,23 @@
           "sources": ["b13"]
         },
         {
+          "count": 1,
+          "cut_mm": 291.53,
+          "centre_mm": 271.53,
+          "short_mm": 251.53,
+          "ends": {
+            "a": "square",
+            "b": {
+              "angle_deg": 45.0,
+              "mitre_deg": 0.0,
+              "bevel_deg": -45.0
+            }
+          },
+          "ordered_mm": 292,
+          "billed_mm": 300,
+          "sources": ["b32"]
+        },
+        {
           "count": 4,
           "cut_mm": 153.14,
           "centre_mm": 113.14,
@@ -215,6 +232,17 @@
           "ordered_mm": 153,
           "billed_mm": 160,
           "sources": ["b27", "b28", "b29", "b30"]
+        },
+        {
+          "count": 1,
+          "cut_mm": 150.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 150,
+          "billed_mm": 150,
+          "sources": ["b31"]
         }
       ]
     },

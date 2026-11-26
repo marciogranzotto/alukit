@@ -4,7 +4,7 @@
   "catalogs": ["../catalogs/test", "../catalogs/test-geo"],
   "currency": "BRL",
   "price_basis": "regular",
-  "ids": { "b": 30, "c": 31, "pt": 1, "r": 1 },
+  "ids": { "b": 32, "c": 33, "pt": 1, "r": 1 },
   "defaults": {
     "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
     "cutting": { "kerf_mm": 3, "trim_mm": 5 }
@@ -159,6 +159,17 @@
       "anchor": "+y",
       "ends": { "a": { "cut": "angle" }, "b": { "cut": "angle" } },
       "tags": ["knee"]
+    },
+    "b31": {
+      "a": ["W", 20, 800],
+      "b": ["W + 150", 20, 800],
+      "label": "handle arm off the right front post; its end b is left square at its point"
+    },
+    "b32": {
+      "a": ["W + 350", 20, 600],
+      "b": ["W + 150", 20, 800],
+      "ends": { "b": { "cut": "angle" } },
+      "label": "handle grip, bearing on the arm's end through an end plate"
     }
   },
   "runs": { "r1": ["b11", "b12"] },
@@ -251,7 +262,14 @@
     "c28": { "type": "butt", "through": "b5", "ends": ["b27.a", "b28.a"] },
     "c29": { "type": "butt", "through": "b6", "ends": ["b29.a", "b30.a"] },
     "c30": { "type": "butt", "through": "b7", "ends": ["b27.b", "b29.b"] },
-    "c31": { "type": "butt", "through": "b8", "ends": ["b28.b", "b30.b"] }
+    "c31": { "type": "butt", "through": "b8", "ends": ["b28.b", "b30.b"] },
+    "c32": { "type": "butt", "through": "b2", "ends": ["b31.a"] },
+    "c33": {
+      "type": "butt",
+      "through": "b31.b",
+      "ends": ["b32.b"],
+      "connector": "test-geo:PLT-8"
+    }
   },
   "patterns": {
     "pt1": {

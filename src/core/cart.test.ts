@@ -12,7 +12,8 @@ import { FIXTURES, readJson } from "./testing.ts";
 /**
  * The cart (design §12): a small synthetic cart with eccentric anchors, rolled 40x80 rails, a
  * steel beam, a spliced run, braces between pivots, a bolted stack of five layers with packers,
- * a flush cover strip, a free end counted from a cut, angled knee braces and a pattern of slats.
+ * a flush cover strip, a free end counted from a cut, angled knee braces, a pattern of slats,
+ * and a grip bearing on another bar's end through an end plate.
  * Its cut list must equal the table worked by hand in tests/fixtures/cart/hand/, which imports
  * nothing from AluKit.
  */
@@ -67,7 +68,12 @@ describe("the cart", () => {
   it("derives with no problems", () => {
     const d = derive(project.raw, project.items);
     expect(d.diagnostics).toEqual([]);
-    expect(d.bars.size).toBe(35);
+    expect(d.bars.size).toBe(37);
+    // The grip bears on the arm's end (an end provider reading a placement provider's end),
+    // through the end plate's 8 mm, measured along the face's normal: 8·√2 along the grip.
+    const grip = d.bars.get("b32")?.ends.b;
+    expect(grip?.by).toBe("c33");
+    expect(Math.round((grip?.move ?? 0) * 100) / 100).toBe(-11.31);
   });
 
   it("has the cut list worked by hand", () => {

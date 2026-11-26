@@ -5,13 +5,20 @@ independently of AluKit: it imports nothing from it and works each length from t
 geometry with plain arithmetic, the way a person would on paper. It writes
 tests/fixtures/cart/expected-cutlist.json, which the cart test compares AluKit's cut list with.
 
-Run: python3 -I tests/fixtures/cart/hand/cutlist_by_hand.py
+Run: python3 -I tests/fixtures/cart/hand/cutlist_by_hand.py, then
+pnpm exec biome format --write tests/fixtures/cart (the repository's JSON style).
 
 Rules used, from docs/design.md: cut lengths come from the placed bounding boxes (§4.5); a butt
-stops a bar at the first face of the through bar it meets; a through bar's end covers a corner;
-a pivot cuts its bar square at the hinge's end distance from the pivot point; the cut list groups
-identical pieces and nests stock items first-fit decreasing, then each bar into the cheapest
-stock length that holds it, cheapest result winning (§5.3).
+stops a bar at the first face of the through bar it meets, or at the end face it names, moved by
+the connector's spacer along that face's normal; a through bar's end covers a corner; a pivot
+cuts its bar square at the hinge's end distance from the pivot point; the cut list groups
+identical pieces, a piece and its end-for-end flip being the same, and nests stock items
+first-fit decreasing, then each bar into the cheapest stock length that holds it, cheapest
+result winning (§5.3).
+
+Not yet in the cart, because their rules are M3b's (generation): a rail run with factory ends,
+carriages, rods and sleeves cut from stock as fasteners (the bolted stack names them already),
+rail-hole selections, price bands and cost lines; and M6's plate and placeholder.
 """
 
 import json
@@ -101,6 +108,58 @@ piece(FB10, "b25", (W - 40) - 40)
 for b in ("b26", "b26@1", "b26@2", "b26@4", "b26@5", "b26@6"):
     piece(TS40, b, D - 2 * T40)
 
+# --- Angled ends: the bar's frame and the canonical orientation --------------------------------
+
+
+def unit(v):
+    n = math.sqrt(sum(c * c for c in v))
+    return tuple(c / n for c in v)
+
+
+def dot(u, v):
+    return sum(p * q for p, q in zip(u, v))
+
+
+def cross(u, v):
+    return (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+
+
+def frame(a, b):
+    """§4.4 for a bar that is not vertical: t along it, y = +Z made perpendicular to t, x = y × t."""
+    t = unit(tuple(q - p for p, q in zip(a, b)))
+    y = unit(tuple(z - t[2] * c for z, c in zip((0, 0, 1), t)))
+    return t, cross(y, t), y
+
+
+def r2(v):
+    return round(v + 0.0, 2)
+
+
+def angled(normal, outward, x, y):
+    """An angled end (§4.5): the angle between the plane's normal and the axis, the mitre
+    atan2(n · x, n · e) and the bevel asin(n · y), e the end's outward axis."""
+    return {
+        "angle_deg": r2(math.degrees(math.acos(dot(normal, outward)))),
+        "mitre_deg": r2(math.degrees(math.atan2(dot(normal, x), dot(normal, outward)))),
+        "bevel_deg": r2(math.degrees(math.asin(dot(normal, y)))),
+    }
+
+
+def canonical(ends):
+    """§5.3: of the piece and its end-for-end flip (t and x reverse, y stays, so a mitre changes
+    sign and a bevel does not), the one whose ends compare first: square before angled, then
+    by mitre, bevel and angle."""
+
+    def key(e):
+        return (0,) if e == "square" else (1, e["mitre_deg"], e["bevel_deg"], e["angle_deg"])
+
+    def flip(e):
+        return e if e == "square" else {**e, "mitre_deg": r2(-e["mitre_deg"])}
+
+    flipped = (flip(ends[1]), flip(ends[0]))
+    return min(ends, flipped, key=lambda pair: (key(pair[0]), key(pair[1])))
+
+
 # --- Knee braces at the top corners -----------------------------------------------------------
 # Front-left: from 200 along the front rail to 200 along the left rail, in plan the line
 # x + y = 200, its top flush with the rails (z 860..900). It meets the front rail's inner face
@@ -109,53 +168,33 @@ centre = math.hypot(120 - 40, 160 - 80)  # 80·√2 = 113.137…
 # Both faces are at 45° to the brace, and the cuts close toward the corner (a trapezoid in plan):
 # each long point is 20·tan 45° beyond the centre line, each short point 20·tan 45° short of it.
 half = T40 / 2 * math.tan(math.radians(45))
-long_point = centre + 2 * half
-short_point = centre - 2 * half
 
-
-def knee_ends(a, b, face_a, face_b):
-    """End cuts in the brace's own frame (§4.4: t along the bar, y = up for a level bar,
-    x = y × t), then the canonical orientation (§5.3): of the piece and its end-for-end flip
-    (x → −x, so mitres change sign), the one whose ends compare first, by mitre value."""
-    t = (b[0] - a[0], b[1] - a[1])
-    n = math.hypot(*t)
-    t = (t[0] / n, t[1] / n)
-    x = (-t[1], t[0])  # y × t with y = +Z: (0, 0, 1) × (tx, ty, 0) = (−ty, tx, 0)
-
-    def mitre(normal, outward):  # atan2(n · x, n · e), e the end's outward axis
-        nx = normal[0] * x[0] + normal[1] * x[1]
-        nz = normal[0] * outward[0] + normal[1] * outward[1]
-        return round(math.degrees(math.atan2(nx, nz)), 2)
-
-    ma = mitre(face_a, (-t[0], -t[1]))
-    mb = mitre(face_b, t)
-    as_drawn = (ma, mb)
-    flipped = (-mb, -ma)
-    return min(as_drawn, flipped)
-
-
-# Outward normals of each end: away from the brace, into the rail it butts.
+# Design points, and the outward normal of each end: away from the brace, into the rail.
 corners = {
-    "b27": ((200, 0), (0, 200), (0, -1), (-1, 0)),  # front rail y = 80, left rail x = 40
-    "b28": ((W - 200, 0), (W, 200), (0, -1), (1, 0)),  # front rail, right rail x = W - 40
-    "b29": ((200, D), (0, D - 200), (0, 1), (-1, 0)),  # back rail y = D - 80, left rail
-    "b30": ((W - 200, D), (W, D - 200), (0, 1), (1, 0)),  # back rail, right rail
+    "b27": ((200, 0, H), (0, 200, H), (0, -1, 0), (-1, 0, 0)),  # front rail, left rail
+    "b28": ((W - 200, 0, H), (W, 200, H), (0, -1, 0), (1, 0, 0)),  # front rail, right rail
+    "b29": ((200, D, H), (0, D - 200, H), (0, 1, 0), (-1, 0, 0)),  # back rail, left rail
+    "b30": ((W - 200, D, H), (W, D - 200, H), (0, 1, 0), (1, 0, 0)),  # back rail, right rail
 }
-knees = {b: knee_ends(*v) for b, v in corners.items()}
-assert len(set(knees.values())) == 1, knees  # all four are the same piece
-m_a, m_b = knees["b27"]
-for b in corners:
-    piece(
-        TS40,
-        b,
-        long_point,
-        ends=(
-            {"angle_deg": 45.0, "mitre_deg": m_a, "bevel_deg": 0.0},
-            {"angle_deg": 45.0, "mitre_deg": m_b, "bevel_deg": 0.0},
-        ),
-        centre=centre,
-        short=short_point,
-    )
+for b, (pa, pb, na, nb) in corners.items():
+    t, x, y = frame(pa, pb)
+    ends = (angled(na, tuple(-c for c in t), x, y), angled(nb, t, x, y))
+    piece(TS40, b, centre + 2 * half, canonical(ends), centre, centre - 2 * half)
+
+# --- The push handle --------------------------------------------------------------------------
+# An arm off the right front post's outer face (x = W) at z = 800, 150 long, its end b square at
+# its design point x = W + 150.
+piece(TS40, "b31", 150)
+# The grip runs at 45° from (W + 350, 20, 600) up to the arm's end. It bears on that end through
+# an 8 mm end plate: the arm's end face x = W + 150 moved 8 along its own normal, x = W + 158.
+# The centre line covers 350 − 158 = 192 in x, so 192·√2 along the grip. Its end b is cut at 45°:
+# its long point is 20·tan 45° beyond the centre line, its short point as far short of it. End a
+# is left square at its design point.
+pa, pb = (W + 350, 20, 600), (W + 150, 20, 800)
+t, x, y = frame(pa, pb)
+centre = (350 - 158) * math.sqrt(2)
+ends = ("square", angled((-1, 0, 0), t, x, y))  # the plane's normal, out of the grip's end b
+piece(TS40, "b32", centre + half, canonical(ends), centre, centre - half)
 
 # --- Grouping, ordering and nesting -----------------------------------------------------------
 q = lambda v: round(v + 0.0, 2)  # noqa: E731  (the 0.01 mm quantum)
