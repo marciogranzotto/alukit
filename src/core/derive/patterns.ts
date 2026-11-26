@@ -124,6 +124,17 @@ function planPattern(
     } else dir = u;
   }
 
+  if (pt.rail_holes !== undefined) {
+    for (const tid of template) used.set(tid, pid);
+    if (ok && along !== undefined) planRailPattern(ctx, pid, pt, [...template], along);
+    else if (ok) {
+      d.error("pattern", pid, "rail_holes: the pattern runs along a rail or a run, not a dir", {
+        field: "along",
+      });
+    }
+    return undefined;
+  }
+
   const steps: [number, number][] = [];
   if (pt.offsets_mm !== undefined) {
     if (pt.pitch_mm !== undefined || pt.count !== undefined) {
@@ -152,12 +163,81 @@ function planPattern(
 
   for (const tid of template) used.set(tid, pid);
   if (!ok) return undefined;
-  return {
+  const plan: Plan = {
     template,
     steps: steps.filter(([k]) => !skip.has(k)),
     ...(along !== undefined ? { along } : {}),
     ...(dir !== undefined ? { dir } : {}),
   };
+  ctx.patternPlans.set(pid, plan);
+  return plan;
+}
+
+/**
+ * A pattern at a rail's holes (§4.7). Holes follow the cut, so its copies are placed in stage 4,
+ * and only parts may be in its template: each part on a station of the pattern's `along`, whose
+ * `at_mm` is then measured from each selected hole (0 puts the part on the hole). The template is
+ * the copy at the first selected hole.
+ */
+function planRailPattern(
+  ctx: Ctx,
+  pid: string,
+  pt: Pattern,
+  template: string[],
+  along: string,
+): void {
+  const { doc, d } = ctx;
+  let ok = true;
+  if (pt.pitch_mm !== undefined || pt.count !== undefined || pt.offsets_mm !== undefined) {
+    d.error("pattern", pid, "a pattern at rail holes takes no pitch_mm, count or offsets_mm", {
+      field: "rail_holes",
+    });
+    ok = false;
+  }
+  const sel = pt.rail_holes as NonNullable<Pattern["rail_holes"]>;
+  if (sel !== true && sel.along !== along) {
+    d.error(
+      "pattern",
+      pid,
+      `rail_holes: selects along ${sel.along}, the pattern runs along ${along}`,
+      {
+        field: "rail_holes/along",
+        refs: [sel.along, along],
+      },
+    );
+    ok = false;
+  }
+  for (const tid of template) {
+    const part = doc.parts[tid];
+    if (part === undefined || !("on" in part)) {
+      d.error(
+        "pattern",
+        pid,
+        `template: ${tid} is not a part on a station; a pattern at rail holes places parts only`,
+        { field: "template", refs: [tid] },
+      );
+      ok = false;
+      continue;
+    }
+    if (part.on.bar !== along) {
+      d.error("pattern", pid, `template: ${tid} stands on ${part.on.bar}, not on ${along}`, {
+        field: "template",
+        refs: [tid],
+      });
+      ok = false;
+    }
+    if (part.on.from !== undefined && part.on.from !== "a") {
+      d.error(
+        "pattern",
+        pid,
+        `template: ${tid}'s at_mm is measured from each hole, so it takes no "from"`,
+        { field: "template", refs: [tid] },
+      );
+      ok = false;
+    }
+  }
+  const skip = new Set(pt.skip ?? []);
+  if (ok) ctx.railPatterns.set(pid, { template, along, sel, skip });
 }
 
 /** Rewrites references to template entities into references to copy k. */

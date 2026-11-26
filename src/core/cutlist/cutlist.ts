@@ -8,8 +8,8 @@ import { add, dot, scale, sub, type V3 } from "../vec.ts";
 import { type NestStock, nest } from "./nesting.ts";
 
 /**
- * The cut list (design §5.3). Pieces come from bars (and, from M3b, from fasteners and sleeves
- * cut from bar stock, through `extraPieces`). They are listed per bar item and option, in the
+ * The cut list (design §5.3). Pieces come from the derived model: its bars, and the fasteners and
+ * sleeves its face connections cut from bar stock. They are listed per bar item and option, in the
  * mode of the chosen offer's sale, overridable per project in `order`:
  *
  * - `cut`: the supplier cuts each piece, ordered at its cut length rounded to `res_mm` and
@@ -30,11 +30,13 @@ export const DEFAULT_TRIM_MM = 0;
 export type EndCut = "square" | { angle_deg: number; mitre_deg: number; bevel_deg: number };
 
 /** A hole, measured along the axis from the named end's long point (§5.3). */
-export interface Machining {
+export interface HoleMachining {
   op: "hole";
   face: Face;
   from: "a" | "b";
   at_mm: number;
+  /** Across the face from its centre line, in §4.3's u; absent when 0. */
+  across_mm?: number;
   d_mm?: number;
   thread?: string;
   depth_mm?: number;
@@ -42,16 +44,41 @@ export interface Machining {
   cbore?: { d_mm: number; depth_mm: number };
 }
 
+/** A tapped hole in an end, along the axis (§5.3: "tap M8 at end a"). */
+export interface EndTapMachining {
+  op: "end-tap";
+  from: "a" | "b";
+  thread: string;
+  depth_mm?: number;
+}
+
+export type Machining = HoleMachining | EndTapMachining;
+
+/** A rail piece's holes (§4.7, §5.3: "rails also list E at each end"). */
+export interface PieceRail {
+  holes: number;
+  pitch_mm: number;
+  E_a_mm: number;
+  E_b_mm: number;
+  /** A factory end: nesting keeps it at an end of a stock bar (§5.3). */
+  factory?: "a" | "b";
+  /** The stock length the piece must come from. */
+  stock_mm?: number;
+}
+
 export interface Piece {
-  /** The entity it is cut for: a bar id. */
+  /** The entity it is cut for: a bar id, or `<connection>.f<k>` / `.s<k>` for stock pieces. */
   source: string;
   item: string;
   opt: Readonly<Record<string, string>>;
   cut: number;
   centre: number;
   short: number;
+  /** From end a's long point to end b's, along the axis: machining from b converts by it. */
+  span: number;
   ends: { a: EndCut; b: EndCut };
   machining: Machining[];
+  rail?: PieceRail;
 }
 
 export interface CutLine {
@@ -62,6 +89,7 @@ export interface CutLine {
   short_mm?: number;
   ends: { a: EndCut; b: EndCut };
   machining: Machining[];
+  rail?: PieceRail;
   /** cut mode: each piece's ordered length (rounded to res_mm) and billed length. */
   ordered_mm?: number;
   billed_mm?: number;
@@ -72,7 +100,8 @@ export interface StockBar {
   sku: string;
   length_mm: number;
   price_minor: number;
-  pieces: { source: string; cut_mm: number }[];
+  /** In order along the bar; a factory-drilled rail piece names the stock end it keeps. */
+  pieces: { source: string; cut_mm: number; factory_end?: "start" | "end" }[];
   /** Kerfs and trims included. */
   used_mm: number;
   offcut_mm: number;
@@ -152,17 +181,28 @@ function longPoints(b: DerivedBar): { a: number; b: number; corners: V3[] } {
   };
 }
 
-/** The bar's holes, each measured along the axis from its named end's long point (§5.3). */
-function machiningOf(b: DerivedBar): Machining[] {
-  if (b.ops.length === 0) return [];
-  const lp = longPoints(b);
-  return b.ops.map((op) => {
+/**
+ * The bar's machining, each measured along the axis from its named end's long point (§5.3): the
+ * holes a person wrote and those stage 4 generated (§5.1), and taps in its ends.
+ */
+function machiningOf(b: DerivedBar, lp: { a: number; b: number }): Machining[] {
+  return b.ops.map((op): Machining => {
+    if (op.op === "end-tap") {
+      return {
+        op: "end-tap",
+        from: op.from,
+        thread: op.thread,
+        ...(op.depth !== undefined ? { depth_mm: q(op.depth) } : {}),
+      };
+    }
     const s = op.from === "a" ? op.at : b.lengths.len - op.at;
+    const across = op.across === undefined ? 0 : q(op.across);
     return {
       op: "hole",
       face: op.face,
       from: op.from,
       at_mm: q(op.from === "a" ? s - lp.a : lp.b - s),
+      ...(across !== 0 ? { across_mm: across } : {}),
       ...(op.d !== undefined ? { d_mm: q(op.d) } : {}),
       ...(op.thread ? { thread: op.thread } : {}),
       ...(op.depth !== undefined ? { depth_mm: q(op.depth) } : {}),
@@ -172,19 +212,54 @@ function machiningOf(b: DerivedBar): Machining[] {
   });
 }
 
+/** A rail piece's holes and end distances (§4.7). */
+function railOf(b: DerivedBar): PieceRail | undefined {
+  const r = b.rail;
+  if (!r) return undefined;
+  return {
+    holes: r.holes.length,
+    pitch_mm: q(r.pitch),
+    E_a_mm: q(r.E_a),
+    E_b_mm: q(r.E_b),
+    ...(r.factory ? { factory: r.factory } : {}),
+    ...(r.stock_mm !== undefined ? { stock_mm: r.stock_mm } : {}),
+  };
+}
+
 const FLIP_FACE: Record<Face, Face> = { "+x": "-x", "-x": "+x", "+y": "+y", "-y": "-y" };
 
-/** The piece turned end for end (a rotation about local y): x → −x, ends swap. */
-function flipped(p: Pick<Piece, "ends" | "machining">): Pick<Piece, "ends" | "machining"> {
+type Oriented = Pick<Piece, "ends" | "machining" | "rail" | "span">;
+
+/**
+ * The piece turned end for end, a rotation about local y: t and x reverse, y stays. The ends
+ * swap and a mitre changes sign; a hole's named end swaps, a `±x` face becomes the other, and an
+ * offset across a `±y` face (along local x) changes sign. A rail's end distances swap.
+ */
+function flipped(p: Oriented): Oriented {
   const flipEnd = (e: EndCut): EndCut =>
     e === "square" ? e : { ...e, mitre_deg: e.mitre_deg === 0 ? 0 : -e.mitre_deg };
+  const other = (e: "a" | "b") => (e === "a" ? "b" : "a");
   return {
+    span: p.span,
     ends: { a: flipEnd(p.ends.b), b: flipEnd(p.ends.a) },
-    machining: p.machining.map((m) => ({
-      ...m,
-      face: FLIP_FACE[m.face],
-      from: m.from === "a" ? "b" : "a",
-    })),
+    machining: p.machining.map((m): Machining => {
+      if (m.op === "end-tap") return { ...m, from: other(m.from) };
+      const out: HoleMachining = { ...m, face: FLIP_FACE[m.face], from: other(m.from) };
+      if (m.across_mm !== undefined && (m.face === "+y" || m.face === "-y")) {
+        out.across_mm = 0 - m.across_mm;
+      }
+      return out;
+    }),
+    ...(p.rail
+      ? {
+          rail: {
+            ...p.rail,
+            E_a_mm: p.rail.E_b_mm,
+            E_b_mm: p.rail.E_a_mm,
+            ...(p.rail.factory ? { factory: other(p.rail.factory) } : {}),
+          },
+        }
+      : {}),
   };
 }
 
@@ -197,12 +272,21 @@ function cmpVal(a: number | string | undefined, b: number | string | undefined):
   return cmp(String(a), String(b));
 }
 
-/** Holes in order: from end a first, then by position, face, size. */
+/**
+ * Machining as listed: from end a first; at each end its tap, then holes by position, face,
+ * offset across and size.
+ */
 function cmpMachining(a: Machining, b: Machining): number {
+  const c =
+    cmpVal(a.from, b.from) || cmpVal(a.op === "end-tap" ? 0 : 1, b.op === "end-tap" ? 0 : 1);
+  if (c !== 0) return c;
+  if (a.op === "end-tap" || b.op === "end-tap") {
+    return cmpVal(a.thread, b.thread) || cmpVal(a.depth_mm, b.depth_mm);
+  }
   return (
-    cmpVal(a.from, b.from) ||
     cmpVal(a.at_mm, b.at_mm) ||
     cmpVal(a.face, b.face) ||
+    cmpVal(a.across_mm ?? 0, b.across_mm ?? 0) ||
     cmpVal(a.d_mm, b.d_mm) ||
     cmpVal(a.thread, b.thread) ||
     cmpVal(a.depth_mm, b.depth_mm) ||
@@ -210,6 +294,69 @@ function cmpMachining(a: Machining, b: Machining): number {
     cmpVal(a.csk?.angle_deg, b.csk?.angle_deg) ||
     cmpVal(a.cbore?.d_mm, b.cbore?.d_mm) ||
     cmpVal(a.cbore?.depth_mm, b.cbore?.depth_mm)
+  );
+}
+
+type Key = (string | number)[];
+
+/**
+ * What a piece of machining is, whichever end it is written from: a hole by its position from
+ * end a's long point (one from end b converts by the piece's span), and a plain through hole by
+ * its axis only, since the same hole can be named from either face of it. Identity and the
+ * canonical orientation compare these, so a hole written from b groups with the same hole
+ * written from a.
+ */
+function physical(m: Machining, span: number): Key {
+  if (m.op === "end-tap") return [0, m.from, m.thread, m.depth_mm ?? -1];
+  const pos = m.from === "a" ? m.at_mm : q(span - m.at_mm);
+  const plain = m.depth_mm === undefined && !m.csk && !m.cbore;
+  return [
+    1,
+    pos,
+    plain ? `+${m.face[1]}` : m.face,
+    m.across_mm ?? 0,
+    m.d_mm ?? -1,
+    m.thread ?? "",
+    m.depth_mm ?? -1,
+    m.csk?.d_mm ?? -1,
+    m.csk?.angle_deg ?? -1,
+    m.cbore?.d_mm ?? -1,
+    m.cbore?.depth_mm ?? -1,
+  ];
+}
+
+function cmpKey(a: Key, b: Key): number {
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    const c = cmpVal(a[i], b[i]);
+    if (c !== 0) return c;
+  }
+  return a.length - b.length;
+}
+
+function physicalList(p: Oriented): Key[] {
+  return p.machining.map((m) => physical(m, q(p.span))).sort(cmpKey);
+}
+
+function railKey(r: PieceRail | undefined): Key {
+  return r ? [r.holes, r.pitch_mm, r.E_a_mm, r.E_b_mm, r.stock_mm ?? -1] : [];
+}
+
+/**
+ * Orientations in order: the sorted machining, then a rail's end distances, then end a's cut,
+ * then end b's.
+ */
+function cmpOrientation(p: Oriented, o: Oriented): number {
+  const mp = physicalList(p);
+  const mo = physicalList(o);
+  for (let i = 0; i < Math.min(mp.length, mo.length); i++) {
+    const c = cmpKey(mp[i] as Key, mo[i] as Key);
+    if (c !== 0) return c;
+  }
+  return (
+    mp.length - mo.length ||
+    cmpKey(railKey(p.rail), railKey(o.rail)) ||
+    cmpEnd(p.ends.a, o.ends.a) ||
+    cmpEnd(p.ends.b, o.ends.b)
   );
 }
 
@@ -223,23 +370,9 @@ function cmpEnd(a: EndCut, b: EndCut): number {
   );
 }
 
-/** Orientations in order: the sorted machining list, then end a's cut, then end b's. */
-function cmpOrientation(
-  p: Pick<Piece, "ends" | "machining">,
-  q: Pick<Piece, "ends" | "machining">,
-) {
-  const mp = [...p.machining].sort(cmpMachining);
-  const mq = [...q.machining].sort(cmpMachining);
-  for (let i = 0; i < Math.min(mp.length, mq.length); i++) {
-    const c = cmpMachining(mp[i] as Machining, mq[i] as Machining);
-    if (c !== 0) return c;
-  }
-  return mp.length - mq.length || cmpEnd(p.ends.a, q.ends.a) || cmpEnd(p.ends.b, q.ends.b);
-}
-
 /**
  * The canonical orientation (§5.3): of a piece and its end-for-end flip, the one whose sorted
- * machining list compares first; on a tie, the one whose end cuts compare first (a square end
+ * machining compares first; on a tie, a rail's end distances, then the end cuts (a square end
  * before an angled one, then mitre and bevel by value).
  */
 export function canonical(p: Piece): Piece {
@@ -247,15 +380,23 @@ export function canonical(p: Piece): Piece {
   return cmpOrientation(f, p) < 0 ? { ...p, ...f } : p;
 }
 
-/** Identical pieces share this key: cut length to the quantum, end cuts, machining. */
-function identity(p: Pick<Piece, "ends" | "machining"> & { cut_mm: number }): string {
-  return JSON.stringify([p.cut_mm, p.ends, [...p.machining].sort(cmpMachining)]);
+/**
+ * Identical pieces share this key: cut length to the quantum, end cuts, machining as it is
+ * physically, and a rail's holes. The factory end is not part of it: a rail piece and its flip
+ * are the same piece.
+ */
+function identity(p: Oriented & { cut_mm: number }): string {
+  const rail = p.rail && { ...p.rail, factory: undefined };
+  return JSON.stringify([p.cut_mm, p.ends, physicalList(p), railKey(rail)]);
 }
 
+/** The pieces of the document's bars, with their machining and rail holes. */
 export function barPieces(derived: Derived): Piece[] {
   const out: Piece[] = [];
   for (const [id, b] of derived.bars) {
     if (b.lengths.cut <= 0) continue; // reported by derive
+    const lp = longPoints(b);
+    const rail = railOf(b);
     out.push({
       source: id,
       item: b.placed.item.id,
@@ -263,11 +404,33 @@ export function barPieces(derived: Derived): Piece[] {
       cut: b.lengths.cut,
       centre: b.lengths.centre,
       short: b.lengths.short,
+      span: lp.b - lp.a,
       ends: { a: endCut(b.ends.a), b: endCut(b.ends.b) },
-      machining: machiningOf(b),
+      machining: machiningOf(b, lp),
+      ...(rail ? { rail } : {}),
     });
   }
   return out;
+}
+
+/** Fasteners and sleeves cut from bar stock (§4.5): square pieces with no machining. */
+export function stockPieces(derived: Derived): Piece[] {
+  return derived.pieces.map((p) => ({
+    source: p.source,
+    item: p.item,
+    opt: p.opt,
+    cut: p.len,
+    centre: p.len,
+    short: p.len,
+    span: p.len,
+    ends: { a: "square", b: "square" },
+    machining: [],
+  }));
+}
+
+/** Every piece the derived model cuts from bar stock: its bars, then its fasteners and sleeves. */
+export function derivedPieces(derived: Derived): Piece[] {
+  return [...barPieces(derived), ...stockPieces(derived)];
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -295,8 +458,6 @@ function barPrice(o: OfferInfo, len: number, basis: string): number {
 export interface CutListInput {
   derived: Derived;
   items: ItemSource;
-  /** Pieces from later stages: fasteners and sleeves cut from bar stock (M3b). */
-  extraPieces?: readonly Piece[];
 }
 
 export function cutList(input: CutListInput): CutList {
@@ -304,7 +465,7 @@ export function cutList(input: CutListInput): CutList {
   const doc = derived.doc;
   const basis = doc.price_basis;
   const d = new Diagnostics();
-  const pieces = [...barPieces(derived), ...(input.extraPieces ?? [])].map(canonical);
+  const pieces = derivedPieces(derived).map(canonical);
 
   const byGroup = new Map<string, Piece[]>();
   for (const p of pieces) {
@@ -415,7 +576,12 @@ export function cutList(input: CutListInput): CutList {
       }));
       const supplierOf = new Map(stockOffers.map((o) => [o.sku, o]));
       const res = nest(
-        ps.map((p) => ({ id: p.source, len: h(p.cut) })),
+        ps.map((p) => ({
+          id: p.source,
+          len: h(p.cut),
+          ...(p.rail?.factory ? { factory: true } : {}),
+          ...(p.rail?.stock_mm !== undefined ? { stock: h(p.rail.stock_mm) } : {}),
+        })),
         stocks,
         h(kerf),
         h(trim),
@@ -424,7 +590,9 @@ export function cutList(input: CutListInput): CutList {
         d.error(
           "length",
           u.id,
-          `${u.id} is ${u.len / 100} mm, longer than any stock length of ${first.item} less its trims: split it with a splice`,
+          u.stock !== undefined
+            ? `${u.id} is ${u.len / 100} mm and must come from ${first.item}'s ${u.stock / 100} mm stock length, which does not hold it`
+            : `${u.id} is ${u.len / 100} mm, longer than any stock length of ${first.item} less its trims: split it with a splice`,
         );
       }
       group.stock = res.bars.map((b) => {
@@ -433,7 +601,11 @@ export function cutList(input: CutListInput): CutList {
           sku: b.stock.sku,
           length_mm: b.stock.len / 100,
           price_minor: b.stock.price,
-          pieces: b.pieces.map((p) => ({ source: p.id, cut_mm: p.len / 100 })),
+          pieces: b.pieces.map((p) => ({
+            source: p.id,
+            cut_mm: p.len / 100,
+            ...(p.end ? { factory_end: p.end } : {}),
+          })),
           used_mm: b.used / 100,
           offcut_mm: (b.stock.len - b.used) / 100,
           waste_mm: (b.stock.len - sum) / 100,
@@ -469,13 +641,28 @@ function groupLines(ps: readonly Piece[]): CutLine[] {
       ...(angled ? { centre_mm: q(p.centre), short_mm: q(p.short) } : {}),
       ends: p.ends,
       machining: [...p.machining].sort(cmpMachining),
+      ...(p.rail ? { rail: p.rail } : {}),
       sources: group.map((x) => x.source).sort(compareIds),
     };
   });
   return lines.sort(
     (a, b) =>
       b.cut_mm - a.cut_mm ||
-      cmpOrientation(a, b) ||
+      cmpListed(a, b) ||
       compareIds(a.sources[0] as string, b.sources[0] as string),
+  );
+}
+
+/** Lines of one length in order: their machining as listed, a rail's holes, then the end cuts. */
+function cmpListed(a: CutLine, b: CutLine): number {
+  for (let i = 0; i < Math.min(a.machining.length, b.machining.length); i++) {
+    const c = cmpMachining(a.machining[i] as Machining, b.machining[i] as Machining);
+    if (c !== 0) return c;
+  }
+  return (
+    a.machining.length - b.machining.length ||
+    cmpKey(railKey(a.rail), railKey(b.rail)) ||
+    cmpEnd(a.ends.a, b.ends.a) ||
+    cmpEnd(a.ends.b, b.ends.b)
   );
 }

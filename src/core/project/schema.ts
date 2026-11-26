@@ -259,6 +259,7 @@ export const RailHolesSel = z.strictObject({
   every: z.int().min(1).optional(),
   plus: z.array(z.enum(["first", "last", "joint"])).optional(),
 });
+export type RailHolesSel = z.infer<typeof RailHolesSel>;
 
 /** A stack entry (§4.5): hardware from head to nut, or a sleeve cut from bar stock. */
 export const StackEntry = z.union([
@@ -266,6 +267,7 @@ export const StackEntry = z.union([
   z.strictObject({ item: ItemRef, qty: z.int().min(1).optional() }),
   z.strictObject({ item: ItemRef, inside: z.union([BarId, RunId]), len_mm: Expr }),
 ]);
+export type StackEntry = z.infer<typeof StackEntry>;
 
 export const FaceConn = z.strictObject({
   type: z.literal("face"),

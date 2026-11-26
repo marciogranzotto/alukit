@@ -1,0 +1,21 @@
+{
+  "case": "G24",
+  "rule": "stations from a selection of holes across a joint; a station on a run (§4.3, §4.7)",
+  "design": "10 stations, at x = 20, 140, 260, 380, 440, 500, 620, 740, 860, 920; the part on rail2, 10 from its a. At at_mm 470: error (on the joint)",
+  "expect": {
+    "stations": { "c2": { "x_mm": [20, 140, 260, 380, 440, 500, 620, 740, 860, 920] } },
+    "parts": { "p1": { "bar": "b2", "s_mm": 10 } },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "the part at 470",
+      "patch": { "parts": { "p1": { "on": { "at_mm": 470 } } } },
+      "expect": {
+        "stations": { "c2": { "x_mm": [20, 140, 260, 380, 440, 500, 620, 740, 860, 920] } },
+        "parts": {},
+        "errors": [{ "code": "joint", "entity": "p1", "refs": ["r1"] }]
+      }
+    }
+  ]
+}

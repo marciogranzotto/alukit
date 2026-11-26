@@ -1,4 +1,4 @@
-import type { CutGroup, CutLine, CutList, EndCut, Machining } from "./cutlist.ts";
+import type { CutGroup, CutLine, CutList, EndCut, Machining, PieceRail } from "./cutlist.ts";
 
 /** The cut list as Markdown, CSV or JSON (design §5.4: "Output as Markdown, CSV or JSON"). */
 
@@ -19,9 +19,19 @@ export function endText(e: EndCut): string {
 }
 
 export function machiningText(m: Machining): string {
-  const what = m.thread ? `tap ${m.thread}` : `Ø${m.d_mm === undefined ? "?" : mm(m.d_mm)} hole`;
   const depth = m.depth_mm === undefined ? "" : `, ${mm(m.depth_mm)} deep`;
-  return `${what} ${mm(m.at_mm)} mm from end ${m.from} on face ${m.face}${depth}`;
+  if (m.op === "end-tap") return `tap ${m.thread} in end ${m.from}${depth}`;
+  const what = m.thread ? `tap ${m.thread}` : `Ø${m.d_mm === undefined ? "?" : mm(m.d_mm)} hole`;
+  const across = m.across_mm === undefined ? "" : `, ${mm(m.across_mm)} across`;
+  const cbore = m.cbore ? `, counterbore Ø${mm(m.cbore.d_mm)} × ${mm(m.cbore.depth_mm)}` : "";
+  const csk = m.csk ? `, countersink Ø${mm(m.csk.d_mm)} at ${m.csk.angle_deg.toFixed(2)}°` : "";
+  return `${what} ${mm(m.at_mm)} mm from end ${m.from} on face ${m.face}${across}${depth}${cbore}${csk}`;
+}
+
+/** A rail piece's holes: "20 holes at 60.00, E 30.00 at a (factory) / 40.00 at b". */
+export function railText(r: PieceRail): string {
+  const tag = (end: "a" | "b") => (r.factory === end ? " (factory)" : "");
+  return `${r.holes} holes at ${mm(r.pitch_mm)}, E ${mm(r.E_a_mm)} at a${tag("a")} / ${mm(r.E_b_mm)} at b${tag("b")}`;
 }
 
 function groupTitle(g: CutGroup): string {
@@ -41,7 +51,7 @@ function lineRow(g: CutGroup, l: CutLine): string {
     mm(l.cut_mm),
     l.centre_mm === undefined ? "" : mm(l.centre_mm),
     `${endText(l.ends.a)} / ${endText(l.ends.b)}`,
-    l.machining.map(machiningText).join("; "),
+    [...(l.rail ? [railText(l.rail)] : []), ...l.machining.map(machiningText)].join("; "),
   ];
   if (g.mode === "cut") cells.push(mm(l.ordered_mm ?? 0), mm(l.billed_mm ?? 0));
   cells.push(l.sources.join(", "));
@@ -75,7 +85,12 @@ export function cutListMarkdown(cl: CutList): string {
         "|---|---:|---:|---|---:|---:|",
       );
       g.stock.forEach((b, i) => {
-        const pieces = b.pieces.map((p) => `${p.source} ${mm(p.cut_mm)}`).join(", ");
+        const pieces = b.pieces
+          .map(
+            (p) =>
+              `${p.source} ${mm(p.cut_mm)}${p.factory_end ? ` (factory end at the ${p.factory_end})` : ""}`,
+          )
+          .join(", ");
         out.push(
           `| ${i + 1}: ${b.sku} | ${mm(b.length_mm)} | ${b.price_minor} | ${pieces} | ${mm(b.offcut_mm)} | ${mm(b.waste_mm)} |`,
         );
@@ -140,7 +155,7 @@ export function cutListCsv(cl: CutList): string {
           l.short_mm === undefined ? undefined : mm(l.short_mm),
           endText(l.ends.a),
           endText(l.ends.b),
-          l.machining.map(machiningText).join("; "),
+          [...(l.rail ? [railText(l.rail)] : []), ...l.machining.map(machiningText)].join("; "),
           l.ordered_mm === undefined ? undefined : mm(l.ordered_mm),
           l.billed_mm === undefined ? undefined : mm(l.billed_mm),
           undefined,

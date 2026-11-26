@@ -8,7 +8,8 @@ a priced bill of materials from real suppliers, the machining on each bar and an
 list. Catalogs can be your own, imported or created. Agents can drive the whole thing
 through a documented file format and a CLI.
 
-**Status: milestones M1 (catalog core), M2a (first catalogs) and M3a (geometry core).**
+**Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core) and the first
+part of M3b (generation and the bill of materials).**
 - Catalog schemas, the three-layer merge, section generators and section properties, and
   `alukit catalog check`, which compares computed section properties against published ones.
 - Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): the
@@ -16,6 +17,9 @@ through a documented file format and a CLI.
   and `ref-hiwin` (the HIWIN HG parts that rails and blocks clone).
 - The project format, placement and end planes, and the cut list: `alukit derive <dir>` and
   `alukit cutlist <dir>`.
+- Generation: rail holes from factory ends or drilled, parts on stations, bolted, screwed and
+  T-nut face connections with their clearance holes, taps, rods and sleeves, connectors' hardware
+  and machining; and the bill of materials with masses: `alukit bom <dir>`.
 
 The app still draws an empty scene.
 

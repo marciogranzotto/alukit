@@ -1,0 +1,31 @@
+{
+  "case": "G23",
+  "rule": "nesting keeps a factory end (§5.3)",
+  "design": "two stock bars, two pieces in one and one in the other; each piece 8 holes, E 30.00 at its factory end and 20.00 at its cut end. A plain bar of the same lengths nests into one (3 × 470 + 2 × 3 = 1416)",
+  "expect": {
+    "rails": {
+      "b1": { "holes": 8, "E_a_mm": 30, "E_b_mm": 20 },
+      "b2": { "holes": 8, "E_a_mm": 30, "E_b_mm": 20 },
+      "b3": { "holes": 8, "E_a_mm": 30, "E_b_mm": 20 }
+    },
+    "stock": { "test-gen:RAIL-G": { "pieces": [2, 1] } },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "a plain bar of the same lengths",
+      "patch": {
+        "bars": {
+          "b1": { "item": "test-gen:BAR-G", "anchor": null, "holes": null },
+          "b2": { "item": "test-gen:BAR-G", "anchor": null, "holes": null },
+          "b3": { "item": "test-gen:BAR-G", "anchor": null, "holes": null }
+        }
+      },
+      "expect": {
+        "rails": {},
+        "stock": { "test-gen:BAR-G": { "pieces": [3], "used_mm": [1416] } },
+        "errors": []
+      }
+    }
+  ]
+}

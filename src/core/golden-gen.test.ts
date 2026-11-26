@@ -1,0 +1,151 @@
+import { basename, join } from "node:path";
+import { beforeAll, describe, expect, it } from "vitest";
+import { cutList } from "./cutlist/cutlist.ts";
+import { type Derived, derive } from "./derive/derive.ts";
+import type { ItemSource } from "./items.ts";
+import { type OpenedProject, openProject } from "./project/open.ts";
+import { FIXTURES, mergePatch, readJson, shown, subdirs } from "./testing.ts";
+
+/**
+ * The generation cases of design §4.6 (G22–G25), M3b's oracle: each folder holds a small
+ * document and the values the design's table gives for it, to 0.01 mm. A row's variations
+ * ("factory: b", "at at_mm 470") are merge patches of the same document. G26 (price bands) is the
+ * order list's, M3b part 3.
+ */
+
+interface Expect {
+  /** Per rail bar: its hole count and end distances. */
+  rails?: Record<string, { holes: number; E_a_mm: number; E_b_mm: number }>;
+  /** Per stock item: the number of pieces in each stock bar, and what each bar uses. */
+  stock?: Record<string, { pieces: number[]; used_mm?: number[] }>;
+  /** Per face connection: its stations' world x. */
+  stations?: Record<string, { x_mm: number[] }>;
+  /** Per face connection: its fastener count and every station's grip. */
+  fastenings?: Record<string, { count: number; grip_mm: number[] }>;
+  /** Per part on a station: the bar it landed on and the distance from that bar's a. */
+  parts?: Record<string, { bar: string; s_mm: number }>;
+  /** Per item: its cut-list lines. */
+  lines?: Record<string, { count: number; cut_mm: number }[]>;
+  /** Per item: its count among the connections' hardware. */
+  hardware?: Record<string, number>;
+  /** Generated holes: how many, their diameters, and how many per bar. */
+  holes?: { total: number; d_mm: number[]; per_bar: Record<string, number> };
+  errors: { code: string; entity: string; refs?: string[] }[];
+}
+
+interface Golden {
+  case: string;
+  rule: string;
+  design: string;
+  expect: Expect;
+  cases?: { name: string; patch: unknown; expect: Expect }[];
+}
+
+const r2 = (x: number) => Math.round(x * 100) / 100;
+
+function check(d: Derived, items: ItemSource, want: Expect, label: string): void {
+  const errors = shown(d.diagnostics, "error");
+  expect(
+    errors.map((e) => ({ code: e.code, entity: e.entity })),
+    `${label}: errors ${JSON.stringify(errors, null, 1)}`,
+  ).toEqual(want.errors.map((e) => ({ code: e.code, entity: e.entity })));
+  for (const e of want.errors) {
+    if (!e.refs) continue;
+    const match = errors.find((x) => x.code === e.code && x.entity === e.entity);
+    expect(match?.refs, `${label}: refs of ${e.code} on ${e.entity}`).toEqual(e.refs);
+  }
+
+  for (const [id, r] of Object.entries(want.rails ?? {})) {
+    const rail = d.bars.get(id)?.rail;
+    expect(rail, `${label}: ${id} has a hole layout`).toBeDefined();
+    expect(
+      [rail?.holes.length, r2(rail?.E_a ?? Number.NaN), r2(rail?.E_b ?? Number.NaN)],
+      `${label}: ${id}'s holes and end distances`,
+    ).toEqual([r.holes, r.E_a_mm, r.E_b_mm]);
+  }
+
+  const cl = cutList({ derived: d, items });
+  for (const [item, s] of Object.entries(want.stock ?? {})) {
+    const g = cl.groups.find((x) => x.item === item);
+    expect(
+      g?.stock?.map((b) => b.pieces.length),
+      `${label}: ${item}'s stock bars`,
+    ).toEqual(s.pieces);
+    if (s.used_mm) expect(g?.stock?.map((b) => b.used_mm)).toEqual(s.used_mm);
+  }
+  for (const [item, lines] of Object.entries(want.lines ?? {})) {
+    const g = cl.groups.find((x) => x.item === item);
+    expect(
+      g?.lines.map((l) => ({ count: l.count, cut_mm: l.cut_mm })),
+      `${label}: ${item}'s cut-list lines`,
+    ).toEqual(lines);
+  }
+
+  for (const [id, s] of Object.entries(want.stations ?? {})) {
+    const f = d.fastenings.get(id);
+    expect(
+      f?.stations.map((x) => r2(x.point[0])),
+      `${label}: ${id}'s stations`,
+    ).toEqual(s.x_mm);
+  }
+  for (const [id, f] of Object.entries(want.fastenings ?? {})) {
+    const got = d.fastenings.get(id);
+    expect(got?.stations.length, `${label}: ${id}'s fasteners`).toBe(f.count);
+    expect([...new Set(got?.stations.map((x) => r2(x.grip)))], `${label}: ${id}'s grip`).toEqual(
+      f.grip_mm,
+    );
+  }
+  for (const [id, p] of Object.entries(want.parts ?? {})) {
+    const got = d.parts.get(id);
+    expect(got?.placed && [got.bar, r2(got.s ?? Number.NaN)], `${label}: ${id}`).toEqual([
+      p.bar,
+      p.s_mm,
+    ]);
+  }
+  for (const [item, qty] of Object.entries(want.hardware ?? {})) {
+    const n = d.hardware.filter((h) => h.item === item).reduce((s, h) => s + h.qty, 0);
+    expect(n, `${label}: ${item}`).toBe(qty);
+  }
+  if (want.holes) {
+    const holes = [...d.bars.values()].flatMap((b) =>
+      b.ops.flatMap((o) => (o.op === "hole" && o.by ? [{ bar: b.placed.id, d: o.d }] : [])),
+    );
+    expect(holes.length, `${label}: generated holes`).toBe(want.holes.total);
+    expect([...new Set(holes.map((h) => h.d))], `${label}: hole diameters`).toEqual(
+      want.holes.d_mm,
+    );
+    const per: Record<string, number> = {};
+    for (const h of holes) per[h.bar] = (per[h.bar] ?? 0) + 1;
+    expect(per, `${label}: holes per bar`).toEqual(want.holes.per_bar);
+  }
+}
+
+const dirs = subdirs(join(FIXTURES, "golden-gen"));
+
+describe("golden generation cases (design §4.6)", () => {
+  it("has one fixture per case G22–G25", () => {
+    expect(dirs.map((d) => basename(d))).toEqual(["G22", "G23", "G24", "G25"]);
+  });
+
+  for (const dir of dirs) {
+    const golden = readJson(join(dir, "expected.json")) as Golden;
+    describe(`${golden.case}: ${golden.rule}`, () => {
+      let project: OpenedProject;
+      beforeAll(async () => {
+        project = await openProject(dir);
+        expect(project.diagnostics).toEqual([]);
+      });
+
+      it(golden.design, () => {
+        check(derive(project.raw, project.items), project.items, golden.expect, golden.case);
+      });
+
+      for (const c of golden.cases ?? []) {
+        it(`${c.name}`, () => {
+          const raw = mergePatch(project.raw, c.patch);
+          check(derive(raw, project.items), project.items, c.expect, `${golden.case} (${c.name})`);
+        });
+      }
+    });
+  }
+});

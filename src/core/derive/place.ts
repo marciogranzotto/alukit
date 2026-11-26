@@ -517,7 +517,10 @@ export function resolveStation(ctx: Ctx, st: Station, owner: Owner): StationPoin
 }
 
 /** A face's centre line in local coordinates, and which local axis its normal runs along. */
-function faceLocal(b: Box, face: Face): { at: [number, number]; dir: "x" | "y"; sign: 1 | -1 } {
+export function faceLocal(
+  b: Box,
+  face: Face,
+): { at: [number, number]; dir: "x" | "y"; sign: 1 | -1 } {
   const [cx, cy] = boxCentre(b);
   switch (face) {
     case "+x":

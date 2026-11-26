@@ -1,0 +1,239 @@
+{
+  "about": "The cart's bill of materials worked by hand: see hand/cart_by_hand.py, which wrote this.",
+  "groups": [
+    {
+      "kind": "bar",
+      "lines": [
+        {
+          "item": "test-geo:FB-50x10",
+          "opt": {},
+          "qty": 5,
+          "length_mm": 3360.0,
+          "unit_mass_kg": 3.925,
+          "mass_kg": 13.188,
+          "mass_src": "calc",
+          "sources": ["b19", "b20", "b23", "b24", "b25"]
+        },
+        {
+          "item": "test-geo:FB-50x20",
+          "opt": {},
+          "qty": 2,
+          "length_mm": 400.0,
+          "unit_mass_kg": 7.85,
+          "mass_kg": 3.14,
+          "mass_src": "calc",
+          "sources": ["b21", "b22"]
+        },
+        {
+          "item": "test-geo:RHS-100x50x4",
+          "opt": {},
+          "qty": 1,
+          "length_mm": 520.0,
+          "unit_mass_kg": 8.702,
+          "mass_kg": 4.525,
+          "mass_src": "calc",
+          "sources": ["b18"]
+        },
+        {
+          "item": "test-geo:TUBE-18x2",
+          "opt": {},
+          "qty": 4,
+          "length_mm": 168.0,
+          "unit_mass_kg": 0.789,
+          "mass_kg": 0.133,
+          "mass_src": "calc",
+          "sources": ["c23"]
+        },
+        {
+          "item": "test:M10-ROD",
+          "opt": {},
+          "qty": 4,
+          "length_mm": 560.0,
+          "unit_mass_kg": 0.455,
+          "mass_kg": 0.255,
+          "mass_src": "calc",
+          "sources": ["c23"]
+        },
+        {
+          "item": "test:RAIL20",
+          "opt": {},
+          "qty": 2,
+          "length_mm": 940.0,
+          "unit_mass_kg": 2.21,
+          "mass_kg": 2.077,
+          "mass_src": "est",
+          "sources": ["b33", "b34"]
+        },
+        {
+          "item": "test:TS40",
+          "opt": {
+            "finish": "anodised"
+          },
+          "qty": 27,
+          "length_mm": 14433.61,
+          "unit_mass_kg": 1.493,
+          "mass_kg": 21.281,
+          "mass_src": "est",
+          "sources": [
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "b7",
+            "b8",
+            "b9",
+            "b10",
+            "b11",
+            "b12",
+            "b13",
+            "b14",
+            "b15",
+            "b16",
+            "b17",
+            "b26",
+            "b26@1",
+            "b26@2",
+            "b26@4",
+            "b26@5",
+            "b26@6",
+            "b27",
+            "b28",
+            "b29",
+            "b30",
+            "b31",
+            "b32"
+          ]
+        },
+        {
+          "item": "test:TS4080",
+          "opt": {
+            "finish": "anodised"
+          },
+          "qty": 2,
+          "length_mm": 2400.0,
+          "unit_mass_kg": 2.743,
+          "mass_kg": 6.583,
+          "mass_src": "est",
+          "sources": ["b5", "b6"]
+        }
+      ],
+      "mass_kg": 51.182
+    },
+    {
+      "kind": "connector",
+      "lines": [
+        {
+          "item": "test-geo:HNG-15",
+          "opt": {},
+          "qty": 8,
+          "unit_mass_kg": 0.1,
+          "mass_kg": 0.8,
+          "mass_src": "est",
+          "sources": ["c13", "c14", "c15", "c16", "c17", "c18", "c19", "c20"]
+        },
+        {
+          "item": "test-geo:PLT-8",
+          "opt": {},
+          "qty": 1,
+          "unit_mass_kg": 0.1,
+          "mass_kg": 0.1,
+          "mass_src": "est",
+          "sources": ["c33"]
+        },
+        {
+          "item": "test:SPL-40",
+          "opt": {},
+          "qty": 1,
+          "unit_mass_kg": 0.05,
+          "mass_kg": 0.05,
+          "mass_src": "est",
+          "sources": ["c9"]
+        }
+      ],
+      "mass_kg": 0.95
+    },
+    {
+      "kind": "fastener",
+      "lines": [
+        {
+          "item": "test-gen:SCR-M5x25",
+          "opt": {},
+          "qty": 10,
+          "unit_mass_kg": 0.006,
+          "mass_kg": 0.06,
+          "mass_src": "est",
+          "sources": ["c35"]
+        },
+        {
+          "item": "test-gen:TNUT-M5",
+          "opt": {},
+          "qty": 10,
+          "unit_mass_kg": 0.004,
+          "mass_kg": 0.04,
+          "mass_src": "est",
+          "sources": ["c35"]
+        },
+        {
+          "item": "test-geo:NUT-M10",
+          "opt": {},
+          "qty": 8,
+          "unit_mass_kg": 0.011,
+          "mass_kg": 0.088,
+          "mass_src": "est",
+          "sources": ["c23"]
+        },
+        {
+          "item": "test-geo:WSH-M10",
+          "opt": {},
+          "qty": 8,
+          "unit_mass_kg": 0.004,
+          "mass_kg": 0.032,
+          "mass_src": "est",
+          "sources": ["c23"]
+        },
+        {
+          "item": "test:SPL-STUD",
+          "opt": {},
+          "qty": 1,
+          "unit_mass_kg": 0.015,
+          "mass_kg": 0.015,
+          "mass_src": "est",
+          "sources": ["c9"]
+        },
+        {
+          "item": "test:TNUT-M8",
+          "opt": {},
+          "qty": 10,
+          "unit_mass_kg": 0.006,
+          "mass_kg": 0.06,
+          "mass_src": "est",
+          "sources": ["p2"],
+          "unplaced": [
+            {
+              "part": "p2",
+              "qty": 10,
+              "why": "spares for light fixings"
+            }
+          ]
+        }
+      ],
+      "mass_kg": 0.295
+    },
+    {
+      "kind": "carriage",
+      "lines": [
+        {
+          "item": "test:CAR20",
+          "opt": {},
+          "qty": 3,
+          "unit_mass_kg": 0.4,
+          "mass_kg": 1.2,
+          "mass_src": "est",
+          "sources": ["p1", "p1@1", "p1@2"]
+        }
+      ],
+      "mass_kg": 1.2
+    }
+  ],
+  "mass_kg": 53.627
+}

@@ -1,7 +1,8 @@
 {
-  "about": "The cart's cut list worked by hand: see hand/cutlist_by_hand.py, which wrote this.",
+  "about": "The cart's cut list worked by hand: see hand/cart_by_hand.py, which wrote this.",
   "kerf_mm": 3,
   "trim_mm": 5,
+  "rail_stations_x_mm": [160, 280, 400, 520, 580, 620, 740, 860, 980, 1040],
   "groups": [
     {
       "item": "test-geo:FB-50x10",
@@ -33,6 +34,40 @@
             "a": "square",
             "b": "square"
           },
+          "machining": [
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at_mm": 100,
+              "across_mm": -15,
+              "d_mm": 11
+            },
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at_mm": 100,
+              "across_mm": 15,
+              "d_mm": 11
+            },
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at_mm": 200,
+              "across_mm": -15,
+              "d_mm": 11
+            },
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at_mm": 200,
+              "across_mm": 15,
+              "d_mm": 11
+            }
+          ],
           "sources": ["b20", "b23"]
         }
       ],
@@ -59,6 +94,40 @@
             "a": "square",
             "b": "square"
           },
+          "machining": [
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at_mm": 50,
+              "across_mm": -15,
+              "d_mm": 11
+            },
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at_mm": 50,
+              "across_mm": 15,
+              "d_mm": 11
+            },
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at_mm": 150,
+              "across_mm": -15,
+              "d_mm": 11
+            },
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at_mm": 150,
+              "across_mm": 15,
+              "d_mm": 11
+            }
+          ],
           "sources": ["b21", "b22"]
         }
       ],
@@ -85,6 +154,80 @@
             "a": "square",
             "b": "square"
           },
+          "machining": [
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at_mm": 210,
+              "across_mm": -15,
+              "d_mm": 11,
+              "depth_mm": 4
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at_mm": 210,
+              "across_mm": 15,
+              "d_mm": 11,
+              "depth_mm": 4
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at_mm": 210,
+              "across_mm": -15,
+              "d_mm": 11,
+              "depth_mm": 4
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at_mm": 210,
+              "across_mm": 15,
+              "d_mm": 11,
+              "depth_mm": 4
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at_mm": 310,
+              "across_mm": -15,
+              "d_mm": 11,
+              "depth_mm": 4
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at_mm": 310,
+              "across_mm": 15,
+              "d_mm": 11,
+              "depth_mm": 4
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at_mm": 310,
+              "across_mm": -15,
+              "d_mm": 11,
+              "depth_mm": 4
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at_mm": 310,
+              "across_mm": 15,
+              "d_mm": 11,
+              "depth_mm": 4
+            }
+          ],
           "sources": ["b18"]
         }
       ],
@@ -98,6 +241,96 @@
         }
       ],
       "cost_minor": 28900
+    },
+    {
+      "item": "test-geo:TUBE-18x2",
+      "opt": {},
+      "mode": "stock",
+      "lines": [
+        {
+          "count": 4,
+          "cut_mm": 42.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "sources": ["c23.s1", "c23.s2", "c23.s3", "c23.s4"]
+        }
+      ],
+      "stock": [
+        {
+          "sku": "test-geo:TUBE-18x2-6000",
+          "length_mm": 6000,
+          "sources": ["c23.s1", "c23.s2", "c23.s3", "c23.s4"],
+          "offcut_mm": 5813.0,
+          "waste_mm": 5832.0
+        }
+      ],
+      "cost_minor": 5200
+    },
+    {
+      "item": "test:M10-ROD",
+      "opt": {},
+      "mode": "stock",
+      "lines": [
+        {
+          "count": 4,
+          "cut_mm": 140.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "sources": ["c23.f1", "c23.f2", "c23.f3", "c23.f4"]
+        }
+      ],
+      "stock": [
+        {
+          "sku": "test:M10-ROD-1000",
+          "length_mm": 1000,
+          "sources": ["c23.f1", "c23.f2", "c23.f3", "c23.f4"],
+          "offcut_mm": 421.0,
+          "waste_mm": 440.0
+        }
+      ],
+      "cost_minor": 1250
+    },
+    {
+      "item": "test:RAIL20",
+      "opt": {},
+      "mode": "stock",
+      "lines": [
+        {
+          "count": 2,
+          "cut_mm": 470.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "rail": {
+            "holes": 8,
+            "pitch_mm": 60,
+            "E_a_mm": 20,
+            "E_b_mm": 30,
+            "factory": "a",
+            "stock_mm": 1000
+          },
+          "sources": ["b33", "b34"]
+        }
+      ],
+      "stock": [
+        {
+          "sku": "test:RAIL20-1000",
+          "length_mm": 1000,
+          "sources": ["b33", "b34"],
+          "offcut_mm": 57.0,
+          "waste_mm": 60.0,
+          "factory_ends": {
+            "b33": "start",
+            "b34": "end"
+          }
+        }
+      ],
+      "cost_minor": 17900
     },
     {
       "item": "test:TS40",
@@ -136,6 +369,14 @@
             "a": "square",
             "b": "square"
           },
+          "machining": [
+            {
+              "op": "end-tap",
+              "from": "a",
+              "thread": "M8",
+              "depth_mm": 20
+            }
+          ],
           "ordered_mm": 660,
           "billed_mm": 660,
           "sources": ["b11"]
@@ -169,6 +410,14 @@
             "a": "square",
             "b": "square"
           },
+          "machining": [
+            {
+              "op": "end-tap",
+              "from": "a",
+              "thread": "M8",
+              "depth_mm": 20
+            }
+          ],
           "ordered_mm": 460,
           "billed_mm": 460,
           "sources": ["b12"]

@@ -1,0 +1,61 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G25",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo", "../../catalogs/test-gen"],
+  "defaults": { "cutting": { "kerf_mm": 3, "trim_mm": 0 } },
+  "bars": {
+    "b1": {
+      "item": "test-geo:FB-50x10",
+      "a": [0, 0, 0],
+      "b": [400, 0, 0],
+      "anchor": "-y",
+      "label": "flat 50x10, z 0..10"
+    },
+    "b2": {
+      "item": "test-geo:FB-50x20",
+      "a": [0, 0, 10],
+      "b": [400, 0, 10],
+      "anchor": "-y",
+      "label": "flat 50x20, z 10..30"
+    },
+    "b3": {
+      "item": "test-geo:RHS-100x50x4",
+      "a": [0, 0, 30],
+      "b": [400, 0, 30],
+      "roll_deg": 90,
+      "anchor": "-x",
+      "label": "RHS 100x50x4 across its 50: rolled so its 50 stands along z, z 30..80"
+    },
+    "b4": {
+      "item": "test-geo:FB-50x20",
+      "a": [0, 0, 80],
+      "b": [400, 0, 80],
+      "anchor": "-y",
+      "label": "flat 50x20, z 80..100"
+    },
+    "b5": {
+      "item": "test-geo:FB-50x10",
+      "a": [0, 0, 100.5],
+      "b": [400, 0, 100.5],
+      "anchor": "-y",
+      "label": "flat 50x10, z 100.5..110.5: 0.5 above the flat below"
+    }
+  },
+  "connections": {
+    "c1": {
+      "type": "face",
+      "bars": ["b1", "b2", "b3", "b4", "b5"],
+      "gaps_mm": [0, 0, 0, 0.5],
+      "fastening": "bolt",
+      "fastener": { "bar": "test:M10-ROD", "len_mm": 140 },
+      "stack": [
+        "test-geo:WSH-M10",
+        "test-geo:NUT-M10",
+        { "item": "test-geo:TUBE-18x2", "inside": "b3", "len_mm": "bore" },
+        "test-geo:WSH-M10",
+        "test-geo:NUT-M10"
+      ],
+      "stations": { "at_mm": [100, 300], "across_mm": [-15, 15] }
+    }
+  }
+}

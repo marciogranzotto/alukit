@@ -14,7 +14,7 @@ by hand while building, and agree.
 |---|---|---|
 | 1 | Geometry-only items live in a second synthetic catalog, `tests/fixtures/catalogs/test-geo/` (RHS 100x50x4, flats 50x10 and 50x20, tube 18x2, a 40 mm cube, a hinge with pivot geometry, an 8 mm end plate, M10 washer and nut), not in `test/` | `test/` is M1's oracle and M2a works on catalogs in parallel; a separate catalog cannot conflict with either |
 | 2 | Each G-case is `golden-ends/Gnn/{alukit.json, expected.json}`. `expected.json` holds the design's numbers verbatim; a variation ("with `through_end: node`", "then H = 1000") is an RFC 7396 merge patch of the base document in `cases`. Errors are asserted as the exact set of `{code, entity, refs}` | One document per case, as §4.6 says; a test cannot pass by accepting extra errors |
-| 3 | The cart's expected cut list is written by `tests/fixtures/cart/hand/cutlist_by_hand.py`, plain Python that imports nothing from AluKit. The test compares a projection of AluKit's cut list with it | §12: worked by hand, independently. The script is the hand calculation, kept so a reviewer can follow every number |
+| 3 | The cart's expected cut list is written by `tests/fixtures/cart/hand/cutlist_by_hand.py` (since M3b `cart_by_hand.py`, which also writes the BOM), plain Python that imports nothing from AluKit. The test compares a projection of AluKit's cut list with it | §12: worked by hand, independently. The script is the hand calculation, kept so a reviewer can follow every number |
 | 4 | The cart covers §12's M3a classes (eccentric anchors, a rolled 40x80, a steel beam, a strut bearing on another bar's end, a flat bar flush with a beam's cut ends, a spliced run, braces between pivots, a bolted stack of five layers with packers, a pattern) plus a free end counted from a cut and angled knee braces. Rails with factory ends, carriages, rods and sleeves cut from stock, rail-hole selections, price bands and cost lines join in M3b; the plate and placeholder in M6 | Their rules are those milestones' (G22–G26 are M3b's oracle); adding them now would fix outputs before their rules exist |
 
 ## The document and expressions
@@ -78,6 +78,10 @@ by hand while building, and agree.
 | 39 | Exit 0 when fine (warnings allowed), 1 on any error, 2 on bad usage. Catalog problems met while opening a project come through as code `catalog` | Scripts test the exit code |
 
 ## For M3b
+
+*Done in M3b part 1, which generates all of the below: see
+[`m3b-gen-decisions.md`](m3b-gen-decisions.md). The cut list now takes the generated pieces
+from the derived model, and `extraPieces` is gone. Kept as written at M3a.*
 
 - `cutList({ derived, items, extraPieces })` takes the fasteners and sleeves cut from stock as
   extra `Piece`s; they group and nest with the bars.

@@ -1,4 +1,6 @@
 import { resolve } from "node:path";
+import { bom } from "#core/bom/bom.ts";
+import { bomCsv, bomJson, bomMarkdown } from "#core/bom/format.ts";
 import { cutList } from "#core/cutlist/cutlist.ts";
 import { cutListCsv, cutListJson, cutListMarkdown } from "#core/cutlist/format.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
@@ -9,7 +11,7 @@ import type { Io } from "./cli.ts";
 import { PROJECT_USAGE } from "./project-usage.ts";
 
 /**
- * `alukit derive` and `alukit cutlist` (design §7.3). Exit codes: 0 fine, 1 the project has
+ * `alukit derive`, `alukit cutlist` and `alukit bom` (design §7.3). Exit codes: 0 fine, 1 the project has
  * errors, 2 a usage error. Without a server (M4a) they run the core in-process.
  */
 
@@ -82,6 +84,19 @@ export async function projectCommand(
       for (const d of derived.diagnostics) io.err(line(d));
     }
     return hasErrors ? 1 : 0;
+  }
+
+  if (cmd === "bom") {
+    const b = bom({ derived, items });
+    const all = sortDiagnostics([...derived.diagnostics, ...b.diagnostics]);
+    if (args.format === "json") {
+      io.out(bomJson({ ...b, diagnostics: all }).trimEnd());
+    } else {
+      const shown = { ...b, diagnostics: [] };
+      io.out((args.format === "csv" ? bomCsv(shown) : bomMarkdown(shown)).trimEnd());
+      for (const d of all) io.err(line(d));
+    }
+    return all.some((d) => d.severity === "error") ? 1 : 0;
   }
 
   const cl = cutList({ derived, items });

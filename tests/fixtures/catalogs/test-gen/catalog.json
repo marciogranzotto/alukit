@@ -1,0 +1,75 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-gen",
+  "name": "Generation test catalog (synthetic)",
+  "vendor": "test-gen-vendor",
+  "currency": "BRL",
+  "prov": { "src": "est", "note": "synthetic test data for generation (M3b), not a vendor's" },
+  "systems": {
+    "rail-g": { "type": "rail", "family": "G", "size": 20 }
+  },
+  "items": {
+    "RAIL-G": {
+      "kind": "bar",
+      "name": "Linear rail G (synthetic)",
+      "shape": "rail",
+      "section": "RAIL-G",
+      "system": "rail-g",
+      "material": "test:s235",
+      "mass_kg_per_m": 2.2,
+      "rail": {
+        "pitch_mm": 60,
+        "E_min_mm": 20,
+        "E_max_mm": 50,
+        "hole": { "thread": "M5", "d_mm": 6, "cbore_d_mm": 9.5, "cbore_depth_mm": 8.5 }
+      }
+    },
+    "BAR-G": {
+      "kind": "bar",
+      "name": "Flat bar 20x10 (synthetic)",
+      "shape": "flat",
+      "section": "FB-20x10",
+      "material": "test:s235"
+    },
+    "CAR-G": {
+      "kind": "carriage",
+      "name": "Carriage G (synthetic)",
+      "rail_system": "rail-g",
+      "mass_kg": 0.35,
+      "bbox_mm": [[-35, -22, -5], [35, 22, 20]],
+      "datums": { "run": [0, 0, 0] }
+    },
+    "END-40": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "End connector 40 (synthetic)",
+      "fits": ["test:s40-c8"],
+      "mass_kg": 0.03,
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M8", "depth_mm": 20 },
+        { "op": "access-hole", "on": "butting", "d_mm": 7, "from_end_mm": 20, "depth_mm": 10 },
+        { "op": "through-hole", "on": "through", "d_mm": 8.5 }
+      ]
+    },
+    "SCR-M5x25": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M5x25",
+      "thread": "M5",
+      "length_mm": 25,
+      "head": "ISO 4762",
+      "class": "8.8",
+      "mass_kg": 0.006
+    },
+    "TNUT-M5": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "T-nut M5, groove 8",
+      "thread": "M5",
+      "groove": "test:c8",
+      "fits": ["test:s40-c8"],
+      "insertion": "drop-in",
+      "mass_kg": 0.004
+    }
+  }
+}

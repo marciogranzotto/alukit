@@ -4,11 +4,24 @@ import type { ItemSource } from "../items.ts";
 import { type Doc, parseProject } from "../project/parse.ts";
 import type { Expr, Face } from "../project/schema.ts";
 import type { V3 } from "../vec.ts";
+import { attach } from "./attach.ts";
 import { Ctx } from "./context.ts";
 import { resolveEnds } from "./ends.ts";
 import { expandPatterns } from "./patterns.ts";
 import { nodePoint, placeBar, placePivot, placeRun } from "./place.ts";
-import type { BarLengths, EndFace, EndReport, PlacedBar, PlacedPivot, PlacedRun } from "./types.ts";
+import type {
+  BarLengths,
+  DerivedPart,
+  EndFace,
+  EndReport,
+  FaceResult,
+  HardwareUse,
+  PlacedBar,
+  PlacedPivot,
+  PlacedRun,
+  RailLayout,
+  StockPiece,
+} from "./types.ts";
 
 /**
  * `derive(doc, items) → Derived` (design §5): a pure function. M3a runs stages 1–3: resolve
@@ -17,24 +30,45 @@ import type { BarLengths, EndFace, EndReport, PlacedBar, PlacedPivot, PlacedRun 
  * cannot resolve is left out while the rest derives (§5.1).
  */
 
-/** A hole a person adds in `ops` (§4.4), valued: along the axis from the named design point. */
-export interface ResolvedOp {
+/**
+ * A hole on a bar (§4.4): one a person adds in `ops`, or one stage 4 generates (§5.1), valued:
+ * along the axis from the named design point.
+ */
+export interface HoleOp {
   op: "hole";
   face: Face;
   from: "a" | "b";
   at: number;
+  /** Across the face from its centre line, in §4.3's u (generated holes only). */
+  across?: number;
   d?: number;
   thread?: string;
   depth?: number;
   csk?: { d: number; angle: number };
   cbore?: { d: number; depth: number };
+  /** The connection that generated it. */
+  by?: string;
 }
+
+/** A tapped hole in a bar's end, along its axis: a splice stud's, an end connector's (§5.1). */
+export interface EndTapOp {
+  op: "end-tap";
+  from: "a" | "b";
+  thread: string;
+  depth?: number;
+  by: string;
+}
+
+export type ResolvedOp = HoleOp | EndTapOp;
 
 export interface DerivedBar {
   placed: PlacedBar;
   lengths: BarLengths;
   ends: { a: EndReport; b: EndReport };
+  /** The holes a person wrote, then the machining stage 4 generates (§5.1). */
   ops: ResolvedOp[];
+  /** A rail's hole layout (§4.7). */
+  rail?: RailLayout;
 }
 
 export interface Derived {
@@ -46,6 +80,14 @@ export interface Derived {
   runs: ReadonlyMap<string, PlacedRun>;
   pivots: ReadonlyMap<string, PlacedPivot>;
   faces: ReadonlyMap<string, EndFace>;
+  /** Parts, placed or counted only (§4.7), in id order. */
+  parts: ReadonlyMap<string, DerivedPart>;
+  /** Face connections' contacts and fastenings (§4.5), in id order. */
+  fastenings: ReadonlyMap<string, FaceResult>;
+  /** Fasteners and sleeves cut from bar stock (§4.5): the cut list nests them with the bars. */
+  pieces: readonly StockPiece[];
+  /** Every counted item that is not a bar or a part: connectors, fastener sets, stacks (§5.4). */
+  hardware: readonly HardwareUse[];
   diagnostics: Diagnostic[];
 }
 
@@ -95,6 +137,9 @@ export function derive(raw: unknown, items: ItemSource): Derived {
     if (l) bars.set(id, { placed: pb, ...l, ops: resolveOps(ctx, id) });
   }
 
+  // Stage 4: rail holes, parts, face contacts and fastenings, generated machining, hardware.
+  const gen = attach(ctx, bars, runs);
+
   return {
     doc: ctx.doc,
     params,
@@ -103,6 +148,10 @@ export function derive(raw: unknown, items: ItemSource): Derived {
     runs,
     pivots,
     faces: s3.faces,
+    parts: gen.parts,
+    fastenings: gen.fastenings,
+    pieces: gen.pieces,
+    hardware: gen.hardware,
     diagnostics: ctx.d.sorted(),
   };
 }

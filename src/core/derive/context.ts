@@ -2,7 +2,7 @@ import { Diagnostics } from "../diagnostics.ts";
 import { type Ast, ExprError, type ExprScope, evalNumber, type Value } from "../expr.ts";
 import type { ItemSource } from "../items.ts";
 import type { Doc } from "../project/parse.ts";
-import type { Bar, Connection, Expr, Node, Param, Part } from "../project/schema.ts";
+import type { Bar, Connection, Expr, Node, Param, Part, RailHolesSel } from "../project/schema.ts";
 import { AXIS, type AxisName, type V3 } from "../vec.ts";
 import type { Copy, PlacedBar, PlacedPivot, PlacedRun } from "./types.ts";
 
@@ -16,6 +16,21 @@ import type { Copy, PlacedBar, PlacedPivot, PlacedRun } from "./types.ts";
 export interface Entity<T> {
   spec: T;
   copy?: Copy;
+}
+
+/** A pattern's copies (§4.7): copy k's step along the pattern's axis, skipped copies left out. */
+export interface PatternPlan {
+  steps: readonly (readonly [number, number])[];
+  along?: string;
+  dir?: V3;
+}
+
+/** A pattern whose copies stand at a selection of rail holes (§4.7). */
+export interface RailPattern {
+  template: readonly string[];
+  along: string;
+  sel: true | RailHolesSel;
+  skip: ReadonlySet<number>;
 }
 
 const BUSY = Symbol("busy");
@@ -34,6 +49,14 @@ export class Ctx {
   readonly bars = new Map<string, Entity<Bar>>();
   readonly conns = new Map<string, Entity<Connection>>();
   readonly parts = new Map<string, Entity<Part>>();
+
+  /** Each valid pattern's copies: their numbers and steps along the axis (§4.7). */
+  readonly patternPlans = new Map<string, PatternPlan>();
+  /**
+   * Patterns at a rail's holes (§4.7): parts placed in stage 4, since holes follow the cut.
+   * Their template parts are placed only by the pattern.
+   */
+  readonly railPatterns = new Map<string, RailPattern>();
 
   readonly placedBars: Memo<PlacedBar> = new Map();
   readonly placedNodes: Memo<V3> = new Map();
