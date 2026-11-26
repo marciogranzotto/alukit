@@ -62,10 +62,12 @@ function order(value: unknown, schema: JsonSchema, spec: CanonicalSpec, path: Pa
   }
   if (!isObject(value)) return value;
   const b = branchFor(schema, value);
-  const declared = propertyOrder(b).filter((k) => Object.hasOwn(value, k));
+  // An undefined value is no value, as JSON.stringify writes it.
+  const present = (k: string) => Object.hasOwn(value, k) && value[k] !== undefined;
+  const declared = propertyOrder(b).filter(present);
   const known = new Set(declared);
   const rest = Object.keys(value)
-    .filter((k) => !known.has(k))
+    .filter((k) => present(k) && !known.has(k))
     .sort(compareIds);
   const out: Record<string, unknown> = {};
   for (const k of [...declared, ...rest]) {

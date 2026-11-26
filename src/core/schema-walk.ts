@@ -146,6 +146,42 @@ export function keySchema(objectSchema: JsonSchema): JsonSchema | undefined {
 export type PathKey = string | number;
 
 /**
+ * True for an expression's schema (§4.9): a value that may be a number or a free string. Labels,
+ * ids and names are strings only, or carry a pattern.
+ */
+export function isExprSchema(schema: JsonSchema): boolean {
+  const bs = branches(schema);
+  return (
+    bs.some((b) => b.type === "number") &&
+    bs.some((b) => b.type === "string" && b.pattern === undefined && b.enum === undefined)
+  );
+}
+
+/** Visits every string in `value` that sits where its schema takes an expression. */
+export function visitExprs(
+  value: unknown,
+  schema: JsonSchema,
+  visit: (src: string, path: readonly PathKey[]) => void,
+  path: PathKey[] = [],
+): void {
+  if (typeof value === "string") {
+    if (isExprSchema(schema)) visit(value, path);
+    return;
+  }
+  const b = branchFor(schema, value);
+  if (Array.isArray(value)) {
+    value.forEach((v, i) => {
+      visitExprs(v, itemSchema(b, i), visit, [...path, i]);
+    });
+    return;
+  }
+  if (!isObject(value)) return;
+  for (const [k, v] of Object.entries(value)) {
+    visitExprs(v, propertySchema(b, k), visit, [...path, k]);
+  }
+}
+
+/**
  * Visits every string in `value` whose schema carries the regular expression `source`, and
  * every record key whose key schema does. `visit` gets the string and its path.
  */
