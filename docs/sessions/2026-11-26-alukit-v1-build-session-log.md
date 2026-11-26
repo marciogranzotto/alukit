@@ -33,7 +33,8 @@ in the gitignored `internal/session-notes.md`.*
 | Milestone | State | Notes |
 |---|---|---|
 | M0 scaffold | **done** (14:16), pushed `81a8a8e` | Every done-when check passed in a fresh clone on Node 26.13.1 / pnpm 12.23.0 (agent), and again on the coordinator's own run. First CI run on GitHub: **success** (run 45866365568). |
-| M1.5 paper model | running | in `internal/paper-model/` (gitignored) |
+| M1.5 paper model | **done** (14:48) | 254 of 254 bodies in the document: 88 clean, 166 awkward, 0 missing. 20 schema gaps (P1–P20) with fixes. The end-plane rules reproduce every drawn bar length within 0.05 mm. Public summary: [`docs/reviews/m1.5-paper-model-findings.md`](../reviews/m1.5-paper-model-findings.md). |
+| Design draft 2.1 | running (Opus), launched 14:50 | folds in P1–P20 |
 | M1 catalog core | running (Opus), launched 14:17 | includes a folded-in review of M0 |
 
 ## Decisions taken autonomously
@@ -64,3 +65,14 @@ in the gitignored `internal/session-notes.md`.*
   - Re-verified by the coordinator, then pushed.
 - **14:17**: M1 (catalog core) launched on Opus, with the M0 review folded in: subpath imports,
   the server path guard, CI action versions.
+- **14:17**: First CI run green. Working rule added: while an agent commits on `main` in the
+  shared working tree, the coordinator doesn't push. Later milestones run on their own branches,
+  in worktrees.
+- **14:48**: M1.5 done.
+  - The biggest gaps: end planes taken from another bar's end (27 bodies), bolts through three or
+    more bodies, fasteners and sleeves cut from bar stock, rail holes measured from the factory
+    end, loose bill items, and a price band for low/likely/high totals.
+  - The paper derive also found three lines where the reference project's own bill disagrees with
+    its drawing. That went to the reference project's session as an FYI; details are internal.
+- **14:50**: Design draft 2.1 launched on Opus to fold in P1–P20. Its catalog-schema changes will
+  reach M1's code as a follow-up.
