@@ -7,7 +7,7 @@ import { type Face, isValuedObject, num } from "./schema/common.ts";
 import type { GrooveType, Material, System } from "./schema/files.ts";
 import type { Item } from "./schema/items.ts";
 import type { Offer } from "./schema/offers.ts";
-import { GENERATORS, type GrooveDims } from "./sections/generators/index.ts";
+import { GENERATORS, type GeneratorContext, type GrooveDims } from "./sections/generators/index.ts";
 
 /**
  * Several loaded catalogs, linked (design §3.1): references resolve across them, a catalog id
@@ -333,6 +333,26 @@ function boxRing([a, b]: readonly [Vec2, Vec2]): Vec2[] {
  * Builds a section's geometry: generators run here, with groove types resolved through the set.
  * Returns the problems instead when it cannot be built.
  */
+/** A generator's context for a section: its groove types, resolved in the section's catalog. */
+export function generatorContext(set: CatalogSet, ls: LoadedSection): GeneratorContext {
+  return {
+    groove(ref: string): GrooveDims | undefined {
+      const g = set.get("groove", ref, ls.catalog)?.value;
+      return (
+        g && {
+          opening_mm: num(g.opening_mm),
+          lip_mm: num(g.lip_mm),
+          depth_mm: num(g.depth_mm),
+          undercut_mm: num(g.undercut_mm),
+          ...(g.taper_from_mm !== undefined && g.bottom_mm !== undefined
+            ? { taper_from_mm: num(g.taper_from_mm), bottom_mm: num(g.bottom_mm) }
+            : {}),
+        }
+      );
+    },
+  };
+}
+
 export function buildSection(
   set: CatalogSet,
   ls: LoadedSection,
@@ -341,22 +361,7 @@ export function buildSection(
   if (s.fidelity === "parametric") {
     const gen = GENERATORS[s.generator];
     if (!gen) return { problems: [`no generator "${s.generator}"`] };
-    const ctx = {
-      groove(ref: string): GrooveDims | undefined {
-        const g = set.get("groove", ref, ls.catalog)?.value;
-        return (
-          g && {
-            opening_mm: num(g.opening_mm),
-            lip_mm: num(g.lip_mm),
-            depth_mm: num(g.depth_mm),
-            undercut_mm: num(g.undercut_mm),
-            ...(g.taper_from_mm !== undefined && g.bottom_mm !== undefined
-              ? { taper_from_mm: num(g.taper_from_mm), bottom_mm: num(g.bottom_mm) }
-              : {}),
-          }
-        );
-      },
-    };
+    const ctx = generatorContext(set, ls);
     const problems = gen.problems(s.params, ctx);
     if (problems.length > 0) return { problems };
     const g = gen.generate(s.params, ctx);
