@@ -1,0 +1,328 @@
+# AluKit user guide
+
+This guide covers a project day to day: what is in its folder, what the document holds, how to
+draw in the viewer, how to read the outputs, and how to keep catalog data and history under
+control. The examples are lines of the synthetic cart project in
+[`tests/fixtures/cart`](../tests/fixtures/cart) (its catalogs are test data, not a real vendor's).
+The [design](design.md) is the full reference; the CLI's `--help` lists every option.
+
+Lengths are in millimetres, angles in degrees, masses in kilograms, and money in integer minor
+units (`_minor`) with a currency. The world is right-handed with **Z up**.
+
+## The project folder
+
+A project is a folder wherever you keep it:
+
+```
+my-frame/
+  alukit.json          the document: everything you decided
+  alukit.lock.json     the catalog data the document uses, pinned
+  revisions/           named revisions you saved (optional)
+  .alukit/             per-machine state: the server's address and token, the edit lock
+```
+
+`alukit new my-frame --catalog forseti --currency BRL` creates the first two files and adds
+`.alukit/` to the folder's `.gitignore` line. Commit the document, the lock and `revisions/`;
+leave `.alukit/` out.
+
+- **`alukit.json`** holds only what you chose. Everything else (cut lengths, end angles, holes,
+  hardware, masses, prices) is derived from it and never stored in it.
+- **`alukit.lock.json`** holds the catalog data the document refers to (the items, their sections
+  and offers) as it was when pinned. AluKit derives from the lock, not from the live catalogs, so
+  the same project gives the same answer next month even if a vendor changes a price. See
+  [Locks](#locks).
+- **`revisions/<name>.json`** is a named revision: the document, its lock, every output and a
+  stamp. See [Revisions and diff](#revisions-and-diff).
+- **`.alukit/`** is per machine. While `alukit serve` runs it holds `owner.json` (port, process,
+  token, mode 0600) and `edit.lock`, so a second writer is refused.
+
+You can edit `alukit.json` by hand. A running server takes a valid edit in as one step of its
+history; an invalid file makes the project read-only until it is valid again. `alukit fmt <dir>`
+rewrites the files into canonical form (`--check` only reports), so diffs stay small.
+
+## The document
+
+A document is a set of entities with ids: a letter prefix and a number. Commands assign ids and
+never reuse them. A bar's end is `b7.a` or `b7.b`. This is the cart, cut to the pieces that
+show each kind of thing.
+
+**Params** are named numbers, or expressions, or valued fields that say where a number came from.
+Anywhere a number goes, an expression may go.
+
+```json
+"params": {
+  "D": "600",
+  "H": { "v": 900, "src": "meas", "note": "under a bench top" },
+  "W": "1200"
+}
+```
+
+**Points** are `[x, y, z]`, a node id, a point on a bar that follows it (`{ "on": ... }`), or a
+hinge (`{ "pivot": "c13" }`). **Bars** run from end `a` to end `b`; `item` picks the profile (or
+the `defaults`), `anchor` names the section point that sits on the line, `roll_deg` turns the
+section.
+
+```json
+"bars": {
+  "b1": { "a": [0, 0, 0], "b": [0, 0, "H"], "anchor": "-x-y", "tags": ["post"] },
+  "b5": { "item": "test:TS4080", "a": [0, 0, "H"], "b": ["W", 0, "H"], "anchor": "+x+y",
+          "roll_deg": 90, "label": "top rail, front" }
+}
+```
+
+**Connections** decide where bars end and how they are joined. `butt` stops ends on a through
+bar; `miter`, `splice` and `pivot` join two ends, collinear ends or a hinge; `face` holds layers
+face to face with bolts, screws or T-nuts and generates the holes and hardware.
+
+```json
+"connections": {
+  "c1": { "type": "butt", "through": "b5", "ends": ["b1.b", "b2.b", "b7.a", "b8.a"] },
+  "c9": { "type": "splice", "ends": ["b11.b", "b12.a"], "connector": "test:SPL-40" }
+}
+```
+
+A connection that stops a bar cuts it: `b7` is 440 long because it butts between the posts'
+faces. You do not type that length.
+
+**Parts** are catalog items that are not bars: carriages, T-nuts, brackets. They sit on a station
+of a bar (`on`), at a world pose (`at`), or are unplaced lines that are counted and priced but
+not drawn.
+
+```json
+"parts": {
+  "p1": { "item": "test:CAR20", "on": { "bar": "r2", "at_mm": 100, "face": "+y" }, "label": "carriage" },
+  "p2": { "item": "test:TNUT-M8", "qty": 10, "unplaced": true, "why": "spares for light fixings" }
+}
+```
+
+**Patterns** repeat a template along a bar by pitch and count; the copies stay live (`b26@2`).
+
+<a id="items"></a>
+**Items** (`items`, named `project:<id>` by parts) are what no catalog holds: a `plate` with an
+outline and holes, a `bent-angle` with its legs, bend radius and K-factor, a `generic` item, or a
+`placeholder` for something not chosen yet, with a bounding box, an estimated mass and an
+estimated price. Holes are through, threaded (`"thread": "M6"`), countersunk (`csk`) or
+counterbored (`cbore`).
+
+```json
+"items": {
+  "plate-a": { "kind": "plate", "name": "Motor plate", "material": "test:s235", "thickness_mm": 8,
+               "outline": [[0, 0], [160, 0], [160, 100], [30, 100], [0, 70]],
+               "holes": [{ "at": [20, 20], "thread": "M6" },
+                         { "at": [140, 20], "d_mm": 6.6, "csk": { "d_mm": 12.4, "angle_deg": 90 } }],
+               "datums": { "mount": [80, 50, 0] } },
+  "motor": { "kind": "placeholder", "name": "Gear motor, model to be chosen",
+             "bbox_mm": [[-60, -45, 0], [60, 45, 110]],
+             "price_minor": { "v": 45000, "src": "est", "low": 30000, "high": 70000 } }
+}
+```
+
+**Variants** override params, swap items, and scope entities with `only_in` and `not_in`. Add a
+taller option with shelf rails, with no `--variant` flag meaning the default:
+
+```sh
+alukit do table '[
+  {"cmd": "addVariant", "args": {"name": "standard", "variant": {}, "default": true}},
+  {"cmd": "addVariant", "args": {"name": "tall", "variant": {"params": {"H": 900}}}}
+]'
+```
+
+An entity with `"only_in": ["tall"]` exists only in that variant. Every output takes
+`--variant`, and `alukit diff <dir> --variant standard --variant tall` compares two.
+
+**Costs and price bands** cover what is not a catalog line. `costs` are lines (labour,
+machining, freight, fabrication, contingency); each has a low, likely and high, a source, and may
+be in another currency (`fx`) or a percentage of the subtotal. `price_bands` give catalog prices
+a low and a high by supplier or kind.
+
+```json
+"costs": [
+  { "id": "K1", "label": "assembly", "kind": "labour", "low_minor": 40000, "likely_minor": 60000,
+    "high_minor": 90000, "src": "est" },
+  { "id": "K5", "label": "contingency", "kind": "contingency", "pct": 10, "of": "subtotal" }
+],
+"price_bands": [
+  { "supplier": "test-steel", "low_pct": -10, "high_pct": 25, "src": "est", "why": "steel prices move weekly" }
+]
+```
+
+A **provenance** (`src`) says how a number is known: `src` (a source, with `ref` and the date
+`read`), `meas`, `est`. Estimates are fine while you plan, and they block the order until
+replaced.
+
+**Open items** are questions that must be answered before you order. `scope` limits which
+suppliers they hold.
+
+```json
+"open": [
+  { "id": "O1", "text": "confirm the rail screws' length against the rail's counterbore",
+    "blocks": "order", "scope": ["c35"] }
+]
+```
+
+**Checks** are your own rules (`{ "value": "len(b3)", "op": ">", "limit": 800, "text": "..." }`);
+`alukit check` reports each one's margin. The skill's
+[document section](../skills/alukit/SKILL.md) lists the expression functions.
+
+## Editing
+
+The one edit path is commands: `alukit do <dir> '<json>'` applies a batch atomically and refuses
+a command that does not validate, with a structured error. `alukit add bar|point|connection|part`
+is sugar for the common ones, and the app's tools send the same commands. `alukit query <dir>
+tag:knee --summary` reads entities back. With a server running, the CLI and every open tab edit
+through it and see each other's changes at once; `alukit undo`, `redo` and `log` use its
+history, whoever made a step.
+
+Check after each batch: `alukit check <dir>` exits 1 on an error, prints warnings (an unconnected
+end, an item with no offer) and reports your checks.
+
+## Drawing in the viewer
+
+`alukit serve <dir>` prints an address with a token and opens it. The server answers only its own page,
+and the token changes on every start.
+
+The left side has the **Project** tree (bars, connections, parts, patterns, items) and the
+**Catalog** browser (vendor, kind, family, search; each card shows the section, key data with its
+source, options and offers, and **Set as palette**). The centre is the 3D view, the right side
+the properties of the selection (every catalog number says where it comes from), and the bottom
+drawer holds the outputs.
+
+| Tool | Key | How |
+|---|---|---|
+| Select | `V` | click to pick, Ctrl or Cmd-click to toggle, Shift-drag a box, `Esc` clears |
+| Draw bar | `B` | click a start, then click an end, or type a length and press `Enter` |
+| Connect | `C` | pick a through bar and the ends that butt, two ends for a miter or splice, or two or more bars for a face joint, then apply |
+| Place part | `P` | click a face or groove; type the distance from an end; roll in quarter turns |
+| Pattern | button | take the selection as the template, click the bar to repeat along, give pitch and count |
+| Measure | `M` | two snapped points: the distance and its components |
+
+While drawing:
+
+- The point snaps to nodes, bar ends, face and groove centre lines, face centres, the datums and
+  face centres of parts, and the grid (10 mm).
+- The line follows the world X, Y or Z axis nearest your pointer; hold **Shift** to leave the
+  axes and move freely in the work plane.
+- Type digits for a length (`Backspace` edits it) and press `Enter`; once you type, nothing pulls
+  the line.
+- `R` rolls the section a quarter turn; `A` cycles the anchor (centre, corners, faces, datums).
+- `W` sets the work plane to a face: press it, then click a bar's face; press it again for the
+  ground. The plane defaults to the ground.
+- *Auto-connect* (a check box of the tool, on by default) butts each end that meets another bar.
+  Switch it off when you want to join the ends yourself with Connect.
+- `Esc` cancels the gesture, then returns to Select. `Ctrl/Cmd+Z` undoes the last step, and
+  `Shift` with it redoes.
+
+Views: the toolbar has Iso, Top, Front, Side, Left, Back and Bottom, `O` toggles perspective and
+orthographic, `F` fits the selection (or everything). A hinge, a bolted face joint and anything
+else the tools do not cover is one `alukit do` away.
+
+Every gesture is one step in the history. The drawer's tabs hold the outputs described next; its
+Order and Costs tabs have a date for the staleness of prices. If the file on disk stops being
+valid, a banner says why and the tools are disabled until it is fixed.
+
+## Reading the outputs
+
+**Cut list** (`alukit cutlist`) lists, per item and option, each piece with its quantity, its cut
+length at the long point, the cut angle on each end, and its machining (holes and taps, from a
+named end, on a named face). For an item sold by the bar the pieces are nested into stock bars
+with kerf and end trim, and you see the stock bar, its price, its offcut and its waste:
+
+```
+| 2 | 300.00 |  | square / square | Ø11.00 hole 100.00 mm from end a on face -y, -15.00 across; ... | b20, b23 |
+```
+
+**BOM** (`alukit bom`) is every item and quantity grouped by kind, with its mass: as the catalog
+publishes it, else computed from the section and material (the table says which). Plates and bent
+angles weigh from their material.
+
+**Order** (`alukit order`) is the buying list per supplier: the offer, quantity, unit price, low
+to high, and what each line is for. Each supplier is **READY** or **BLOCKED**, with every reason,
+and the totals follow, in the project's currency. A cost line that covers an item (a fabricator
+drilling it, say) replaces the item's price. The rules, and what each blocks:
+
+| Rule | Blocks by default | When |
+|---|---|---|
+| `check-error` | yes | a check failed; blocks the suppliers of the entities it names |
+| `open-item` | yes | an open item with `"blocks": "order"`, within its `scope` |
+| `placeholder` | yes | a placeholder is on the list; blocks its own line under "unsourced" |
+| `missing-price` | yes | no offer or no price, or no exchange rate |
+| `est-price` | yes | the price is an estimate |
+| `out-of-stock` | yes | the offer was read as out of stock |
+| `option-not-sold` | yes | the option (a finish) is not sold |
+| `stale-price` | warns | the price was read more than 30 days before `--as-of` (today by default) |
+
+Set a rule to `block`, `warn` or `off` in the document's `order_rules`. `alukit order` exits 1
+while any supplier is blocked, which is what you want in a script. The cart is blocked, on
+purpose: `alukit order tests/fixtures/cart` shows an open item, a missing price, an estimate and
+a placeholder.
+
+**Costs** (`alukit costs`) is the cost lines and the low, likely and high totals with their
+provenance, including the share of the total that is sourced and the share that is estimated.
+
+**Machining sheet** (`alukit machining`) is for the project's own plates and bent angles. Each
+part has its material, thickness, quantity and maker, its outline (or an angle's legs, bend
+and blank, with the bend allowance), and a table of holes measured from the part's datum, with
+type, size and the face to drill from:
+
+```
+| h2 | 140.00 | 20.00 | countersunk | Ø6.60, countersink Ø12.40 at 90.00°, 2.90 deep, through | front |
+```
+
+A bar's machining is on the cut list, from a named end; the sheet's last table lists the cut-list
+lines that carry some.
+
+`--format md|csv|json` works on the output commands (`md|json` for `machining`).
+
+## Locks
+
+A new item you name is pinned into the lock automatically. To take in what a vendor changed since,
+run:
+
+```sh
+alukit lock update my-frame --dry-run    # print what would move, write nothing
+alukit lock update my-frame              # refresh every item
+alukit lock update my-frame --item forseti:PF40-01
+```
+
+The output lists each change (a price, a section, a stock length) and what it does to cut
+lengths. An entry that live catalogs no longer have is kept and reported, never dropped
+silently, and `lock update` refuses to write when the catalogs have errors. Add `--frozen` to any
+output to make an unpinned item an error rather than reading it live, which is what you want in a
+build you must reproduce.
+
+## Revisions and diff
+
+A revision is a named, immutable copy of what you published:
+
+```sh
+alukit revision save my-frame "v1"       # document, lock, every variant's outputs, a stamp
+alukit revision list my-frame
+alukit revision show my-frame "v1" --output order
+alukit revision verify my-frame "v1"     # re-derive and report any drift; exit 1 on drift
+```
+
+`verify` opens no catalog: it derives again from the stored document and lock and compares every
+output. The report names every field that moved; a different AluKit or Node version is noted, not counted as drift.
+
+`alukit diff <a> [<b>]` shows what moved between two sides: entities, cut lengths, BOM and order
+lines, prices, totals and the lock. A side is a project folder or its `alukit.json`, a revision
+file, `rev:<name>` (a revision of the project in the current folder), or `git:<ref>:<path>`; each
+side derives with its own lock.
+
+```sh
+cd my-frame
+alukit diff rev:v1 .                            # since the revision
+alukit diff git:main:. .                        # since the main branch's committed copy
+alukit diff . --variant standard --variant tall  # one side, two variants
+```
+
+## Exports
+
+`alukit export glb <dir> -o model.glb` writes the model as binary glTF: Y up, metres, a node per
+bar, part and fastener named `<id> <label|item>`, with the item, SKU, options and cut length in
+`extras`. A project plate's or angle's holes are children of its node. The same project gives the
+same bytes. `alukit snapshot <dir> --view iso --size 1600x1000 -o shot.png` renders a view to
+PNG in headless Chromium; the document can name its own views.
+
+Next: the [design](design.md) for the rules behind each of these, and the
+[decision notes](notes/README.md) for what was settled while building them.
