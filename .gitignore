@@ -1,0 +1,13 @@
+# User projects never live in this repo (open them from any folder)
+projects/
+
+# Downloads, importer scratch, caches
+.cache/
+
+# Tooling
+node_modules/
+dist/
+.DS_Store
+
+# Internal notes behind the public docs (never committed)
+internal/
