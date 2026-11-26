@@ -41,7 +41,7 @@ in the gitignored `internal/session-notes.md`.*
 | M3b part 3: offers, order list, costs | running (Opus, worktree), launched 17:05 | pack cover, blocking rules, price bands (G26), `alukit order` |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | running (Opus, worktree), launched 17:27 | includes the G-A follow-up: commands treat `plane.normal` bar names as references |
-| M2b rest of Forseti | running (Sonnet, worktree), launched 17:27 | all 1,196 SKUs; a section for every profile stem |
+| M2b rest of Forseti | **done** (17:43), merged, pushed | All 1,196 orderable SKUs map to offers (1,208 offers, 1,034 items: 497 generic, 235 fasteners, 151 accessories, 100 connectors, 31 bars, 12 panels, 8 carriages). All 27 profile stems have sections (8 exact, 19 parametric). New connectors are marked as having no mounting model yet. Gate: 322 tests. Calls: [`docs/notes/m2b-decisions.md`](../notes/m2b-decisions.md). |
 | M3b part 2: commands, canonical form, lock | **done** (17:15), merged `7a1e18d`, pushed | All 36 §6 commands, pure, with undo/redo restoring document and lock byte for byte; atomic batches; canonical form + `fmt`; the lock pins catalog data and derive reads only the lock; `new/do/add/query/check/lock update`. Calls: [`docs/notes/m3b-doc-decisions.md`](../notes/m3b-doc-decisions.md). |
 | Early acceptance slice | **passed** (16:14) | All 75 T-slot pieces of the reference frame are within 0.5 mm of the record's drawn length; the largest difference is 0.04 mm. No AluKit bugs. Two pieces needed stand-ins (gaps G-A and G-B below). Details are internal. |
 | M1 catalog core | **done** (14:56), pushed `54ff321` | 94 tests. The 40x40 básico computes 553.53 mm², Ix 9.1287 and Iy 9.1307 cm⁴. 8 generators, worst 0.0025% from closed form. 43 schema calls in [`docs/notes/m1-decisions.md`](../notes/m1-decisions.md). Re-verified by the coordinator. |
@@ -162,3 +162,11 @@ in the gitignored `internal/session-notes.md`.*
 - **17:27**: Pushed `1d827cf`. Launched M4a (viewer and server, with the G-A command follow-up
   folded in) and M2b (the rest of Forseti), both in worktrees. M3b part 3 is still running; it
   predates part 2's locks, so its merge will need lock updates.
+- **17:43**: M2b done and merged (3 commits, no conflicts).
+  - The importer refuses to write unless every orderable SKU has an offer; a committed SKU list
+    keeps the test runnable without the raw dump.
+  - New inconsistencies: PF20-11's printed mass doesn't match its area (accepted mismatch); PF50-01
+    is printed with another profile's table (no A or I taken); four profiles have no table or
+    drawing; six variations are listed at price 0.
+  - A new system `s50-c8` assumes base 40's groove (stated in its name).
+  - Shop weights are shipping weights, kept as `ship_mass_kg`, not as item mass.
