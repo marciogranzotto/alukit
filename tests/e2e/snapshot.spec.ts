@@ -1,6 +1,9 @@
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { exampleCommands, workedExample } from "../../src/cli/skill-example.ts";
 import { cli, type Served, scratchProject, serve } from "./helpers.ts";
 import { coverage, decodePng, differing, type Image } from "./png.ts";
 
@@ -47,6 +50,32 @@ test("renders a non-blank PNG of the size asked for; the same state twice gives 
     expect(bad.code).toBe(2);
   } finally {
     await p.remove();
+  }
+});
+
+test("the skill's worked example runs whole, as written, and its snapshot shows the table", async () => {
+  test.setTimeout(180_000);
+  // The unit suite runs the example but its snapshot, which needs the built app (skill.test.ts).
+  const skill = await readFile(
+    fileURLToPath(new URL("../../skills/alukit/SKILL.md", import.meta.url)),
+    "utf8",
+  );
+  const dir = await mkdtemp(join(tmpdir(), "alukit-e2e-skill-"));
+  try {
+    const shots: string[][] = [];
+    for (const words of exampleCommands(workedExample(skill))) {
+      const args = words.slice(1);
+      const r = await cli(args, dir);
+      expect(r.code, `alukit ${args.join(" ")}\n${r.err}`).toBe(0);
+      if (args[0] === "snapshot") shots.push(args);
+    }
+    expect(shots).toHaveLength(1);
+    // As the skill says: 1600 x 1000 at the iso view, the table drawn over the background.
+    const img = decodePng(await readFile(join(dir, "table", "exports", "table.png")));
+    expect([img.width, img.height]).toEqual([1600, 1000]);
+    expect(coverage(img)).toBeGreaterThan(0.1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
 });
 

@@ -27,12 +27,16 @@ export interface Served {
   stop(): Promise<void>;
 }
 
-/** Runs the CLI as its own process; resolves with its exit code, output, and timing. */
+/**
+ * Runs the CLI as its own process, in the repository or in `cwd`; resolves with its exit code,
+ * output, and timing.
+ */
 export function cli(
   args: string[],
+  cwd = ROOT,
 ): Promise<{ code: number; out: string; err: string; exitedAt: number }> {
   return new Promise((ok, fail) => {
-    const child = spawn(process.execPath, [MAIN, ...args], { cwd: ROOT });
+    const child = spawn(process.execPath, [MAIN, ...args], { cwd });
     let out = "";
     let err = "";
     child.stdout.on("data", (b: Buffer) => {

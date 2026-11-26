@@ -1,6 +1,6 @@
 ---
 name: alukit
-description: Use when planning, editing or checking a build made from catalog parts with AluKit (aluminium T-slot extrusion, steel sections, rails, brackets, fasteners) — an alukit.json project and its lock, bars, connections, parts, patterns, custom plates and bent angles, variants, the cut list, BOM, order list and costs, the machining sheet, revisions, diffs or a GLB export. Triggers on "alukit", "alukit.json", "alukit.lock.json", "cut list for this frame", "T-slot frame", "aluminium profile frame", "add a bar", "order list", "machining sheet", "revision save", "alukit diff", "export glb".
+description: Use when planning, editing or checking a build made from catalog parts with AluKit (aluminium T-slot extrusion, steel sections, rails, brackets, fasteners) — an alukit.json project and its lock, bars, connections, parts, patterns, custom plates and bent angles, variants, the cut list, BOM, order list and costs, the machining sheet, revisions, diffs, a snapshot of the model or a GLB export. Triggers on "alukit", "alukit.json", "alukit.lock.json", "cut list for this frame", "T-slot frame", "aluminium profile frame", "add a bar", "order list", "machining sheet", "revision save", "alukit diff", "alukit snapshot", "export glb".
 ---
 
 # AluKit
@@ -9,7 +9,7 @@ AluKit plans mechanical builds made from catalog parts. A project is a folder ho
 document, `alukit.json`, and a lock, `alukit.lock.json`. AluKit derives everything else from
 them: frames and end planes, cut lengths and angles, generated machining and hardware, the cut
 list, the bill of materials, the order list per supplier, costs, the machining sheet for the
-project's own plates and bent angles, checks, and a GLB.
+project's own plates and bent angles, checks, a GLB, and pictures of the model.
 
 Work through the CLI, `alukit`. It is the same core the app uses, and every number it prints is
 derived, so **never compute a cut length, a mass or a price by hand**: change the document,
@@ -141,7 +141,10 @@ items with `"blocks": "order"` hold the order of their scope's suppliers.
    output; `alukit revision verify <dir> "<name>"` re-derives it and exits 1 on any drift.
    `alukit diff git:<ref>:<dir> <dir>` shows what moved since a commit, each side with its own
    lock.
-7. `alukit export glb <dir> -o <file>.glb` for a 3D model (Y up, metres; each node named
+7. `alukit snapshot <dir> -o <file>.png --view iso` to see what you built: a PNG of a standard
+   view (`iso`, `top`, `front`, `side`, `left`, `back`, `bottom`) or one the document names, drawn
+   in headless Chromium the same way every time. Look at it after a batch that moves things.
+8. `alukit export glb <dir> -o <file>.glb` for a 3D model (Y up, metres; each node named
    `<id> <label|item>`, with its item, SKU, options and cut length in `extras`; a project
    plate's or bent angle's holes are its node's children).
 
@@ -205,10 +208,11 @@ alukit bom table
 alukit order table
 alukit diff table --variant standard --variant tall
 
-# Publish, verify, and export the default variant.
+# Publish, verify, export the default variant, and look at it.
 alukit revision save table "Rev A"
 alukit revision verify table "Rev A"
 alukit export glb table -o table/exports/table.glb
+alukit snapshot table -o table/exports/table.png --view iso
 ```
 <!-- end of the worked example -->
 
@@ -222,6 +226,8 @@ What it gives:
 - `alukit diff`: H 750 → 900, the legs' cut lengths, b9, b10 and their butts added, and the
   BOM, order lines and totals that follow.
 - `alukit revision verify`: zero drift in 2 variants.
+- `alukit snapshot`: `table/exports/table.png`, 1600 × 1000, the table seen from the front
+  right, above.
 
 ## Reference
 

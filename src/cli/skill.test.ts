@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { SKILL_DIR } from "./skill.ts";
+import { exampleCommands, workedExample } from "./skill-example.ts";
 import { withReference } from "./skill-reference.ts";
 import { capture } from "./testing.ts";
 
@@ -17,64 +18,6 @@ import { capture } from "./testing.ts";
 
 const MAIN = fileURLToPath(new URL("./main.ts", import.meta.url));
 const SKILL = readFileSync(join(SKILL_DIR, "SKILL.md"), "utf8");
-
-/** The shell commands of the worked example: the fenced block between its markers. */
-function workedExample(text: string): string {
-  const start = text.indexOf("<!-- worked example");
-  const end = text.indexOf("<!-- end of the worked example -->");
-  const block = /```sh\n([\s\S]*?)```/.exec(text.slice(start, end));
-  if (start < 0 || end < start || !block) throw new Error("no worked example in the skill");
-  return block[1] as string;
-}
-
-/**
- * Splits shell text into commands of words: single and double quotes (which may span lines),
- * backslash-newline continuations, and `#` comments. Enough for the example; anything else (a
- * pipe, a redirect, a variable) is refused, so the example stays runnable as written.
- */
-function commands(sh: string): string[][] {
-  const out: string[][] = [];
-  let words: string[] = [];
-  let word: string | undefined;
-  const endWord = () => {
-    if (word !== undefined) words.push(word);
-    word = undefined;
-  };
-  const endCommand = () => {
-    endWord();
-    if (words.length > 0) out.push(words);
-    words = [];
-  };
-  for (let i = 0; i < sh.length; i++) {
-    const c = sh[i] as string;
-    if (c === "'") {
-      const j = sh.indexOf("'", i + 1);
-      word = (word ?? "") + sh.slice(i + 1, j);
-      i = j;
-    } else if (c === '"') {
-      let s = "";
-      i++;
-      while (sh[i] !== '"') {
-        if (sh[i] === "\\") i++;
-        s += sh[i];
-        i++;
-      }
-      word = (word ?? "") + s;
-    } else if (c === "\\" && sh[i + 1] === "\n") {
-      i++;
-      endWord();
-    } else if (c === "\n") endCommand();
-    else if (c === " " || c === "\t") endWord();
-    else if (c === "#" && word === undefined) {
-      while (i < sh.length && sh[i] !== "\n") i++;
-      endCommand();
-    } else if ("|<>;&$`".includes(c))
-      throw new Error(`the example uses "${c}", which a test cannot run as written`);
-    else word = (word ?? "") + c;
-  }
-  endCommand();
-  return out;
-}
 
 /** Runs `alukit <args>` as a process in `cwd`, as a person would. */
 function alukit(cwd: string, args: readonly string[]) {
@@ -101,18 +44,26 @@ describe("the skill's worked example, run as written", () => {
   let dir: string;
   const runs: { args: string[]; code: number | null; out: string; err: string }[] = [];
 
+  /** Commands that need the built app: the end-to-end suite runs them (snapshot.spec.ts). */
+  const later: string[][] = [];
+
   beforeAll(async () => {
     dir = await mkdtemp(join(tmpdir(), "alukit-skill-"));
-    for (const words of commands(workedExample(SKILL))) {
+    for (const words of exampleCommands(workedExample(SKILL))) {
       expect(words[0]).toBe("alukit");
       const args = words.slice(1);
-      runs.push({ args, ...alukit(dir, args) });
+      if (args[0] === "snapshot") later.push(args);
+      else runs.push({ args, ...alukit(dir, args) });
     }
   }, 120_000);
 
   it("runs every command with exit 0", () => {
     expect(runs.length).toBeGreaterThan(10);
     for (const r of runs) expect(r.code, `alukit ${r.args.join(" ")}\n${r.err}`).toBe(0);
+    // It looks at what it built: a snapshot, which the end-to-end suite runs.
+    expect(later).toEqual([
+      ["snapshot", "table", "-o", "table/exports/table.png", "--view", "iso"],
+    ]);
   });
 
   const pieces = (args: string[]) => {
