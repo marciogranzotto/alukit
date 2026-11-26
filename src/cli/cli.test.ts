@@ -27,13 +27,15 @@ describe("cli", () => {
     expect(r).toEqual({ code: 0, out: [pkg.version], err: [] });
   });
 
-  it("lists planned commands as not implemented yet", () => {
-    expect(helpText()).toContain("cutlist | bom | order | costs <dir>");
+  it("lists planned commands as not implemented yet, and the project commands as usable", () => {
+    expect(helpText()).toContain("bom | order | costs <dir>");
     expect(helpText()).toContain("(not implemented yet)");
+    expect(helpText()).toMatch(/\n {2}derive <dir> \[--json\]\n/);
+    expect(helpText()).toMatch(/\n {2}cutlist <dir> \[--format md\|csv\|json\]\n/);
   });
 
   it("refuses planned and unknown commands", async () => {
-    expect((await capture(["cutlist"])).code).toBe(2);
+    expect((await capture(["bom"])).code).toBe(2);
     expect((await capture(["nope"])).code).toBe(2);
   });
 
@@ -129,5 +131,48 @@ describe("alukit catalog", () => {
       },
     );
     expect(JSON.parse(stdout).ok).toBe(true);
+  });
+});
+
+describe("alukit derive and cutlist", () => {
+  const project = (name: string) =>
+    fileURLToPath(new URL(`../../tests/fixtures/${name}`, import.meta.url));
+
+  it("derives a project as JSON: exit 0, alukit.derived/1", async () => {
+    const r = await capture(["derive", project("cart"), "--json"]);
+    expect(r.code).toBe(0);
+    const d = JSON.parse(r.out.join("\n"));
+    expect(d.schema).toBe("alukit.derived/1");
+    expect(d.bars.b14.cut_mm).toBe(569.88);
+    expect(d.bars["b26@6"].pattern).toBe("pt1");
+    expect(d.diagnostics).toEqual([]);
+  });
+
+  it("exits 1 and names the problem when the document has an error", async () => {
+    const r = await capture(["derive", project("golden-ends/G07")]);
+    expect(r.code).toBe(1);
+    expect(r.err.join("\n")).toMatch(/^error angled-end b2\.a: /m);
+  });
+
+  it("prints the cut list in each format", async () => {
+    const md = await capture(["cutlist", project("cart")]);
+    expect(md.code).toBe(0);
+    expect(md.out.join("\n")).toMatch(/\| 4 \| 153\.14 \| 113\.14 \| 45\.00° mitre -45\.00° \//);
+    const csv = await capture(["cutlist", project("cart"), "--format", "csv"]);
+    expect(csv.out.join("\n").split("\n")[0]).toMatch(/^kind,item,options,mode,count,cut_mm,/);
+    const json = await capture(["cutlist", project("cart"), "--format", "json"]);
+    expect(JSON.parse(json.out.join("\n")).schema).toBe("alukit.cutlist/1");
+  });
+
+  it("refuses bad usage with exit 2", async () => {
+    expect((await capture(["cutlist"])).code).toBe(2);
+    expect((await capture(["cutlist", "x", "--format", "pdf"])).code).toBe(2);
+    expect((await capture(["derive", "x", "--frob"])).code).toBe(2);
+  });
+
+  it("exits 1 for a folder with no document", async () => {
+    const r = await capture(["derive", project("catalogs")]);
+    expect(r.code).toBe(1);
+    expect(r.err.join("\n")).toMatch(/cannot read alukit\.json/);
   });
 });

@@ -1,0 +1,9 @@
+{
+  "case": "G7",
+  "rule": "an angled end must declare its cut",
+  "design": "error on brace.a; drawn square at its design point (500·√2 = 707.11)",
+  "expect": {
+    "bars": { "b2": { "cut_mm": 707.11, "ends": { "a": { "by": "default", "move_mm": 0 } } } },
+    "errors": [{ "code": "angled-end", "entity": "b2.a" }]
+  }
+}

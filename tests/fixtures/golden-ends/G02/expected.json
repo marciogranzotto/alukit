@@ -1,0 +1,6 @@
+{
+  "case": "G2",
+  "rule": "through end stops at the node",
+  "design": "b1 1000.00, b2 580.00",
+  "expect": { "bars": { "b1": { "cut_mm": 1000 }, "b2": { "cut_mm": 580 } }, "errors": [] }
+}

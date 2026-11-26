@@ -1,0 +1,16 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G17",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo"],
+  "defaults": { "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } } },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [1000, 0, 0], "label": "block" },
+    "b2": {
+      "a": [2600, 1200, 0],
+      "b": [1000, 0, 0],
+      "label": "brace",
+      "ends": { "b": { "cut": "angle" } }
+    }
+  },
+  "connections": { "c1": { "type": "butt", "through": "b1.b", "ends": ["b2.b"] } }
+}

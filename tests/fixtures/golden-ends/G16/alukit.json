@@ -1,0 +1,12 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G16",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo"],
+  "defaults": { "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } } },
+  "bars": {
+    "b1": { "item": "test-geo:RHS-100x50x4", "a": [0, 0, 0], "b": [1000, 0, 0] },
+    "b2": { "a": [500, 600, 0], "b": [500, 0, 0], "label": "from +Y" },
+    "b3": { "a": [500, 0, -600], "b": [500, 0, 0], "label": "from below" }
+  },
+  "connections": { "c1": { "type": "butt", "through": "b1", "ends": ["b2.b", "b3.b"] } }
+}

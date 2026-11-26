@@ -1,0 +1,9 @@
+{
+  "case": "G10",
+  "rule": "compatible sections",
+  "design": "error",
+  "expect": {
+    "bars": { "b1": { "cut_mm": 1000 }, "b2": { "cut_mm": 600 } },
+    "errors": [{ "code": "miter", "entity": "c1" }]
+  }
+}

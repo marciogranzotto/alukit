@@ -1,0 +1,13 @@
+{
+  "case": "G20",
+  "rule": "a chain of end providers",
+  "design": "error naming the butt and b2.b's of; b3 500.00, at its design point (it would be 530.00)",
+  "expect": {
+    "bars": {
+      "b1": { "cut_mm": 940 },
+      "b2": { "cut_mm": 940 },
+      "b3": { "cut_mm": 500, "ends": { "b": { "by": "default" } } }
+    },
+    "errors": [{ "code": "chain", "entity": "b3.b", "refs": ["b2.b", "c1"] }]
+  }
+}

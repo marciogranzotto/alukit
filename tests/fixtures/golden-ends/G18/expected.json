@@ -1,0 +1,15 @@
+{
+  "case": "G18",
+  "rule": "a flush end follows the other bar's cut",
+  "design": "b1 940.00, b2 940.00; with b1's extend_mm: -50, 900.00 and 900.00",
+  "expect": { "bars": { "b1": { "cut_mm": 940 }, "b2": { "cut_mm": 940 } }, "errors": [] },
+  "cases": [
+    {
+      "name": "b1 extend_mm -50",
+      "patch": {
+        "bars": { "b1": { "ends": { "a": { "extend_mm": -50 }, "b": { "extend_mm": -50 } } } }
+      },
+      "expect": { "bars": { "b1": { "cut_mm": 900 }, "b2": { "cut_mm": 900 } }, "errors": [] }
+    }
+  ]
+}

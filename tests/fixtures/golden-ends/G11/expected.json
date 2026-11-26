@@ -1,0 +1,9 @@
+{
+  "case": "G11",
+  "rule": "one provider per end",
+  "design": "error naming both; b2.a at its design point",
+  "expect": {
+    "bars": { "b2": { "cut_mm": 600, "ends": { "a": { "by": "default", "move_mm": 0 } } } },
+    "errors": [{ "code": "two-providers", "entity": "b2.a", "refs": ["c1", "c2"] }]
+  }
+}

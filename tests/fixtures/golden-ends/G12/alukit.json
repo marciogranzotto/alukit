@@ -1,0 +1,13 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G12",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo"],
+  "defaults": { "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } } },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [2500, 0, 0] },
+    "b2": { "a": [2500, 0, 0], "b": [5000, 0, 0] }
+  },
+  "connections": {
+    "c1": { "type": "splice", "ends": ["b1.b", "b2.a"], "connector": "test:SPL-40" }
+  }
+}

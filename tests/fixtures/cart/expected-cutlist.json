@@ -1,0 +1,271 @@
+{
+  "about": "The cart's cut list worked by hand: see hand/cutlist_by_hand.py, which wrote this.",
+  "kerf_mm": 3,
+  "trim_mm": 5,
+  "groups": [
+    {
+      "item": "test-geo:FB-50x10",
+      "opt": {},
+      "mode": "stock",
+      "lines": [
+        {
+          "count": 2,
+          "cut_mm": 1120.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "sources": ["b24", "b25"]
+        },
+        {
+          "count": 1,
+          "cut_mm": 520.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "sources": ["b19"]
+        },
+        {
+          "count": 2,
+          "cut_mm": 300.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "sources": ["b20", "b23"]
+        }
+      ],
+      "stock": [
+        {
+          "sku": "test-geo:FB-50x10-6000",
+          "length_mm": 6000,
+          "sources": ["b24", "b25", "b19", "b20", "b23"],
+          "offcut_mm": 2618.0,
+          "waste_mm": 2640.0
+        }
+      ],
+      "cost_minor": 7000
+    },
+    {
+      "item": "test-geo:FB-50x20",
+      "opt": {},
+      "mode": "stock",
+      "lines": [
+        {
+          "count": 2,
+          "cut_mm": 200.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "sources": ["b21", "b22"]
+        }
+      ],
+      "stock": [
+        {
+          "sku": "test-geo:FB-50x20-6000",
+          "length_mm": 6000,
+          "sources": ["b21", "b22"],
+          "offcut_mm": 5587.0,
+          "waste_mm": 5600.0
+        }
+      ],
+      "cost_minor": 13500
+    },
+    {
+      "item": "test-geo:RHS-100x50x4",
+      "opt": {},
+      "mode": "stock",
+      "lines": [
+        {
+          "count": 1,
+          "cut_mm": 520.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "sources": ["b18"]
+        }
+      ],
+      "stock": [
+        {
+          "sku": "test-geo:RHS-100x50x4-6000",
+          "length_mm": 6000,
+          "sources": ["b18"],
+          "offcut_mm": 5470.0,
+          "waste_mm": 5480.0
+        }
+      ],
+      "cost_minor": 28900
+    },
+    {
+      "item": "test:TS40",
+      "opt": {
+        "finish": "anodised"
+      },
+      "mode": "cut",
+      "offer": "test:TS40-c7",
+      "lines": [
+        {
+          "count": 2,
+          "cut_mm": 1120.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 1120,
+          "billed_mm": 1120,
+          "sources": ["b9", "b10"]
+        },
+        {
+          "count": 4,
+          "cut_mm": 860.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 860,
+          "billed_mm": 860,
+          "sources": ["b1", "b2", "b3", "b4"]
+        },
+        {
+          "count": 1,
+          "cut_mm": 660.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 660,
+          "billed_mm": 660,
+          "sources": ["b11"]
+        },
+        {
+          "count": 4,
+          "cut_mm": 569.88,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 570,
+          "billed_mm": 570,
+          "sources": ["b14", "b15", "b16", "b17"]
+        },
+        {
+          "count": 6,
+          "cut_mm": 520.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 520,
+          "billed_mm": 520,
+          "sources": ["b26", "b26@1", "b26@2", "b26@4", "b26@5", "b26@6"]
+        },
+        {
+          "count": 1,
+          "cut_mm": 460.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 460,
+          "billed_mm": 460,
+          "sources": ["b12"]
+        },
+        {
+          "count": 2,
+          "cut_mm": 440.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 440,
+          "billed_mm": 440,
+          "sources": ["b7", "b8"]
+        },
+        {
+          "count": 1,
+          "cut_mm": 300.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 300,
+          "billed_mm": 300,
+          "sources": ["b13"]
+        },
+        {
+          "count": 1,
+          "cut_mm": 291.53,
+          "centre_mm": 271.53,
+          "short_mm": 251.53,
+          "ends": {
+            "a": "square",
+            "b": {
+              "angle_deg": 45.0,
+              "mitre_deg": 0.0,
+              "bevel_deg": -45.0
+            }
+          },
+          "ordered_mm": 292,
+          "billed_mm": 300,
+          "sources": ["b32"]
+        },
+        {
+          "count": 4,
+          "cut_mm": 153.14,
+          "centre_mm": 113.14,
+          "short_mm": 73.14,
+          "ends": {
+            "a": {
+              "angle_deg": 45.0,
+              "mitre_deg": -45.0,
+              "bevel_deg": 0.0
+            },
+            "b": {
+              "angle_deg": 45.0,
+              "mitre_deg": -45.0,
+              "bevel_deg": 0.0
+            }
+          },
+          "ordered_mm": 153,
+          "billed_mm": 160,
+          "sources": ["b27", "b28", "b29", "b30"]
+        },
+        {
+          "count": 1,
+          "cut_mm": 150.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 150,
+          "billed_mm": 150,
+          "sources": ["b31"]
+        }
+      ]
+    },
+    {
+      "item": "test:TS4080",
+      "opt": {
+        "finish": "anodised"
+      },
+      "mode": "cut",
+      "offer": "test:TS4080-c7",
+      "lines": [
+        {
+          "count": 2,
+          "cut_mm": 1200.0,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "ordered_mm": 1200,
+          "billed_mm": 1200,
+          "sources": ["b5", "b6"]
+        }
+      ]
+    }
+  ]
+}

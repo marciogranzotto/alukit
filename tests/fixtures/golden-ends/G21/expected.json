@@ -1,0 +1,13 @@
+{
+  "case": "G21",
+  "rule": "a free end counted from the cut",
+  "design": "b2 80.00; without from, 60.00",
+  "expect": { "bars": { "b2": { "cut_mm": 80 } }, "errors": [] },
+  "cases": [
+    {
+      "name": "without from",
+      "patch": { "bars": { "b2": { "b": { "from": null } } } },
+      "expect": { "bars": { "b2": { "cut_mm": 60 } }, "errors": [] }
+    }
+  ]
+}

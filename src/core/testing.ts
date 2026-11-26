@@ -1,0 +1,40 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { Diagnostic } from "./diagnostics.ts";
+
+/** Helpers for the geometry core's fixture tests. */
+
+export const FIXTURES = fileURLToPath(new URL("../../tests/fixtures", import.meta.url));
+
+export function readJson(path: string): unknown {
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+
+export function subdirs(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => join(dir, e.name))
+    .sort();
+}
+
+/** An RFC 7396 merge patch: objects merge key by key, `null` deletes, anything else replaces. */
+export function mergePatch(target: unknown, patch: unknown): unknown {
+  if (typeof patch !== "object" || patch === null || Array.isArray(patch)) return patch;
+  const out: Record<string, unknown> =
+    typeof target === "object" && target !== null && !Array.isArray(target)
+      ? { ...(target as Record<string, unknown>) }
+      : {};
+  for (const [k, v] of Object.entries(patch as Record<string, unknown>)) {
+    if (v === null) delete out[k];
+    else out[k] = mergePatch(out[k], v);
+  }
+  return out;
+}
+
+/** Diagnostics of one severity as comparable `{ code, entity, refs }` records. */
+export function shown(ds: readonly Diagnostic[], severity: Diagnostic["severity"]) {
+  return ds
+    .filter((d) => d.severity === severity)
+    .map((d) => ({ code: d.code, entity: d.entity, refs: d.refs, message: d.message }));
+}

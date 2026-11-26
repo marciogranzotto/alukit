@@ -1,0 +1,12 @@
+{
+  "case": "G1",
+  "rule": "near face; through end covers",
+  "design": "b1 1020.00, b2 580.00",
+  "expect": {
+    "bars": {
+      "b1": { "cut_mm": 1020, "ends": { "b": { "by": "c1" } } },
+      "b2": { "cut_mm": 580, "ends": { "a": { "by": "c1" } } }
+    },
+    "errors": []
+  }
+}

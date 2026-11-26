@@ -8,12 +8,16 @@ a priced bill of materials from real suppliers, the machining on each bar and an
 list. Catalogs can be your own, imported or created. Agents can drive the whole thing
 through a documented file format and a CLI.
 
-**Status: milestone M2a, the first catalogs.** Catalog schemas, the three-layer merge, section
-generators and section properties, and `alukit catalog check`, which compares computed section
-properties against published ones (M1). Built-in catalogs: `forseti` (from
-[`importers/forseti`](importers/forseti/README.md): the profiles, hardware, rails and blocks of a
-first set), `std` (standard steel shapes and fasteners) and `ref-hiwin` (the HIWIN HG parts that
-rails and blocks clone). The app still draws an empty scene.
+**Status: milestones M1 (catalog core), M2a (first catalogs) and M3a (geometry core).**
+- Catalog schemas, the three-layer merge, section generators and section properties, and
+  `alukit catalog check`, which compares computed section properties against published ones.
+- Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): the
+  profiles, hardware, rails and blocks of a first set), `std` (standard steel shapes and fasteners)
+  and `ref-hiwin` (the HIWIN HG parts that rails and blocks clone).
+- The project format, placement and end planes, and the cut list: `alukit derive <dir>` and
+  `alukit cutlist <dir>`.
+
+The app still draws an empty scene.
 
 | Document                                                                   | What                                                                                                 |
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |

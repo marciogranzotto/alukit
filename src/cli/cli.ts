@@ -1,17 +1,17 @@
 import { readFileSync } from "node:fs";
 import { CATALOG_USAGE } from "./catalog-usage.ts";
+import { PROJECT_COMMANDS, PROJECT_USAGE } from "./project-usage.ts";
 
 export interface Io {
   out: (text: string) => void;
   err: (text: string) => void;
 }
 
-/** The planned commands (design §7.3). Every one is "not implemented yet" except `serve`. */
+/** The planned commands (design §7.3), not implemented yet. */
 const PLANNED: readonly (readonly [string, string])[] = [
   ["new <dir>", "create a project"],
   ["check <dir>", "validate, derive and run the checks"],
-  ["cutlist | bom | order | costs <dir>", "the outputs"],
-  ["derive <dir>", "the derived model as JSON"],
+  ["bom | order | costs <dir>", "the outputs"],
   ["query <dir> <selector>", "select entities"],
   ["do <dir> -f batch.json", "apply edits"],
   ["log | undo", "the server's log; undo the latest step"],
@@ -49,6 +49,7 @@ export function helpText(): string {
     "",
     "Commands:",
     `  ${"serve [--port N]".padEnd(width)}  serve the app on 127.0.0.1`,
+    ...PROJECT_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
     ...CATALOG_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
     ...rows,
     "",
@@ -94,6 +95,10 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
   if (cmd === "catalog") {
     const { catalogCommand } = await import("./catalog.ts");
     return catalogCommand(rest, io);
+  }
+  if ((PROJECT_COMMANDS as readonly string[]).includes(cmd)) {
+    const { projectCommand } = await import("./project.ts");
+    return projectCommand(cmd, rest, io);
   }
   if (PLANNED_NAMES.has(cmd)) {
     io.err(`alukit ${cmd}: not implemented yet`);
