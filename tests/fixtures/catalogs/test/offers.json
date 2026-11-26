@@ -99,7 +99,7 @@
     },
     "RAIL20-1000": {
       "item": "RAIL20",
-      "sale": { "mode": "stock", "length_mm": 1000 },
+      "sale": { "mode": "stock", "length_mm": 1000, "factory_E_mm": 20 },
       "price": {
         "regular_minor": 17900,
         "sale_minor": 16100,

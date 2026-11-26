@@ -135,6 +135,13 @@
       "material": "steel-8.8",
       "area_mm2": { "v": 58, "src": "src", "ref": "ISO 898-1, stress area of M10" }
     },
+    "TUBE-12x1": {
+      "kind": "bar",
+      "name": "Steel tube 12x1",
+      "shape": "tube",
+      "section": "TUBE-12x1",
+      "material": "s235"
+    },
     "RAIL20": {
       "kind": "bar",
       "name": "Linear rail 20",
@@ -156,7 +163,8 @@
       "rail_system": "rail-hg20",
       "dims": { "H_mm": 30, "W_mm": 63, "L_mm": 77.5 },
       "mass_kg": 0.4,
-      "bbox_mm": [[-31.5, -38.75, 0], [31.5, 38.75, 30]],
+      "bbox_mm": [[-38.75, -31.5, -12.9], [38.75, 31.5, 12.5]],
+      "datums": { "run": [0, 0, 0] },
       "clone_of": { "item": "ref-test:HG20CA" },
       "ratings": { "preload_class": "ZA" }
     },

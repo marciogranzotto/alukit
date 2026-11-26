@@ -12,6 +12,7 @@
       "name": "HG20CA (reference)",
       "rail_system": "rail-hg20",
       "dims": { "H_mm": 30, "W_mm": 44, "L_mm": 77.5 },
+      "datums": { "run": [0, 0, 0] },
       "ratings": {
         "C_N": { "v": 27100, "src": "src", "ref": "a maker's table, synthetic here" },
         "C0_N": 36680,

@@ -1,4 +1,5 @@
 import { compareIds } from "#core/ids.ts";
+import { snapInt } from "#core/quantum.ts";
 import { type SectionProperties, sectionProperties } from "#core/section-properties.ts";
 import { type Diagnostic, sortDiagnostics } from "./diagnostics.ts";
 import { type BuiltSection, buildSection, type CatalogSet } from "./link.ts";
@@ -154,7 +155,7 @@ export function checkCatalog(
     if (it.kind === "connector") {
       const fits = new Set(it.fits.map((s) => resolved(s, li.catalog)));
       it.mounts?.forEach((m, i) => {
-        for (const sys of Object.keys(m.fasteners ?? {})) {
+        for (const [sys, entries] of Object.entries(m.fasteners ?? {})) {
           if (!fits.has(resolved(sys, li.catalog))) {
             add(
               "warn",
@@ -165,6 +166,21 @@ export function checkCatalog(
               `mounts[${i}]/fasteners/${sys}`,
             );
           }
+          // A sleeve is cut from bar stock (design 2.1, §3.4).
+          entries.forEach((e, j) => {
+            if (!("inside" in e)) return;
+            const sleeve = set.get("item", e.item, li.catalog);
+            if (sleeve && sleeve.value.item.kind !== "bar") {
+              add(
+                "error",
+                "sleeve-not-bar",
+                `the sleeve ${sleeve.id} is a ${sleeve.value.item.kind}; a sleeve is cut from bar stock`,
+                li.files,
+                li.id,
+                `mounts[${i}]/fasteners/${sys}[${j}]/item`,
+              );
+            }
+          });
         }
       });
     }
@@ -404,6 +420,46 @@ function checkOffers(set: CatalogSet, cat: LoadedCatalog, add: Add): void {
       );
     if (!isBar && offer.sale)
       add("error", "offer-sale", "only bars have a sale rule", [file], entity, "sale");
+    // A factory end distance belongs to a rail's stock offer (design 2.1, §3.2).
+    if (offer.sale?.mode === "stock" && offer.sale.factory_E_mm !== undefined) {
+      const field = "sale/factory_E_mm";
+      if (it.kind !== "bar" || it.shape !== "rail") {
+        add(
+          "error",
+          "offer-factory-E",
+          "only a rail's stock offer has factory_E_mm",
+          [file],
+          entity,
+          field,
+        );
+      } else if (it.rail) {
+        const e = num(offer.sale.factory_E_mm);
+        const lo = num(it.rail.E_min_mm);
+        const hi = num(it.rail.E_max_mm);
+        if (e < lo || e > hi) {
+          add(
+            "warn",
+            "factory-E-range",
+            `factory_E_mm ${e} is outside the rail's end distance range ${lo}–${hi}`,
+            [file],
+            entity,
+            field,
+          );
+        }
+        // The same E at both ends: the holes between them are a whole number of pitches.
+        const pitches = (offer.sale.length_mm - 2 * e) / num(it.rail.pitch_mm);
+        if (!Number.isInteger(snapInt(pitches))) {
+          add(
+            "warn",
+            "factory-E-pitch",
+            `a ${offer.sale.length_mm} mm rail with E ${e} at both ends leaves ${pitches.toFixed(3)} pitches between its end holes, not a whole number`,
+            [file],
+            entity,
+            field,
+          );
+        }
+      }
+    }
     const wantPer = !isBar
       ? "unit"
       : offer.sale?.mode === "cut"

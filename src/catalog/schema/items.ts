@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ratingsSchema } from "../ratings.ts";
 import {
   Bbox3,
+  DatumName,
   ItemQty,
   type Kind,
   OptionName,
@@ -107,6 +108,29 @@ export const BarItem = z.strictObject({
     .describe("rails: hole pitch and the end distance range"),
 });
 
+/**
+ * A part item's named points (design 2.1, §3.2), in its own frame: +z away from the face it mounts
+ * on, +x along the bar it mounts on. `mount` lands on a station (§4.7).
+ */
+const Datums = z
+  .record(DatumName, Vec3)
+  .describe("named points in the item's own frame; `mount` lands on a station (§4.7)");
+
+/** A carriage declares `run`: the point that sits on the rail's running-face centre line (§3.4). */
+const CarriageDatums = Datums.refine((d) => Object.hasOwn(d, "run"), {
+  message: "a carriage declares the datum `run` (§3.4)",
+});
+
+/**
+ * A sleeve cut from bar stock and set in the through bar's bore on the mount hole's axis (design
+ * 2.1, §3.4, §4.5). `len_mm` is a length, or `bore`: the through bar's inside depth along the axis.
+ */
+export const Sleeve = z.strictObject({
+  item: Ref.describe("the bar the sleeve is cut from"),
+  inside: z.literal("through").describe("the bar whose bore holds it: the through bar"),
+  len_mm: z.union([z.literal("bore"), z.number().positive()]),
+});
+
 const Hole = z.strictObject({
   at_mm: Vec3.describe("the hole's centre on the mounting plane, in the item's frame"),
   d_mm: Valued,
@@ -121,6 +145,7 @@ export const ConnectorItem = z.strictObject({
   fits: z.array(Ref).min(1).describe("the systems it fits"),
   mass_kg: Valued.optional(),
   bbox_mm: Bbox3.optional(),
+  datums: Datums.optional(),
   frame: z
     .strictObject({
       x: Vec3,
@@ -137,9 +162,9 @@ export const ConnectorItem = z.strictObject({
           .describe("the face that bears on a bar"),
         holes: z.array(Hole).optional(),
         fasteners: z
-          .record(Ref, z.array(ItemQty).min(1))
+          .record(Ref, z.array(z.union([ItemQty, Sleeve])).min(1))
           .optional()
-          .describe("the fastener set for each system it fits (review B3)"),
+          .describe("the fastener set for each system it fits (review B3); it may list sleeves"),
       }),
     )
     .optional(),
@@ -200,8 +225,17 @@ export const FastenerItem = z.strictObject({
   torque_Nm: Valued.optional(),
   groove: Ref.optional().describe("T-nuts and hammer screws: the groove type"),
   insertion: z.enum(["drop-in", "slide-in"]).optional(),
+  fits: z
+    .array(Ref)
+    .min(1)
+    .optional()
+    .describe("T-nuts and hammer screws: the systems whose grooves they fit"),
+  dims: Quantities.optional().describe(
+    "published dimensions under the standard's letters: d1_mm, d2_mm, h_mm, s_mm, m_mm …",
+  ),
   mass_kg: Valued.optional(),
   bbox_mm: Bbox3.optional(),
+  datums: Datums.optional(),
 });
 
 export const CarriageItem = z.strictObject({
@@ -210,6 +244,7 @@ export const CarriageItem = z.strictObject({
   dims: Quantities.optional().describe("published dimensions, keys with unit suffixes"),
   mass_kg: Valued.optional(),
   bbox_mm: Bbox3.optional(),
+  datums: CarriageDatums,
 });
 
 export const AccessoryItem = z.strictObject({
@@ -220,6 +255,7 @@ export const AccessoryItem = z.strictObject({
   dims: Quantities.optional(),
   mass_kg: Valued.optional(),
   bbox_mm: Bbox3.optional(),
+  datums: Datums.optional(),
 });
 
 /** Sheet stock. Its mass follows from thickness and material; sheet sizes are offers. */
@@ -235,6 +271,7 @@ export const GenericItem = z.strictObject({
   dims: Quantities.optional(),
   mass_kg: Valued.optional(),
   bbox_mm: Bbox3.optional(),
+  datums: Datums.optional(),
 });
 
 export const Item = z.discriminatedUnion("kind", [

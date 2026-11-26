@@ -2,6 +2,7 @@ import { type Region, sectionProperties, type Vec2 } from "#core/section-propert
 import type { Diagnostic } from "./diagnostics.ts";
 import { type LoadedCatalog, type LoadedItem, type LoadedSection, splitRef } from "./load.ts";
 import type { Source } from "./merge.ts";
+import { factoryE } from "./rails.ts";
 import { type Face, isValuedObject, num } from "./schema/common.ts";
 import type { GrooveType, Material, System } from "./schema/files.ts";
 import type { Item } from "./schema/items.ts";
@@ -112,6 +113,7 @@ export function itemRefs(item: Item): RefSite[] {
       break;
     case "fastener":
       add("groove", item.groove, "groove");
+      for (const [i, sys] of (item.fits ?? []).entries()) add(`fits[${i}]`, sys, "system");
       break;
     case "carriage":
       add("rail_system", item.rail_system, "system");
@@ -178,8 +180,9 @@ export function linkCatalogs(loaded: readonly LoadedCatalog[]): LinkResult {
       );
       continue;
     }
-    // A copy with its own item map: filling clones' ratings must not change the caller's catalog.
-    set.catalogs.set(cat.id, { ...cat, items: new Map(cat.items) });
+    // A copy with its own item and offer maps: filling clones' ratings and rails' factory end
+    // distances must not change the caller's catalog.
+    set.catalogs.set(cat.id, { ...cat, items: new Map(cat.items), offers: new Map(cat.offers) });
   }
 
   const checkRefs = (sites: RefSite[], from: string, entity: string, files: string[]) => {
@@ -254,6 +257,18 @@ export function linkCatalogs(loaded: readonly LoadedCatalog[]): LinkResult {
         continue;
       }
       cat.items.set(local, withCloneRatings(li, orig.value));
+    }
+  }
+
+  // Rails' stock offers that do not state factory_E_mm take the centred layout's, as an estimate.
+  for (const cat of set.catalogs.values()) {
+    for (const [sku, offer] of cat.offers) {
+      if (offer.sale?.mode !== "stock" || offer.sale.factory_E_mm !== undefined) continue;
+      const item = set.get("item", offer.item, cat.id)?.value.item;
+      if (item?.kind !== "bar") continue;
+      const e = factoryE(item, offer);
+      if (e !== undefined)
+        cat.offers.set(sku, { ...offer, sale: { ...offer.sale, factory_E_mm: e } });
     }
   }
 
@@ -335,6 +350,9 @@ export function buildSection(
             lip_mm: num(g.lip_mm),
             depth_mm: num(g.depth_mm),
             undercut_mm: num(g.undercut_mm),
+            ...(g.taper_from_mm !== undefined && g.bottom_mm !== undefined
+              ? { taper_from_mm: num(g.taper_from_mm), bottom_mm: num(g.bottom_mm) }
+              : {}),
           }
         );
       },

@@ -29,15 +29,29 @@ export const Material = z.strictObject({
 });
 export type Material = z.infer<typeof Material>;
 
-/** Groove type (§3.3). */
-export const GrooveType = z.strictObject({
-  opening_mm: Valued,
-  lip_mm: Valued,
-  depth_mm: Valued,
-  undercut_mm: Valued,
-  class: z.enum(["standard", "light"]).describe("some makers rate T-nuts in standard grooves only"),
-  prov: Prov.optional(),
-});
+/**
+ * Groove type (§3.3). The chamber under the lip is `undercut_mm` wide; when it narrows toward the
+ * bottom, `taper_from_mm` is the depth where it starts to and `bottom_mm` its width at
+ * `depth_mm` (M2a; real slots taper, and a full-width chamber down to the bottom would cross the
+ * neighbouring groove's on a 40x40).
+ */
+export const GrooveType = z
+  .strictObject({
+    opening_mm: Valued,
+    lip_mm: Valued,
+    depth_mm: Valued,
+    undercut_mm: Valued,
+    taper_from_mm: Valued.optional().describe("the depth where the chamber starts to narrow"),
+    bottom_mm: Valued.optional().describe("the chamber's width at depth_mm, when it narrows"),
+    class: z
+      .enum(["standard", "light"])
+      .describe("some makers rate T-nuts in standard grooves only"),
+    prov: Prov.optional(),
+  })
+  .refine((g) => (g.taper_from_mm === undefined) === (g.bottom_mm === undefined), {
+    message: "taper_from_mm and bottom_mm go together",
+    path: ["bottom_mm"],
+  });
 export type GrooveType = z.infer<typeof GrooveType>;
 
 /** System (§3.3): an interface family that decides what fits. */
@@ -87,7 +101,9 @@ export type CatalogFile = z.infer<typeof CatalogFile>;
 /** offers.json: the importer's output (layer 1). */
 export const OffersFile = z.strictObject({
   schema: z.literal(OFFERS_SCHEMA),
-  offers: z.record(LocalId, Offer).describe("keyed by SKU"),
+  offers: z
+    .record(LocalId, Offer)
+    .describe("keyed by SKU, or by an id of its own when the offer names its `sku`"),
 });
 export type OffersFile = z.output<typeof OffersFile>;
 

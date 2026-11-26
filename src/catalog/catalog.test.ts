@@ -12,7 +12,7 @@ describe("the test catalog", () => {
   it("loads and checks with no errors and no warnings", async () => {
     const { report, set } = await checkTest(await fixtureCopy());
     expect(report.diagnostics).toEqual([]);
-    expect(report.counts).toEqual({ items: 17, offers: 22, sections: 6, errors: 0, warnings: 0 });
+    expect(report.counts).toEqual({ items: 18, offers: 22, sections: 7, errors: 0, warnings: 0 });
     expect([...set.catalogs.keys()].sort()).toEqual(["ref-test", "test"]);
     expect(report.uncomputed).toEqual(["test:RAIL20", "test:TS40", "test:TS4080"]);
   });
@@ -230,6 +230,30 @@ describe("ids across catalogs (design §3.1)", () => {
       layer: "clone",
       from: "ref-test:HG20CA",
     });
+  });
+
+  it("gives a rail's stock offer its stated factory E, or the centred layout's as an estimate (draft 2.1)", async () => {
+    const { set } = await checkTest(await fixtureCopy());
+    const sale = (sku: string) => set.catalogs.get("test")?.offers.get(sku)?.sale;
+    // Stated: kept as is.
+    expect(sale("RAIL20-1000")).toMatchObject({ factory_E_mm: 20 });
+    // Not stated: pitch 60, E_min 20, 500 long: ((500 − 40) mod 60) / 2 + 20 = 40.
+    expect(sale("RAIL20-500")).toMatchObject({ factory_E_mm: { v: 40, src: "est" } });
+  });
+
+  it("checks a stated factory E against the rail's range and pitch, and only on rails", async () => {
+    const root = await fixtureCopy();
+    await patchJson(join(root, "test/offers.json"), (d) => {
+      at(d, "offers", "RAIL20-1000").sale.factory_E_mm = 50; // 900 between: 15 pitches, E > 40
+      at(d, "offers", "RAIL20-500").sale.factory_E_mm = 25; // 450 between: 7.5 pitches
+      at(d, "offers", "M10-ROD-1000").sale.factory_E_mm = 20;
+    });
+    const { report } = await checkTest(root);
+    expect(report.diagnostics.map((d) => [d.code, d.entity])).toEqual([
+      ["offer-factory-E", "test:offers/M10-ROD-1000"],
+      ["factory-E-pitch", "test:offers/RAIL20-500"],
+      ["factory-E-range", "test:offers/RAIL20-1000"],
+    ]);
   });
 
   it("reports unknown references and unknown catalogs", async () => {

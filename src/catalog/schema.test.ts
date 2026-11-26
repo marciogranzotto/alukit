@@ -80,6 +80,7 @@ describe("units by suffix (design §2)", () => {
       rail_system: "r",
       prov: { src: "est" },
       dims: { H_in: 2 },
+      datums: { run: [0, 0, 0] },
     };
     expect(Item.safeParse(carriage).success).toBe(false);
     expect(Item.safeParse({ ...carriage, dims: { H_mm: 2 } }).success).toBe(true);
@@ -143,6 +144,97 @@ describe("ids and values (design §2)", () => {
     expect(Offer.safeParse({ item: "x", price: { ...price, regular_minor: 1.5 } }).success).toBe(
       false,
     );
+  });
+
+  it("takes a quoted price range on either price, in whole minor units (draft 2.1)", () => {
+    const price = { per: "unit", read: "2026-11-26", src: "src" };
+    const range = { v: 1000, low: 900, high: 1200, src: "src", ref: "a quote" };
+    expect(Offer.safeParse({ item: "x", price: { ...price, regular_minor: range } }).success).toBe(
+      true,
+    );
+    expect(
+      Offer.safeParse({ item: "x", price: { ...price, regular_minor: 1100, sale_minor: range } })
+        .success,
+    ).toBe(true);
+    for (const bad of [
+      { ...range, low: 1100 },
+      { ...range, high: 1200.5 },
+      { v: 1000.5, src: "calc" },
+    ]) {
+      expect(
+        Offer.safeParse({ item: "x", price: { ...price, regular_minor: bad } }).success,
+        JSON.stringify(bad),
+      ).toBe(false);
+    }
+    // Price bands are a project-level list, never on an offer.
+    expect(
+      Offer.safeParse({ item: "x", price: { ...price, regular_minor: 1000 }, price_band: "b" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("gives a stock sale its factory end distance, and an offer the SKU it orders", () => {
+    const price = { regular_minor: 100, per: "bar", read: "2026-11-26", src: "src" };
+    const sale = { mode: "stock", length_mm: 1000 };
+    expect(
+      Offer.safeParse({ item: "r", price, sale: { ...sale, factory_E_mm: { v: 20, src: "src" } } })
+        .success,
+    ).toBe(true);
+    expect(Offer.safeParse({ item: "r", sku: "R-c7", price, sale }).success).toBe(true);
+    expect(
+      Offer.safeParse({
+        item: "r",
+        price,
+        sale: { mode: "cut", min_mm: 40, max_mm: 3000, factory_E_mm: 20 },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("part frames (draft 2.1)", () => {
+  const prov = { src: "est" };
+
+  it("a carriage declares its run datum; other parts may name datums", () => {
+    const carriage = { kind: "carriage", name: "c", rail_system: "r", prov };
+    expect(Item.safeParse(carriage).success).toBe(false);
+    expect(Item.safeParse({ ...carriage, datums: { top: [0, 0, 1] } }).success).toBe(false);
+    expect(Item.safeParse({ ...carriage, datums: { run: [0, 0, 0] } }).success).toBe(true);
+    const bracket = { kind: "connector", subtype: "bracket", name: "b", fits: ["s40-c8"], prov };
+    expect(Item.safeParse({ ...bracket, datums: { heel: [0, 0, 0] } }).success).toBe(true);
+    // "c" names a section's centroid, so a part may not use it.
+    expect(Item.safeParse({ ...bracket, datums: { c: [0, 0, 0] } }).success).toBe(false);
+  });
+
+  it("a mount's fastener set may list a sleeve through the bore", () => {
+    const mount = (set: unknown[]) => ({
+      kind: "connector",
+      subtype: "bracket",
+      name: "b",
+      fits: ["s40-c8"],
+      prov,
+      mounts: [
+        {
+          plane: { point_mm: [0, 0, 0], normal: [0, 0, 1] },
+          holes: [{ at_mm: [0, 0, 0], d_mm: 8.5 }],
+          fasteners: { "s40-c8": set },
+        },
+      ],
+    });
+    const screw = { item: "SCR", qty: 1 };
+    for (const len_mm of ["bore", 12]) {
+      expect(
+        Item.safeParse(mount([screw, { item: "TUBE", inside: "through", len_mm }])).success,
+        String(len_mm),
+      ).toBe(true);
+    }
+    for (const bad of [
+      { item: "TUBE", inside: "around", len_mm: "bore" },
+      { item: "TUBE", inside: "through", len_mm: "auto" },
+      { item: "TUBE", inside: "through", len_mm: 0 },
+      { item: "TUBE", inside: "through", len_mm: "bore", qty: 1 },
+    ]) {
+      expect(Item.safeParse(mount([screw, bad])).success, JSON.stringify(bad)).toBe(false);
+    }
   });
 });
 

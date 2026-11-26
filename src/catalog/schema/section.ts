@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { GENERATORS } from "../sections/generators/index.ts";
-import { Face, IsoDate, LocalId, Ref, SourceRef, Vec2 } from "./common.ts";
+import { DatumName, Face, IsoDate, LocalId, Ref, SourceRef, Vec2 } from "./common.ts";
 
 /**
  * A section file, `sections/<id>.json` (design §3.5): one section, in mm, about its nominal
@@ -22,8 +22,7 @@ export const GrooveAt = z.strictObject({
   type: Ref.describe("a groove type (§3.3)"),
 });
 
-/** Datum names are words; `c` is the bounding-box centre anchor and cannot be one (§4.4). */
-export const DatumName = z.string().regex(/^(?!c$)[a-z][a-z0-9_-]*$/);
+export { DatumName };
 
 const common = {
   schema: z.literal(SECTION_SCHEMA),

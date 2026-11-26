@@ -50,6 +50,28 @@ export const ValuedObject = z
 export const Valued = z.union([z.number(), ValuedObject]);
 export type Valued = z.infer<typeof Valued>;
 
+/**
+ * Money in minor units (design §2): an integer, or a valued field whose value and range are
+ * integers. A range is a quoted price range (design 2.1, §3.2): it gives an order line its low
+ * and high, and no price band applies (§4.11).
+ */
+const MinorInt = z.int().nonnegative();
+export const MinorObject = z
+  .strictObject({
+    v: MinorInt,
+    src: Src.optional(),
+    ref: SourceRef.optional(),
+    read: IsoDate.optional(),
+    note: z.string().optional(),
+    low: MinorInt.optional(),
+    high: MinorInt.optional(),
+  })
+  .refine((o) => (o.low === undefined || o.low <= o.v) && (o.high === undefined || o.v <= o.high), {
+    message: "a range must satisfy low <= v <= high",
+  });
+export const Minor = z.union([MinorInt, MinorObject]);
+export type Minor = z.infer<typeof Minor>;
+
 /** The number of a valued field. */
 export function num(x: Valued): number {
   return typeof x === "number" ? x : x.v;
@@ -115,6 +137,12 @@ export const Bbox3 = z
 
 /** A thread designation as published: "M8", "M10x1.25", "TR8x8", '3/8"'. */
 export const Thread = z.string().min(1);
+
+/**
+ * A datum's name: a word. `c` is the bounding-box centre anchor and cannot be one (§4.4). Sections
+ * declare datums in 2D, part items in 3D, in the item's own frame (design 2.1, §3.2).
+ */
+export const DatumName = z.string().regex(/^(?!c$)[a-z][a-z0-9_-]*$/);
 
 /** A face of a section, in section-local terms (design §4.3). */
 export const Face = z.enum(["+x", "-x", "+y", "-y"]);

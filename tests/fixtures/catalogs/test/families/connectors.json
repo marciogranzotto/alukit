@@ -24,7 +24,11 @@
           "plane": { "point_mm": [0, 0, 20], "normal": [-1, 0, 0] },
           "holes": [{ "at_mm": [0, 0, 20], "d_mm": 8.5 }],
           "fasteners": {
-            "s40-c8": [{ "item": "SCR-M8x16", "qty": 1 }, { "item": "TNUT-M8", "qty": 1 }],
+            "s40-c8": [
+              { "item": "SCR-M8x16", "qty": 1 },
+              { "item": "TNUT-M8", "qty": 1 },
+              { "item": "TUBE-12x1", "inside": "through", "len_mm": "bore" }
+            ],
             "s45-c10": [{ "item": "SCR-M8x16", "qty": 1 }, { "item": "TNUT-M8-C10", "qty": 1 }]
           }
         }
