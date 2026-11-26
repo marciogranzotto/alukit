@@ -140,13 +140,30 @@ function Viewport({ snapshot }: { snapshot?: string | undefined }) {
   );
 }
 
+/** Input types that take no typing: keys pressed while one has focus are the tools'. */
+const NOT_TYPED = new Set([
+  "checkbox",
+  "radio",
+  "button",
+  "submit",
+  "reset",
+  "range",
+  "color",
+  "file",
+]);
+
+/** Whether the focused element takes the keys typed: a text field, a list, an editable. */
+function typingIn(t: HTMLElement | null): boolean {
+  if (!t) return false;
+  if (t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable) return true;
+  return t.tagName === "INPUT" && !NOT_TYPED.has((t as HTMLInputElement).type);
+}
+
 /** Keys: undo and redo, tool shortcuts, the active tool's keys, views (§8). */
 function useKeys(): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT"))
-        return;
+      if (typingIn(e.target as HTMLElement | null)) return;
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") {
         e.preventDefault();

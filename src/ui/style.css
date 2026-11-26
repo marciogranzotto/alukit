@@ -149,7 +149,9 @@ code {
 
 /* Main area */
 
+/* Rows 2 and 3 hold the banners when they show; the main area always takes the 1fr row. */
 .main {
+  grid-row: 4;
   display: grid;
   grid-template-columns: minmax(180px, 260px) 1fr minmax(220px, 320px);
   min-height: 0;
@@ -389,6 +391,7 @@ table.kv td {
 /* Drawer */
 
 .drawer {
+  grid-row: 5;
   background: var(--panel);
   border-top: 1px solid var(--line);
   display: flex;
