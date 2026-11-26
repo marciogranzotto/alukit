@@ -118,9 +118,11 @@ export class Ctx {
   private sec(args: readonly Ast[]): Value {
     const [a] = args;
     if (args.length !== 1 || a?.t !== "name") throw new ExprError("sec takes one bar id");
-    const bar = this.bars.get(a.name);
+    // The document's own bars: params are valued before pattern copies exist, and a document
+    // never names a copy.
+    const bar = this.doc.bars[a.name];
     if (!bar) throw new ExprError(`sec(${a.name}): no bar ${a.name}`);
-    const ref = bar.spec.item ?? this.doc.defaults.bar?.item;
+    const ref = bar.item ?? this.doc.defaults.bar?.item;
     if (!ref) throw new ExprError(`sec(${a.name}): the bar names no item`);
     const found = this.items.item(ref);
     if (!found.ok) throw new ExprError(`sec(${a.name}): ${found.message}`);

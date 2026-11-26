@@ -1,4 +1,12 @@
-import type { Bar, Face, FreeEnd, Point, Pose, Station } from "../project/schema.ts";
+import {
+  type Bar,
+  type Face,
+  type FreeEnd,
+  isPose,
+  type Point,
+  type Pose,
+  type Station,
+} from "../project/schema.ts";
 import { TOL } from "../tolerances.ts";
 import { cosDeg, reduceDeg, sinDeg } from "../trig.ts";
 import {
@@ -674,10 +682,10 @@ export function bodyPrism(
   const owner: Owner = { id: conn, field: "through/at", copy };
   let pos: V3 | undefined;
   let rot: V3 = [0, 0, 0];
-  if (!Array.isArray(at) && typeof at === "object" && "pos" in at) {
-    pos = resolvePoint(ctx, at.pos as Point, owner);
+  if (isPose(at)) {
+    pos = resolvePoint(ctx, at.pos, owner);
     if (at.rot_deg) rot = ctx.vec(conn, "through/at/rot_deg", at.rot_deg) ?? rot;
-  } else pos = resolvePoint(ctx, at as Point, owner);
+  } else pos = resolvePoint(ctx, at, owner);
   if (!pos) return undefined;
   const datum = item.datums?.mount ?? [0, 0, 0];
   const axes = poseAxes(rot);

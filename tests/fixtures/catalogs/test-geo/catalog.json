@@ -54,6 +54,16 @@
       "bbox_mm": [[-20, -20, 0], [20, 20, 30]],
       "pivot": { "height_mm": 15, "end_mm": 25, "range_deg": [0, 180] }
     },
+    "PLT-8": {
+      "kind": "connector",
+      "subtype": "plate",
+      "name": "End plate 8 mm",
+      "fits": ["test:s40-c8"],
+      "material": "test:s235",
+      "mass_kg": 0.1,
+      "bbox_mm": [[-20, -20, 0], [20, 20, 8]],
+      "spacer_mm": 8
+    },
     "WSH-M10": {
       "kind": "fastener",
       "subtype": "washer",

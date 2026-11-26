@@ -39,6 +39,10 @@
       "item": "HNG-15",
       "price": { "regular_minor": 3400, "per": "unit", "read": "2026-11-26", "src": "src" }
     },
+    "PLT-8": {
+      "item": "PLT-8",
+      "price": { "regular_minor": 900, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
     "WSH-M10-100": {
       "item": "WSH-M10",
       "pack": 100,

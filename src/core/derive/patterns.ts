@@ -1,13 +1,14 @@
-import type {
-  Bar,
-  Connection,
-  EndSpec,
-  FreeEnd,
-  Node,
-  Part,
-  Pattern,
-  Point,
-  Station,
+import {
+  type Bar,
+  type Connection,
+  type EndSpec,
+  type FreeEnd,
+  isPose,
+  type Node,
+  type Part,
+  type Pattern,
+  type Point,
+  type Station,
 } from "../project/schema.ts";
 import { unit, type V3 } from "../vec.ts";
 import type { Ctx } from "./context.ts";
@@ -40,7 +41,6 @@ export function expandPatterns(ctx: Ctx): void {
       const copy: Copy = {
         pattern: pid,
         k,
-        template,
         step,
         ...(plan.along !== undefined ? { along: plan.along } : {}),
         ...(plan.dir !== undefined ? { dir: plan.dir } : {}),
@@ -222,20 +222,12 @@ class Remap {
   conn(c: Connection): Connection {
     switch (c.type) {
       case "butt": {
-        const through =
-          typeof c.through === "string"
-            ? c.through.includes(".")
-              ? this.end(c.through)
-              : this.id(c.through)
-            : {
-                ...c.through,
-                at:
-                  Array.isArray(c.through.at) || typeof c.through.at === "string"
-                    ? this.point(c.through.at)
-                    : "pos" in c.through.at
-                      ? c.through.at
-                      : this.point(c.through.at),
-              };
+        let through = c.through;
+        if (typeof through === "string") {
+          through = through.includes(".") ? this.end(through) : this.id(through);
+        } else if (!isPose(through.at)) {
+          through = { ...through, at: this.point(through.at) };
+        }
         return { ...c, through, ends: c.ends.map((e) => this.end(e)) };
       }
       case "miter":

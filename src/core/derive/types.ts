@@ -25,8 +25,6 @@ export interface Box {
 export interface Copy {
   pattern: string;
   k: number;
-  /** The template ids of this pattern. */
-  template: ReadonlySet<string>;
   /** The bar or run the copies are translated along, when `along` names one. */
   along?: string;
   /** A direction, when `along` is `{ dir }`. */
@@ -185,10 +183,4 @@ export interface EndReport {
   mitre?: number;
   bevel?: number;
   cut?: "angle" | "square";
-}
-
-export interface DerivedBar {
-  placed: PlacedBar;
-  lengths: BarLengths;
-  ends: { a: EndReport; b: EndReport };
 }

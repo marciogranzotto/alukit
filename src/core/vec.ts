@@ -24,8 +24,9 @@ export function addScaled(a: V3, b: V3, s: number): V3 {
   return [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
 }
 
+/** −a, written `0 − x` so that a zero component stays +0. */
 export function neg(a: V3): V3 {
-  return [-a[0], -a[1], -a[2]];
+  return [0 - a[0], 0 - a[1], 0 - a[2]];
 }
 
 export function dot(a: V3, b: V3): number {

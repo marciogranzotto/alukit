@@ -127,6 +127,11 @@ export type FreeEnd = z.infer<typeof FreeEnd>;
 export const Pose = z.strictObject({ pos: Vec3Expr, rot_deg: Vec3Expr.optional() });
 export type Pose = z.infer<typeof Pose>;
 
+/** Tells a pose from a point where either may stand (a butt's body). */
+export function isPose(x: Point | Pose): x is Pose {
+  return typeof x === "object" && !Array.isArray(x) && "pos" in x;
+}
+
 /** An explicit end plane (§4.5). */
 export const Plane = z.union([
   z.strictObject({ point: Point, normal: Vec3Expr }),

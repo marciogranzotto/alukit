@@ -221,6 +221,10 @@ class Ends {
     }
     if (!this.placed.has(bar)) return; // its own failure is reported
     const list = this.claims.get(ref) ?? [];
+    if (list.some((x) => x.name === c.name && x.kind === c.kind)) {
+      this.ctx.d.error("connection", owner, `${owner} names ${ref} twice`, { refs: [ref] });
+      return;
+    }
     list.push(c);
     this.claims.set(ref, list);
   }
@@ -236,8 +240,9 @@ class Ends {
           const kind =
             typeof through !== "string" ? "butt-body" : through.includes(".") ? "butt-end" : "butt";
           for (const e of spec.ends) this.claim(id, e, { kind, conn: id, name: id });
-          if (kind === "butt-end" && spec.through_end !== undefined) {
-            ctx.d.error("butt-end", id, "through_end does not apply when through is a bar's end", {
+          if (kind !== "butt" && spec.through_end !== undefined) {
+            const what = kind === "butt-end" ? "a bar's end" : "a body";
+            ctx.d.error("connection", id, `through_end does not apply when through is ${what}`, {
               field: "through_end",
             });
           }
@@ -388,7 +393,7 @@ class Ends {
       prism = bodyPrism(ctx, id, spec.through.body, spec.through.at, copy);
       if (!prism) return undefined;
     }
-    const spacer = spec.spacer_mm === undefined ? 0 : ctx.num(id, "spacer_mm", spec.spacer_mm);
+    const spacer = this.spacer(id, spec);
     if (spacer === undefined) return undefined;
     const out = new Map<string, PlaneN>();
     for (const ref of spec.ends) {
@@ -721,10 +726,23 @@ class Ends {
       );
       return undefined;
     }
-    const spacer =
-      spec.spacer_mm === undefined ? 0 : ctx.num(c.conn as string, "spacer_mm", spec.spacer_mm);
+    const spacer = this.spacer(c.conn as string, spec);
     if (spacer === undefined) return undefined;
     return { p: addScaled(f.face.p, f.face.n, spacer), n: neg(f.face.n) };
+  }
+
+  /** A butt's spacer (§4.5): given, else its connector's, else none. */
+  private spacer(id: string, spec: ButtConn): number | undefined {
+    const { ctx } = this;
+    if (spec.spacer_mm !== undefined) return ctx.num(id, "spacer_mm", spec.spacer_mm);
+    if (spec.connector === undefined) return 0;
+    const found = ctx.items.item(spec.connector);
+    if (!found.ok) {
+      ctx.d.error("item", id, found.message, { field: "connector" });
+      return 0;
+    }
+    const s = found.item.kind === "connector" ? found.item.spacer_mm : undefined;
+    return s === undefined ? 0 : typeof s === "number" ? s : s.v;
   }
 
   // -------------------------------------------------------------------------------------------
