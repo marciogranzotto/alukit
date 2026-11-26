@@ -46,6 +46,17 @@ code {
   height: 100%;
 }
 
+/* The banners render only when they have something to say: pin the main row and the drawer to
+   their rows, or with no banner the main row is placed in an auto row and the 1fr row lies empty
+   below it (the viewport shrinks to the tree's height). */
+.app > .main {
+  grid-row: 4;
+}
+
+.app > .drawer {
+  grid-row: 5;
+}
+
 /* Top bar */
 
 .topbar {
