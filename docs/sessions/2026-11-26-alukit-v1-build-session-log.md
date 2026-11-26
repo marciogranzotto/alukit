@@ -40,7 +40,8 @@ in the gitignored `internal/session-notes.md`.*
 | M3b part 1: generation + BOM | **done** (17:03), merged, pushed `a9bfc3c` | G22–G25 pass with the design's values; the cart's cut list and BOM equal the hand tables; `alukit bom`; 240 tests after merge. Calls in [`docs/notes/m3b-gen-decisions.md`](../notes/m3b-gen-decisions.md). |
 | M3b part 3: offers, order list, costs | **done**, merged `a2dda75` (18:11), pushed | The cart's order list and totals match the hand golden byte for byte. G26 passes. Pack cover is an exact DP checked against brute force for needs 1–60. 7 blocking rules + 1 warning, each tested both ways. Calls: `docs/notes/m3b-order-decisions.md`. |
 | M5 core: variants, diff, revisions, GLB, skill | running (Opus, worktree), launched 18:14 | `snapshot` deferred to M4b |
-| M6 custom parts, placeholders | running (Opus, worktree), launched 18:14 | includes gap G-B |
+| M6 custom parts, placeholders | **done**, merged `2ded043` (19:08), pushed | Plates and bent angles with threaded, countersunk and counterbored holes; `alukit machining` (byte-exact against the hand golden); a placeholder holds only its own order group; gap G-B resolved without a new rule (golden G28). Calls: `docs/notes/m6-decisions.md`. |
+| M4b draw tool + catalog browser + `snapshot` | running (Opus, worktree), launched 18:32 | |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
 | M2b rest of Forseti | **done** (17:43), merged, pushed | All 1,196 orderable SKUs map to offers (1,208 offers, 1,034 items: 497 generic, 235 fasteners, 151 accessories, 100 connectors, 31 bars, 12 panels, 8 carriages). All 27 profile stems have sections (8 exact, 19 parametric). New connectors are marked as having no mounting model yet. Gate: 322 tests. Calls: [`docs/notes/m2b-decisions.md`](../notes/m2b-decisions.md). |
@@ -206,3 +207,20 @@ in the gitignored `internal/session-notes.md`.*
     security; Vite's default CORS is turned off.
   - A merge-caused bug was fixed: server-side checks didn't use the `mass()`/`cost()` accessors. A
     test now compares `/api/check` with `alukit check --json`.
+- **18:32**: M4b launched in a worktree, with M5's `snapshot` folded in.
+- **18:50**: M6 built (4 commits).
+  - Bend allowance BA = A·(π/180)·(R + K·T), with K required (0 < K ≤ 0.5): published K values vary
+    and DIN 6935's text wasn't checkable. Tap drill = major − pitch; a hole may name its own drill.
+  - Golden diff: the cut list is unchanged; in the BOM and order, only totals fed by the new lines
+    changed, and every other line is an addition.
+  - The merge went to an Opus agent, with fold-ins: the viewer draws plates, angles and
+    placeholders; `/api/machining` and a Machining drawer tab.
+- **19:08**: M6 merged by an Opus agent; the coordinator re-ran the gate (PASS, 455 tests).
+  - The viewer now draws plates (holes as rods), bent angles (legs plus bend) and placeholders
+    (translucent boxes). `/api/machining` and a Machining tab come from the same function as the
+    CLI.
+  - A grid-layout bug from M4a was fixed: on small projects the viewport collapsed to the tree's
+    height.
+  - The only test expectations changed are the cart's drawn part count (3 → 6) and the
+    box-selection count (42 → 45), from M6's three new parts.
+- **18:55**: M5 core built (6 commits; it merged `main` with M4a mid-way). Its merge is next.
