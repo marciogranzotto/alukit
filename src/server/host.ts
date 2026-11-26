@@ -1,0 +1,627 @@
+import { createHash } from "node:crypto";
+import { type FSWatcher, unwatchFile, watch, watchFile } from "node:fs";
+import { join } from "node:path";
+import type { CatalogSet } from "#catalog/link.ts";
+import { type CheckOutput, checkModel } from "#core/check/check.ts";
+import { applyBatch, type CommandResult } from "#core/commands/apply.ts";
+import { History, type LogEntry, type Step, stepText } from "#core/commands/history.ts";
+import type { CommandEnv, State } from "#core/commands/types.ts";
+import { type Derived, derive } from "#core/derive/derive.ts";
+import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
+import type { ItemSource } from "#core/items.ts";
+import { pinLock } from "#core/lock/pin.ts";
+import { documentRefs, lockCovers } from "#core/lock/refs.ts";
+import { LOCK_FILE, type Lock, lockText } from "#core/lock/schema.ts";
+import { lockItems } from "#core/lock/source.ts";
+import { projectText } from "#core/project/canonical.ts";
+import { DOCUMENT, openLiveCatalogs } from "#core/project/open.ts";
+import { parseProject } from "#core/project/parse.ts";
+import { readDocument, readLock, writeAtomic } from "#core/project/store.ts";
+
+/**
+ * The server owns the document (design §7.1, review M1). One `ProjectHost` per project holds the
+ * document and its lock in memory with one command queue: commands from tabs and the CLI, undo,
+ * redo, and direct edits of the files, each in turn. A step is applied, its files are written
+ * (the lock, then the document, each atomically), and only then is it committed to the history
+ * and broadcast, so a failed write leaves no step behind.
+ *
+ * A direct edit is read by the watcher; the server's own writes are recognised by hash. A valid
+ * edit enters the log as one `file` step. An invalid one makes the project read-only: every
+ * client is told why, commands are refused, until the file is valid again or someone chooses
+ * "restore last good", which writes the last good state back.
+ *
+ * Valid means what §7.4 says: the document is strict JSON that validates against the document
+ * schema, and the lock, if there is one, against the lock schema. Cross-reference problems are
+ * not invalidity: derive draws a half-edited document with diagnostics (§1, principle 8), as it
+ * does for one a command left.
+ */
+
+export type Status =
+  | { readOnly: false }
+  | {
+      readOnly: true;
+      /** `file`: the files on disk are not valid; `write`: the server could not write them. */
+      reason: "file" | "write";
+      message: string;
+      diagnostics: Diagnostic[];
+    };
+
+/** A step in a few words, for the undo and redo buttons and the log. */
+export interface StepInfo {
+  rev: number;
+  source: string;
+  what: string;
+}
+
+export interface DiagnosticsDelta {
+  new: Diagnostic[];
+  resolved: Diagnostic[];
+  counts: { error: number; warn: number; info: number };
+}
+
+/** What the event stream carries (design §7.1: each revision is broadcast). */
+export type HostEvent =
+  | {
+      type: "rev";
+      rev: number;
+      source: string;
+      what: string;
+      /** For an undo or redo: the revision of the step taken back or applied again. */
+      of?: number;
+      changes?: { created: string[]; removed: string[]; changed: string[] };
+      diagnostics: DiagnosticsDelta;
+      undo: StepInfo | null;
+      redo: StepInfo | null;
+    }
+  | { type: "status"; rev: number; status: Status };
+
+export interface Summary {
+  rev: number;
+  name?: string;
+  status: Status;
+  undo: StepInfo | null;
+  redo: StepInfo | null;
+}
+
+/** One revision's derived model and checks, computed once. */
+export interface Snapshot {
+  rev: number;
+  state: State;
+  items: ItemSource;
+  derived: Derived;
+  check: CheckOutput;
+  /** Problems with the catalogs the project names, as last opened. */
+  catalogs: Diagnostic[];
+}
+
+export interface CommandsRequest {
+  commands: readonly unknown[];
+  source: string;
+  /** Makes a retry harmless: the server remembers recent ids and their answers (§7.1). */
+  id?: string;
+  /** Advisory; with `strict`, a stale base revision is refused. */
+  baseRev?: number;
+  strict?: boolean;
+}
+
+export type CommandsAnswer =
+  | {
+      ok: true;
+      rev: number;
+      source: string;
+      results: CommandResult[];
+      diagnostics: DiagnosticsDelta;
+      /** The steps made since `baseRev`, by others, before this one. */
+      between: LogEntry[];
+    }
+  | { ok: false; kind: "refused"; failed: unknown; rev: number }
+  | { ok: false; kind: "read-only"; status: Status; rev: number }
+  | { ok: false; kind: "stale"; rev: number; between: LogEntry[] }
+  | { ok: false; kind: "write"; message: string; rev: number };
+
+export type HistoryAnswer =
+  | { ok: true; rev: number; step: StepInfo; undo: StepInfo | null; redo: StepInfo | null }
+  | { ok: false; kind: "nothing" | "read-only" | "write"; message: string; rev: number };
+
+export interface HostOptions {
+  /** The project folder, already resolved (`realpath`). */
+  dir: string;
+  builtinDir?: string;
+  /** Today's date for records (YYYY-MM-DD). */
+  today?: () => string;
+  /** Watch the files for direct edits (default true). */
+  watch?: boolean;
+  /** How long the watcher waits for a burst of file events to settle, in ms (default 50). */
+  settleMs?: number;
+  /** The interval of the polling safety net beside `fs.watch`, in ms (default 1000; 0: none). */
+  pollMs?: number;
+}
+
+/** The project could not be opened: its files are not valid (§7.4). */
+export class HostOpenError extends Error {
+  readonly diagnostics: Diagnostic[];
+  constructor(diagnostics: Diagnostic[]) {
+    super(diagnostics.map((d) => d.message).join("; "));
+    this.name = "HostOpenError";
+    this.diagnostics = diagnostics;
+  }
+}
+
+const RECENT_IDS = 256;
+
+function sha(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
+}
+
+function localDate(d = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function counts(ds: readonly Diagnostic[]) {
+  return {
+    error: ds.filter((d) => d.severity === "error").length,
+    warn: ds.filter((d) => d.severity === "warn").length,
+    info: ds.filter((d) => d.severity === "info").length,
+  };
+}
+
+function key(d: Diagnostic): string {
+  return JSON.stringify([d.severity, d.code, d.entity ?? "", d.field ?? "", d.message]);
+}
+
+function info(step: Step | undefined): StepInfo | null {
+  return step ? { rev: step.rev, source: step.source, what: stepText(step) } : null;
+}
+
+/** What the files on disk hold, read and validated. */
+interface Files {
+  docText?: string;
+  lockText?: string;
+  state?: { doc: Record<string, unknown>; lock: Lock | undefined };
+  problems: Diagnostic[];
+}
+
+async function readFiles(dir: string): Promise<Files> {
+  const doc = await readDocument(dir);
+  const lock = await readLock(dir);
+  const problems = [...doc.diagnostics, ...lock.diagnostics];
+  const raw = doc.value;
+  if (raw !== undefined) {
+    // The document schema (§7.4): what parseProject reports as a schema error.
+    for (const d of parseProject(raw).diagnostics) if (d.code === "schema") problems.push(d);
+  }
+  const out: Files = {
+    ...(doc.text !== undefined ? { docText: doc.text } : {}),
+    ...(lock.text !== undefined ? { lockText: lock.text } : {}),
+    problems,
+  };
+  if (problems.length === 0 && raw !== undefined) {
+    out.state = { doc: raw as Record<string, unknown>, lock: lock.value };
+  }
+  return out;
+}
+
+export class ProjectHost {
+  readonly dir: string;
+  private readonly opts: HostOptions;
+  private readonly history: History;
+  private statusValue: Status = { readOnly: false };
+  /** Hashes of the files as the server last wrote or read them. */
+  private disk: { doc?: string; lock?: string };
+  private chain: Promise<unknown> = Promise.resolve();
+  private readonly listeners = new Set<(e: HostEvent) => void>();
+  private readonly recent = new Map<string, Promise<CommandsAnswer>>();
+  private snap: Snapshot;
+  private catalogDiagnostics: Diagnostic[];
+  private watcher: FSWatcher | undefined;
+  /** The stat poll's listener, to remove exactly it on close. */
+  private poll: (() => void) | undefined;
+  private settleTimer: ReturnType<typeof setTimeout> | undefined;
+  private closed = false;
+
+  private constructor(
+    opts: HostOptions,
+    state: State,
+    disk: { doc?: string; lock?: string },
+    catalogs: Diagnostic[],
+  ) {
+    this.dir = opts.dir;
+    this.opts = opts;
+    this.history = new History(state);
+    this.disk = disk;
+    this.catalogDiagnostics = catalogs;
+    this.snap = this.compute();
+  }
+
+  /**
+   * Opens a project the server will own. The caller holds `.alukit/edit.lock`. A missing lock,
+   * or one that does not cover the document, is completed from the live catalogs and written
+   * (§4.13), as the first command would. Invalid files refuse to open.
+   */
+  static async open(opts: HostOptions): Promise<ProjectHost> {
+    const files = await readFiles(opts.dir);
+    if (!files.state) throw new HostOpenError(files.problems);
+    const raw = files.state.doc;
+    const live = await openLiveCatalogs(opts.dir, raw, opts.builtinDir);
+    let lock = files.state.lock;
+    const refs = documentRefs(raw);
+    const disk: { doc?: string; lock?: string } = {
+      ...(files.docText !== undefined ? { doc: sha(files.docText) } : {}),
+      ...(files.lockText !== undefined ? { lock: sha(files.lockText) } : {}),
+    };
+    if (!lock || !lockCovers(lock, refs)) {
+      lock = pinLock(live.set, refs, lock, { kind: "add" }).lock;
+      const text = lockText(lock);
+      await writeAtomic(join(opts.dir, LOCK_FILE), text);
+      disk.lock = sha(text);
+    }
+    const host = new ProjectHost(opts, { doc: raw, lock }, disk, live.diagnostics);
+    if (opts.watch !== false) host.startWatching();
+    return host;
+  }
+
+  get rev(): number {
+    return this.history.rev;
+  }
+
+  get status(): Status {
+    return this.statusValue;
+  }
+
+  get state(): State {
+    return this.history.current;
+  }
+
+  summary(): Summary {
+    const name = this.state.doc.name;
+    return {
+      rev: this.rev,
+      ...(typeof name === "string" ? { name } : {}),
+      status: this.statusValue,
+      undo: info(this.history.undoStep),
+      redo: info(this.history.redoStep),
+    };
+  }
+
+  log(): readonly LogEntry[] {
+    return this.history.log();
+  }
+
+  /** The current revision's derived model and checks. */
+  snapshot(): Snapshot {
+    return this.snap;
+  }
+
+  subscribe(listener: (e: HostEvent) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  /** Applies a batch of commands as one step (§6, §7.1). */
+  commands(req: CommandsRequest): Promise<CommandsAnswer> {
+    if (req.id !== undefined) {
+      const seen = this.recent.get(req.id);
+      if (seen) return seen;
+    }
+    const answer = this.run(() => this.applyNow(req));
+    if (req.id !== undefined) {
+      this.recent.set(req.id, answer);
+      if (this.recent.size > RECENT_IDS) {
+        const oldest = this.recent.keys().next().value as string;
+        this.recent.delete(oldest);
+      }
+    }
+    return answer;
+  }
+
+  /** Takes back the latest step, whoever made it (§7.1). */
+  undo(source: string): Promise<HistoryAnswer> {
+    return this.run(() => this.move("undo", source));
+  }
+
+  redo(source: string): Promise<HistoryAnswer> {
+    return this.run(() => this.move("redo", source));
+  }
+
+  /** "Restore last good" (§7.1): writes the last good state over files that are not valid. */
+  restore(): Promise<{ ok: boolean; rev: number; message?: string }> {
+    return this.run(async () => {
+      if (!this.statusValue.readOnly) {
+        return { ok: true, rev: this.rev, message: "the files already hold the current state" };
+      }
+      try {
+        await this.write(this.state, true);
+      } catch (e) {
+        this.setStatus(writeFailure(e));
+        return {
+          ok: false,
+          rev: this.rev,
+          message: (this.statusValue as { message: string }).message,
+        };
+      }
+      this.setStatus({ readOnly: false });
+      return { ok: true, rev: this.rev };
+    });
+  }
+
+  /** Reads the files now, as the watcher does after an event; resolves when it is handled. */
+  checkFiles(): Promise<void> {
+    return this.run(() => this.takeInFiles());
+  }
+
+  /** Resolves when everything queued so far has run. */
+  settled(): Promise<void> {
+    return this.run(async () => {});
+  }
+
+  async close(): Promise<void> {
+    this.closed = true;
+    if (this.settleTimer) clearTimeout(this.settleTimer);
+    this.watcher?.close();
+    if (this.poll) {
+      unwatchFile(join(this.dir, DOCUMENT), this.poll);
+      unwatchFile(join(this.dir, LOCK_FILE), this.poll);
+    }
+    await this.settled();
+    this.listeners.clear();
+  }
+
+  // -------------------------------------------------------------------------------------------
+
+  /** The one command queue: every change runs here, in turn. */
+  private run<T>(task: () => Promise<T>): Promise<T> {
+    const next = this.chain.then(task, task);
+    this.chain = next.catch(() => {});
+    return next;
+  }
+
+  private env(live: CatalogSet): CommandEnv {
+    return { today: (this.opts.today ?? localDate)(), live };
+  }
+
+  private async applyNow(req: CommandsRequest): Promise<CommandsAnswer> {
+    const rev0 = this.rev;
+    const between = this.log().filter(
+      (e) => req.baseRev !== undefined && e.rev > req.baseRev && e.rev <= rev0,
+    );
+    if (this.statusValue.readOnly) {
+      return { ok: false, kind: "read-only", status: this.statusValue, rev: rev0 };
+    }
+    if (req.strict && req.baseRev !== undefined && req.baseRev !== rev0) {
+      return { ok: false, kind: "stale", rev: rev0, between };
+    }
+    const live = await openLiveCatalogs(this.dir, this.state.doc, this.opts.builtinDir);
+    this.catalogDiagnostics = live.diagnostics;
+    const r = applyBatch(this.state, req.commands, this.env(live.set));
+    if (!r.ok) return { ok: false, kind: "refused", failed: r.failed, rev: rev0 };
+    try {
+      await this.write(r.state);
+    } catch (e) {
+      this.setStatus(writeFailure(e));
+      return { ok: false, kind: "write", message: (e as Error).message, rev: rev0 };
+    }
+    const before = this.snap;
+    const rev = this.history.commit(req.commands, r.results, r.state, req.source);
+    const changes = {
+      created: r.results.flatMap((x) => x.created),
+      removed: r.results.flatMap((x) => x.removed),
+      changed: r.results.flatMap((x) => x.changed),
+    };
+    const delta = this.advance(before);
+    this.emit({
+      type: "rev",
+      rev,
+      source: req.source,
+      what: stepText(this.history.undoStep as Step),
+      changes,
+      diagnostics: delta,
+      undo: info(this.history.undoStep),
+      redo: info(this.history.redoStep),
+    });
+    return { ok: true, rev, source: req.source, results: r.results, diagnostics: delta, between };
+  }
+
+  private async move(which: "undo" | "redo", source: string): Promise<HistoryAnswer> {
+    const rev0 = this.rev;
+    if (this.statusValue.readOnly) {
+      return { ok: false, kind: "read-only", message: this.statusValue.message, rev: rev0 };
+    }
+    const step = which === "undo" ? this.history.undoStep : this.history.redoStep;
+    if (!step) return { ok: false, kind: "nothing", message: `nothing to ${which}`, rev: rev0 };
+    try {
+      await this.write(which === "undo" ? step.before : step.after);
+    } catch (e) {
+      this.setStatus(writeFailure(e));
+      return { ok: false, kind: "write", message: (e as Error).message, rev: rev0 };
+    }
+    const before = this.snap;
+    if (which === "undo") this.history.undo(source);
+    else this.history.redo(source);
+    const delta = this.advance(before);
+    const entry = this.log()[this.log().length - 1] as LogEntry;
+    this.emit({
+      type: "rev",
+      rev: this.rev,
+      source,
+      what: entry.what,
+      of: step.rev,
+      diagnostics: delta,
+      undo: info(this.history.undoStep),
+      redo: info(this.history.redoStep),
+    });
+    return {
+      ok: true,
+      rev: this.rev,
+      step: info(step) as StepInfo,
+      undo: info(this.history.undoStep),
+      redo: info(this.history.redoStep),
+    };
+  }
+
+  /**
+   * The watcher's work: read the files; ignore the server's own writes (by hash); take a valid
+   * edit in as a `file` step; go read-only on an invalid one; come back when they are valid.
+   */
+  private async takeInFiles(): Promise<void> {
+    if (this.closed) return;
+    const files = await readFiles(this.dir);
+    const docHash = files.docText === undefined ? undefined : sha(files.docText);
+    const lockHash = files.lockText === undefined ? undefined : sha(files.lockText);
+    if (docHash === this.disk.doc && lockHash === this.disk.lock) return;
+
+    if (!files.state) {
+      this.disk = {
+        ...(docHash !== undefined ? { doc: docHash } : {}),
+        ...(lockHash !== undefined ? { lock: lockHash } : {}),
+      };
+      this.setStatus({
+        readOnly: true,
+        reason: "file",
+        message: `the files are not valid: ${files.problems[0]?.message ?? "unreadable"}`,
+        diagnostics: sortDiagnostics(files.problems),
+      });
+      return;
+    }
+
+    // Valid. The lock, edited or deleted with it, is completed from the live catalogs.
+    const raw = files.state.doc;
+    let lock = files.state.lock ?? this.state.lock;
+    const live = await openLiveCatalogs(this.dir, raw, this.opts.builtinDir);
+    this.catalogDiagnostics = live.diagnostics;
+    const refs = documentRefs(raw);
+    let lockWritten: string | undefined;
+    if (!files.state.lock || !lockCovers(lock, refs)) {
+      lock = pinLock(live.set, refs, lock, { kind: "add" }).lock;
+      lockWritten = lockText(lock);
+    }
+    this.disk = {
+      ...(docHash !== undefined ? { doc: docHash } : {}),
+      ...(lockHash !== undefined ? { lock: lockHash } : {}),
+    };
+    if (lockWritten !== undefined) {
+      try {
+        await writeAtomic(join(this.dir, LOCK_FILE), lockWritten);
+        this.disk.lock = sha(lockWritten);
+      } catch (e) {
+        this.setStatus(writeFailure(e));
+        return;
+      }
+    }
+    const next: State = { doc: raw, lock };
+    const same =
+      projectText(next.doc) === projectText(this.state.doc) &&
+      lockText(next.lock) === lockText(this.state.lock);
+    if (!same) {
+      const before = this.snap;
+      const rev = this.history.record(next, "file");
+      const delta = this.advance(before);
+      this.emit({
+        type: "rev",
+        rev,
+        source: "file",
+        what: "file edit",
+        diagnostics: delta,
+        undo: info(this.history.undoStep),
+        redo: info(this.history.redoStep),
+      });
+    }
+    if (this.statusValue.readOnly) this.setStatus({ readOnly: false });
+  }
+
+  /**
+   * Writes a state: the lock, then the document (§7.1), each atomically, and only the files
+   * whose canonical text differs from what is on disk; `force` writes both.
+   */
+  private async write(state: State, force = false): Promise<void> {
+    const lt = lockText(state.lock);
+    const dt = projectText(state.doc);
+    const lh = sha(lt);
+    const dh = sha(dt);
+    if (force || lh !== this.disk.lock) {
+      await writeAtomic(join(this.dir, LOCK_FILE), lt);
+      this.disk.lock = lh;
+    }
+    if (force || dh !== this.disk.doc) {
+      await writeAtomic(join(this.dir, DOCUMENT), dt);
+      this.disk.doc = dh;
+    }
+  }
+
+  private compute(): Snapshot {
+    const state = this.state;
+    const items = lockItems(state.lock);
+    const derived = derive(state.doc, items);
+    const check = checkModel({ raw: state.doc, derived, items });
+    return { rev: this.rev, state, items, derived, check, catalogs: this.catalogDiagnostics };
+  }
+
+  /** Moves the snapshot to the current revision; the diagnostics it added and resolved. */
+  private advance(before: Snapshot): DiagnosticsDelta {
+    this.snap = this.compute();
+    const was = new Set(before.check.diagnostics.map(key));
+    const now = new Set(this.snap.check.diagnostics.map(key));
+    return {
+      new: this.snap.check.diagnostics.filter((d) => !was.has(key(d))),
+      resolved: before.check.diagnostics.filter((d) => !now.has(key(d))),
+      counts: counts(this.snap.check.diagnostics),
+    };
+  }
+
+  private setStatus(s: Status): void {
+    this.statusValue = s;
+    this.emit({ type: "status", rev: this.rev, status: s });
+  }
+
+  private emit(e: HostEvent): void {
+    for (const l of this.listeners) {
+      try {
+        l(e);
+      } catch {
+        // A listener that fails (a closed stream) must not stop the others.
+      }
+    }
+  }
+
+  private startWatching(): void {
+    const names = new Set([DOCUMENT, LOCK_FILE]);
+    const poke = () => {
+      if (this.closed) return;
+      if (this.settleTimer) clearTimeout(this.settleTimer);
+      this.settleTimer = setTimeout(() => {
+        this.settleTimer = undefined;
+        void this.checkFiles();
+      }, this.opts.settleMs ?? 50);
+    };
+    // The folder, not the files: an editor that saves by rename replaces the file's inode.
+    try {
+      this.watcher = watch(this.dir, { persistent: false }, (_event, name) => {
+        if (name === null || names.has(String(name))) poke();
+      });
+      this.watcher.on("error", () => {
+        // The polling below still sees the files.
+      });
+    } catch {
+      // A file system without change events: the polling below is the watcher.
+    }
+    // `fs.watch` is not reliable on every file system (Node's docs, "Caveats"); a slow stat poll
+    // beside it costs little, and a duplicate check is harmless (it compares hashes).
+    const pollMs = this.opts.pollMs ?? 1000;
+    if (pollMs > 0) {
+      this.poll = poke;
+      for (const n of names) {
+        watchFile(join(this.dir, n), { interval: pollMs, persistent: false }, poke);
+      }
+    }
+  }
+}
+
+function writeFailure(e: unknown): Status {
+  const message = `cannot write the project files: ${e instanceof Error ? e.message : String(e)}`;
+  return {
+    readOnly: true,
+    reason: "write",
+    message,
+    diagnostics: [{ severity: "error", code: "write", message }],
+  };
+}
