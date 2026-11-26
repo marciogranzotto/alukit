@@ -21,6 +21,7 @@ import {
   catalogIndex,
   catalogTree,
   itemCard,
+  listed,
   searchCatalog,
 } from "./catalog.ts";
 import { type CommandsAnswer, type HistoryAnswer, type HostOptions, ProjectHost } from "./host.ts";
@@ -402,20 +403,17 @@ async function api(
           sendJson(res, 400, { ok: false, message: "limit and offset take whole numbers" });
           return;
         }
-        const { entries } = await catalogEntries(ctx);
+        const { live, lock, entries } = await catalogEntries(ctx);
         const opt = (k: string) => query.get(k) ?? undefined;
-        sendJson(
-          res,
-          200,
-          searchCatalog(entries, {
-            ...(opt("q") !== undefined ? { q: opt("q") } : {}),
-            ...(opt("vendor") !== undefined ? { vendor: opt("vendor") } : {}),
-            ...(opt("kind") !== undefined ? { kind: opt("kind") } : {}),
-            ...(opt("family") !== undefined ? { family: opt("family") } : {}),
-            ...(limit !== undefined ? { limit } : {}),
-            ...(offset !== undefined ? { offset } : {}),
-          }),
-        );
+        const found = searchCatalog(entries, {
+          ...(opt("q") !== undefined ? { q: opt("q") } : {}),
+          ...(opt("vendor") !== undefined ? { vendor: opt("vendor") } : {}),
+          ...(opt("kind") !== undefined ? { kind: opt("kind") } : {}),
+          ...(opt("family") !== undefined ? { family: opt("family") } : {}),
+          ...(limit !== undefined ? { limit } : {}),
+          ...(offset !== undefined ? { offset } : {}),
+        });
+        sendJson(res, 200, { total: found.total, items: listed(found.items, live, lock) });
         return;
       }
       case "/api/catalog/item": {

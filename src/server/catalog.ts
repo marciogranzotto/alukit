@@ -6,6 +6,7 @@ import { catalogItems, type ItemSource, type OfferInfo } from "#core/items.ts";
 import type { Lock } from "#core/lock/schema.ts";
 import { lockItems } from "#core/lock/source.ts";
 import type { ViewSection } from "../mesh/model.ts";
+import { type P2, simplifyRing } from "../mesh/outline.ts";
 import { viewSection } from "./view.ts";
 
 /**
@@ -195,6 +196,53 @@ export function searchCatalog(
   const offset = Math.max(0, query.offset ?? 0);
   const limit = Math.min(Math.max(1, query.limit ?? 50), SEARCH_LIMIT);
   return { total: hits.length, items: hits.slice(offset, offset + limit) };
+}
+
+/** A section drawn small: its outline and holes, coarsened to a hundredth of its size. */
+export interface Thumb {
+  outline: P2[];
+  holes: P2[][];
+  bbox: [P2, P2];
+}
+
+/** A list entry as a card shows it: a bar's thumbnail, fidelity and mass per metre. */
+export type ListedEntry = CatalogEntry & {
+  thumb?: Thumb;
+  fidelity?: string;
+  mass_kg_per_m?: number;
+};
+
+/** The list's cards: each entry with what a glance needs, read from its catalog or the lock. */
+export function listed(
+  entries: readonly CatalogEntry[],
+  live: CatalogSet,
+  lock: Lock,
+): ListedEntry[] {
+  const sources = { live: catalogItems(live), lock: lockItems(lock) };
+  return entries.map((e) => {
+    const found = (e.live ? sources.live : sources.lock).item(e.id);
+    const bar = found.ok ? found.bar : undefined;
+    if (!bar) return e;
+    const [[x0, y0], [x1, y1]] = bar.section.bbox_mm;
+    const tol = Math.max(x1 - x0, y1 - y0) / 100;
+    const ring = (r: readonly (readonly [number, number])[]) =>
+      simplifyRing(r, tol).map(
+        ([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10] as P2,
+      );
+    return {
+      ...e,
+      thumb: {
+        outline: ring(bar.section.draw.outline),
+        holes: bar.section.draw.holes.map(ring),
+        bbox: [
+          [x0, y0],
+          [x1, y1],
+        ],
+      },
+      fidelity: bar.section.fidelity,
+      ...(bar.mass_kg_per_m ? { mass_kg_per_m: bar.mass_kg_per_m.v } : {}),
+    };
+  });
 }
 
 /** One number of an item card, with the provenance its valued field gives. */

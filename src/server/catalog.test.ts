@@ -193,6 +193,11 @@ describe("the catalog API", () => {
     ]);
     const found = await get(s, "api/catalog/items?q=TS4080&kind=bar");
     expect((found.body.items as { id: string }[]).map((e) => e.id)).toEqual(["test:TS4080"]);
+    // A list card carries a bar's thumbnail, so the list needs no request per item.
+    expect((found.body.items as { thumb?: { bbox: unknown } }[])[0]?.thumb?.bbox).toEqual([
+      [-20, -40],
+      [20, 40],
+    ]);
     const card = await get(s, "api/catalog/item?id=test%3ATS4080");
     expect(card.status).toBe(200);
     expect((card.body.entry as { id: string }).id).toBe("test:TS4080");
