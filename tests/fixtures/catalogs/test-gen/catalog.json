@@ -39,6 +39,18 @@
       "bbox_mm": [[-35, -22, -5], [35, 22, 20]],
       "datums": { "run": [0, 0, 0] }
     },
+    "END-40": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "End connector 40 (synthetic)",
+      "fits": ["test:s40-c8"],
+      "mass_kg": 0.03,
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M8", "depth_mm": 20 },
+        { "op": "access-hole", "on": "butting", "d_mm": 7, "from_end_mm": 20, "depth_mm": 10 },
+        { "op": "through-hole", "on": "through", "d_mm": 8.5 }
+      ]
+    },
     "SCR-M5x25": {
       "kind": "fastener",
       "subtype": "screw",

@@ -136,7 +136,7 @@ describe("alukit catalog", () => {
   });
 });
 
-describe("alukit derive and cutlist", () => {
+describe("alukit derive, cutlist and bom", () => {
   const project = (name: string) =>
     fileURLToPath(new URL(`../../tests/fixtures/${name}`, import.meta.url));
 
@@ -166,9 +166,31 @@ describe("alukit derive and cutlist", () => {
     expect(JSON.parse(json.out.join("\n")).schema).toBe("alukit.cutlist/1");
   });
 
+  it("prints the bill of materials in each format", async () => {
+    const md = await capture(["bom", project("cart")]);
+    expect(md.code).toBe(0);
+    expect(md.out.join("\n")).toMatch(/^# Bill of materials$/m);
+    expect(md.out.join("\n")).toMatch(
+      /^\| test:CAR20 \| .* \| 3 \| 0\.400 \| 1\.200 \| p1, p1@1, p1@2 \|$/m,
+    );
+    const csv = await capture(["bom", project("cart"), "--format", "csv"]);
+    expect(csv.out.join("\n").split("\n")[0]).toMatch(/^kind,item,name,options,qty,length_mm,/);
+    const json = await capture(["bom", project("cart"), "--format", "json"]);
+    const b = JSON.parse(json.out.join("\n"));
+    expect(b.schema).toBe("alukit.bom/1");
+    expect(b.diagnostics).toEqual([]);
+  });
+
+  it("exits 1 for the BOM of a document with an error, naming it", async () => {
+    const r = await capture(["bom", project("golden-ends/G07")]);
+    expect(r.code).toBe(1);
+    expect(r.err.join("\n")).toMatch(/^error angled-end b2\.a: /m);
+  });
+
   it("refuses bad usage with exit 2", async () => {
     expect((await capture(["cutlist"])).code).toBe(2);
     expect((await capture(["cutlist", "x", "--format", "pdf"])).code).toBe(2);
+    expect((await capture(["bom", "x", "--format", "pdf"])).code).toBe(2);
     expect((await capture(["derive", "x", "--frob"])).code).toBe(2);
   });
 

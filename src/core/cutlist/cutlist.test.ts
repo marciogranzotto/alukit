@@ -79,6 +79,84 @@ describe("nesting (design §5.3)", () => {
     );
     expect(r.bars.map((b) => b.stock.sku)).toEqual(["s2000"]);
   });
+
+  it("stands a factory piece at a stock end, with no trim there, at most two per bar", () => {
+    const stock = [{ sku: "s1000", len: h(1000), price: 100 }];
+    // Two factory pieces of 470: 0 × 5 + 940 + 3 = 943 (the cart's rail).
+    const two = nest(
+      [
+        { id: "r1", len: h(470), factory: true },
+        { id: "r2", len: h(470), factory: true },
+      ],
+      stock,
+      h(3),
+      h(5),
+    );
+    expect(two.bars.map((b) => [b.used / 100, b.pieces.map((p) => [p.id, p.end])])).toEqual([
+      [
+        943,
+        [
+          ["r1", "start"],
+          ["r2", "end"],
+        ],
+      ],
+    ]);
+    // One factory piece and a plain one: a trim at the far end only, 5 + 940 + 3 = 948; the
+    // factory piece first.
+    const mixed = nest(
+      [
+        { id: "p1", len: h(470) },
+        { id: "r1", len: h(470), factory: true },
+      ],
+      stock,
+      h(3),
+      h(5),
+    );
+    expect(mixed.bars.map((b) => [b.used / 100, b.pieces.map((p) => [p.id, p.end])])).toEqual([
+      [
+        948,
+        [
+          ["r1", "start"],
+          ["p1", undefined],
+        ],
+      ],
+    ]);
+    // Three short factory pieces fit by length but not by ends: two bars.
+    const three = nest(
+      ["r1", "r2", "r3"].map((id) => ({ id, len: h(100), factory: true })),
+      stock,
+      h(3),
+      h(5),
+    );
+    expect(three.bars.map((b) => b.pieces.length)).toEqual([2, 1]);
+  });
+
+  it("keeps a piece that names its stock length in that length, cheaper or not", () => {
+    const stocks = [
+      { sku: "s500", len: h(500), price: 100 },
+      { sku: "s1000", len: h(1000), price: 200 },
+    ];
+    const free = nest([{ id: "p1", len: h(300) }], stocks, h(3), h(5));
+    expect(free.bars.map((b) => b.stock.sku)).toEqual(["s500"]);
+    const pinned = nest([{ id: "p1", len: h(300), stock: h(1000) }], stocks, h(3), h(5));
+    expect(pinned.bars.map((b) => b.stock.sku)).toEqual(["s1000"]);
+    // A free piece that rides in the pinned bar keeps it there; one too long for any is unplaced.
+    const ride = nest(
+      [
+        { id: "p1", len: h(300), stock: h(1000) },
+        { id: "p2", len: h(300) },
+      ],
+      stocks,
+      h(3),
+      h(5),
+    );
+    expect(ride.bars.map((b) => [b.stock.sku, b.pieces.map((p) => p.id)])).toEqual([
+      ["s1000", ["p1", "p2"]],
+    ]);
+    expect(nest([{ id: "p1", len: h(600), stock: h(500) }], stocks, h(3), h(5)).unplaced).toEqual([
+      { id: "p1", len: h(600), stock: h(500) },
+    ]);
+  });
 });
 
 describe("the cut list (design §5.3)", () => {
