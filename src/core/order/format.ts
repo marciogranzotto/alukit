@@ -1,4 +1,5 @@
 import type { Diagnostic } from "../diagnostics.ts";
+// From types.ts, not order.ts: the viewer imports these helpers, and nothing of the pricing.
 import {
   type CostOut,
   type MoneyOut,
@@ -7,7 +8,7 @@ import {
   optText,
   type SupplierOrder,
   type Totals,
-} from "./order.ts";
+} from "./types.ts";
 
 /**
  * The order list and the costs as Markdown, CSV or JSON (design §5.4: "Output as Markdown, CSV or
@@ -25,11 +26,11 @@ export function money(minor: number): string {
 
 const mm = (x: number) => x.toFixed(2);
 
-function supplierName(s: SupplierOrder): string {
+export function supplierName(s: SupplierOrder): string {
   return s.supplier ?? "Unsourced (no offer)";
 }
 
-function qtyText(l: OrderLine): string {
+export function qtyText(l: OrderLine): string {
   if (l.unit === "pack") return `${l.qty} × pack of ${l.pack}`;
   if (l.unit === "bar") return `${l.qty} × bar ${mm(l.length_mm ?? 0)} mm`;
   if (l.unit === "piece" && l.length_mm !== undefined) {
@@ -41,7 +42,8 @@ function qtyText(l: OrderLine): string {
   return `${l.qty} ${l.unit}${l.qty === 1 ? "" : "s"}`;
 }
 
-function priceText(l: OrderLine): string[] {
+/** Unit price, low, likely and high, as the order list prints them. */
+export function priceText(l: OrderLine): string[] {
   if (l.covered_by) return [`see ${l.covered_by}`, "", "", ""];
   if (l.likely_minor === undefined) return ["no price", "", "", ""];
   const cur = l.currency ? ` ${l.currency}` : "";
@@ -53,7 +55,7 @@ function priceText(l: OrderLine): string[] {
   ];
 }
 
-function itemsText(
+export function itemsText(
   xs: readonly { item: string; opt: Record<string, string>; qty: number }[],
 ): string {
   return xs
@@ -61,7 +63,7 @@ function itemsText(
     .join("; ");
 }
 
-function detailText(l: OrderLine): string {
+export function detailText(l: OrderLine): string {
   const parts: string[] = [];
   if (l.kit) parts.push(`each kit: ${itemsText(l.kit)}`);
   if (l.pieces) {
@@ -122,7 +124,7 @@ function totalsMarkdown(t: Totals): string[] {
 }
 
 /** What a cost line covers, or the share a contingency takes. */
-function coversText(c: CostOut): string {
+export function coversText(c: CostOut): string {
   if (c.pct !== undefined) return `${c.pct} % of the subtotal`;
   if (!c.covers) return "";
   return [

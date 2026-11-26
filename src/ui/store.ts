@@ -15,6 +15,8 @@ export const summary = signal<Summary | undefined>(undefined);
 export const model = signal<Model | undefined>(undefined);
 export const selection = signal<ReadonlySet<string>>(new Set());
 export const log = signal<LogEntry[]>([]);
+/** The order's date (`as_of`), when the person picked one; the server's today otherwise. */
+export const asOf = signal<string | undefined>(undefined);
 /** The last answer worth telling: a refusal, a failure. */
 export const notice = signal<{ text: string; error: boolean } | undefined>(undefined);
 export const busy = signal(false);

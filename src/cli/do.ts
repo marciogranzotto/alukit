@@ -6,6 +6,7 @@ import { checkModel } from "#core/check/check.ts";
 import { modelOutputs, outputAccessors } from "#core/check/outputs.ts";
 import { applyBatch, batchOf, type CommandResult } from "#core/commands/apply.ts";
 import type { CommandError, State } from "#core/commands/types.ts";
+import { localDate } from "#core/dates.ts";
 import { derive } from "#core/derive/derive.ts";
 import { jsonText } from "#core/derive/output.ts";
 import type { Diagnostic } from "#core/diagnostics.ts";
@@ -47,12 +48,6 @@ export interface EditOptions {
   as?: string;
   /** The command named in error messages: `do`, or `add` when it applies its own command. */
   cmd: string;
-}
-
-/** Today as YYYY-MM-DD in local time: the date a decision record carries. */
-export function localDate(d = new Date()): string {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 /** What `alukit check` reports on the model of a state (§5.5), without the file-level checks. */

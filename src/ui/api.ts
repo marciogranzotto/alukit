@@ -49,6 +49,16 @@ export async function get<T>(path: string): Promise<T> {
   return body as T;
 }
 
+/** A GET of an output of one revision: the server names the revision in `x-alukit-rev`. */
+export async function getAtRev<T>(path: string): Promise<{ rev: number; body: T }> {
+  const r = await fetch(path, { headers: headers(false), cache: "no-store" });
+  const body = await r.json().catch(() => undefined);
+  if (!r.ok) throw new ApiError(r.status, body);
+  const rev = Number(r.headers.get("x-alukit-rev"));
+  if (!Number.isInteger(rev)) throw new ApiError(r.status, { message: "no revision" });
+  return { rev, body: body as T };
+}
+
 /** A POST whose answer is returned whatever its status: refusals are answers too. */
 export async function post<T>(path: string, body: unknown): Promise<{ status: number; body: T }> {
   const r = await fetch(path, {

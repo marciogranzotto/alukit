@@ -75,6 +75,8 @@ to fold into the design or veto. Labels: **verified** (run, with how), **read**,
 | # | Decision | Why |
 |---|---|---|
 | 40 | Each revision's snapshot holds its outputs (`modelOutputs`: the cut list, the BOM and the priced order, each computed on first use), and its checks are `alukit check`'s, with `mass()` and `cost()` read from them (m3b-doc decision 39). The view model, `/api/cutlist` and `/api/bom` read the same outputs | A `do` sent through the server must report the diagnostics a headless `do` reports; M4a's server called `checkModel` with no accessors, so every `mass()` or `cost()` check stayed `check-pending` there (**verified**: `server.test.ts` compares `/api/check` with `alukit check --json` on G26 with a `cost()` and a `mass()` check) |
+| 41 | `GET /api/order` and `GET /api/costs` answer what `alukit order` and `alukit costs --format json` print, byte for byte: one function (`checkedOrder`) runs the order rules after the checks for both, on the snapshot's outputs, derived from the lock the server holds and stamped with its hash. `?as_of=YYYY-MM-DD` is `--as-of`; without it, the server's today; anything else is 400. The revision is in `x-alukit-rev` | The order is judged as of a date as well as a revision, so it is not in `/api/model`, and nothing is priced until a tab or an agent asks. `--frozen` has no server counterpart: the server derives from the lock it holds and pins what an edit names (**verified**: `server.test.ts`, the cart's answer equals the hand golden plus the stamp) |
+| 42 | The drawer's tabs follow §8: Cut list, BOM, Order, Costs, Checks, Log. Order and Costs fetch when shown and again at each revision the scene draws; an older answer stays on screen, dimmed, until the drawn revision's arrives. One date picker sets `as_of` for both. A reason's entities link into the scene (an end or a stock piece selects its entity); items, cost lines and suppliers do not. Lines and cost lines are worded by the Markdown output's helpers, so the tab and `alukit order` say the same | Every panel settles on the revision the scene shows (decision 29); the tab is the order list, not a second rendering of it (**verified**: `tests/e2e/outputs.spec.ts`, each supplier's status and total and the totals against the CLI, and a CLI `addCost` reaching the tab live) |
 
 ## Measured
 
@@ -92,7 +94,8 @@ to fold into the design or veto. Labels: **verified** (run, with how), **read**,
   through `alukit serve` only.
 - `serve` rebuilding `dist/` when the sources change (§10): it refuses to start without a build.
 - Orthographic and standard views, the section plane, hole markers, placeholder hatching, and the
-  drawer's order, costs, open items, params and decisions tabs.
+  drawer's open items, params and decisions tabs. (The order and costs tabs came with the merge,
+  decision 42.)
 
 ## For M4b (draw, connect, place, pattern, catalog browser)
 

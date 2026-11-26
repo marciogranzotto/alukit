@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
@@ -5,7 +6,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DOCUMENT } from "#core/project/open.ts";
 import { acquireEditLock, EditLockHeld, STATE_DIR } from "#core/project/store.ts";
-import { scratchFixtures } from "#core/testing.ts";
+import { FIXTURES, scratchFixtures } from "#core/testing.ts";
 import { capture } from "../cli/testing.ts";
 import { SseParser } from "../ui/sse.ts";
 import { ownerPath, readOwner } from "./owner.ts";
@@ -140,7 +141,15 @@ describe("static files", () => {
 describe("the security gate (§7.2)", () => {
   it("answers 403 without the token, or with a wrong one", async () => {
     const r = await serve();
-    for (const path of ["/api/project", "/api/model", "/api/events", "/api/log", "/api/x"]) {
+    for (const path of [
+      "/api/project",
+      "/api/model",
+      "/api/order",
+      "/api/costs",
+      "/api/events",
+      "/api/log",
+      "/api/x",
+    ]) {
       expect((await raw(r.port, path)).status, path).toBe(403);
       const wrong = await raw(r.port, path, { headers: { authorization: "Bearer nope" } });
       expect(wrong.status, path).toBe(403);
@@ -333,6 +342,78 @@ describe("the API", () => {
       status: { readOnly: true, reason: "file" },
     });
     ctrl.abort();
+  });
+});
+
+describe("the order and the costs (§5.4, §4.11)", () => {
+  const AS_OF = "2026-11-26";
+
+  async function text(r: RunningServer, path: string) {
+    const res = await fetch(new URL(path, r.url), { headers: auth(r) });
+    return { status: res.status, rev: res.headers.get("x-alukit-rev"), body: await res.text() };
+  }
+
+  it("answers as alukit order and costs --format json, byte for byte, derived from the lock", async () => {
+    const f = await fixture();
+    const cart = join(f.dir, "..", "..", "cart");
+    const r = await serve({ ...f, dir: cart });
+
+    // The cart's order is the hand golden plus the stamp: the hash of the lock the server holds.
+    const order = await text(r, `api/order?as_of=${AS_OF}`);
+    expect(order).toMatchObject({ status: 200, rev: "0" });
+    const lock = createHash("sha256").update(await readFile(join(cart, "alukit.lock.json")));
+    const golden = await readFile(join(FIXTURES, "cart", "expected-order.json"), "utf8");
+    expect(order.body).toBe(
+      golden.replace(
+        /^( {2}"oldest_read": .*\n)/m,
+        `$1  "lock": "sha256:${lock.digest("hex")}",\n`,
+      ),
+    );
+    for (const cmd of ["order", "costs"]) {
+      const served = await text(r, `api/${cmd}?as_of=${AS_OF}`);
+      const cli = await capture([cmd, cart, "--format", "json", "--as-of", AS_OF]);
+      expect(served.body, cmd).toBe(`${cli.out}\n`);
+    }
+  });
+
+  it("follows the revision, takes today by default, and refuses a date that is not one", async () => {
+    const f = await fixture();
+    const r = await startServer({
+      dir: join(f.dir, "..", "..", "golden-gen", "G26"),
+      distDir: f.dist,
+      host: { watch: false, today: () => AS_OF },
+    });
+    running.push(r);
+    const before = JSON.parse((await text(r, "api/costs")).body);
+    expect(before).toMatchObject({ schema: "alukit.costs/1", as_of: AS_OF, costs: [] });
+    const a = await api(r, "api/commands", {
+      commands: [
+        {
+          cmd: "addCost",
+          args: {
+            cost: {
+              label: "Paint",
+              kind: "labour",
+              low_minor: 1000,
+              likely_minor: 1000,
+              high_minor: 1000,
+            },
+          },
+        },
+      ],
+      source: "ui",
+    });
+    expect(a.status).toBe(200);
+    const after = await text(r, "api/costs");
+    expect(after.rev).toBe("1");
+    const costs = JSON.parse(after.body);
+    expect(costs.costs.map((c: { id: string }) => c.id)).toEqual(["K1"]);
+    expect(costs.totals.total.likely_minor).toBe(before.totals.total.likely_minor + 1000);
+
+    expect(JSON.parse((await text(r, "api/order?as_of=2027-01-02")).body).as_of).toBe("2027-01-02");
+    for (const bad of ["2026-02-30", "26-11-2026", ""]) {
+      expect((await text(r, `api/order?as_of=${bad}`)).status, bad).toBe(400);
+    }
   });
 });
 

@@ -513,3 +513,42 @@ tr.warn {
 .diagnostics .code {
   color: var(--dim);
 }
+
+.status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 5px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+}
+
+.status.READY {
+  color: var(--ok);
+}
+
+.status.BLOCKED {
+  color: var(--error);
+}
+
+.stale {
+  opacity: 0.55;
+}
+
+.stamp {
+  color: var(--dim);
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.as-of input {
+  font: inherit;
+  color: inherit;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+table.grid tr.total td {
+  font-weight: 600;
+}

@@ -7,6 +7,7 @@ import { type ModelOutputs, modelOutputs, outputAccessors } from "#core/check/ou
 import { applyBatch, type CommandResult } from "#core/commands/apply.ts";
 import { History, type LogEntry, type Step, stepText } from "#core/commands/history.ts";
 import type { CommandEnv, State } from "#core/commands/types.ts";
+import { localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
 import type { ItemSource } from "#core/items.ts";
@@ -157,11 +158,6 @@ function sha(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-function localDate(d = new Date()): string {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-
 function counts(ds: readonly Diagnostic[]) {
   return {
     error: ds.filter((d) => d.severity === "error").length,
@@ -299,6 +295,11 @@ export class ProjectHost {
     return this.history.log();
   }
 
+  /** Today's date, YYYY-MM-DD: what records carry, and the order's date unless one is given. */
+  today(): string {
+    return (this.opts.today ?? localDate)();
+  }
+
   /** The current revision's derived model and checks. */
   snapshot(): Snapshot {
     return this.snap;
@@ -390,7 +391,7 @@ export class ProjectHost {
   }
 
   private env(live: CatalogSet): CommandEnv {
-    return { today: (this.opts.today ?? localDate)(), live };
+    return { today: this.today(), live };
   }
 
   private async applyNow(req: CommandsRequest): Promise<CommandsAnswer> {

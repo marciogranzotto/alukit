@@ -5,8 +5,12 @@ import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { CHECK_SCHEMA } from "#core/check/check.ts";
+import { checkedOrder } from "#core/check/outputs.ts";
+import { isDate } from "#core/dates.ts";
 import { derivedJson } from "#core/derive/output.ts";
 import { sortDiagnostics } from "#core/diagnostics.ts";
+import { lockHash } from "#core/lock/pin.ts";
+import { costsJson, costsOf, orderJson } from "#core/order/format.ts";
 import { DOCUMENT } from "#core/project/open.ts";
 import { acquireEditLock, SERVE } from "#core/project/store.ts";
 import { type CommandsAnswer, type HistoryAnswer, type HostOptions, ProjectHost } from "./host.ts";
@@ -35,6 +39,7 @@ import { viewModel } from "./view.ts";
  * | `GET /api/project` | the document and its lock as the server holds them |
  * | `GET /api/model` | everything a tab shows for one revision (`alukit.view/1`, `view.ts`) |
  * | `GET /api/derived`, `/api/cutlist`, `/api/bom`, `/api/check` | as the CLI's `--json` outputs |
+ * | `GET /api/order`, `/api/costs` `[?as_of=YYYY-MM-DD]` | as `alukit order` and `costs --format json`, from the lock; today by default |
  * | `GET /api/log` | the log of steps, undos and redos |
  * | `GET /api/events` | the event stream: SSE wire format, read with `fetch` |
  * | `POST /api/commands` | `{ commands, source, id?, baseRev?, strict? }`: one step |
@@ -260,6 +265,7 @@ async function api(
   ctx: Ctx,
   method: string,
   path: string,
+  query: URLSearchParams,
   req: IncomingMessage,
   res: ServerResponse,
 ) {
@@ -317,6 +323,23 @@ async function api(
           },
           snap.rev,
         );
+        return;
+      }
+      case "/api/order":
+      case "/api/costs": {
+        // As the CLI prints them (§5.4, §5.5): derived from the lock the server holds, after the
+        // checks, stamped with that lock's hash; judged as of a date, today unless one is given.
+        const asOf = query.get("as_of") ?? p.today();
+        if (!isDate(asOf)) {
+          sendJson(res, 400, { ok: false, message: "as_of takes a date, YYYY-MM-DD" });
+          return;
+        }
+        const snap = p.snapshot();
+        const o = checkedOrder(snap.outputs, snap.check.diagnostics, {
+          asOf,
+          lock: lockHash(snap.state.lock),
+        });
+        sendJson(res, 200, path === "/api/order" ? orderJson(o) : costsJson(costsOf(o)), snap.rev);
         return;
       }
       case "/api/log":
@@ -392,11 +415,15 @@ async function handle(ctx: Ctx, req: IncomingMessage, res: ServerResponse): Prom
     return;
   }
   const method = req.method ?? "GET";
+  const url = req.url ?? "/";
+  const q = url.indexOf("?");
+  const rawPath = q < 0 ? url : url.slice(0, q);
+  const rawQuery = q < 0 ? "" : url.slice(q + 1);
   let path: string;
   try {
     // A malformed escape such as "%E0%A4%A" makes decodeURIComponent throw; uncaught, that
     // would take the whole server down.
-    path = decodeURIComponent((req.url ?? "/").split("?")[0] ?? "/");
+    path = decodeURIComponent(rawPath);
   } catch {
     send(res, 400, "bad request");
     return;
@@ -416,7 +443,7 @@ async function handle(ctx: Ctx, req: IncomingMessage, res: ServerResponse): Prom
       deny(res, refused);
       return;
     }
-    await api(ctx, method, path, req, res);
+    await api(ctx, method, path, new URLSearchParams(rawQuery), req, res);
     return;
   }
   await serveStatic(ctx, method, path, res);
