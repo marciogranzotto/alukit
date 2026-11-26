@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { CATALOG_USAGE } from "./catalog-usage.ts";
 import { EDIT_COMMANDS, EDIT_USAGE, PROJECT_COMMANDS, PROJECT_USAGE } from "./project-usage.ts";
+import { PUBLISH_COMMANDS, PUBLISH_USAGE, type PublishCommand } from "./publish-usage.ts";
 
 export interface Io {
   out: (text: string) => void;
@@ -12,8 +13,6 @@ export interface Io {
 /** The planned commands (design §7.3), not implemented yet. */
 const PLANNED: readonly (readonly [string, string])[] = [
   ["log | undo", "the server's log; undo the latest step"],
-  ["diff <a> <b>", "compare projects, revisions or variants"],
-  ["revision save|verify <name>", "revisions"],
   ["snapshot <dir>", "render a view to PNG"],
   ["export glb <dir>", "export a GLB"],
   ["catalog search | import", "find items; run a vendor importer"],
@@ -47,6 +46,7 @@ export function helpText(): string {
     ...PROJECT_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
     ...EDIT_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
     ...CATALOG_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
+    ...PUBLISH_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
     ...rows,
     "",
     "Options:",
@@ -99,6 +99,10 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
   if ((EDIT_COMMANDS as readonly string[]).includes(cmd)) {
     const { editCommand } = await import("./edit.ts");
     return editCommand(cmd as (typeof EDIT_COMMANDS)[number], rest, io);
+  }
+  if ((PUBLISH_COMMANDS as readonly string[]).includes(cmd)) {
+    const { publishCommand } = await import("./publish.ts");
+    return publishCommand(cmd as PublishCommand, rest, io);
   }
   if (PLANNED_NAMES.has(cmd)) {
     io.err(`alukit ${cmd}: not implemented yet`);

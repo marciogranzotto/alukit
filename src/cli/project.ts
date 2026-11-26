@@ -80,14 +80,14 @@ export async function loadAndDerive(
   return { project, derived, items: project.items };
 }
 
-function isDate(s: string): boolean {
+export function isDate(s: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   const t = Date.parse(`${s}T00:00:00Z`);
   return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === s;
 }
 
 /** Today's local date, YYYY-MM-DD. */
-function today(): string {
+export function today(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
