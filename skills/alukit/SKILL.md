@@ -242,9 +242,10 @@ alukit undo | redo <dir> [--as <name>] [--json]
     take back the latest step, whoever made it, or apply again the last one taken back
 alukit log <dir> [--json]
     the server's log: every step, undo and redo, with its source
-alukit derive <dir> [--json] [--variant v] [--frozen]
+alukit derive <dir> [--json] [--select <paths>] [--variant v] [--frozen]
     the derived model: frames, end planes, cut lengths and angles, parts, rail holes,
-    fastenings, generated machining and hardware (alukit.derived/1)
+    fastenings, generated machining and hardware (alukit.derived/1); --select answers
+    JSON with only the members named, e.g. bars.*.cut_mm,params (* is every member)
 alukit cutlist <dir> [--format md|csv|json] [--variant v] [--frozen]
     the cut list: pieces grouped per item and option, ordered or nested into stock
 alukit bom <dir> [--format md|csv|json] [--variant v] [--frozen]
@@ -300,8 +301,14 @@ alukit catalog check <path|id> [--catalog <dir>]... [--json]
     computed against published, references, overrides, family collisions, offers
 alukit catalog show <catalog>:<item> [--catalog <dir>]...
     the merged item as JSON: fields with their sources, corrections, section, offers
+alukit catalog search <query> [--kind <kind>] [--catalog <id|dir>]... [--limit n] [--json]
+    items whose id, code, name or family hold every word, ranked (exact id or code first);
+    every built-in catalog unless --catalog names some; 20 items unless --limit (200 at most)
 alukit catalog schema [catalog|offers|section|family|overrides|item]
     the JSON Schema of a catalog file (all of them without a name)
+alukit catalog import forseti [--snapshot <dir>] [--pdf <file>] [--python <path>] [--out <dir>] [--fetch]
+    run the vendor's importer on a shop snapshot and its catalogue PDF (importers/forseti);
+    says what is missing instead; reads the network only with --fetch (a new snapshot)
 ```
 
 ### Edit commands

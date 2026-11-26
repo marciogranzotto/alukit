@@ -16,7 +16,8 @@ import type { Snapshot } from "./host.ts";
  *   GLB writer uses too, §9);
  * - `items`: the catalog entries the model uses, as the lock pins them, with their provenance
  *   (§1, principle 3), for the properties panel;
- * - `check`, `cutlist`, `bom`: the bottom drawer's tables (§8).
+ * - `check`, `cutlist`, `bom`: the bottom drawer's tables (§8);
+ * - `variant`: the variant all of it was derived in (§4.10), which `?variant=` chooses.
  *
  * The status (read-only or not) and the undo and redo steps are not here: they change without a
  * revision, and reach a tab on the event stream.
@@ -52,6 +53,8 @@ export function viewModel(snap: Snapshot) {
     schema: VIEW_SCHEMA,
     rev: snap.rev,
     ...(typeof rawDoc.name === "string" ? { name: rawDoc.name } : {}),
+    /** The variant derived (§4.10): the one asked for, else the default; null for none. */
+    variant: derived.variant ?? null,
     doc: rawDoc,
     derived: derivedJson(derived),
     display,

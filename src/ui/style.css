@@ -129,6 +129,93 @@ code {
   border-color: var(--accent);
 }
 
+.topbar .variant {
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.topbar select,
+.topbar input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 4px;
+  font: inherit;
+}
+
+.revisions-anchor {
+  position: relative;
+}
+
+.popover.revisions {
+  top: calc(100% + 4px);
+  min-width: 340px;
+  max-width: 460px;
+  gap: 6px;
+}
+
+.popover.revisions button {
+  max-width: none;
+}
+
+.popover p {
+  margin: 0;
+}
+
+.revision-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.revision-list li {
+  padding: 4px 0;
+  border-top: 1px solid var(--line);
+}
+
+.msg-error {
+  color: var(--error);
+}
+
+/* The drawer's record forms (open items, params, decisions) */
+
+.record-form,
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 8px 0 4px;
+}
+
+.inline-form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.record-form input,
+.inline-form input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 4px;
+  font: inherit;
+}
+
+.record-form input.wide {
+  flex: 1 1 24ch;
+  min-width: 16ch;
+}
+
+.form-errors {
+  flex-basis: 100%;
+  margin: 2px 0;
+}
+
 .banner {
   padding: 8px 12px;
   background: #4a2323;
@@ -607,6 +694,28 @@ table.grid tr.total td {
 
 .toolbar .sep {
   width: 10px;
+}
+
+.toolbar .section-tools {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.toolbar .section-at {
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+}
+
+.section-range {
+  width: 160px;
+  accent-color: var(--accent);
+}
+
+.toolbar .section-at .num {
+  min-width: 9ch;
+  font-variant-numeric: tabular-nums;
 }
 
 .tool-hint {

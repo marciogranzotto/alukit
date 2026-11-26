@@ -24,6 +24,19 @@ is that list, and `build` refuses to write unless every one of them has an offer
 `catalogs/forseti` (or a third argument), prints what it emitted and what it left out, and fails
 rather than guess when the data is not where the tables say. `.cache/` is not committed.
 
+`alukit catalog import forseti` runs the same `build` and finds its inputs for you: each from its
+flag, else its environment variable, else `.cache/forseti/`. It says which is missing, and how to
+get it, rather than run; it reads the network only with `--fetch`, which first takes a new snapshot
+(into `--snapshot`, else `.cache/forseti/snapshots/<today>`).
+
+| Input | Flag | Variable | In `.cache/forseti/` |
+|---|---|---|---|
+| Python with PyMuPDF | `--python` | `FORSETI_PYTHON` | `venv/bin/python` |
+| the shop's snapshot | `--snapshot` | `FORSETI_SNAPSHOT` | the newest `snapshots/<date>` with a `manifest.json` |
+| the catalogue | `--pdf` | `FORSETI_PDF` | `catalogo_forsetiA4.pdf` |
+
+`--out <dir>` writes somewhere other than `catalogs/forseti`.
+
 The same snapshot and PDF give byte-identical files. `src/catalog/builtin.test.ts` runs the build
 twice and compares both runs with the committed files when `FORSETI_SNAPSHOT`, `FORSETI_PDF` and
 `FORSETI_PYTHON` (an interpreter with PyMuPDF) are set; otherwise it skips.

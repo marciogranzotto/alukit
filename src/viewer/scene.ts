@@ -73,6 +73,19 @@ export type SelectMode = "replace" | "toggle" | "add";
 
 export type Projection = "perspective" | "orthographic";
 
+/**
+ * The section clipping plane (design §8): square to a world axis at `at_mm`. It hides the side
+ * beyond it (coordinates above `at_mm`), or the side below with `flip`. It changes what is drawn
+ * and what a pick or a snap can reach, nothing else: the document and its outputs are as they were.
+ */
+export interface SectionPlane {
+  axis: "x" | "y" | "z";
+  at_mm: number;
+  flip: boolean;
+}
+
+const AXIS_INDEX = { x: 0, y: 1, z: 2 } as const;
+
 /** The pointer as a tool reads it: where, and which modifier keys are held. */
 export interface ToolPointer {
   clientX: number;
@@ -123,6 +136,13 @@ export interface Viewer {
   fitSelection(ids: ReadonlySet<string>): void;
   /** Renders now, whatever changed: a snapshot reads the canvas right after. */
   renderNow(): void;
+  /** Sets the section clipping plane, or takes it away. */
+  setSection(s: SectionPlane | undefined): void;
+  section(): SectionPlane | undefined;
+  /** Whether the section plane hides a world point. */
+  clipped(p: V3): boolean;
+  /** The model's extent along a world axis (mm): the section plane's range. */
+  extent(axis: SectionPlane["axis"]): [number, number];
   stats(): ViewerStats;
   dispose(): void;
 }
@@ -150,6 +170,8 @@ function geometryOf(d: MeshData): BufferGeometry {
 export function createViewer(container: HTMLElement): Viewer {
   const renderer = new WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // The section plane clips the model's materials only, not the grid or the tools' overlay.
+  renderer.localClippingEnabled = true;
   container.appendChild(renderer.domElement);
 
   const scene = new Scene();
@@ -236,6 +258,82 @@ export function createViewer(container: HTMLElement): Viewer {
   let selection: ReadonlySet<string> = new Set();
   let highlight: ReadonlySet<string> = new Set();
   let fitted = false;
+
+  // ---------------------------------------------------------------------------------------------
+  // The section plane (§8): local clipping on the model's materials, and an outline where it
+  // crosses the model's box. The plane is one object every clipped material shares, moved in
+  // place, so moving it recompiles nothing.
+
+  let section: SectionPlane | undefined;
+  const clipPlane = new THREE.Plane();
+  const clipPlanes = [clipPlane];
+  const outlineMaterial = new LineBasicMaterial({
+    color: COLOURS.highlight,
+    transparent: true,
+    opacity: 0.8,
+  });
+  const outline = new THREE.LineLoop(new BufferGeometry(), outlineMaterial);
+  outline.name = "section outline";
+  outline.raycast = () => {};
+  outline.visible = false;
+  world.add(outline);
+
+  /** The model's box in the world frame (Z up, mm); the empty project's metre cube. */
+  function worldBox(): Box3 {
+    const toWorld = world.matrixWorld.clone().invert();
+    const box = new Box3();
+    const b = modelBox();
+    for (const x of [b.min.x, b.max.x])
+      for (const y of [b.min.y, b.max.y])
+        for (const z of [b.min.z, b.max.z])
+          box.expandByPoint(new Vector3(x, y, z).applyMatrix4(toWorld));
+    return box;
+  }
+
+  /** Every material of the model clips, or none does. */
+  function clipMaterials(): void {
+    const planes = section ? clipPlanes : null;
+    content.traverse((o) => {
+      const m = (o as { material?: THREE.Material | THREE.Material[] }).material;
+      for (const x of Array.isArray(m) ? m : m ? [m] : []) x.clippingPlanes = planes;
+    });
+  }
+
+  /** Moves the plane and its outline to the section, in three's frame. */
+  function placeSection(): void {
+    if (!section) {
+      outline.visible = false;
+      return;
+    }
+    const i = AXIS_INDEX[section.axis];
+    const n = new Vector3(0, 0, 0).setComponent(i, section.flip ? 1 : -1);
+    // Kept where n·p + c ≥ 0: below at_mm, or above it when flipped.
+    const c = section.flip ? -section.at_mm : section.at_mm;
+    clipPlane.set(n, c).applyMatrix4(world.matrixWorld);
+    // The outline: the plane's rectangle across the model's box, a little larger.
+    const b = worldBox();
+    const pad = Math.max(b.getSize(new Vector3()).length() * 0.02, 10);
+    const [u, v] = [0, 1, 2].filter((k) => k !== i) as [number, number];
+    const corners: number[] = [];
+    for (const [su, sv] of [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, 1],
+    ] as const) {
+      const p = new Vector3();
+      p.setComponent(i, section.at_mm);
+      p.setComponent(u, su === 0 ? b.min.getComponent(u) - pad : b.max.getComponent(u) + pad);
+      p.setComponent(v, sv === 0 ? b.min.getComponent(v) - pad : b.max.getComponent(v) + pad);
+      corners.push(p.x, p.y, p.z);
+    }
+    outline.geometry.setAttribute("position", new Float32BufferAttribute(corners, 3));
+    outline.geometry.computeBoundingSphere();
+    outline.visible = true;
+  }
+
+  /** Whether the section hides a point given in three's frame. */
+  const hiddenThree = (p: Vector3) => section !== undefined && clipPlane.distanceToPoint(p) < 0;
 
   function clear(): void {
     for (const c of [...content.children]) content.remove(c);
@@ -446,6 +544,7 @@ export function createViewer(container: HTMLElement): Viewer {
       instanced.push({ mesh, ids, colours });
     }
 
+    clipMaterials();
     counts = {
       bars: instancedCount + angled,
       instancedBars: instancedCount,
@@ -633,6 +732,8 @@ export function createViewer(container: HTMLElement): Viewer {
     castFrom(clientX, clientY);
     const hits = raycaster.intersectObjects(content.children as Object3D[], false);
     for (const h of hits) {
+      // What the section plane hides is not there to pick: the ray goes on to what is drawn.
+      if (hiddenThree(h.point)) continue;
       const g = instanced.find((x) => x.mesh === h.object);
       const s = single.find((x) => x.mesh === h.object);
       const id = g && h.instanceId !== undefined ? g.ids[h.instanceId] : s?.id;
@@ -802,6 +903,8 @@ export function createViewer(container: HTMLElement): Viewer {
         fitView();
         fitted = true;
       }
+      // The outline spans the model's box, which a revision may change.
+      placeSection();
     },
     setSelection(ids) {
       selection = ids;
@@ -839,6 +942,21 @@ export function createViewer(container: HTMLElement): Viewer {
       renderer.render(scene, camera);
       dirty = false;
     },
+    setSection(s) {
+      const was = section !== undefined;
+      section = s ? { ...s } : undefined;
+      // Turning it on or off changes which materials clip; moving it only moves the plane.
+      if (was !== (section !== undefined)) clipMaterials();
+      placeSection();
+      invalidate();
+    },
+    section: () => (section ? { ...section } : undefined),
+    clipped: (p) => hiddenThree(new Vector3(...p).applyMatrix4(world.matrixWorld)),
+    extent(axis) {
+      const b = worldBox();
+      const i = AXIS_INDEX[axis];
+      return [b.min.getComponent(i), b.max.getComponent(i)];
+    },
     stats: () => ({ ...counts }),
     dispose() {
       cancelAnimationFrame(frame);
@@ -849,6 +967,8 @@ export function createViewer(container: HTMLElement): Viewer {
       el.removeEventListener("pointerleave", onLeave);
       clear();
       overlay.dispose();
+      outline.geometry.dispose();
+      outlineMaterial.dispose();
       for (const u of unitCache.values()) u.geometry.dispose();
       controls.dispose();
       renderer.dispose();

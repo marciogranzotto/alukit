@@ -73,7 +73,7 @@ support it; `alukit --help` and `alukit <command> --help` list the options.
 | `add bar\|point\|connection\|part <dir>` | one entity, as sugar over `do` |
 | `query <dir> <selector>` | read entities back: `b7`, `tag:leg`, `item:forseti:PF40-01`, `connections of b2` |
 | `check <dir>` | validate, derive and run the checks; exit 1 on an error |
-| `derive <dir> --json` | the full derived model, for report builders |
+| `derive <dir> --json` | the full derived model, for report builders; `--select bars.*.cut_mm,params` keeps only what you name |
 | `cutlist` `bom` `order` `costs <dir>` | the outputs; `order` exits 1 when blocked |
 | `machining <dir>` | the machining sheet for the project's own plates and bent angles |
 | `undo` `redo` `log <dir>` | the running server's history, across the app and the CLI |
@@ -83,7 +83,9 @@ support it; `alukit --help` and `alukit <command> --help` list the options.
 | `revision save\|list\|show\|verify` | named snapshots of the document, lock and every output |
 | `snapshot <dir> -o x.png` | render a view to PNG in headless Chromium |
 | `export glb <dir> -o x.glb` | the model as binary glTF |
+| `catalog search <query>` | find items across the catalogs, ranked, 20 at a time (`--kind`, `--catalog`, `--limit`) |
 | `catalog check\|show\|schema` | work on catalogs |
+| `catalog import forseti` | rebuild `catalogs/forseti` with the importer, or say which of its inputs is missing |
 | `skill install` | link the agent skill into `~/.claude/skills/alukit` |
 
 `--variant <name>` selects a variant on every output; `--frozen` makes an item the lock does not

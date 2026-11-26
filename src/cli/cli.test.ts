@@ -29,9 +29,13 @@ describe("cli", () => {
     expect(r).toEqual({ code: 0, out: [pkg.version], err: [] });
   });
 
-  it("lists planned commands as not implemented yet, and the server and project commands as usable", () => {
-    expect(helpText()).toContain("(not implemented yet)");
-    expect(helpText()).toMatch(/\n {2}derive <dir> \[--json\] \[--variant v\] \[--frozen\]\n/);
+  it("lists every command of design §7.3 as usable: none is left planned", () => {
+    expect(helpText()).not.toContain("not implemented");
+    expect(helpText()).toMatch(
+      /\n {2}derive <dir> \[--json\] \[--select <paths>\] \[--variant v\] \[--frozen\]\n/,
+    );
+    expect(helpText()).toMatch(/\n {2}catalog search <query> \[--kind <kind>\]/);
+    expect(helpText()).toMatch(/\n {2}catalog import forseti /);
     expect(helpText()).toMatch(
       /\n {2}cutlist <dir> \[--format md\|csv\|json\] \[--variant v\] \[--frozen\]\n/,
     );
@@ -65,7 +69,7 @@ describe("cli", () => {
     }
   });
 
-  it("refuses planned and unknown commands, and a project command with no folder", async () => {
+  it("refuses unknown commands, and a project command with no folder", async () => {
     expect((await capture(["order"])).code).toBe(2);
     expect((await capture(["nope"])).code).toBe(2);
     expect((await capture(["bom"])).code).toBe(2);
@@ -149,7 +153,9 @@ describe("alukit catalog", () => {
     expect((await capture(["catalog"])).code).toBe(2);
     expect((await capture(["catalog", "check"])).code).toBe(2);
     expect((await capture(["catalog", "check", "x", "--frobnicate"])).code).toBe(2);
-    expect((await capture(["catalog", "search", "x"])).code).toBe(2);
+    expect((await capture(["catalog", "search"])).code).toBe(2);
+    expect((await capture(["catalog", "import"])).code).toBe(2);
+    expect((await capture(["catalog", "import", "forseti", "--json"])).code).toBe(2);
     expect((await capture(["catalog", "check", "no-such-catalog"])).code).toBe(1);
   });
 
@@ -178,6 +184,22 @@ describe("alukit derive, cutlist and bom", () => {
     expect(d.bars.b14.cut_mm).toBe(569.88);
     expect(d.bars["b26@6"].pattern).toBe("pt1");
     expect(d.diagnostics).toEqual([]);
+  });
+
+  it("answers only the members --select names, as derive --json has them (§7.3)", async () => {
+    const whole = JSON.parse((await capture(["derive", project("cart"), "--json"])).out.join("\n"));
+    const r = await capture(["derive", project("cart"), "--select", "bars.*.cut_mm,params"]);
+    expect(r.code).toBe(0);
+    const d = JSON.parse(r.out.join("\n"));
+    expect(Object.keys(d)).toEqual(["schema", "params", "bars"]);
+    expect(d.params).toEqual(whole.params);
+    expect(Object.keys(d.bars)).toEqual(Object.keys(whole.bars));
+    expect(d.bars.b14).toEqual({ cut_mm: whole.bars.b14.cut_mm });
+    const missing = await capture(["derive", project("cart"), "--select", "bars.b999"]);
+    expect(missing.code).toBe(1);
+    expect(missing.err.join("\n")).toBe("alukit derive: the derived model has no bars.b999");
+    expect((await capture(["derive", project("cart"), "--select", "bars..b1"])).code).toBe(2);
+    expect((await capture(["cutlist", project("cart"), "--select", "bars"])).code).toBe(2);
   });
 
   it("exits 1 and names the problem when the document has an error", async () => {

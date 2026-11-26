@@ -315,6 +315,8 @@ export interface SnapOptions {
   step?: number;
   /** Bars to ignore (the one being edited). */
   skipBars?: ReadonlySet<string>;
+  /** Points the view does not show (the section plane's far side): nothing snaps there. */
+  hidden?: (p: V3) => boolean;
 }
 
 /** A line's snapped point as a snap: a station on the bar, or coordinates on a copy. */
@@ -356,6 +358,7 @@ export function findSnap(targets: SnapTargets, o: SnapOptions): Snap | undefined
   for (const pt of targets.points) {
     const bar = "bar" in pt.ref ? pt.ref.bar : undefined;
     if (bar && skip.has(bar)) continue;
+    if (o.hidden?.(pt.p)) continue;
     const sp = o.project(pt.p);
     if (!sp) continue;
     const d2 = dist2(sp, o.at);
@@ -374,6 +377,7 @@ export function findSnap(targets: SnapTargets, o: SnapOptions): Snap | undefined
     if (skip.has(l.bar)) continue;
     const s = nearestOn(o.ray, l);
     const p = addScaled(l.a, l.t, s);
+    if (o.hidden?.(p)) continue;
     const sp = o.project(p);
     if (!sp) continue;
     const d2 = dist2(sp, o.at);

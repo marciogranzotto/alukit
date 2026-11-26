@@ -3,9 +3,10 @@
  * `--version` load no schemas.
  */
 export const PROJECT_USAGE = [
-  "alukit derive <dir> [--json] [--variant v] [--frozen]",
+  "alukit derive <dir> [--json] [--select <paths>] [--variant v] [--frozen]",
   "    the derived model: frames, end planes, cut lengths and angles, parts, rail holes,",
-  "    fastenings, generated machining and hardware (alukit.derived/1)",
+  "    fastenings, generated machining and hardware (alukit.derived/1); --select answers",
+  "    JSON with only the members named, e.g. bars.*.cut_mm,params (* is every member)",
   "alukit cutlist <dir> [--format md|csv|json] [--variant v] [--frozen]",
   "    the cut list: pieces grouped per item and option, ordered or nested into stock",
   "alukit bom <dir> [--format md|csv|json] [--variant v] [--frozen]",

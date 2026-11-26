@@ -506,3 +506,169 @@ describe("the CLI through a running server (§7.1, §7.3)", () => {
     expect(await readFile(join(dir, DOCUMENT), "utf8")).toContain("[4, 5, 6]");
   });
 });
+
+describe("variants, the GLB and revisions through the server (§4.10, §4.13, §9)", () => {
+  const AS_OF = "2026-11-26";
+
+  /** The cart with two variants, as the CLI's variant tests make it, served. */
+  async function cartWithVariants(): Promise<RunningServer> {
+    const f = await fixture();
+    const cart = join(f.dir, "..", "..", "cart");
+    const made = await capture([
+      "do",
+      cart,
+      JSON.stringify([
+        { cmd: "addVariant", args: { name: "base", variant: {}, default: true } },
+        { cmd: "addVariant", args: { name: "tall", variant: { params: { H: "1100" } } } },
+        { cmd: "setBar", args: { id: "b13", set: { not_in: ["tall"] } } },
+      ]),
+    ]);
+    expect(made.code).toBe(0);
+    const r = await startServer({
+      dir: cart,
+      distDir: f.dist,
+      host: { watch: false, today: () => AS_OF },
+    });
+    running.push(r);
+    return r;
+  }
+
+  async function get(r: RunningServer, path: string) {
+    const res = await fetch(new URL(path, r.url), { headers: auth(r) });
+    return { status: res.status, res };
+  }
+
+  it("derives every view in the variant ?variant= names, as --variant does", async () => {
+    const r = await cartWithVariants();
+    const base = (await (await get(r, "api/model")).res.json()) as {
+      variant: string | null;
+      derived: { bars: Record<string, { len_mm: number }> };
+    };
+    expect(base.variant).toBe("base");
+    expect(base.derived.bars.b1?.len_mm).toBe(900);
+    expect(base.derived.bars.b13).toBeDefined();
+
+    const tall = (await (await get(r, "api/model?variant=tall")).res.json()) as typeof base;
+    expect(tall.variant).toBe("tall");
+    expect(tall.derived.bars.b1?.len_mm).toBe(1100);
+    expect(tall.derived.bars.b13).toBeUndefined();
+
+    // Each output as the CLI prints it with --variant: the order, costs and sheet byte for byte.
+    const outputs: [string, string[]][] = [
+      [`api/order?variant=tall&as_of=${AS_OF}`, ["order", r.dir, "--as-of", AS_OF]],
+      [`api/costs?variant=tall&as_of=${AS_OF}`, ["costs", r.dir, "--as-of", AS_OF]],
+      ["api/machining?variant=tall", ["machining", r.dir]],
+    ];
+    for (const [path, argv] of outputs) {
+      const served = await get(r, path);
+      expect(served.status, path).toBe(200);
+      const cli = await capture([...argv, "--variant", "tall", "--format", "json"]);
+      expect(await served.res.text(), path).toBe(`${cli.out}\n`);
+    }
+    const cut = (await (await get(r, "api/cutlist?variant=tall")).res.json()) as {
+      groups: unknown;
+    };
+    const cliCut = await capture(["cutlist", r.dir, "--variant", "tall", "--format", "json"]);
+    expect(cut.groups).toEqual(JSON.parse(cliCut.out).groups);
+    const check = (await (await get(r, "api/check?variant=tall")).res.json()) as {
+      variant: string;
+      checks: unknown;
+    };
+    const cliCheck = await capture(["check", r.dir, "--variant", "tall", "--json"]);
+    expect(check.variant).toBe("tall");
+    expect(check.checks).toEqual(JSON.parse(cliCheck.out).checks);
+
+    // A name the document does not list is refused, listing the ones it does.
+    for (const path of [
+      "api/model?variant=wood",
+      "api/order?variant=wood",
+      "api/export/glb?variant=wood",
+    ]) {
+      const bad = await get(r, path);
+      expect(bad.status, path).toBe(400);
+      expect(((await bad.res.json()) as { message: string }).message).toBe(
+        "there is no variant wood; the project has base, tall",
+      );
+    }
+  });
+
+  it("answers the GLB alukit export glb writes, byte for byte, in a variant too", async () => {
+    const r = await cartWithVariants();
+    for (const variant of [undefined, "tall"]) {
+      const served = await get(r, `api/export/glb${variant ? `?variant=${variant}` : ""}`);
+      expect(served.status).toBe(200);
+      expect(served.res.headers.get("content-type")).toBe("model/gltf-binary");
+      // Named after the project and the variant derived: the default is "base".
+      expect(served.res.headers.get("content-disposition")).toBe(
+        `attachment; filename="Cart-synthetic-${variant ?? "base"}.glb"`,
+      );
+      const bytes = Buffer.from(await served.res.arrayBuffer());
+      const out = join(r.dir, "..", `cart-${variant ?? "default"}.glb`);
+      const cli = await capture([
+        "export",
+        "glb",
+        r.dir,
+        "-o",
+        out,
+        ...(variant ? ["--variant", variant] : []),
+      ]);
+      expect(cli.code).toBe(0);
+      expect(bytes.equals(await readFile(out)), variant ?? "default").toBe(true);
+    }
+  });
+
+  it("saves and verifies revisions of what it holds; the CLI's save goes through it", async () => {
+    const r = await cartWithVariants();
+    const empty = await api(r, "api/revisions");
+    expect(empty.body).toMatchObject({ revisions: [], problems: [] });
+    const current = empty.body.current as string;
+    expect(current).toMatch(/^sha256:[0-9a-f]{64}$/);
+
+    const saved = await api(r, "api/revisions", { name: "Quote 1", as_of: AS_OF });
+    expect(saved.status).toBe(200);
+    expect(saved.body).toMatchObject({
+      ok: true,
+      file: join("revisions", "quote-1.json"),
+      name: "Quote 1",
+      as_of: AS_OF,
+      stamp: { hash: current },
+      variants: ["base", "tall"],
+    });
+    const outs = saved.body.outputs as { variant: string; bars: number }[];
+    expect(outs.map((o) => o.variant)).toEqual(["base", "tall"]);
+    const again = await api(r, "api/revisions", { name: "quote 1" });
+    expect(again.status).toBe(409);
+    expect(again.body.message).toBe(
+      `${join("revisions", "quote-1.json")} exists; a revision is never overwritten`,
+    );
+    expect((await api(r, "api/revisions", { name: "--" })).status).toBe(400);
+
+    // The CLI's save meets the server's edit lock, so it is the server's to make.
+    const cli = await capture(["revision", "save", r.dir, "Quote 2", "--as-of", AS_OF]);
+    expect(cli.err).toBe("");
+    expect(cli.code).toBe(0);
+    expect(cli.out).toContain(`saved ${join("revisions", "quote-2.json")}: "Quote 2"`);
+
+    const listed = await api(r, "api/revisions");
+    expect((listed.body.revisions as { name: string }[]).map((x) => x.name)).toEqual([
+      "Quote 1",
+      "Quote 2",
+    ]);
+
+    // Verify answers what alukit revision verify --json prints.
+    const v = await get(r, "api/revisions/verify?name=Quote%201");
+    expect(v.status).toBe(200);
+    const cliVerify = await capture(["revision", "verify", r.dir, "Quote 1", "--json"]);
+    expect(await v.res.text()).toBe(`${cliVerify.out}\n`);
+    expect(JSON.parse(cliVerify.out)).toMatchObject({ name: "Quote 1", ok: true });
+    expect((await get(r, "api/revisions/verify?name=nope")).status).toBe(404);
+
+    // An edit moves the current state away from what was saved.
+    const a = await api(r, "api/commands", {
+      commands: [{ cmd: "setParam", args: { name: "W", value: "1300" } }],
+      source: "ui",
+    });
+    expect(a.status).toBe(200);
+    expect((await api(r, "api/revisions")).body.current).not.toBe(current);
+  });
+});

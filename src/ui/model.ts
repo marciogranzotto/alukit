@@ -48,9 +48,13 @@ export interface Model {
   schema: "alukit.view/1";
   rev: number;
   name?: string;
+  /** The variant derived (§4.10): the one asked for, else the default; null for none. */
+  variant: string | null;
   /** The document as written. */
   doc: Record<string, unknown>;
   derived: {
+    /** Each param's value, in the variant derived. */
+    params: Record<string, number>;
     nodes: Record<string, [number, number, number]>;
     bars: MeshInput["bars"];
     runs: Record<string, { bars: string[]; len_mm: number }>;

@@ -59,6 +59,33 @@ export async function getAtRev<T>(path: string): Promise<{ rev: number; body: T 
   return { rev, body: body as T };
 }
 
+/**
+ * Downloads a file the API answers (an export): the request carries the token, so the browser
+ * cannot follow a plain link to it. The bytes become a blob the page saves under the name the
+ * server gives in `Content-Disposition`. Resolves with that name.
+ */
+export async function download(path: string): Promise<string> {
+  const r = await fetch(path, { headers: headers(false), cache: "no-store" });
+  if (!r.ok) throw new ApiError(r.status, await r.json().catch(() => undefined));
+  const name =
+    /filename="([^"]+)"/.exec(r.headers.get("content-disposition") ?? "")?.[1] ?? "alukit";
+  const url = URL.createObjectURL(await r.blob());
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.hidden = true;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    // Revoking at once can cancel a download that has not started reading the blob yet in some
+    // browsers; a minute is ample, and the blob is freed then.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+  return name;
+}
+
 /** A POST whose answer is returned whatever its status: refusals are answers too. */
 export async function post<T>(path: string, body: unknown): Promise<{ status: number; body: T }> {
   const r = await fetch(path, {
