@@ -18,7 +18,9 @@ import { compareIds } from "../ids.ts";
 import type { ItemSource } from "../items.ts";
 import { itemRefSource } from "../lock/refs.ts";
 import { projectJsonSchema } from "../project/canonical.ts";
+import { parseProject } from "../project/parse.ts";
 import { type Variant, Variants } from "../project/schema.ts";
+import { projectItems } from "../project-items/source.ts";
 import { mapStringsWithPattern, type PathKey, propertySchema } from "../schema-walk.ts";
 
 /**
@@ -40,7 +42,7 @@ import { mapStringsWithPattern, type PathKey, propertySchema } from "../schema-w
  * - **Swaps** replace an item wherever the frame names one: the entities and `defaults`. The
  *   records about buying (`order`, `costs`, `price_bands`) keep naming what they name. A bar or
  *   part whose item a swap replaces keeps only the options its new item has; each one dropped is
- *   an info.
+ *   an info. The new item may be a project item (§4.8), which has none.
  */
 
 export interface VariantResult {
@@ -225,7 +227,8 @@ export function applyVariant(raw: unknown, items?: ItemSource, name?: string): V
     doc = withField(doc, "params", { ...params, ...variant.params });
   }
   if (variant?.swap && Object.keys(variant.swap).length > 0) {
-    doc = swapItems(doc, raw, variant.swap, selected as string, items, d);
+    const source = items ? withProjectItems(items, raw) : undefined;
+    doc = swapItems(doc, raw, variant.swap, selected as string, source, d);
   }
 
   return {
@@ -233,6 +236,24 @@ export function applyVariant(raw: unknown, items?: ItemSource, name?: string): V
     ...(selected !== undefined ? { variant: selected } : {}),
     omitted: [...removed].sort(compareIds),
     diagnostics: d.sorted(),
+  };
+}
+
+/**
+ * The items a swap's new item is looked up in: the catalogs' and the document's own project items
+ * (§4.8), as derive reads them. A variant changes no project item, so the document as written
+ * holds them; they are resolved only when a swapped entity has options to check.
+ */
+function withProjectItems(items: ItemSource, raw: RawDoc): ItemSource {
+  let own: ItemSource | undefined;
+  const get = () => {
+    own ??= projectItems(items, parseProject(raw).doc).source;
+    return own;
+  };
+  return {
+    item: (ref) => get().item(ref),
+    offers: (itemId) => get().offers(itemId),
+    material: (ref) => get().material(ref),
   };
 }
 

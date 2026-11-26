@@ -85,6 +85,34 @@ describe("variants (§4.10)", () => {
     ]);
   });
 
+  it("drops the options a project item lacks when a swap puts one on a part (§4.8)", () => {
+    const doc = mergePatch(DOC, {
+      items: {
+        spacer: {
+          kind: "generic",
+          name: "spacer",
+          bbox_mm: [
+            [0, 0, 0],
+            [20, 20, 10],
+          ],
+        },
+      },
+      parts: { p1: { item: "test:TS4080", opt: { finish: "black" }, at: { pos: [0, 0, 0] } } },
+      variants: { list: { alu: { swap: { "test:TS4080": "project:spacer" } } } },
+    });
+    const d = derive(doc, items);
+    expect(d.parts.get("p1")?.item).toBe("project:spacer");
+    expect(shown(d.diagnostics, "error").filter((x) => x.entity === "p1")).toEqual([]);
+    expect(shown(d.diagnostics, "info")).toContainEqual(
+      expect.objectContaining({
+        code: "variant",
+        entity: "p1",
+        message:
+          "opt/finish dropped: project:spacer, swapped in for test:TS4080, has no such option",
+      }),
+    );
+  });
+
   it("sec() reads the section after the swap", () => {
     const steel = mergePatch(DOC, { bars: { b5: { not_in: null } } });
     expect(derive(steel, items).bars.get("b5")?.lengths.len).toBe(40);
