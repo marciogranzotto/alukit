@@ -5,10 +5,9 @@ import {
   AmbientLight,
   AxesHelper,
   Box3,
-  BoxGeometry,
-  type BufferGeometry,
+  BufferAttribute,
+  BufferGeometry,
   Color,
-  CylinderGeometry,
   DirectionalLight,
   DoubleSide,
   Float32BufferAttribute,
@@ -37,7 +36,11 @@ import {
   squareEnds,
   squareMatrix,
 } from "../mesh/bars.ts";
-import type { BarJson, MeshInput, V3, ViewSection } from "../mesh/model.ts";
+import type { MeshData } from "../mesh/data.ts";
+import type { BarJson, MeshInput, ViewSection } from "../mesh/model.ts";
+import { fastenerMatrix, partShape } from "../mesh/place.ts";
+import { boxMesh, rodMesh } from "../mesh/solids.ts";
+import { barColour, COLOURS, TRANSLUCENT_OPACITY } from "../mesh/style.ts";
 
 CameraControls.install({
   THREE: THREE as unknown as Parameters<typeof CameraControls.install>[0]["THREE"],
@@ -67,40 +70,13 @@ export interface Viewer {
   dispose(): void;
 }
 
-const COLOURS = {
-  background: 0x1b1f24,
-  anodised: 0xb9c3cd,
-  black: 0x3a3f46,
-  steel: 0x8d949c,
-  part: 0x6fa8dc,
-  fastener: 0xc9a227,
-  edge: 0x15181c,
-  selected: 0xff9f1c,
-} as const;
-
-function barColour(bar: BarJson): number {
-  if (bar.opt.finish === "black") return COLOURS.black;
-  if (bar.opt.finish !== undefined) return COLOURS.anodised;
-  return COLOURS.steel;
-}
-
-/** Columns x, y, z and a translation: a frame as a matrix. */
-function basis(x: V3, y: V3, z: V3, o: V3): Matrix4 {
-  // biome-ignore format: a matrix reads best by rows
-  return new Matrix4().set(
-    x[0], y[0], z[0], o[0],
-    x[1], y[1], z[1], o[1],
-    x[2], y[2], z[2], o[2],
-    0, 0, 0, 1,
-  );
-}
-
-/** Two unit vectors square to `a` and to each other, completing a right-handed frame. */
-function across(a: V3): [V3, V3] {
-  const ref: V3 = Math.abs(a[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
-  const u = new Vector3(...ref).cross(new Vector3(...a)).normalize();
-  const w = new Vector3(...a).cross(u).normalize();
-  return [u.toArray() as unknown as V3, w.toArray() as unknown as V3];
+/** A mesh from src/mesh as a geometry three can draw. */
+function geometryOf(d: MeshData): BufferGeometry {
+  const g = new BufferGeometry();
+  g.setAttribute("position", new Float32BufferAttribute(d.positions, 3));
+  g.setAttribute("normal", new Float32BufferAttribute(d.normals, 3));
+  if (d.indices) g.setIndex(new BufferAttribute(d.indices, 1));
+  return g;
 }
 
 /**
@@ -286,30 +262,24 @@ export function createViewer(container: HTMLElement): Viewer {
     owned.push(edgeGeometry, edgeMaterial);
 
     // Parts: a box from the item's bounding box in its own frame; translucent when a placeholder
-    // or when the catalog gives no box (a marker).
+    // or when the catalog gives no box (a marker). Shapes and places from src/mesh (§9).
     let parts = 0;
     for (const [id, p] of Object.entries(m.parts)) {
-      if (p.unplaced || !p.frame || !p.origin || !p.point) continue;
-      const view = m.display.parts[id];
-      const box = view?.box;
-      const [lo, hi]: [V3, V3] = box ?? [
-        [-10, -10, -10],
-        [10, 10, 10],
-      ];
-      const geometry = new BoxGeometry(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
-      geometry.translate((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2);
-      const translucent = view?.translucent ?? true;
+      const shape = partShape(p, m.display.parts[id]);
+      if (!shape) continue;
+      const geometry = geometryOf(boxMesh(shape.box[0], shape.box[1]));
+      const { translucent } = shape;
       const material = new MeshLambertMaterial({
         color: COLOURS.part,
         transparent: translucent,
-        opacity: translucent ? 0.35 : 1,
+        opacity: translucent ? TRANSLUCENT_OPACITY : 1,
         depthWrite: !translucent,
         side: translucent ? DoubleSide : THREE.FrontSide,
       });
       const mesh = new Mesh(geometry, material);
       mesh.name = id;
       mesh.matrixAutoUpdate = false;
-      mesh.matrix.copy(basis(p.frame.x, p.frame.y, p.frame.z, box ? p.origin : p.point));
+      mesh.matrix.fromArray(shape.matrix);
       content.add(mesh);
       owned.push(geometry, material);
       single.push({ mesh, id, colour: COLOURS.part });
@@ -320,22 +290,14 @@ export function createViewer(container: HTMLElement): Viewer {
     // connection.
     const fs = m.display.fasteners;
     if (fs.length > 0) {
-      const geometry = new CylinderGeometry(0.5, 0.5, 1, 12);
+      const geometry = geometryOf(rodMesh());
       const material = new MeshLambertMaterial({ color: 0xffffff });
       const mesh = new InstancedMesh(geometry, material, fs.length);
       mesh.name = "fasteners";
       const ids: string[] = [];
       const colours: number[] = [];
       fs.forEach((f, i) => {
-        const [u, w] = across(f.axis);
-        const mid: V3 = [
-          f.head[0] + (f.axis[0] * f.len) / 2,
-          f.head[1] + (f.axis[1] * f.len) / 2,
-          f.head[2] + (f.axis[2] * f.len) / 2,
-        ];
-        // The cylinder runs along its local y: y onto the axis, scaled to the length.
-        const M = basis(w, f.axis, u, mid).multiply(new Matrix4().makeScale(f.d, f.len, f.d));
-        mesh.setMatrixAt(i, M);
+        mesh.setMatrixAt(i, new Matrix4().fromArray(fastenerMatrix(f)));
         mesh.setColorAt(i, new Color(COLOURS.fastener));
         ids.push(f.connection);
         colours.push(COLOURS.fastener);

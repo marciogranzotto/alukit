@@ -1,9 +1,11 @@
 import type { P2 } from "./outline.ts";
 
 /**
- * What meshes are built from: the parts of the server's view model (`alukit.view/1`) that
- * drawing reads, typed here so that `src/mesh/` depends on nothing but three's geometry classes.
- * World coordinates are the design's: millimetres, right-handed, Z up (§2).
+ * What meshes are built from: the parts of the view model (`alukit.view/1`) that drawing reads,
+ * as JSON, so the browser draws from what the server sends and the GLB writer (§9) from the same
+ * shapes. `display.ts` builds them from a derived model; `bars.ts` alone uses three's geometry
+ * classes (the extrusion and its triangulation), and nothing here uses a renderer. World
+ * coordinates are the design's: millimetres, right-handed, Z up (§2).
  */
 
 export type V3 = readonly [number, number, number];
@@ -81,6 +83,8 @@ export interface ViewPart {
 export interface ViewFastener {
   connection: string;
   k: number;
+  /** The fastener item: a catalog fastener, or the bar stock it is cut from. */
+  item: string;
   head: V3;
   axis: V3;
   len: number;

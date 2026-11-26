@@ -1,6 +1,8 @@
 import { execFile } from "node:child_process";
 import { stat } from "node:fs/promises";
 import { dirname, relative, resolve, sep } from "node:path";
+import { LOCK_FILE } from "../lock/schema.ts";
+import { DOCUMENT } from "./open.ts";
 
 /**
  * The little git a project needs (Node only): the commit and dirty flag a revision's stamp
@@ -29,15 +31,19 @@ function git(cwd: string, args: readonly string[]): Promise<Run> {
 
 export interface GitStamp {
   commit: string;
-  /** The project folder has changes not committed (untracked files count). */
+  /**
+   * The document or the lock differ from that commit (untracked counts). Only these two: they
+   * alone decide what derives (§4.13), and an export or a revision written into the folder must
+   * not make the next one dirty.
+   */
   dirty: boolean;
 }
 
-/** The commit HEAD names and whether the project folder differs from it; undefined outside git. */
+/** The commit HEAD names and whether the project's files differ from it; undefined outside git. */
 export async function gitStamp(dir: string): Promise<GitStamp | undefined> {
   const head = await git(dir, ["rev-parse", "--verify", "HEAD"]);
   if (!head.ok) return undefined;
-  const status = await git(dir, ["status", "--porcelain", "--", "."]);
+  const status = await git(dir, ["status", "--porcelain", "--", DOCUMENT, LOCK_FILE]);
   if (!status.ok) return undefined;
   return { commit: head.stdout.trim(), dirty: status.stdout.trim() !== "" };
 }

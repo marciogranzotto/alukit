@@ -156,7 +156,7 @@ describe("alukit revision", () => {
     ]);
   });
 
-  it("stamps the project's git commit and whether its folder had changes", async () => {
+  it("stamps the project's git commit and whether its document or lock had changes", async () => {
     const { root, dir } = await cart();
     git(root, "init", "-q");
     git(root, "add", "-A");
@@ -165,7 +165,14 @@ describe("alukit revision", () => {
     await capture(["revision", "save", dir, "clean", "--as-of", AS_OF]);
     const clean = JSON.parse(readFileSync(join(dir, "revisions", "clean.json"), "utf8"));
     expect(clean.stamp.git).toEqual({ commit: head, dirty: false });
-    // The first revision is now an untracked file in the project folder.
+    // The first revision, untracked in the folder, does not make the next one dirty.
+    await capture(["revision", "save", dir, "again", "--as-of", AS_OF]);
+    const again = JSON.parse(readFileSync(join(dir, "revisions", "again.json"), "utf8"));
+    expect(again.stamp.git).toEqual({ commit: head, dirty: false });
+    // An edit to the document does.
+    await editJson(join(dir, "alukit.json"), (d) => {
+      d.params.W = "1300";
+    });
     await capture(["revision", "save", dir, "dirty", "--as-of", AS_OF]);
     const dirty = JSON.parse(readFileSync(join(dir, "revisions", "dirty.json"), "utf8"));
     expect(dirty.stamp.git).toEqual({ commit: head, dirty: true });

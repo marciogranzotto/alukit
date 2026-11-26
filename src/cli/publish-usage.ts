@@ -20,6 +20,11 @@ export const PUBLISH = {
     "    stamp; show prints what was stored; verify re-derives it and exits 1 on any drift",
     "    (<dir> defaults to the current folder)",
   ],
+  export: [
+    "alukit export glb <dir> -o <file.glb> [--variant v] [--frozen]",
+    "    the model as binary glTF: Y up, metres, one node per bar, part and fastener, each",
+    "    named <id> <label|item> with its id, item, SKU, options and cut length in extras",
+  ],
 } as const;
 
 export type PublishCommand = keyof typeof PUBLISH;

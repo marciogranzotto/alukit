@@ -2,7 +2,7 @@ import type { Bom } from "../bom/bom.ts";
 import { type CheckResult, checkModel } from "../check/check.ts";
 import { checkedOrder, modelOutputs, outputAccessors } from "../check/outputs.ts";
 import type { CutList } from "../cutlist/cutlist.ts";
-import { derive } from "../derive/derive.ts";
+import { type Derived, derive } from "../derive/derive.ts";
 import { derivedJson } from "../derive/output.ts";
 import { type Diagnostic, sortDiagnostics } from "../diagnostics.ts";
 import type { ItemSource } from "../items.ts";
@@ -50,6 +50,11 @@ function plain<T>(x: T): T {
 }
 
 export function projectOutputs(input: OutputsInput): Outputs {
+  return deriveOutputs(input).outputs;
+}
+
+/** The outputs, and the derived model they come from (the GLB writer places meshes from it). */
+export function deriveOutputs(input: OutputsInput): { derived: Derived; outputs: Outputs } {
   const { raw, items } = input;
   const d = derive(raw, items, { variant: input.variant });
   const derived = {
@@ -64,7 +69,7 @@ export function projectOutputs(input: OutputsInput): Outputs {
     asOf: input.asOf,
     ...(input.lock ? { lock: lockHash(input.lock) } : {}),
   });
-  return plain({
+  const outputsJson = plain({
     ...(derived.variant !== undefined ? { variant: derived.variant } : {}),
     derived: derivedJson(derived),
     cutlist: { ...cl, diagnostics: sortDiagnostics([...derived.diagnostics, ...cl.diagnostics]) },
@@ -73,4 +78,5 @@ export function projectOutputs(input: OutputsInput): Outputs {
     costs: costsOf(order),
     check: { checks: checked.checks, diagnostics: checked.diagnostics },
   });
+  return { derived, outputs: outputsJson };
 }
