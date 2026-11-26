@@ -8,8 +8,9 @@ a priced bill of materials from real suppliers, the machining on each bar and an
 list. Catalogs can be your own, imported or created. Agents can drive the whole thing
 through a documented file format and a CLI.
 
-**Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core) and M3b
-(generation with the bill of materials; the edit path; offers, the order list and costs).**
+**Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core), M3b
+(generation with the bill of materials; the edit path; offers, the order list and costs) and M4a
+(the viewer and the server that owns the document).**
 - Catalog schemas, the three-layer merge, section generators and section properties, and
   `alukit catalog check`, which compares computed section properties against published ones.
 - Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): every
@@ -26,8 +27,15 @@ through a documented file format and a CLI.
 - The order list per supplier (cheapest pack cover, kits, price bands, cost lines covering
   machining, READY or BLOCKED by named rules) and the costs and totals: `alukit order <dir>` and
   `alukit costs <dir>`.
+- The server and the viewer: `alukit serve <dir>` owns the project and opens it in the browser,
+  which draws the derived model, selects by click or box, and shows properties (with where each
+  catalog number comes from), the project tree, the cut list, the BOM, the order, the costs and
+  the checks. CLI edits go through a running server and appear live in every tab; `alukit undo`,
+  `redo` and `log` use its history. A direct edit of `alukit.json` is taken in as a step, or makes
+  the project read-only while the file is not valid. The server answers only its own page, with a
+  per-start token.
 
-The app still draws an empty scene.
+Drawing with the mouse comes next (M4b).
 
 | Document                                                                   | What                                                                                                 |
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -51,11 +59,11 @@ pnpm exec playwright install chromium   # once, for the end-to-end test
 
 | Script | Does |
 |---|---|
-| `pnpm dev` | Vite dev server with hot reload |
+| `pnpm dev` | Vite dev server with hot reload (the app only: the project API is not mounted there yet) |
 | `pnpm build` | builds the app into `dist/` |
-| `pnpm serve` | serves `dist/` on 127.0.0.1 (a free port) through the CLI |
+| `pnpm serve <dir>` | serves a project and the built app on 127.0.0.1 (a free port) through the CLI |
 | `pnpm test` | unit tests (Vitest) |
-| `pnpm test:e2e` | end-to-end test (Playwright, Chromium); run `pnpm build` first |
+| `pnpm test:e2e` | end-to-end tests (Playwright, Chromium, one worker); run `pnpm build` first |
 | `pnpm lint` / `pnpm format` | Biome check / format |
 | `pnpm typecheck` | TypeScript 7, no emit |
 

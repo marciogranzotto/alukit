@@ -21,6 +21,7 @@ export interface Step {
 
 export interface LogEntry {
   rev: number;
+  /** Who made the step; for an undo or redo, who asked for it. */
   source: string;
   what: string;
   /** For undo and redo entries: the revision of the step undone or redone. */
@@ -65,14 +66,21 @@ export class History {
   ): BatchResult & { rev?: number } {
     const r = applyBatch(this.state, commands, env);
     if (!r.ok) return r;
-    this.push({
-      source,
-      commands: [...commands],
-      results: r.results,
-      before: this.state,
-      after: r.state,
-    });
-    return { ...r, rev: this.revision };
+    return { ...r, rev: this.commit(commands, r.results, r.state, source) };
+  }
+
+  /**
+   * Takes in a batch that `applyBatch` already applied to the current state, as one step. The
+   * server applies, writes the files, and only then commits, so a failed write leaves no step.
+   */
+  commit(
+    commands: readonly unknown[],
+    results: CommandResult[],
+    state: State,
+    source: string,
+  ): number {
+    this.push({ source, commands: [...commands], results, before: this.state, after: state });
+    return this.revision;
   }
 
   /** Takes in a state that came from elsewhere (a valid direct edit of the file) as one step. */
@@ -81,7 +89,21 @@ export class History {
     return this.revision;
   }
 
-  undo(): UndoResult {
+  /** The step `undo` would take back, without taking it: the state it restores is its `before`. */
+  get undoStep(): Step | undefined {
+    return this.past[this.past.length - 1];
+  }
+
+  /** The step `redo` would apply again: the state it restores is its `after`. */
+  get redoStep(): Step | undefined {
+    return this.future[this.future.length - 1];
+  }
+
+  /**
+   * Takes back the latest step, whoever made it (§7.1). `source` is who asks: the log names
+   * them, and the step taken back by its revision; without one, the step's own source.
+   */
+  undo(source?: string): UndoResult {
     const step = this.past.pop();
     if (!step) return { ok: false, message: "nothing to undo" };
     this.future.push(step);
@@ -89,14 +111,14 @@ export class History {
     this.revision++;
     this.entries.push({
       rev: this.revision,
-      source: step.source,
+      source: source ?? step.source,
       what: `undo ${stepText(step)}`,
       of: step.rev,
     });
     return { ok: true, step, rev: this.revision };
   }
 
-  redo(): UndoResult {
+  redo(source?: string): UndoResult {
     const step = this.future.pop();
     if (!step) return { ok: false, message: "nothing to redo" };
     this.past.push(step);
@@ -104,7 +126,7 @@ export class History {
     this.revision++;
     this.entries.push({
       rev: this.revision,
-      source: step.source,
+      source: source ?? step.source,
       what: `redo ${stepText(step)}`,
       of: step.rev,
     });

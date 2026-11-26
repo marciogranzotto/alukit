@@ -7,6 +7,7 @@ import { LockFile, lockText } from "../lock/schema.ts";
 import { lockItems } from "../lock/source.ts";
 import { projectText } from "../project/canonical.ts";
 import { openLiveCatalogs } from "../project/open.ts";
+import { select } from "../query.ts";
 import { FIXTURES, readJson } from "../testing.ts";
 import { applyBatch, applyCommand } from "./apply.ts";
 import { History } from "./history.ts";
@@ -757,6 +758,105 @@ describe("items, params, costs and records", () => {
       entries: [{ kind: "items", id: "test:TS40", change: "changed" }],
     });
     expect(no(s, { cmd: "lockUpdate", args: {} })[0]?.code).toBe("catalogs");
+  });
+});
+
+describe("a plane's normal naming a bar (gap G-A, G27)", () => {
+  const bars = (s: State) => s.doc.bars as Record<string, Record<string, unknown>>;
+  const normalOf = (s: State, bar: string) => {
+    const ends = bars(s)[bar]?.ends as { b?: { plane?: { normal?: unknown } } } | undefined;
+    return ends?.b?.plane?.normal;
+  };
+
+  it("is a reference: query lists it, commands check it, removeEntity refuses or cascades", () => {
+    const s = g("G27");
+    const shoeRefs = ["b1", "b3"];
+    expect(select(s.doc, "bars of b2")).toEqual({ ok: true, ids: shoeRefs });
+    expect(select(s.doc, "bars of b3")).toEqual({ ok: true, ids: ["b2"] });
+
+    expect(
+      no(s, {
+        cmd: "setBar",
+        args: { id: "b2", set: { ends: { b: { plane: { point: "n1", normal: "b9" } } } } },
+      }),
+    ).toMatchObject([{ code: "ref", field: "ends/b/plane/normal", refs: ["b9"] }]);
+
+    expect(no(s, { cmd: "removeEntity", args: { id: "b3" } })).toMatchObject([
+      { code: "referenced", entity: "b3", refs: ["b2", "c2"] },
+    ]);
+    // The shoe holds the strut whole, as it holds a face's or an end's bar: it goes with it.
+    const r = ok(s, { cmd: "removeEntity", args: { id: "b3", cascade: true } });
+    expect(r.results[0]).toMatchObject({ removed: ["b2", "b3", "c1", "c2"], changed: [] });
+  });
+
+  it("array and explodePattern remap it inside the copied set and keep it outside", () => {
+    const s = g("G27");
+    const both = ok(s, {
+      cmd: "array",
+      args: { ids: ["n1", "b2", "b3", "c1", "c2"], along: "b1", pitch_mm: 200, count: 2 },
+    });
+    expect(both.results[0]?.created).toEqual(["b4", "b5", "c3", "c4", "n2"]);
+    expect(normalOf(both.state, "b4")).toBe("b5");
+    expect(errorsOf(derived(both.state))).toEqual([]);
+
+    // A shoe copied without its strut stays square to the strut: a translation keeps its axis.
+    const alone = ok(s, {
+      cmd: "array",
+      args: { ids: ["n1", "b2", "c1"], along: "b1", pitch_mm: -200, count: 2 },
+    });
+    expect(normalOf(alone.state, "b4")).toBe("b3");
+    const d = derived(alone.state);
+    expect(errorsOf(d)).toEqual([]);
+    expect(d.bars.get("b4")?.ends.b.angle).toBeCloseTo(d.bars.get("b2")?.ends.b.angle as number, 9);
+
+    // Exploding a pattern gives the copies derive made, normal included.
+    const p = ok(s, {
+      cmd: "addPattern",
+      args: { template: ["n1", "b2", "b3", "c1", "c2"], along: "b1", pitch_mm: 300, count: 2 },
+    }).state;
+    const before = geometry(derived(p));
+    const x = ok(p, { cmd: "explodePattern", args: { id: "pt1" } });
+    expect(normalOf(x.state, "b4")).toBe("b5");
+    const after = geometry(derived(x.state));
+    expect(after.b4).toEqual(before["b2@1"]);
+    expect(after.b5).toEqual(before["b3@1"]);
+  });
+
+  it("mirror remaps it, and keeps a bar outside the set only when the plane keeps its axis", () => {
+    const s = g("G27");
+    const m = ok(s, {
+      cmd: "mirror",
+      args: { ids: ["n1", "b2", "b3", "c1", "c2"], plane: { axis: "x", at_mm: 500 } },
+    });
+    expect(normalOf(m.state, "b4")).toBe("b5");
+    const d = geometry(derived(m.state));
+    expect(d.b4?.cut).toBe(d.b2?.cut);
+    expect(d.b5?.cut).toBe(d.b3?.cut);
+    expect(errorsOf(derived(m.state))).toEqual([]);
+
+    // The strut's axis (0.6, 0, -0.8) is turned by a plane square to x: it must come along.
+    expect(
+      no(s, { cmd: "mirror", args: { ids: ["n1", "b2", "c1"], plane: { axis: "x", at_mm: 500 } } }),
+    ).toMatchObject([{ code: "geometry", refs: ["b3"] }]);
+    // A plane square to y leaves that axis as it is: the image is square to the same strut.
+    const y = ok(s, { cmd: "mirror", args: { ids: ["b2", "c1"], plane: { axis: "y", at_mm: 0 } } });
+    expect(normalOf(y.state, "b4")).toBe("b3");
+    expect(errorsOf(derived(y.state))).toEqual([]);
+  });
+
+  it("stays a bar in canonical form, while a vector normal is not snapped as a length", () => {
+    const s = g("G27");
+    const text = projectText(s.doc);
+    expect(text).toBe(readFileSync(join(FIXTURES, "golden-ends", "G27", "alukit.json"), "utf8"));
+    expect(text).toContain('"plane": { "point": "n1", "normal": "b3" }');
+    const vector = ok(s, {
+      cmd: "setBar",
+      args: {
+        id: "b2",
+        set: { ends: { b: { plane: { point: "n1", normal: [0.6000000000000001, 0, -0.8] } } } },
+      },
+    }).state;
+    expect(projectText(vector.doc)).toContain('"normal": [0.6000000000000001, 0, -0.8]');
   });
 });
 

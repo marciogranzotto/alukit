@@ -1,15 +1,54 @@
-import { readFile, realpath } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { extname, join, normalize, resolve, sep } from "node:path";
+import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { z } from "zod";
+import { CHECK_SCHEMA } from "#core/check/check.ts";
+import { derivedJson } from "#core/derive/output.ts";
+import { sortDiagnostics } from "#core/diagnostics.ts";
+import { DOCUMENT } from "#core/project/open.ts";
+import { acquireEditLock, SERVE } from "#core/project/store.ts";
+import { type CommandsAnswer, type HistoryAnswer, type HostOptions, ProjectHost } from "./host.ts";
+import { removeOwner, writeOwner } from "./owner.ts";
+import {
+  checkFetchSite,
+  checkHost,
+  checkJsonBody,
+  checkOrigin,
+  checkToken,
+  isInside,
+  newToken,
+  type Refusal,
+} from "./security.ts";
+import { SSE_PING, sseEvent } from "./sse.ts";
+import { viewModel } from "./view.ts";
 
-// TODO(M4a, design §7.2): the per-start token (.alukit/owner.json, Authorization on /api), the
-// Host and Origin checks, JSON-only bodies, project-path confinement, and the document's command
-// queue and event stream. Until then this server serves static files and /api/health only, and
-// is bound to 127.0.0.1 so nothing off this machine can reach it.
+/**
+ * `alukit serve` (design §7.1, §7.2, §10): one `node:http` server per project, bound to
+ * 127.0.0.1. It serves the built app (`dist/`) and the project's API:
+ *
+ * | Request | Answer |
+ * |---|---|
+ * | `GET /api/health` | `{ ok: true }`: a liveness probe, the only `/api` path without the token |
+ * | `GET /api/session` | the project folder, the server's pid, the revision and status |
+ * | `GET /api/project` | the document and its lock as the server holds them |
+ * | `GET /api/model` | everything a tab shows for one revision (`alukit.view/1`, `view.ts`) |
+ * | `GET /api/derived`, `/api/cutlist`, `/api/bom`, `/api/check` | as the CLI's `--json` outputs |
+ * | `GET /api/log` | the log of steps, undos and redos |
+ * | `GET /api/events` | the event stream: SSE wire format, read with `fetch` |
+ * | `POST /api/commands` | `{ commands, source, id?, baseRev?, strict? }`: one step |
+ * | `POST /api/undo`, `/api/redo` | `{ source }` |
+ * | `POST /api/restore` | "restore last good": the last good state over invalid files |
+ *
+ * Every request passes the checks of `security.ts` first: `Host` and `Origin` on everything,
+ * the token and `Sec-Fetch-Site` on `/api`, a JSON content type on bodies. A refused request
+ * gets 403 (415 for a body that is not JSON) and nothing else is read.
+ */
 
 const HOST = "127.0.0.1";
+const MAX_BODY = 8 * 1024 * 1024;
+const PING_MS = 20_000;
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -22,17 +61,57 @@ const MIME: Record<string, string> = {
   ".woff2": "font/woff2",
 };
 
+/**
+ * Headers on every answer. The page runs only its own scripts and connects only to its own
+ * origin; it may not be framed (a frame could be clicked through); no `Referer` leaves it.
+ */
+const COMMON: Record<string, string> = {
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "no-referrer",
+  "x-frame-options": "DENY",
+  "content-security-policy":
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+};
+
+const SOURCE = /^(ui|cli|cli:[A-Za-z0-9._-]{1,64}|agent:[A-Za-z0-9._-]{1,64})$/;
+
+const Source = z
+  .string()
+  .regex(SOURCE, "ui, cli, cli:<name> or agent:<name> (file is the watcher's)");
+
+const CommandsBody = z.strictObject({
+  commands: z.array(z.unknown()).min(1).max(10_000),
+  source: Source,
+  id: z.string().min(1).max(200).optional(),
+  baseRev: z.number().int().nonnegative().optional(),
+  strict: z.boolean().optional(),
+});
+
+const HistoryBody = z.strictObject({ source: Source });
+
 export interface ServerOptions {
+  /** The project folder. */
+  dir: string;
   /** 0 picks a free port. */
   port?: number;
   /** The built app. Defaults to the repository's dist/. */
   distDir?: string;
+  builtinDir?: string;
+  /** Passed to the project host: watching, its settle time and poll interval, today's date. */
+  host?: Omit<HostOptions, "dir" | "builtinDir">;
 }
 
 export interface RunningServer {
   server: Server;
   port: number;
+  /** The app's address, ending in "/". */
   url: string;
+  /** The address `serve` opens: the token in the fragment, which never reaches a server (§7.2). */
+  appUrl: string;
+  token: string;
+  /** The project folder, resolved. */
+  dir: string;
+  host: ProjectHost;
   close: () => Promise<void>;
 }
 
@@ -40,48 +119,88 @@ export interface RunningServer {
 // with a space in its name would look for "my%20folder/dist".
 const defaultDist = fileURLToPath(new URL("../../dist", import.meta.url));
 
-/** True when `path` is `root` itself or lies under it. Both must be absolute and normalised. */
-function isInside(root: string, path: string): boolean {
-  return path === root || path.startsWith(root.endsWith(sep) ? root : root + sep);
-}
-
-function send(res: ServerResponse, status: number, text?: string): void {
+function send(
+  res: ServerResponse,
+  status: number,
+  text?: string,
+  headers: Record<string, string> = {},
+): void {
+  const h = { ...COMMON, "cache-control": "no-store", ...headers };
   if (text === undefined) {
-    res.writeHead(status).end();
+    res.writeHead(status, h).end();
     return;
   }
-  res.writeHead(status, { "content-type": "text/plain; charset=utf-8" }).end(text);
+  res.writeHead(status, { "content-type": "text/plain; charset=utf-8", ...h }).end(text);
 }
 
-async function handle(root: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const method = req.method ?? "GET";
-  let path: string;
+function sendJson(res: ServerResponse, status: number, body: unknown, rev?: number): void {
+  const text = typeof body === "string" ? body : `${JSON.stringify(body)}\n`;
+  res
+    .writeHead(status, {
+      ...COMMON,
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      ...(rev !== undefined ? { "x-alukit-rev": String(rev) } : {}),
+    })
+    .end(text);
+}
+
+function deny(res: ServerResponse, r: Refusal): void {
+  send(res, r.status, `${r.status === 403 ? "forbidden" : "unsupported media type"}: ${r.reason}`);
+}
+
+/** Reads a JSON body, at most MAX_BODY bytes. */
+async function readBody(req: IncomingMessage): Promise<{ value: unknown } | { error: string }> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size > MAX_BODY) return { error: "the body is too large" };
+    chunks.push(chunk as Buffer);
+  }
   try {
-    // A malformed escape such as "%E0%A4%A" makes decodeURIComponent throw; uncaught, that
-    // would take the whole server down.
-    path = decodeURIComponent((req.url ?? "/").split("?")[0] ?? "/");
-  } catch {
-    send(res, 400, "bad request");
-    return;
+    return { value: JSON.parse(Buffer.concat(chunks).toString("utf8")) };
+  } catch (e) {
+    return { error: `the body is not JSON: ${(e as Error).message}` };
   }
-  if (path.includes("\0")) {
-    send(res, 400, "bad request");
-    return;
-  }
+}
 
-  if (path === "/api/health") {
-    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
-    res.end(JSON.stringify({ ok: true }));
-    return;
+function commandsStatus(a: CommandsAnswer): number {
+  if (a.ok) return 200;
+  switch (a.kind) {
+    case "refused":
+      return 422;
+    case "read-only":
+    case "stale":
+      return 409;
+    default:
+      return 500;
   }
+}
+
+function historyStatus(a: HistoryAnswer): number {
+  if (a.ok) return 200;
+  return a.kind === "write" ? 500 : 409;
+}
+
+interface Ctx {
+  root: string;
+  port: () => number;
+  token: string;
+  project: ProjectHost;
+  /** The model answer of the current revision, serialised once. */
+  model: { rev: number; text: string } | undefined;
+  streams: Set<ServerResponse>;
+}
+
+async function serveStatic(ctx: Ctx, method: string, path: string, res: ServerResponse) {
   if (method !== "GET" && method !== "HEAD") {
-    res.writeHead(405, { allow: "GET, HEAD" }).end();
+    send(res, 405, undefined, { allow: "GET, HEAD" });
     return;
   }
-
   // Lexical check: a leading "/" makes normalize() drop any ".." that would climb above root.
-  const file = join(root, normalize(path === "/" ? "/index.html" : path));
-  if (!isInside(root, file)) {
+  const file = join(ctx.root, normalize(path === "/" ? "/index.html" : path));
+  if (!isInside(ctx.root, file)) {
     send(res, 403);
     return;
   }
@@ -89,7 +208,7 @@ async function handle(root: string, req: IncomingMessage, res: ServerResponse): 
   let real: string;
   let realRoot: string;
   try {
-    [real, realRoot] = await Promise.all([realpath(file), realpath(root)]);
+    [real, realRoot] = await Promise.all([realpath(file), realpath(ctx.root)]);
   } catch {
     send(res, 404, "not found");
     return;
@@ -107,40 +226,278 @@ async function handle(root: string, req: IncomingMessage, res: ServerResponse): 
     return;
   }
   res.writeHead(200, {
+    ...COMMON,
     "content-type": MIME[extname(real)] ?? "application/octet-stream",
     "cache-control": "no-cache",
   });
   res.end(method === "HEAD" ? undefined : body);
 }
 
-export function createAppServer(distDir: string = defaultDist): Server {
-  const root = resolve(distDir);
-  return createServer((req, res) => {
-    handle(root, req, res).catch(() => {
-      // Never let one request's failure become an unhandled rejection that ends the process.
-      if (res.headersSent) res.destroy();
-      else send(res, 500, "internal error");
-    });
+function events(ctx: Ctx, req: IncomingMessage, res: ServerResponse): void {
+  res.writeHead(200, {
+    ...COMMON,
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-store",
+    connection: "keep-alive",
   });
+  res.flushHeaders();
+  ctx.streams.add(res);
+  res.write(sseEvent("hello", ctx.project.summary(), ctx.project.rev));
+  const off = ctx.project.subscribe((e) => {
+    res.write(sseEvent(e.type, e, e.rev));
+  });
+  const ping = setInterval(() => res.write(SSE_PING), PING_MS);
+  const end = () => {
+    clearInterval(ping);
+    off();
+    ctx.streams.delete(res);
+  };
+  req.on("close", end);
+  res.on("close", end);
 }
 
-export async function startServer(options: ServerOptions = {}): Promise<RunningServer> {
-  const distDir = options.distDir ?? defaultDist;
+async function api(
+  ctx: Ctx,
+  method: string,
+  path: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+) {
+  const p = ctx.project;
+  if (method === "GET") {
+    switch (path) {
+      case "/api/session":
+        sendJson(res, 200, {
+          schema: "alukit.session/1",
+          dir: p.dir,
+          pid: process.pid,
+          ...p.summary(),
+        });
+        return;
+      case "/api/project":
+        sendJson(res, 200, { ...p.summary(), doc: p.state.doc, lock: p.state.lock }, p.rev);
+        return;
+      case "/api/model": {
+        const snap = p.snapshot();
+        if (ctx.model?.rev !== snap.rev) {
+          ctx.model = { rev: snap.rev, text: `${JSON.stringify(viewModel(snap))}\n` };
+        }
+        sendJson(res, 200, ctx.model.text, snap.rev);
+        return;
+      }
+      case "/api/derived": {
+        const snap = p.snapshot();
+        sendJson(res, 200, derivedJson(snap.derived), snap.rev);
+        return;
+      }
+      case "/api/cutlist": {
+        const snap = p.snapshot();
+        sendJson(res, 200, snap.outputs.cutList(), snap.rev);
+        return;
+      }
+      case "/api/bom": {
+        const snap = p.snapshot();
+        sendJson(res, 200, snap.outputs.bom(), snap.rev);
+        return;
+      }
+      case "/api/check": {
+        const snap = p.snapshot();
+        const diagnostics = sortDiagnostics([...snap.catalogs, ...snap.check.diagnostics]);
+        const count = (s: string) => diagnostics.filter((d) => d.severity === s).length;
+        sendJson(
+          res,
+          200,
+          {
+            schema: CHECK_SCHEMA,
+            rev: snap.rev,
+            ok: count("error") === 0,
+            counts: { error: count("error"), warn: count("warn"), info: count("info") },
+            checks: snap.check.checks,
+            diagnostics,
+          },
+          snap.rev,
+        );
+        return;
+      }
+      case "/api/log":
+        sendJson(res, 200, { rev: p.rev, entries: p.log() }, p.rev);
+        return;
+      case "/api/events":
+        events(ctx, req, res);
+        return;
+    }
+    send(res, 404, "not found");
+    return;
+  }
+  if (method !== "POST") {
+    send(res, 405, undefined, { allow: "GET, POST" });
+    return;
+  }
+  const bad = checkJsonBody(req.headers);
+  if (bad) {
+    deny(res, bad);
+    return;
+  }
+  const body = await readBody(req);
+  if ("error" in body) {
+    sendJson(res, 400, { ok: false, message: body.error });
+    return;
+  }
+  const parse = <T>(schema: z.ZodType<T>): T | undefined => {
+    const r = schema.safeParse(body.value);
+    if (r.success) return r.data;
+    sendJson(res, 400, {
+      ok: false,
+      message: r.error.issues.map((i) => `${i.path.join("/") || "body"}: ${i.message}`).join("; "),
+    });
+    return undefined;
+  };
+  switch (path) {
+    case "/api/commands": {
+      const b = parse(CommandsBody);
+      if (!b) return;
+      const a = await p.commands({
+        commands: b.commands,
+        source: b.source,
+        ...(b.id !== undefined ? { id: b.id } : {}),
+        ...(b.baseRev !== undefined ? { baseRev: b.baseRev } : {}),
+        ...(b.strict !== undefined ? { strict: b.strict } : {}),
+      });
+      sendJson(res, commandsStatus(a), { schema: "alukit.do/1", ...a }, p.rev);
+      return;
+    }
+    case "/api/undo":
+    case "/api/redo": {
+      const b = parse(HistoryBody);
+      if (!b) return;
+      const a = path === "/api/undo" ? await p.undo(b.source) : await p.redo(b.source);
+      sendJson(res, historyStatus(a), a, p.rev);
+      return;
+    }
+    case "/api/restore": {
+      if (!parse(z.strictObject({}))) return;
+      const a = await p.restore();
+      sendJson(res, a.ok ? 200 : 500, a, p.rev);
+      return;
+    }
+  }
+  send(res, 404, "not found");
+}
+
+async function handle(ctx: Ctx, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  // Host and Origin first, on everything: a rebinding page or a foreign origin learns nothing.
+  const foreign = checkHost(req.headers, ctx.port()) ?? checkOrigin(req.headers, ctx.port());
+  if (foreign) {
+    deny(res, foreign);
+    return;
+  }
+  const method = req.method ?? "GET";
+  let path: string;
+  try {
+    // A malformed escape such as "%E0%A4%A" makes decodeURIComponent throw; uncaught, that
+    // would take the whole server down.
+    path = decodeURIComponent((req.url ?? "/").split("?")[0] ?? "/");
+  } catch {
+    send(res, 400, "bad request");
+    return;
+  }
+  if (path.includes("\0")) {
+    send(res, 400, "bad request");
+    return;
+  }
+  if (path === "/api" || path.startsWith("/api/")) {
+    if (path === "/api/health") {
+      if (method !== "GET" && method !== "HEAD") send(res, 405, undefined, { allow: "GET, HEAD" });
+      else sendJson(res, 200, { ok: true });
+      return;
+    }
+    const refused = checkFetchSite(req.headers) ?? checkToken(req.headers, ctx.token);
+    if (refused) {
+      deny(res, refused);
+      return;
+    }
+    await api(ctx, method, path, req, res);
+    return;
+  }
+  await serveStatic(ctx, method, path, res);
+}
+
+/**
+ * Starts the server for a project: takes the edit lock (§7.1), opens the project, listens on
+ * 127.0.0.1, and writes `.alukit/owner.json` with a fresh token. `close` undoes all of it.
+ */
+export async function startServer(options: ServerOptions): Promise<RunningServer> {
+  const distDir = resolve(options.distDir ?? defaultDist);
   try {
     await readFile(join(distDir, "index.html"));
   } catch {
     throw new Error("the app is not built (no dist/index.html); run `pnpm build` first");
   }
-  const server = createAppServer(distDir);
-  await new Promise<void>((ok, fail) => {
-    server.once("error", fail);
-    server.listen(options.port ?? 0, HOST, ok);
-  });
-  const { port } = server.address() as AddressInfo;
-  return {
-    server,
-    port,
-    url: `http://${HOST}:${port}/`,
-    close: () => new Promise((ok) => server.close(() => ok())),
+  let dir: string;
+  try {
+    dir = await realpath(options.dir);
+    if (!(await stat(join(dir, DOCUMENT))).isFile()) throw new Error();
+  } catch {
+    throw new Error(`no project in ${options.dir} (no ${DOCUMENT}); create one with alukit new`);
+  }
+
+  const release = await acquireEditLock(dir, SERVE);
+  let project: ProjectHost;
+  try {
+    project = await ProjectHost.open({
+      ...(options.host ?? {}),
+      dir,
+      ...(options.builtinDir ? { builtinDir: options.builtinDir } : {}),
+    });
+  } catch (e) {
+    await release();
+    throw e;
+  }
+
+  const token = newToken();
+  let port = 0;
+  const ctx: Ctx = {
+    root: distDir,
+    port: () => port,
+    token,
+    project,
+    model: undefined,
+    streams: new Set(),
   };
+  const server = createServer((req, res) => {
+    handle(ctx, req, res).catch(() => {
+      // Never let one request's failure become an unhandled rejection that ends the process.
+      if (res.headersSent) res.destroy();
+      else send(res, 500, "internal error");
+    });
+  });
+  try {
+    await new Promise<void>((ok, fail) => {
+      server.once("error", fail);
+      server.listen(options.port ?? 0, HOST, ok);
+    });
+  } catch (e) {
+    await project.close();
+    await release();
+    throw e;
+  }
+  port = (server.address() as AddressInfo).port;
+  const url = `http://${HOST}:${port}/`;
+  await writeOwner(dir, { url, port, started: new Date().toISOString(), token });
+
+  let closing: Promise<void> | undefined;
+  const close = () => {
+    closing ??= (async () => {
+      for (const s of ctx.streams) s.destroy();
+      await new Promise<void>((ok) => {
+        server.close(() => ok());
+        server.closeAllConnections();
+      });
+      await project.close();
+      await removeOwner(dir, token);
+      await release();
+    })();
+    return closing;
+  };
+  return { server, port, url, appUrl: `${url}#t=${token}`, token, dir, host: project, close };
 }

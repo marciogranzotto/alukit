@@ -147,6 +147,8 @@ function structural(kind: Kind, id: string, v: unknown, c: Collect): void {
         if (!plane) continue;
         const f = `ends/${e}/plane`;
         if ("point" in plane) c.point(plane.point, `${f}/point`);
+        // A normal may name a bar: the plane is square to its axis (gap G-A, G27).
+        if (typeof plane.normal === "string") c.whole(plane.normal, `${f}/normal`);
         if (isObject(plane.face)) c.whole(plane.face.bar, `${f}/face/bar`);
         if ("of" in plane) c.end(plane.of, `${f}/of`);
       }
