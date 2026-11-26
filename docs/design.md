@@ -1324,8 +1324,8 @@ Vite's HMR socket into every user's runtime, a second surface to secure, so it i
 5. **Services.** The machining services guide (56 pages, outside the API: mitre 1–60°, threads,
    connector holes, access holes, parallel holes) goes into `services.json` by hand, with page
    references.
-6. **Overrides** with `expect`: the 40x80's Ix and Iy (very likely swapped labels and a lost
-   digit) and the 40x40 fechado's mass; other inconsistencies as accepted mismatches with notes
+6. **Overrides** with `expect`: the 40x80's strong-axis inertia (printed 6.55 for 65.5 cm⁴, a
+   lost digit; *corrected 2026-11-26 by M2a: the labels are not swapped*) and the 40x40 fechado's mass; other inconsistencies as accepted mismatches with notes
    (*read: survey §7*).
 7. **Clone ratings.** HIWIN HG values for the HGR/HGH rails and carriages go once into
    `catalogs/ref-hiwin/`; Forseti's items point at them with `clone_of` (review m8).

@@ -216,7 +216,9 @@ The design is a graph, not a pile of meshes. Everything else is derived from it.
     caveat is clone ratings), or foot ratings. Caster ratings appear on only 2 listings.
     EN 755-2 values still need verifying from the standard.
   - **16 inconsistencies** were found in the catalogue and shop. Examples: the 40x80
-    Ix/Iy, very likely swapped labels plus a lost digit (about 17.76 / 65.5 cm⁴); the
+    strong-axis inertia, printed 6.55 for 65.5 cm⁴, a lost digit; *(corrected 2026-11-26 by M2a,
+    checked on five drawings: the labels are not swapped, since the catalogue always gives IX about
+    the long side)*; the
     40x40 fechado's mass; PF30-04 at 0.816 kg/m in the catalogue against 1.2 in the shop.
     These argue for the tool's own computed-versus-published check.
 

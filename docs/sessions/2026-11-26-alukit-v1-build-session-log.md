@@ -34,9 +34,10 @@ in the gitignored `internal/session-notes.md`.*
 |---|---|---|
 | M0 scaffold | **done** (14:16), pushed `81a8a8e` | Every done-when check passed in a fresh clone on Node 26.13.1 / pnpm 12.23.0 (agent), and again on the coordinator's own run. First CI run on GitHub: **success** (run 45866365568). |
 | M1.5 paper model | **done** (14:48) | 254 of 254 bodies in the document: 88 clean, 166 awkward, 0 missing. 20 schema gaps (P1–P20) with fixes. The end-plane rules reproduce every drawn bar length within 0.05 mm. Public summary: [`docs/reviews/m1.5-paper-model-findings.md`](../reviews/m1.5-paper-model-findings.md). |
-| Design draft 2.1 | running (Opus), launched 14:50 | folds in P1–P20 |
+| Design draft 2.1 | **done** (15:08), pushed `9093d70` | P1–P20 resolved (two v1 exclusions); new golden cases G17–G26; §16 resolution table; four additive catalog-schema changes, handed to M2a. |
+| M3a geometry core | running (Opus, own worktree), launched 15:10 | project schema, expressions, frames, end planes (two sweeps), connections, cut list, golden cases, cart fixture |
 | M1 catalog core | **done** (14:56), pushed `54ff321` | 94 tests. The 40x40 básico computes 553.53 mm², Ix 9.1287 and Iy 9.1307 cm⁴. 8 generators, worst 0.0025% from closed form. 43 schema calls in [`docs/notes/m1-decisions.md`](../notes/m1-decisions.md). Re-verified by the coordinator. |
-| M2a first catalogs | running (Opus, own worktree), launched 14:57 | Forseti importer, the reference project's items, `std`, `ref-hiwin` |
+| M2a first catalogs | **done** (15:51), fast-forwarded and pushed | forseti: 103 items, 159 offers, 8 exact + 3 parametric sections. std: 19 items. ref-hiwin: 12. `catalog check` passes on all three. The importer is byte-deterministic. 107 tests (+1 skipped without the importer inputs). |
 
 ## Decisions taken autonomously
 
@@ -51,6 +52,10 @@ in the gitignored `internal/session-notes.md`.*
 - **pnpm's release-age policy.** pnpm 12 refused vite 8.4.0 (published 2026-11-26) under its
   minimum-release-age rule, so `pnpm-workspace.yaml` carries `minimumReleaseAgeExclude:
   [vite@8.4.0]`. Drop the exclusion once 8.4.0 is old enough.
+- **std and ref-hiwin values from recall.** The `std` catalog's standard table and clause numbers
+  (DIN/ISO) were written by an agent from recall. The values match common tables, but the
+  citations need a check; a verification task is queued. HIWIN publishes no minimum rail end
+  distance, so that one is an estimate.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
@@ -87,3 +92,17 @@ in the gitignored `internal/session-notes.md`.*
     - arcs are flattened at a fixed 0.5° step (a chord tolerance failed 0.1% on small rods);
     - fixtures live in `tests/fixtures/catalogs/`, since `catalogs/` is for shipped catalogs.
 - **14:57**: M1 pushed. M2a launched in its own worktree; it merges after review.
+- **15:08**: Draft 2.1 done. The coordinator spot-checked G17 (36.87° = atan 3/4; long − short
+  = 40 × 0.75 = 30), G25 (an M10 medium clearance hole is Ø11 per ISO 273) and G26 (half away from
+  zero: 10.05 × 0.9 = 9.045 → 9.05).
+- **15:10**: 2.1 pushed. M2a told the exact catalog additions (offer price ranges,
+  `factory_E_mm`, part datums, mount sleeves). M3a launched in its own worktree, in parallel.
+- **15:51**: M2a done (10 commits), fast-forwarded onto `main`.
+  - **Correction:** the 40x80's printed IX/IY are *not* swapped; only a digit is lost (65.5 printed
+    as 6.55). M2a checked the catalogue's axis convention on five drawings. Fixed in the survey,
+    `BRAINSTORM.md` and `design.md`.
+  - A second agent checked the families against the sources and caught an importer bug (a kit's
+    main item was a nut).
+  - Lint failed after the merge, though M2a had reported it passing: Biome was scanning the
+    agents' worktrees in `.claude/worktrees/` and their nested `biome.json`. Fixed with Biome's
+    force-ignore `!!.claude`.
