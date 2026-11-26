@@ -1,21 +1,17 @@
 import { defineConfig } from "@playwright/test";
 
-const port = 4173;
-
+// Each test serves its own scratch copy of a fixture project through `alukit serve` (see
+// tests/e2e/helpers.ts), the way users get the app, so `pnpm build` must run first. One worker
+// keeps the machine calm; the tests are few.
 export default defineConfig({
   testDir: "tests/e2e",
   fullyParallel: false,
+  workers: 1,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? "github" : "list",
   use: {
-    baseURL: `http://127.0.0.1:${port}`,
     browserName: "chromium",
+    viewport: { width: 1280, height: 800 },
     launchOptions: { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] },
-  },
-  // The built app, served the way users get it: through `alukit serve`. Run `pnpm build` first.
-  webServer: {
-    command: `node src/cli/main.ts serve --port ${port}`,
-    url: `http://127.0.0.1:${port}/api/health`,
-    reuseExistingServer: !process.env.CI,
   },
 });

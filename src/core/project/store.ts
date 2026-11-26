@@ -97,15 +97,21 @@ export async function readLock(dir: string): Promise<ReadResult<Lock>> {
   };
 }
 
-/** Writes a file atomically: a temporary file beside it, fsync, rename, then the folder fsync. */
-export async function writeAtomic(path: string, text: string): Promise<void> {
+/**
+ * Writes a file atomically: a temporary file beside it, fsync, rename, then the folder fsync.
+ * `mode` sets the new file's permissions from its creation on (a secret is never readable by
+ * others, not even for a moment).
+ */
+export async function writeAtomic(path: string, text: string, mode?: number): Promise<void> {
   const tmp = join(
     dirname(path),
     `.${basename(path)}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`,
   );
   try {
-    const fh = await open(tmp, "w");
+    const fh = await open(tmp, "wx", mode);
     try {
+      // The umask may only take bits away, but say exactly what is meant.
+      if (mode !== undefined) await fh.chmod(mode);
       await fh.writeFile(text, "utf8");
       await fh.sync();
     } finally {
@@ -134,16 +140,29 @@ export async function writeProject(dir: string, doc: string | undefined, lock: L
   if (doc !== undefined) await writeAtomic(join(dir, DOCUMENT), doc);
 }
 
+/** Who holds `.alukit/edit.lock`: a process, and what it is when it says (`alukit serve`). */
+export interface EditLockHolder {
+  pid?: number;
+  host?: string;
+  started?: string;
+  /** `alukit serve` holds the lock for as long as it owns the project (§7.1). */
+  by?: string;
+}
+
 export class EditLockHeld extends Error {
-  readonly holder: { pid?: number; host?: string; started?: string };
-  constructor(path: string, holder: { pid?: number; host?: string; started?: string }) {
+  readonly holder: EditLockHolder;
+  constructor(path: string, holder: EditLockHolder) {
+    const who = `${holder.by ? `${holder.by}, ` : ""}process ${holder.pid ?? "?"}${holder.host ? ` on ${holder.host}` : ""}`;
     super(
-      `${path} is held by process ${holder.pid ?? "?"}${holder.host ? ` on ${holder.host}` : ""} (started ${holder.started ?? "?"}); wait for it, or delete the file if that process is gone`,
+      `${path} is held by ${who} (started ${holder.started ?? "?"}); ${holder.by === SERVE ? "it owns the project: send edits through it, or stop it" : "wait for it, or delete the file if that process is gone"}`,
     );
     this.name = "EditLockHeld";
     this.holder = holder;
   }
 }
+
+/** The `by` of the edit lock the server holds. */
+export const SERVE = "alukit serve";
 
 function alive(pid: number): boolean {
   try {
@@ -155,17 +174,19 @@ function alive(pid: number): boolean {
 }
 
 /**
- * Runs `fn` holding `.alukit/edit.lock` (§7.1): created exclusively, holding the pid, the host
- * and the process's start time. A lock whose process is gone (same host) is stale and taken over.
+ * Takes `.alukit/edit.lock` (§7.1): created exclusively, holding the pid, the host and the
+ * process's start time, and `by` when the holder says what it is. A lock whose process is gone
+ * (same host) is stale and taken over. Returns the release, which removes the file once.
  */
-export async function withEditLock<T>(dir: string, fn: () => Promise<T>): Promise<T> {
+export async function acquireEditLock(dir: string, by?: string): Promise<() => Promise<void>> {
   const stateDir = join(dir, STATE_DIR);
   await mkdir(stateDir, { recursive: true });
   const path = join(stateDir, EDIT_LOCK);
-  const me = {
+  const me: EditLockHolder = {
     pid: process.pid,
     host: hostname(),
     started: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+    ...(by ? { by } : {}),
   };
   for (let attempt = 0; ; attempt++) {
     try {
@@ -178,7 +199,7 @@ export async function withEditLock<T>(dir: string, fn: () => Promise<T>): Promis
       break;
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-      let holder: { pid?: number; host?: string; started?: string } = {};
+      let holder: EditLockHolder = {};
       try {
         holder = JSON.parse(await readFile(path, "utf8"));
       } catch {
@@ -189,10 +210,21 @@ export async function withEditLock<T>(dir: string, fn: () => Promise<T>): Promis
       await unlink(path).catch(() => {});
     }
   }
+  let released = false;
+  return async () => {
+    if (released) return;
+    released = true;
+    await unlink(path).catch(() => {});
+  };
+}
+
+/** Runs `fn` holding `.alukit/edit.lock` (§7.1); see `acquireEditLock`. */
+export async function withEditLock<T>(dir: string, fn: () => Promise<T>): Promise<T> {
+  const release = await acquireEditLock(dir);
   try {
     return await fn();
   } finally {
-    await unlink(path).catch(() => {});
+    await release();
   }
 }
 
@@ -289,7 +321,14 @@ export async function loadProject(dir: string, opts: LoadOptions = {}): Promise<
     );
   }
   if (opts.persist !== false && (!lock || pinned.added.length > 0)) {
-    await withEditLock(dir, () => writeProject(dir, undefined, pinned.lock));
+    try {
+      await withEditLock(dir, () => writeProject(dir, undefined, pinned.lock));
+    } catch (e) {
+      // Someone else edits the project (a running server pins on its own next step): derive
+      // from the pinned lock all the same, and say it was not written.
+      if (!(e instanceof EditLockHeld)) throw e;
+      notices.push(`${LOCK_FILE} not written: ${e.message}`);
+    }
   }
   return {
     dir,

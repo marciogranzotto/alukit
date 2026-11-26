@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { parseJson } from "#catalog/json.ts";
 import { bomCsv, bomJson, bomMarkdown } from "#core/bom/format.ts";
 import { cutListCsv, cutListJson, cutListMarkdown } from "#core/cutlist/format.ts";
+import { isDate, localDate } from "#core/dates.ts";
 import { jsonText } from "#core/derive/output.ts";
 import type { Diagnostic } from "#core/diagnostics.ts";
 import type { FieldChange } from "#core/lock/diff.ts";
@@ -30,7 +31,7 @@ import {
 } from "#core/revision/revision.ts";
 import { parseOptions, usageError } from "./args.ts";
 import { type Io, packageVersion } from "./cli.ts";
-import { diagnosticLine, isDate, today } from "./project.ts";
+import { diagnosticLine } from "./project.ts";
 import { publishUsageOf } from "./publish-usage.ts";
 
 /**
@@ -142,7 +143,7 @@ async function save(argv: readonly string[], io: Io): Promise<number> {
       io,
     );
   }
-  const asOf = args.values["as-of"] ?? today();
+  const asOf = args.values["as-of"] ?? localDate();
   if (!isDate(asOf))
     return usageError("revision save", "--as-of takes a date, YYYY-MM-DD", USAGE, io);
   const root = resolve(pos.dir);

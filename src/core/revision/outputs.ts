@@ -1,6 +1,6 @@
 import type { Bom } from "../bom/bom.ts";
 import { type CheckResult, checkModel } from "../check/check.ts";
-import { modelOutputs, outputAccessors } from "../check/outputs.ts";
+import { checkedOrder, modelOutputs, outputAccessors } from "../check/outputs.ts";
 import type { CutList } from "../cutlist/cutlist.ts";
 import { derive } from "../derive/derive.ts";
 import { derivedJson } from "../derive/output.ts";
@@ -9,7 +9,7 @@ import type { ItemSource } from "../items.ts";
 import { lockHash } from "../lock/pin.ts";
 import type { Lock } from "../lock/schema.ts";
 import { type CostsOutput, costsOf } from "../order/format.ts";
-import { type Order, orderOf } from "../order/order.ts";
+import type { Order } from "../order/order.ts";
 
 /**
  * A project's outputs for one variant, as the CLI prints them in JSON (design §5.1 stages 1–6):
@@ -60,8 +60,7 @@ export function projectOutputs(input: OutputsInput): Outputs {
   const cl = outputs.cutList();
   const b = outputs.bom();
   const checked = checkModel({ raw, derived, items, accessors: outputAccessors(outputs) });
-  const order = orderOf(outputs.priced(), {
-    diagnostics: sortDiagnostics([...checked.diagnostics, ...b.diagnostics]),
+  const order = checkedOrder(outputs, checked.diagnostics, {
     asOf: input.asOf,
     ...(input.lock ? { lock: lockHash(input.lock) } : {}),
   });

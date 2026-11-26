@@ -29,7 +29,7 @@ describe("cli", () => {
     expect(r).toEqual({ code: 0, out: [pkg.version], err: [] });
   });
 
-  it("lists planned commands as not implemented yet, and the project commands as usable", () => {
+  it("lists planned commands as not implemented yet, and the server and project commands as usable", () => {
     expect(helpText()).toContain("(not implemented yet)");
     expect(helpText()).toMatch(/\n {2}derive <dir> \[--json\] \[--variant v\] \[--frozen\]\n/);
     expect(helpText()).toMatch(
@@ -46,6 +46,9 @@ describe("cli", () => {
     );
     expect(helpText()).toMatch(/\n {2}fmt <dir>\.\.\. \[--check\]\n/);
     for (const cmd of [
+      "serve",
+      "undo",
+      "log",
       "bom",
       "order",
       "costs",

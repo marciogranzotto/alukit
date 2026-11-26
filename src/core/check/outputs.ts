@@ -1,9 +1,10 @@
 import { type Bom, bom } from "../bom/bom.ts";
 import { type CutList, cutList } from "../cutlist/cutlist.ts";
 import type { Derived } from "../derive/derive.ts";
+import { type Diagnostic, sortDiagnostics } from "../diagnostics.ts";
 import { type Ast, ExprError } from "../expr.ts";
 import type { ItemSource } from "../items.ts";
-import { type PricedOrder, priceOrder } from "../order/order.ts";
+import { type Order, orderOf, type PricedOrder, priceOrder } from "../order/order.ts";
 import type { Accessor } from "./model.ts";
 
 /**
@@ -36,6 +37,23 @@ export function modelOutputs(derived: Derived, items: ItemSource): ModelOutputs 
   const b = once(() => bom({ derived, items }));
   const priced = once(() => priceOrder({ derived, items, bom: b(), cutList: cl() }));
   return { cutList: cl, bom: b, priced };
+}
+
+/**
+ * The order list with its rules (§5.1 stage 6, §5.5), after the checks: every error so far, the
+ * checks' and the BOM's, holds an order through `check-error`. `alukit order`, `alukit costs` and
+ * the server's `/api/order` and `/api/costs` all build it here, so they answer the same.
+ */
+export function checkedOrder(
+  outputs: ModelOutputs,
+  checks: readonly Diagnostic[],
+  input: { asOf: string; lock?: string },
+): Order {
+  return orderOf(outputs.priced(), {
+    diagnostics: sortDiagnostics([...checks, ...outputs.bom().diagnostics]),
+    asOf: input.asOf,
+    ...(input.lock !== undefined ? { lock: input.lock } : {}),
+  });
 }
 
 const BOUNDS = ["low", "likely", "high"] as const;

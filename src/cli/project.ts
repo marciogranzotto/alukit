@@ -2,9 +2,10 @@ import { resolve } from "node:path";
 import { bom } from "#core/bom/bom.ts";
 import { bomCsv, bomJson, bomMarkdown } from "#core/bom/format.ts";
 import { checkModel } from "#core/check/check.ts";
-import { modelOutputs, outputAccessors } from "#core/check/outputs.ts";
+import { checkedOrder, modelOutputs, outputAccessors } from "#core/check/outputs.ts";
 import { cutList } from "#core/cutlist/cutlist.ts";
 import { cutListCsv, cutListJson, cutListMarkdown } from "#core/cutlist/format.ts";
+import { isDate, localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
 import { derivedJson, jsonText } from "#core/derive/output.ts";
 import { selectedVariant, variantsOf } from "#core/derive/variant.ts";
@@ -21,7 +22,7 @@ import {
   orderJson,
   orderMarkdown,
 } from "#core/order/format.ts";
-import { type Order, orderOf } from "#core/order/order.ts";
+import type { Order } from "#core/order/order.ts";
 import { type LoadedProject, loadProject } from "#core/project/store.ts";
 import { parseOptions, usageError } from "./args.ts";
 import type { Io } from "./cli.ts";
@@ -78,19 +79,6 @@ export async function loadAndDerive(
     diagnostics: sortDiagnostics([...project.diagnostics, ...d.diagnostics]),
   };
   return { project, derived, items: project.items };
-}
-
-export function isDate(s: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
-  const t = Date.parse(`${s}T00:00:00Z`);
-  return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === s;
-}
-
-/** Today's local date, YYYY-MM-DD. */
-export function today(): string {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 /** Why each blocked supplier is blocked, one line per reason. */
@@ -185,9 +173,8 @@ export async function projectCommand(
       items,
       accessors: outputAccessors(outputs),
     });
-    const o = orderOf(outputs.priced(), {
-      diagnostics: sortDiagnostics([...checked.diagnostics, ...outputs.bom().diagnostics]),
-      asOf: asOf ?? today(),
+    const o = checkedOrder(outputs, checked.diagnostics, {
+      asOf: asOf ?? localDate(),
       ...(loaded.project.lock ? { lock: lockHash(loaded.project.lock) } : {}),
     });
     if (cmd === "order") {

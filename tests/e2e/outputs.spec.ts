@@ -1,0 +1,107 @@
+import { expect, test } from "@playwright/test";
+import { money } from "../../src/core/order/format.ts";
+import { cli, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
+
+/**
+ * The drawer's Order and Costs tabs (design §8), fed by the server: they show what `alukit order`
+ * and `alukit costs` print for the same date, a reason's entities select in the scene, and an
+ * edit from the CLI reaches them live.
+ */
+
+const AS_OF = "2026-11-26";
+
+interface MoneyOut {
+  low_minor: number;
+  likely_minor: number;
+  high_minor: number;
+}
+
+let served: Served;
+test.beforeEach(async () => {
+  served = await serve("cart");
+});
+test.afterEach(async () => {
+  await served.stop();
+});
+
+test("the order tab shows each supplier's status, reasons and total, as alukit order does", async ({
+  page,
+}) => {
+  await openTab(page, served, 0);
+  await page.getByRole("tab", { name: "Order" }).click();
+  const order = page.getByTestId("order");
+  await order.getByTestId("as-of").fill(AS_OF);
+  await expect(order.getByTestId("as-of")).toHaveValue(AS_OF);
+
+  const printed = await cli(["order", served.dir, "--format", "json", "--as-of", AS_OF]);
+  const o = JSON.parse(printed.out) as {
+    status: string;
+    lock: string;
+    suppliers: {
+      supplier: string | null;
+      status: string;
+      reasons: { rule: string }[];
+      totals: MoneyOut;
+    }[];
+  };
+  await expect(order.locator(".status").first()).toHaveText(o.status);
+  await expect(order).toContainText(o.lock.slice(0, 19));
+  expect(o.suppliers.length).toBeGreaterThan(1);
+  for (const s of o.suppliers) {
+    const section = order.locator(`section[data-supplier="${s.supplier ?? ""}"]`);
+    await expect(section.locator("h4 .status")).toHaveText(s.status);
+    await expect(section.locator("h4")).toContainText(money(s.totals.likely_minor));
+    await expect(section.locator(".diagnostics li")).toHaveCount(s.reasons.length);
+  }
+
+  // The open item that holds a supplier names its connection: the link selects it.
+  const held = order.locator('section[data-supplier="test-gen-vendor"]');
+  await expect(held).toContainText("open-item");
+  await held.getByRole("button", { name: "c35" }).click();
+  await expect(page.getByTestId("properties").locator("h2")).toContainText("c35");
+});
+
+test("the costs tab shows the totals of alukit costs, and follows a CLI edit live", async ({
+  page,
+}) => {
+  await openTab(page, served, 0);
+  await page.getByRole("tab", { name: "Costs" }).click();
+  const costs = page.getByTestId("costs");
+  await costs.getByTestId("as-of").fill(AS_OF);
+
+  const printed = await cli(["costs", served.dir, "--format", "json", "--as-of", AS_OF]);
+  const c = JSON.parse(printed.out) as { costs: { id: string }[]; totals: { total: MoneyOut } };
+  const total = costs.getByTestId("totals").locator("tr.total");
+  await expect(total).toContainText(money(c.totals.total.likely_minor));
+  await expect(total).toContainText(money(c.totals.total.low_minor));
+  await expect(total).toContainText(money(c.totals.total.high_minor));
+  const lines = costs.getByTestId("cost-lines");
+  for (const x of c.costs) await expect(lines).toContainText(x.id);
+  await expect(lines).not.toContainText("touch-up paint");
+
+  // A cost line added from the CLI goes through the server; the tab shows the next revision.
+  const added = await cli([
+    "do",
+    served.dir,
+    JSON.stringify({
+      cmd: "addCost",
+      args: {
+        cost: {
+          label: "touch-up paint",
+          kind: "other",
+          low_minor: 10000,
+          likely_minor: 10000,
+          high_minor: 10000,
+        },
+      },
+    }),
+  ]);
+  expect(added.code).toBe(0);
+  await waitDrawn(page, 1);
+  await expect(costs).toHaveAttribute("data-rev", "1");
+  await expect(lines).toContainText("touch-up paint");
+  const after = await cli(["costs", served.dir, "--format", "json", "--as-of", AS_OF]);
+  const t = (JSON.parse(after.out) as { totals: { total: MoneyOut } }).totals.total;
+  expect(t.likely_minor).toBeGreaterThan(c.totals.total.likely_minor);
+  await expect(total).toContainText(money(t.likely_minor));
+});

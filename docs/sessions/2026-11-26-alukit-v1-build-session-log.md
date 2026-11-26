@@ -39,8 +39,10 @@ in the gitignored `internal/session-notes.md`.*
 | std / ref-hiwin verification | **done** (16:09), merged, pushed | 40 rows: 33 verified, 5 corrected, 3 partly unverifiable. Table: [`docs/notes/std-hiwin-verification.md`](../notes/std-hiwin-verification.md). |
 | M3b part 1: generation + BOM | **done** (17:03), merged, pushed `a9bfc3c` | G22–G25 pass with the design's values; the cart's cut list and BOM equal the hand tables; `alukit bom`; 240 tests after merge. Calls in [`docs/notes/m3b-gen-decisions.md`](../notes/m3b-gen-decisions.md). |
 | M3b part 3: offers, order list, costs | **done**, merged `a2dda75` (18:11), pushed | The cart's order list and totals match the hand golden byte for byte. G26 passes. Pack cover is an exact DP checked against brute force for needs 1–60. 7 blocking rules + 1 warning, each tested both ways. Calls: `docs/notes/m3b-order-decisions.md`. |
+| M5 core: variants, diff, revisions, GLB, skill | running (Opus, worktree), launched 18:14 | `snapshot` deferred to M4b |
+| M6 custom parts, placeholders | running (Opus, worktree), launched 18:14 | includes gap G-B |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
-| M4a viewer + server | **built** (18:06); merge in progress (Opus agent) | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
+| M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
 | M2b rest of Forseti | **done** (17:43), merged, pushed | All 1,196 orderable SKUs map to offers (1,208 offers, 1,034 items: 497 generic, 235 fasteners, 151 accessories, 100 connectors, 31 bars, 12 panels, 8 carriages). All 27 profile stems have sections (8 exact, 19 parametric). New connectors are marked as having no mounting model yet. Gate: 322 tests. Calls: [`docs/notes/m2b-decisions.md`](../notes/m2b-decisions.md). |
 | M3b part 2: commands, canonical form, lock | **done** (17:15), merged `7a1e18d`, pushed | All 36 §6 commands, pure, with undo/redo restoring document and lock byte for byte; atomic batches; canonical form + `fmt`; the lock pins catalog data and derive reads only the lock; `new/do/add/query/check/lock update`. Calls: [`docs/notes/m3b-doc-decisions.md`](../notes/m3b-doc-decisions.md). |
 | Early acceptance slice | **passed** (16:14) | All 75 T-slot pieces of the reference frame are within 0.5 mm of the record's drawn length; the largest difference is 0.04 mm. No AluKit bugs. Two pieces needed stand-ins (gaps G-A and G-B below). Details are internal. |
@@ -195,3 +197,12 @@ in the gitignored `internal/session-notes.md`.*
   - Extra fix: open-item scopes (`supplier:<id>`, bar ends, pieces) now share one parser between
     commands and order rules.
   - Still open: the cut list and BOM don't carry the lock hash yet; `bbox()` ignores parts.
+- **18:14**: M5 core and M6 launched in worktrees, in parallel with the M4a merge; both run their
+  tests with `nice`.
+- **18:30**: M4a merged by an Opus agent. The coordinator re-ran the gate: PASS, 425 tests.
+  - The drawer gained Order and Costs tabs (`GET /api/order` and `/api/costs`, through the lock,
+    stamped with its hash). Order reasons link to entities in the scene.
+  - The API is mounted in the Vite dev server (`ALUKIT_PROJECT=<dir> pnpm dev`) with the same
+    security; Vite's default CORS is turned off.
+  - A merge-caused bug was fixed: server-side checks didn't use the `mass()`/`cost()` accessors. A
+    test now compares `/api/check` with `alukit check --json`.

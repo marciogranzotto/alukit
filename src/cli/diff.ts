@@ -1,6 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { dirname, join, posix, resolve } from "node:path";
 import { parseJson } from "#catalog/json.ts";
+import { isDate, localDate } from "#core/dates.ts";
 import { jsonText } from "#core/derive/output.ts";
 import { selectedVariant, variantsOf } from "#core/derive/variant.ts";
 import { type DiffSide, diffSides } from "#core/diff/diff.ts";
@@ -20,7 +21,6 @@ import {
 } from "#core/revision/revision.ts";
 import { parseOptions, usageError } from "./args.ts";
 import type { Io } from "./cli.ts";
-import { isDate, today } from "./project.ts";
 import { publishUsageOf } from "./publish-usage.ts";
 import { revisionFile } from "./revision.ts";
 
@@ -229,7 +229,7 @@ export async function diffCommand(argv: readonly string[], io: Io): Promise<numb
       return 1;
     }
     // A revision's outputs are as of its own date; a side derived now is judged on the same one.
-    const asOf = asOfArg ?? a.revision?.as_of ?? b.revision?.as_of ?? today();
+    const asOf = asOfArg ?? a.revision?.as_of ?? b.revision?.as_of ?? localDate();
     const report = diffSides(sideOf(a, vs[0], asOf), sideOf(b, vs[1], asOf));
     io.out((format === "json" ? jsonText(report) : diffMarkdown(report)).trimEnd());
     return 0;

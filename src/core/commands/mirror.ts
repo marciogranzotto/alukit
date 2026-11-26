@@ -210,6 +210,21 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
       if (c) return `${c}.${e}`;
       return selfMap(bar, ref).reversed ? swapEnd(ref) : ref;
     },
+    axisBar: (bar, where) => {
+      // A plane square to a bar reads only its axis t. Its image is square to R(t), so a bar
+      // outside the set still serves when R(t) = ±t: its axis lies in the plane's directions
+      // (t_k = 0) or is square to the plane.
+      const c = copyOf.get(bar);
+      if (c) return c;
+      const t = derivedBar(ctx, bar).placed.frame.t;
+      const along = Math.abs(t[k] as number);
+      if (along <= 1e-9 || Math.abs(along - 1) <= 1e-9) return bar;
+      throw refusal(
+        "geometry",
+        `${where}: the plane is square to ${bar}, which is not mirrored and whose axis the mirror turns; include it`,
+        { entity: where.split("/")[0], refs: [bar] },
+      );
+    },
     coords: (v) => v.map((c, i) => (i === k ? reflect(c, at) : c)) as unknown as typeof v,
     direction: (v) => {
       if (typeof v === "string") return v[1] === AXES[k] ? `${v[0] === "+" ? "-" : "+"}${v[1]}` : v;
