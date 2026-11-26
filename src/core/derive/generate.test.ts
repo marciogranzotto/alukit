@@ -322,6 +322,34 @@ describe("rail holes (§4.7)", () => {
     expect(r2(d.bars.get("b1")?.rail?.E_a ?? 0)).toBe(30);
   });
 
+  it("needs stock_mm when the stock lengths' factory ends differ, and keeps the piece there", () => {
+    // test:RAIL20: the 1000 states E 20; the 500 states none, so it takes the centred layout's,
+    // 20 + ((500 − 40) mod 60) / 2 = 40, as an estimate. A 470 piece with its factory end at a:
+    const rail20 = (holes: unknown) => ({
+      bars: {
+        b1: { item: "test:RAIL20", a: [0, 0, 0], b: [470, 0, 0], anchor: "mount", holes },
+      },
+    });
+    // Unnamed, it is laid out from the shortest length that holds it, the 500: holes 40 + 60k
+    // while 470 − (40 + 60k) ≥ 20, k ≤ 6, so E_b = 470 − 400 = 70, beyond E_max 40.
+    const unnamed = run(rail20({ factory: "a" }));
+    expect(diags(unnamed)).toEqual([
+      ["rail", "b1"],
+      ["rail", "b1.b"],
+    ]);
+    // Named 1000: E 20, 8 holes, E_b 30; nested in the 1000 though the 500 is cheaper.
+    const named = run(rail20({ factory: "a", stock_mm: 1000 }));
+    expect(diags(named)).toEqual([]);
+    const r = named.bars.get("b1")?.rail;
+    expect([r?.holes.length, r2(r?.E_a ?? 0), r2(r?.E_b ?? 0), r?.stock_mm]).toEqual([
+      8, 20, 30, 1000,
+    ]);
+    const g = cutList({ derived: named, items }).groups.find((x) => x.item === "test:RAIL20");
+    expect(g?.stock?.map((b) => b.sku)).toEqual(["test:RAIL20-1000"]);
+    // A length nobody sells.
+    expect(diags(run(rail20({ factory: "a", stock_mm: 750 })))).toEqual([["rail", "b1"]]);
+  });
+
   it("refuses holes on a bar that is not a rail", () => {
     const d = run({ bars: { b1: { a: [0, 0, 0], b: [470, 0, 0], holes: { drilled: true } } } });
     expect(diags(d)).toEqual([["rail", "b1"]]);
