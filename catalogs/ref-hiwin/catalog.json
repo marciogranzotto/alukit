@@ -6,7 +6,7 @@
     "src": "src",
     "ref": "pdf:G99TE24-2410.pdf",
     "read": "2026-11-26",
-    "note": "HIWIN Linear Guideway technical catalogue G99TE24-2410. Page numbers are the PDF's, three ahead of the printed ones. Ratings and dimensions of the maker's own parts, for clones to refer to"
+    "note": "HIWIN Linear Guideway technical catalogue G99TE24-2410 (HG series section, printed pages 22 to 43, read as the extract at https://s3.amazonaws.com/www.motionusa.com/hiwin/2025/HG%20Series_2025.pdf). Page numbers are the PDF's, three ahead of the printed ones. Cross-checked 2026-11-26 against HIWIN GmbH GW-11-7-EN-2401-K (HG/QH series, printed pages 36 to 43) for the block and rail dimensions, the 50 km load basis and mu. Ratings and dimensions of the maker's own parts, for clones to refer to"
   },
   "systems": {
     "rail-hg15": { "type": "rail", "family": "HG", "size": 15, "name": "HIWIN HG15" },
@@ -53,8 +53,20 @@
           "note": "the dynamic rating's nominal life for ball types"
         },
         "MR_Nm": 120,
-        "MP_Nm": 140,
-        "MY_Nm": 140,
+        "MP_Nm": {
+          "v": 140,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 100 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
+        "MY_Nm": {
+          "v": 140,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 100 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
         "seal_N": {
           "v": 2.35,
           "src": "src",
@@ -115,8 +127,20 @@
           "note": "the dynamic rating's nominal life for ball types"
         },
         "MR_Nm": 270,
-        "MP_Nm": 280,
-        "MY_Nm": 280,
+        "MP_Nm": {
+          "v": 280,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 200 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
+        "MY_Nm": {
+          "v": 280,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 200 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
         "seal_N": {
           "v": 2.75,
           "src": "src",
@@ -177,8 +201,20 @@
           "note": "the dynamic rating's nominal life for ball types"
         },
         "MR_Nm": 420,
-        "MP_Nm": 490,
-        "MY_Nm": 490,
+        "MP_Nm": {
+          "v": 490,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 330 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
+        "MY_Nm": {
+          "v": 490,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 330 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
         "seal_N": {
           "v": 3.14,
           "src": "src",
@@ -239,8 +275,20 @@
           "note": "the dynamic rating's nominal life for ball types"
         },
         "MR_Nm": 660,
-        "MP_Nm": 700,
-        "MY_Nm": 700,
+        "MP_Nm": {
+          "v": 700,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 530 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
+        "MY_Nm": {
+          "v": 700,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 530 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
         "seal_N": {
           "v": 3.53,
           "src": "src",
@@ -279,11 +327,11 @@
       "rail": {
         "pitch_mm": 60,
         "E_min_mm": {
-          "v": 7.5,
-          "low": 4.75,
-          "high": 20,
-          "src": "est",
-          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+          "v": 6,
+          "src": "src",
+          "ref": "pdf:GW-11-7-EN-2401-K.pdf#p41",
+          "read": "2026-11-26",
+          "note": "E1/2 min of Table 3.9 in HIWIN GmbH's HG/QH catalogue GW-11-7-EN-2401-K (printed page 41); G99TE24-2410 prints no minimum. Replaces the earlier estimate (the counterbore's diameter D)"
         },
         "E_max_mm": {
           "v": 30,
@@ -298,7 +346,7 @@
         "src": "src",
         "ref": "pdf:G99TE24-2410.pdf#p41",
         "read": "2026-11-26",
-        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M4"
+        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M4; E_min from the GmbH catalogue (see E_min_mm)"
       }
     },
     "HGR20R": {
@@ -317,11 +365,11 @@
       "rail": {
         "pitch_mm": 60,
         "E_min_mm": {
-          "v": 9.5,
-          "low": 5.75,
-          "high": 20,
-          "src": "est",
-          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+          "v": 7,
+          "src": "src",
+          "ref": "pdf:GW-11-7-EN-2401-K.pdf#p41",
+          "read": "2026-11-26",
+          "note": "E1/2 min of Table 3.9 in HIWIN GmbH's HG/QH catalogue GW-11-7-EN-2401-K (printed page 41); G99TE24-2410 prints no minimum. Replaces the earlier estimate (the counterbore's diameter D)"
         },
         "E_max_mm": {
           "v": 30,
@@ -336,7 +384,7 @@
         "src": "src",
         "ref": "pdf:G99TE24-2410.pdf#p41",
         "read": "2026-11-26",
-        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M5"
+        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M5; E_min from the GmbH catalogue (see E_min_mm)"
       }
     },
     "HGR25R": {
@@ -355,11 +403,11 @@
       "rail": {
         "pitch_mm": 60,
         "E_min_mm": {
-          "v": 11,
-          "low": 6.5,
-          "high": 20,
-          "src": "est",
-          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+          "v": 8,
+          "src": "src",
+          "ref": "pdf:GW-11-7-EN-2401-K.pdf#p41",
+          "read": "2026-11-26",
+          "note": "E1/2 min of Table 3.9 in HIWIN GmbH's HG/QH catalogue GW-11-7-EN-2401-K (printed page 41); G99TE24-2410 prints no minimum. Replaces the earlier estimate (the counterbore's diameter D)"
         },
         "E_max_mm": {
           "v": 30,
@@ -374,7 +422,7 @@
         "src": "src",
         "ref": "pdf:G99TE24-2410.pdf#p41",
         "read": "2026-11-26",
-        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M6"
+        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M6; E_min from the GmbH catalogue (see E_min_mm)"
       }
     },
     "HGR30R": {
@@ -393,11 +441,11 @@
       "rail": {
         "pitch_mm": 80,
         "E_min_mm": {
-          "v": 14,
-          "low": 8,
-          "high": 20,
-          "src": "est",
-          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+          "v": 9,
+          "src": "src",
+          "ref": "pdf:GW-11-7-EN-2401-K.pdf#p41",
+          "read": "2026-11-26",
+          "note": "E1/2 min of Table 3.9 in HIWIN GmbH's HG/QH catalogue GW-11-7-EN-2401-K (printed page 41); G99TE24-2410 prints no minimum. Replaces the earlier estimate (the counterbore's diameter D)"
         },
         "E_max_mm": {
           "v": 40,
@@ -412,7 +460,7 @@
         "src": "src",
         "ref": "pdf:G99TE24-2410.pdf#p41",
         "read": "2026-11-26",
-        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M8"
+        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M8; E_min from the GmbH catalogue (see E_min_mm)"
       }
     },
     "HGW15CC": {
@@ -455,8 +503,20 @@
           "note": "the dynamic rating's nominal life for ball types"
         },
         "MR_Nm": 120,
-        "MP_Nm": 140,
-        "MY_Nm": 140,
+        "MP_Nm": {
+          "v": 140,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p45",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 100 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
+        "MY_Nm": {
+          "v": 140,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p45",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 100 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
         "seal_N": {
           "v": 2.35,
           "src": "src",
@@ -519,8 +579,20 @@
           "note": "the dynamic rating's nominal life for ball types"
         },
         "MR_Nm": 270,
-        "MP_Nm": 280,
-        "MY_Nm": 280,
+        "MP_Nm": {
+          "v": 280,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p45",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 200 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
+        "MY_Nm": {
+          "v": 280,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p45",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 200 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
         "seal_N": {
           "v": 2.75,
           "src": "src",
@@ -583,8 +655,20 @@
           "note": "the dynamic rating's nominal life for ball types"
         },
         "MR_Nm": 420,
-        "MP_Nm": 490,
-        "MY_Nm": 490,
+        "MP_Nm": {
+          "v": 490,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p45",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 330 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
+        "MY_Nm": {
+          "v": 490,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p45",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 330 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
         "seal_N": {
           "v": 3.14,
           "src": "src",
@@ -647,8 +731,20 @@
           "note": "the dynamic rating's nominal life for ball types"
         },
         "MR_Nm": 660,
-        "MP_Nm": 700,
-        "MY_Nm": 700,
+        "MP_Nm": {
+          "v": 700,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p45",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 530 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
+        "MY_Nm": {
+          "v": 700,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p45",
+          "read": "2026-11-26",
+          "note": "value of G99TE24-2410 (printed in kN m). HIWIN GmbH GW-11-7-EN-2401-K, Table 3.4, prints a lower 530 N m for this size (and G99TE17-1303 prints the same lower value on the older 100 km load basis); the editions disagree, so treat the lower value as the conservative one"
+        },
         "seal_N": {
           "v": 3.53,
           "src": "src",
