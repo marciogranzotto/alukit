@@ -32,9 +32,9 @@ in the gitignored `internal/session-notes.md`.*
 
 | Milestone | State | Notes |
 |---|---|---|
-| M0 scaffold | running | |
+| M0 scaffold | **done** (14:16), pushed `81a8a8e` | Every done-when check passed in a fresh clone on Node 26.13.1 / pnpm 12.23.0 (agent), and again on the coordinator's own run. First CI run on GitHub: **success** (run 45866365568). |
 | M1.5 paper model | running | in `internal/paper-model/` (gitignored) |
-| M1 catalog core | queued after M0 | |
+| M1 catalog core | running (Opus), launched 14:17 | includes a folded-in review of M0 |
 
 ## Decisions taken autonomously
 
@@ -46,9 +46,21 @@ in the gitignored `internal/session-notes.md`.*
 
 ## For Marcio to review later
 
-*(nothing yet)*
+- **pnpm's release-age policy.** pnpm 12 refused vite 8.4.0 (published 2026-11-26) under its
+  minimum-release-age rule, so `pnpm-workspace.yaml` carries `minimumReleaseAgeExclude:
+  [vite@8.4.0]`. Drop the exclusion once 8.4.0 is old enough.
+- **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
+  internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
 ## Log
 
 - **14:15**: D17 recorded (all four of draft 2's calls kept). Autonomous mode started. M0 and
   M1.5 launched in parallel.
+- **14:16**: M0 done in 6 commits (`6df83fe` … `81a8a8e`).
+  - Exact pins as §10, plus `@types/three` and `@types/node`.
+  - No install scripts needed.
+  - Biome excludes Markdown: its first run reformatted the docs, which the agent reverted.
+  - The renderer keeps its drawing buffer so tests can read pixels; e2e uses SwiftShader WebGL.
+  - Re-verified by the coordinator, then pushed.
+- **14:17**: M1 (catalog core) launched on Opus, with the M0 review folded in: subpath imports,
+  the server path guard, CI action versions.
