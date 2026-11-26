@@ -1,9 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseJson } from "#catalog/json.ts";
 import { checkModel } from "#core/check/check.ts";
 import { applyBatch, batchOf, type CommandResult } from "#core/commands/apply.ts";
-import type { State } from "#core/commands/types.ts";
+import type { CommandError, State } from "#core/commands/types.ts";
 import { derive } from "#core/derive/derive.ts";
 import { jsonText } from "#core/derive/output.ts";
 import type { Diagnostic } from "#core/diagnostics.ts";
@@ -20,6 +21,7 @@ import {
   withEditLock,
   writeProject,
 } from "#core/project/store.ts";
+import { call, findServer, type ServerLink } from "../server/client.ts";
 import { parseOptions, usageError } from "./args.ts";
 import type { Io } from "./cli.ts";
 import { diagnosticLine } from "./project.ts";
@@ -27,10 +29,12 @@ import { usageOf } from "./project-usage.ts";
 
 /**
  * `alukit do <dir> '<json>' | -f <file> | -` (design §6, §7.1, §7.3): one batch per process,
- * applied atomically by the same core the server will run, under `.alukit/edit.lock`. The answer
- * names what each command created, removed and changed, the new revision, and the diagnostics
- * the batch added or resolved. With no server, the revision is the content hash of the document
- * and its lock: the server's counter (M4a) needs a process that outlives one batch.
+ * applied atomically. When a server owns the project (found through `.alukit/owner.json`), the
+ * batch goes to it, so it appears live in every tab and enters the server's log; otherwise the
+ * same core runs in-process under `.alukit/edit.lock`. The answer names what each command
+ * created, removed and changed, the new revision, and the diagnostics the batch added or
+ * resolved. With no server, the revision is the content hash of the document and its lock: the
+ * server's counter needs a process that outlives one batch.
  */
 
 export const DO_SCHEMA = "alukit.do/1";
@@ -77,6 +81,78 @@ function resultLine(r: CommandResult): string {
   return `${r.cmd}: ${parts.length > 0 ? parts.join("; ") : "no change"}`;
 }
 
+/** An answer to a batch, from the server or in-process: what `do` prints. */
+type DoAnswer =
+  | {
+      ok: true;
+      rev: number | string;
+      results: CommandResult[];
+      diagnostics: { new: Diagnostic[]; resolved: Diagnostic[]; counts: ReturnType<typeof counts> };
+      /** From a server: the steps others made since the batch's base revision. */
+      between?: unknown[];
+    }
+  | { ok: false; failed: { index: number; cmd?: string; errors: CommandError[] } };
+
+function report(answer: DoAnswer, source: string, io: Io, opts: EditOptions): number {
+  if (opts.json) {
+    io.out(jsonText({ schema: DO_SCHEMA, ...answer, source }).trimEnd());
+    return answer.ok ? 0 : 1;
+  }
+  if (!answer.ok) {
+    const { index, cmd, errors } = answer.failed;
+    io.err(`refused: command ${index + 1}${cmd ? ` (${cmd})` : ""}; nothing was changed`);
+    for (const e of errors) {
+      io.err(
+        `  ${e.code}${e.entity ? ` ${e.entity}` : ""}${e.field ? ` ${e.field}` : ""}: ${e.message}`,
+      );
+    }
+    return 1;
+  }
+  const { new: added, resolved, counts: total } = answer.diagnostics;
+  for (const res of answer.results) io.out(resultLine(res));
+  for (const d of added) io.out(`new ${diagnosticLine(d)}`);
+  for (const d of resolved) io.out(`resolved ${diagnosticLine(d)}`);
+  io.out(
+    `rev ${answer.rev}: ${total.error} error${total.error === 1 ? "" : "s"}, ${total.warn} warning${total.warn === 1 ? "" : "s"} (${added.length} new, ${resolved.length} resolved)`,
+  );
+  return 0;
+}
+
+/** Sends a batch to the server that owns the project; the exit code. */
+async function applyThroughServer(
+  link: ServerLink,
+  commands: readonly unknown[],
+  source: string,
+  io: Io,
+  opts: EditOptions,
+): Promise<number> {
+  let r: Awaited<ReturnType<typeof call>>;
+  try {
+    // The id makes a retry harmless (§7.1); this process sends once.
+    r = await call(link, "POST", "/api/commands", { commands, source, id: randomUUID() });
+  } catch (e) {
+    io.err(
+      `alukit ${opts.cmd}: the server at ${link.url} did not answer (${e instanceof Error ? e.message : String(e)}); nothing is known to have changed`,
+    );
+    return 1;
+  }
+  const body = r.body as {
+    ok?: boolean;
+    kind?: string;
+    message?: string;
+    status?: { message?: string };
+  } & Partial<DoAnswer>;
+  if (body.ok === true || body.kind === "refused")
+    return report(body as DoAnswer, source, io, opts);
+  const why =
+    body.kind === "read-only"
+      ? `the project is read-only: ${body.status?.message ?? "its files are not valid"}`
+      : (body.message ?? `the server answered ${r.status}`);
+  if (opts.json) io.out(jsonText({ schema: DO_SCHEMA, ...body, source }).trimEnd());
+  else io.err(`refused: ${why}; nothing was changed`);
+  return 1;
+}
+
 /** Applies a batch to a project folder and answers; the exit code. */
 export async function applyToProject(
   dir: string,
@@ -86,6 +162,8 @@ export async function applyToProject(
 ): Promise<number> {
   const root = resolve(dir);
   const source = opts.as ? `cli:${opts.as}` : "cli";
+  const link = await findServer(root);
+  if (link) return applyThroughServer(link, commands, source, io, opts);
   try {
     return await withEditLock(root, async () => {
       const doc = await readDocument(root);
@@ -115,20 +193,7 @@ export async function applyToProject(
       const before = modelDiagnostics(state);
 
       const r = applyBatch(state, commands, { today: localDate(), live: live.set });
-      if (!r.ok) {
-        if (opts.json) {
-          io.out(jsonText({ schema: DO_SCHEMA, ok: false, source, failed: r.failed }).trimEnd());
-        } else {
-          const { index, cmd, errors } = r.failed;
-          io.err(`refused: command ${index + 1}${cmd ? ` (${cmd})` : ""}; nothing was changed`);
-          for (const e of errors) {
-            io.err(
-              `  ${e.code}${e.entity ? ` ${e.entity}` : ""}${e.field ? ` ${e.field}` : ""}: ${e.message}`,
-            );
-          }
-        }
-        return 1;
-      }
+      if (!r.ok) return report({ ok: false, failed: r.failed }, source, io, opts);
 
       const docText = projectText(r.state.doc);
       const newLockText = lockText(r.state.lock);
@@ -145,29 +210,21 @@ export async function applyToProject(
       const after = modelDiagnostics(r.state);
       const was = new Set(before.map(key));
       const now = new Set(after.map(key));
-      const added = after.filter((d) => !was.has(key(d)));
-      const resolved = before.filter((d) => !now.has(key(d)));
-      const total = counts(after);
-      if (opts.json) {
-        io.out(
-          jsonText({
-            schema: DO_SCHEMA,
-            ok: true,
-            rev,
-            source,
-            results: r.results,
-            diagnostics: { new: added, resolved, counts: total },
-          }).trimEnd(),
-        );
-        return 0;
-      }
-      for (const res of r.results) io.out(resultLine(res));
-      for (const d of added) io.out(`new ${diagnosticLine(d)}`);
-      for (const d of resolved) io.out(`resolved ${diagnosticLine(d)}`);
-      io.out(
-        `rev ${rev}: ${total.error} error${total.error === 1 ? "" : "s"}, ${total.warn} warning${total.warn === 1 ? "" : "s"} (${added.length} new, ${resolved.length} resolved)`,
+      return report(
+        {
+          ok: true,
+          rev,
+          results: r.results,
+          diagnostics: {
+            new: after.filter((d) => !was.has(key(d))),
+            resolved: before.filter((d) => !now.has(key(d))),
+            counts: counts(after),
+          },
+        },
+        source,
+        io,
+        opts,
       );
-      return 0;
     });
   } catch (e) {
     if (e instanceof EditLockHeld) {
