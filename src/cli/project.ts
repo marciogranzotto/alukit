@@ -13,9 +13,8 @@ import { cutListCsv, cutListJson, cutListMarkdown } from "#core/cutlist/format.t
 import { isDate, localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
 import { derivedJson, jsonText } from "#core/derive/output.ts";
-import { selectedVariant, variantsOf } from "#core/derive/variant.ts";
+import { unknownVariant } from "#core/derive/variant.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
-import { compareIds } from "#core/ids.ts";
 import type { ItemSource } from "#core/items.ts";
 import { lockHash } from "#core/lock/pin.ts";
 import { machiningJson, machiningMarkdown } from "#core/machining/format.ts";
@@ -54,11 +53,9 @@ export interface Loaded {
 
 /** Refuses a `--variant` the document does not have; true when it may go on. */
 export function variantExists(raw: unknown, variant: string | undefined, io: Io, cmd: string) {
-  if (variant === undefined || selectedVariant(raw, variant) !== undefined) return true;
-  const names = Object.keys(variantsOf(raw)?.list ?? {}).sort(compareIds);
-  io.err(
-    `alukit ${cmd}: there is no variant ${variant}; ${names.length === 0 ? "the project has none" : `the project has ${names.join(", ")}`}`,
-  );
+  const why = unknownVariant(raw, variant);
+  if (why === undefined) return true;
+  io.err(`alukit ${cmd}: ${why}`);
   return false;
 }
 

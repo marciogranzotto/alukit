@@ -69,6 +69,16 @@ export function selectedVariant(raw: unknown, name?: string): string | undefined
   return vs?.default !== undefined && Object.hasOwn(vs.list, vs.default) ? vs.default : undefined;
 }
 
+/**
+ * Why a variant cannot be derived, for a CLI flag or a server query that names it (§4.10): the
+ * document does not list it. Undefined when it may be: `name` is absent (the default) or listed.
+ */
+export function unknownVariant(raw: unknown, name: string | undefined): string | undefined {
+  if (name === undefined || selectedVariant(raw, name) !== undefined) return undefined;
+  const names = Object.keys(variantsOf(raw)?.list ?? {}).sort(compareIds);
+  return `there is no variant ${name}; ${names.length === 0 ? "the project has none" : `the project has ${names.join(", ")}`}`;
+}
+
 function known(list: Readonly<Record<string, unknown>>): string {
   const names = Object.keys(list).sort(compareIds);
   return names.length === 0 ? "; the document has none" : `; it has ${names.join(", ")}`;

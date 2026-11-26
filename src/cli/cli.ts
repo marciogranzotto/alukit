@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { packageVersion } from "#core/version.ts";
 import { CATALOG_USAGE } from "./catalog-usage.ts";
 import { EDIT_COMMANDS, EDIT_USAGE, PROJECT_COMMANDS, PROJECT_USAGE } from "./project-usage.ts";
 import { PUBLISH_COMMANDS, PUBLISH_USAGE, type PublishCommand } from "./publish-usage.ts";
@@ -22,11 +22,7 @@ const PLANNED_NAMES = new Set(
 );
 PLANNED_NAMES.delete("catalog");
 
-export function packageVersion(): string {
-  const url = new URL("../../package.json", import.meta.url);
-  const pkg = JSON.parse(readFileSync(url, "utf8")) as { version: string };
-  return pkg.version;
-}
+export { packageVersion };
 
 export function helpText(): string {
   const width = Math.max(...PLANNED.map(([cmd]) => cmd.length));

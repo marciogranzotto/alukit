@@ -3,10 +3,7 @@ import { dirname, resolve } from "node:path";
 import { localDate } from "#core/dates.ts";
 import { gitStamp } from "#core/project/git.ts";
 import { loadProject, writeAtomic } from "#core/project/store.ts";
-import { deriveOutputs } from "#core/revision/outputs.ts";
-import { contentStamp } from "#core/revision/revision.ts";
-import { writeGlb } from "../export/glb.ts";
-import { glbScene } from "../export/model.ts";
+import { projectGlb } from "../export/project.ts";
 import { parseOptions, usageError } from "./args.ts";
 import { type Io, packageVersion } from "./cli.ts";
 import { diagnosticLine, variantExists } from "./project.ts";
@@ -50,35 +47,16 @@ export async function exportCommand(argv: readonly string[], io: Io): Promise<nu
   const variant = args.values.variant;
   if (!variantExists(project.raw, variant, io, "export")) return 1;
 
-  const version = packageVersion();
-  const { derived, outputs } = deriveOutputs({
+  const { bytes, scene, derived } = projectGlb({
     raw: project.raw,
-    items: project.items,
     lock: project.lock,
+    items: project.items,
     variant,
+    version: packageVersion(),
+    git: (await gitStamp(root)) ?? null,
     // The order only names the SKUs here; its date changes none of them.
     asOf: localDate(),
   });
-  const git = (await gitStamp(root)) ?? null;
-  const name =
-    typeof (project.raw as { name?: unknown }).name === "string"
-      ? (project.raw as { name: string }).name
-      : "alukit";
-  const scene = glbScene({
-    derived,
-    items: project.items,
-    outputs,
-    name,
-    generator: `AluKit ${version}`,
-    stamp: {
-      alukit: version,
-      hash: contentStamp(version, project.raw, project.lock),
-      variant: derived.variant ?? null,
-      revision: null,
-      git,
-    },
-  });
-  const bytes = writeGlb(scene);
   const path = resolve(out);
   await mkdir(dirname(path), { recursive: true });
   await writeAtomic(path, bytes);

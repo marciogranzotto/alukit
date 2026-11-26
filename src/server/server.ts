@@ -8,18 +8,30 @@ import type { CatalogSet } from "#catalog/link.ts";
 import { CHECK_SCHEMA } from "#core/check/check.ts";
 import { checkedMachining, checkedOrder } from "#core/check/outputs.ts";
 import { isDate } from "#core/dates.ts";
-import { derivedJson } from "#core/derive/output.ts";
+import { derivedJson, jsonText } from "#core/derive/output.ts";
+import { unknownVariant } from "#core/derive/variant.ts";
 import { sortDiagnostics } from "#core/diagnostics.ts";
 import { compareIds } from "#core/ids.ts";
 import { lockHash } from "#core/lock/pin.ts";
 import type { Lock } from "#core/lock/schema.ts";
 import { machiningJson } from "#core/machining/format.ts";
 import { costsJson, costsOf, orderJson } from "#core/order/format.ts";
+import { gitStamp } from "#core/project/git.ts";
 import { DOCUMENT } from "#core/project/open.ts";
 import type { Doc } from "#core/project/parse.ts";
 import { acquireEditLock, SERVE } from "#core/project/store.ts";
 import type { ResolvedProjectItem } from "#core/project-items/resolve.ts";
 import { projectItems } from "#core/project-items/source.ts";
+import {
+  outputSummary,
+  readRevisionFile,
+  revisionFileName,
+  revisionPath,
+  savedAnswer,
+} from "#core/revision/files.ts";
+import { contentStamp, verified, verifyRevision } from "#core/revision/revision.ts";
+import { packageVersion } from "#core/version.ts";
+import { projectGlb } from "../export/project.ts";
 import {
   CATALOG_SCHEMA,
   type CatalogEntry,
@@ -30,8 +42,15 @@ import {
   projectEntries,
   searchCatalog,
 } from "./catalog.ts";
-import { type CommandsAnswer, type HistoryAnswer, type HostOptions, ProjectHost } from "./host.ts";
+import {
+  type CommandsAnswer,
+  type HistoryAnswer,
+  type HostOptions,
+  ProjectHost,
+  type Snapshot,
+} from "./host.ts";
 import { removeOwner, writeOwner } from "./owner.ts";
+import { RevisionIndex } from "./revisions.ts";
 import {
   checkFetchSite,
   checkHost,
@@ -60,6 +79,10 @@ import { viewModel } from "./view.ts";
  * | `GET /api/derived`, `/api/cutlist`, `/api/bom`, `/api/check` | as the CLI's `--json` outputs |
  * | `GET /api/order`, `/api/costs` `[?as_of=YYYY-MM-DD]` | as `alukit order` and `costs --format json`, from the lock; today by default |
  * | `GET /api/machining` | as `alukit machining --format json`: the custom parts' holes, the machined bars |
+ * | `GET /api/export/glb` | as `alukit export glb`, byte for byte: the model as binary glTF, to download |
+ * | `GET /api/revisions` | the saved revisions (§4.13) and the current state's content hash |
+ * | `POST /api/revisions` | `{ name, as_of? }`: saves a revision of what the server holds |
+ * | `GET /api/revisions/verify?name=` | as `alukit revision verify --json`, byte for byte |
  * | `GET /api/catalog` | the catalogs the document names, as vendor › kind › family with counts (§8) |
  * | `GET /api/catalog/items` `[?q=&vendor=&kind=&family=&limit=&offset=]` | items matching a search |
  * | `GET /api/catalog/item?id=<catalog>:<code>` | one item's card: key data, section, options, offers |
@@ -68,6 +91,10 @@ import { viewModel } from "./view.ts";
  * | `POST /api/commands` | `{ commands, source, id?, baseRev?, strict? }`: one step |
  * | `POST /api/undo`, `/api/redo` | `{ source }` |
  * | `POST /api/restore` | "restore last good": the last good state over invalid files |
+ *
+ * Every request that derives (the model, the outputs, the GLB) takes `?variant=<name>`, as the
+ * CLI takes `--variant`: that variant, else the document's default (§4.10). A name the document
+ * does not list is a 400 that lists the ones it does.
  *
  * Every request passes the checks of `security.ts` first: `Host` and `Origin` on everything,
  * the token and `Sec-Fetch-Site` on `/api`, a JSON content type on bodies. A refused request
@@ -116,6 +143,11 @@ const CommandsBody = z.strictObject({
 });
 
 const HistoryBody = z.strictObject({ source: Source });
+
+const SaveBody = z.strictObject({
+  name: z.string().min(1).max(200),
+  as_of: z.string().refine(isDate, "a date, YYYY-MM-DD").optional(),
+});
 
 export interface SessionOptions {
   /** The project folder. */
@@ -234,10 +266,14 @@ interface Ctx {
   port: () => number;
   token: string;
   project: ProjectHost;
-  /** The model answer of the current revision, serialised once. */
-  model: { rev: number; text: string } | undefined;
+  /** The model answers of the current revision, serialised once per variant asked for. */
+  model: { rev: number; text: Map<string, string> } | undefined;
   /** The catalog browser's index, built once per opening of the catalogs and lock. */
   catalog: CatalogIndex | undefined;
+  /** The saved revisions, each file read once while it stays the same. */
+  revisions: RevisionIndex;
+  /** The current state's content hash (§4.13's stamp), once per revision. */
+  stamp: { rev: number; hash: string } | undefined;
   streams: Set<ServerResponse>;
 }
 
@@ -308,6 +344,47 @@ async function serveStatic(root: string, method: string, path: string, res: Serv
   res.end(method === "HEAD" ? undefined : body);
 }
 
+/**
+ * The current revision in the variant a request names (`?variant=`, §4.10), or the document's
+ * default without one; undefined once it has answered 400 for a name the document does not list.
+ */
+function snapshotFor(
+  p: ProjectHost,
+  query: URLSearchParams,
+  res: ServerResponse,
+): Snapshot | undefined {
+  const v = query.get("variant") ?? undefined;
+  const why = unknownVariant(p.state.doc, v);
+  if (why !== undefined) {
+    sendJson(res, 400, { ok: false, message: why });
+    return undefined;
+  }
+  return p.snapshot(v);
+}
+
+/** The content hash of what the server holds (§4.13's stamp): what a saved revision records. */
+function currentStamp(ctx: Ctx): string {
+  const p = ctx.project;
+  if (ctx.stamp?.rev !== p.rev) {
+    ctx.stamp = { rev: p.rev, hash: contentStamp(packageVersion(), p.state.doc, p.state.lock) };
+  }
+  return ctx.stamp.hash;
+}
+
+/**
+ * A file name for a download: the project's name and the variant derived, each kept to letters,
+ * digits, `.` and `_`, runs of anything else turned into one `-`.
+ */
+function downloadName(p: ProjectHost, variant: string | undefined, ext: string): string {
+  const clean = (s: string) =>
+    s
+      .normalize("NFKD")
+      .replace(/[^A-Za-z0-9._]+/g, "-")
+      .replace(/^[-.]+|[-.]+$/g, "");
+  const name = clean(typeof p.state.doc.name === "string" ? p.state.doc.name : "") || "alukit";
+  return `${name}${variant ? `-${clean(variant)}` : ""}.${ext}`;
+}
+
 function events(ctx: Ctx, req: IncomingMessage, res: ServerResponse): void {
   res.writeHead(200, {
     ...COMMON,
@@ -354,36 +431,46 @@ async function api(
         sendJson(res, 200, { ...p.summary(), doc: p.state.doc, lock: p.state.lock }, p.rev);
         return;
       case "/api/model": {
-        const snap = p.snapshot();
-        if (ctx.model?.rev !== snap.rev) {
-          ctx.model = { rev: snap.rev, text: `${JSON.stringify(viewModel(snap))}\n` };
+        const snap = snapshotFor(p, query, res);
+        if (!snap) return;
+        if (ctx.model?.rev !== snap.rev) ctx.model = { rev: snap.rev, text: new Map() };
+        const key = snap.derived.variant ?? "";
+        let text = ctx.model.text.get(key);
+        if (text === undefined) {
+          text = `${JSON.stringify(viewModel(snap))}\n`;
+          ctx.model.text.set(key, text);
         }
-        sendJson(res, 200, ctx.model.text, snap.rev);
+        sendJson(res, 200, text, snap.rev);
         return;
       }
       case "/api/derived": {
-        const snap = p.snapshot();
+        const snap = snapshotFor(p, query, res);
+        if (!snap) return;
         sendJson(res, 200, derivedJson(snap.derived), snap.rev);
         return;
       }
       case "/api/cutlist": {
-        const snap = p.snapshot();
+        const snap = snapshotFor(p, query, res);
+        if (!snap) return;
         sendJson(res, 200, snap.outputs.cutList(), snap.rev);
         return;
       }
       case "/api/bom": {
-        const snap = p.snapshot();
+        const snap = snapshotFor(p, query, res);
+        if (!snap) return;
         sendJson(res, 200, snap.outputs.bom(), snap.rev);
         return;
       }
       case "/api/machining": {
         // As the CLI prints it (M6), byte for byte: the sheet and the problems met on the way.
-        const snap = p.snapshot();
+        const snap = snapshotFor(p, query, res);
+        if (!snap) return;
         sendJson(res, 200, machiningJson(checkedMachining(snap.derived, snap.outputs)), snap.rev);
         return;
       }
       case "/api/check": {
-        const snap = p.snapshot();
+        const snap = snapshotFor(p, query, res);
+        if (!snap) return;
         const diagnostics = sortDiagnostics([...snap.catalogs, ...snap.check.diagnostics]);
         const count = (s: string) => diagnostics.filter((d) => d.severity === s).length;
         sendJson(
@@ -391,6 +478,7 @@ async function api(
           200,
           {
             schema: CHECK_SCHEMA,
+            ...(snap.derived.variant !== undefined ? { variant: snap.derived.variant } : {}),
             rev: snap.rev,
             ok: count("error") === 0,
             counts: { error: count("error"), warn: count("warn"), info: count("info") },
@@ -410,12 +498,63 @@ async function api(
           sendJson(res, 400, { ok: false, message: "as_of takes a date, YYYY-MM-DD" });
           return;
         }
-        const snap = p.snapshot();
+        const snap = snapshotFor(p, query, res);
+        if (!snap) return;
         const o = checkedOrder(snap.outputs, snap.check.diagnostics, {
           asOf,
           lock: lockHash(snap.state.lock),
         });
         sendJson(res, 200, path === "/api/order" ? orderJson(o) : costsJson(costsOf(o)), snap.rev);
+        return;
+      }
+      case "/api/export/glb": {
+        // As `alukit export glb` writes it (§9), through the same function: the same bytes.
+        const snap = snapshotFor(p, query, res);
+        if (!snap) return;
+        const { bytes } = projectGlb({
+          raw: snap.state.doc,
+          lock: snap.state.lock,
+          items: snap.items,
+          variant: snap.derived.variant,
+          version: packageVersion(),
+          git: (await gitStamp(p.dir)) ?? null,
+          asOf: p.today(),
+        });
+        res
+          .writeHead(200, {
+            ...COMMON,
+            "content-type": "model/gltf-binary",
+            "content-length": String(bytes.length),
+            "content-disposition": `attachment; filename="${downloadName(p, snap.derived.variant, "glb")}"`,
+            "cache-control": "no-store",
+            "x-alukit-rev": String(snap.rev),
+          })
+          .end(bytes);
+        return;
+      }
+      case "/api/revisions": {
+        const { revisions, problems } = await ctx.revisions.list();
+        sendJson(res, 200, { rev: p.rev, current: currentStamp(ctx), revisions, problems }, p.rev);
+        return;
+      }
+      case "/api/revisions/verify": {
+        // As `alukit revision verify --json` prints it: read only, re-derived from the file.
+        const name = query.get("name") ?? "";
+        if (name === "") {
+          sendJson(res, 400, { ok: false, message: "name the revision: ?name=" });
+          return;
+        }
+        const r = await readRevisionFile(revisionPath(p.dir, name), revisionFileName(name));
+        if (!r.ok) {
+          const missing = r.problems[0]?.startsWith("cannot read") === true;
+          sendJson(res, missing ? 404 : 422, {
+            ok: false,
+            message: [...r.problems, ...(r.details ?? [])].join("\n"),
+          });
+          return;
+        }
+        const v = verifyRevision(r.value, packageVersion());
+        sendJson(res, 200, jsonText({ name: r.value.name, ok: verified(v), ...v }));
         return;
       }
       case "/api/catalog": {
@@ -518,6 +657,29 @@ async function api(
       if (!parse(z.strictObject({}))) return;
       const a = await p.restore();
       sendJson(res, a.ok ? 200 : 500, a, p.rev);
+      return;
+    }
+    case "/api/revisions": {
+      // `alukit revision save` (§4.13) of what the server holds, in its queue; the CLI sends its
+      // own here while a server runs, since the server holds the edit lock.
+      const b = parse(SaveBody);
+      if (!b) return;
+      const a = await p.saveRevision({
+        name: b.name,
+        asOf: b.as_of ?? p.today(),
+        version: packageVersion(),
+      });
+      if (!a.ok) {
+        const status = a.kind === "name" ? 400 : 409;
+        sendJson(res, status, { ok: false, kind: a.kind, message: a.message }, p.rev);
+        return;
+      }
+      sendJson(
+        res,
+        200,
+        { ok: true, ...savedAnswer(a.file, a.rev), outputs: a.rev.outputs.map(outputSummary) },
+        p.rev,
+      );
       return;
     }
   }
@@ -637,6 +799,8 @@ export async function openSession(options: SessionOptions): Promise<Session> {
     project,
     model: undefined,
     catalog: undefined,
+    revisions: new RevisionIndex(dir),
+    stamp: undefined,
     streams: new Set(),
   };
   let closing: Promise<void> | undefined;

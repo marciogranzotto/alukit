@@ -1,6 +1,4 @@
-import { access, mkdir, readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { parseJson } from "#catalog/json.ts";
 import { bomCsv, bomJson, bomMarkdown } from "#core/bom/format.ts";
 import { cutListCsv, cutListJson, cutListMarkdown } from "#core/cutlist/format.ts";
 import { isDate, localDate } from "#core/dates.ts";
@@ -18,18 +16,29 @@ import {
   orderMarkdown,
 } from "#core/order/format.ts";
 import { gitStamp } from "#core/project/git.ts";
-import { loadProject, withEditLock, writeAtomic } from "#core/project/store.ts";
+import { loadProject, withEditLock } from "#core/project/store.ts";
+import {
+  type OutputSummary,
+  outputSummary,
+  readRevisionFile,
+  revisionFiles,
+  revisionPath,
+  type Saved,
+  savedAnswer,
+  saveRevision,
+  variantLabel,
+} from "#core/revision/files.ts";
 import type { Outputs } from "#core/revision/outputs.ts";
 import {
-  makeRevision,
   REVISIONS_DIR,
   type Revision,
-  readRevision,
   revisionSlug,
+  type Stamp,
   storedOutputs,
   verified,
   verifyRevision,
 } from "#core/revision/revision.ts";
+import { call, findServer } from "../server/client.ts";
 import { parseOptions, usageError } from "./args.ts";
 import { type Io, packageVersion } from "./cli.ts";
 import { diagnosticLine } from "./project.ts";
@@ -40,21 +49,13 @@ import { publishUsageOf } from "./publish-usage.ts";
  * `revisions/<slug>.json` in the project folder: the document, its lock, the outputs of every
  * variant and the stamp. A saved revision is never overwritten. `show` prints what was stored;
  * `verify` re-derives from the stored document and lock with this tool, reads nothing else and
- * writes nothing, and exits 1 on any drift.
+ * writes nothing, and exits 1 on any drift. While a server owns the project, `save` goes through
+ * it (`POST /api/revisions`): it holds the document and the edit lock (§7.1).
  */
 
 const USAGE = publishUsageOf("revision");
 const OUTPUTS = ["derive", "cutlist", "bom", "order", "costs", "machining", "check"] as const;
 type OutputName = (typeof OUTPUTS)[number];
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /** `[<dir>] <name>`: one positional is the name, in the current folder. */
 function dirAndName(positionals: readonly string[]): { dir: string; name?: string } | undefined {
@@ -63,9 +64,7 @@ function dirAndName(positionals: readonly string[]): { dir: string; name?: strin
   return undefined;
 }
 
-export function revisionFile(root: string, name: string): string {
-  return join(root, REVISIONS_DIR, `${revisionSlug(name)}.json`);
-}
+export const revisionFile = revisionPath;
 
 /** Reads a revision file; prints why it cannot and returns undefined. */
 export async function loadRevision(
@@ -73,41 +72,21 @@ export async function loadRevision(
   io: Io,
   cmd: string,
 ): Promise<Revision | undefined> {
-  let text: string;
-  try {
-    text = await readFile(path, "utf8");
-  } catch (e) {
-    io.err(`alukit ${cmd}: cannot read ${path}: ${e instanceof Error ? e.message : String(e)}`);
-    return undefined;
-  }
-  const parsed = parseJson(text);
-  if (!parsed.ok) {
-    for (const p of parsed.problems)
-      io.err(`alukit ${cmd}: ${path}${p.line ? `:${p.line}` : ""}: ${p.message}`);
-    return undefined;
-  }
-  const r = readRevision(parsed.value);
-  if (!r.ok) {
-    io.err(`alukit ${cmd}: ${path} is not a revision (${"alukit.revision/1"}):`);
-    for (const p of r.problems) io.err(`  ${p}`);
-    return undefined;
-  }
-  return r.value;
+  const r = await readRevisionFile(path);
+  if (r.ok) return r.value;
+  for (const p of r.problems) io.err(`alukit ${cmd}: ${p}`);
+  for (const p of r.details ?? []) io.err(`  ${p}`);
+  return undefined;
 }
 
-const variantLabel = (v: string | undefined) => v ?? "(no variant)";
-
-function gitText(r: Revision): string {
-  const g = r.stamp.git;
+function gitText(stamp: Stamp): string {
+  const g = stamp.git;
   return g ? `git ${g.commit.slice(0, 12)}${g.dirty ? " (dirty)" : ""}` : "no git commit";
 }
 
-function summaryLine(o: Outputs): string {
-  const bars = Object.keys((o.derived.bars as Record<string, unknown> | undefined) ?? {}).length;
-  const pieces = o.cutlist.groups.reduce((n, g) => n + g.pieces, 0);
-  const t = o.order.totals.total;
-  const cur = o.order.currency ?? "";
-  return `  ${variantLabel(o.variant).padEnd(14)} ${String(bars).padStart(4)} bars  ${String(pieces).padStart(4)} pieces  ${o.bom.mass_kg.toFixed(3).padStart(10)} kg  ${o.order.status.padEnd(7)}  ${cur} ${money(t.likely_minor)} (${money(t.low_minor)} – ${money(t.high_minor)})`;
+function summaryLine(s: OutputSummary): string {
+  const t = s.total;
+  return `  ${s.variant.padEnd(14)} ${String(s.bars).padStart(4)} bars  ${String(s.pieces).padStart(4)} pieces  ${s.mass_kg.toFixed(3).padStart(10)} kg  ${s.status.padEnd(7)}  ${s.currency ?? ""} ${money(t.likely_minor)} (${money(t.low_minor)} – ${money(t.high_minor)})`;
 }
 
 function changeLines(changes: readonly FieldChange[], limit = 20): string[] {
@@ -135,8 +114,7 @@ async function save(argv: readonly string[], io: Io): Promise<number> {
   const pos = dirAndName(args.positionals);
   if (!pos?.name) return usageError("revision save", "a revision name is needed", USAGE, io);
   const { name } = pos;
-  const slug = revisionSlug(name);
-  if (slug === "") {
+  if (revisionSlug(name) === "") {
     return usageError(
       "revision save",
       `"${name}" has no letter or digit to name a file`,
@@ -148,48 +126,57 @@ async function save(argv: readonly string[], io: Io): Promise<number> {
   if (!isDate(asOf))
     return usageError("revision save", "--as-of takes a date, YYYY-MM-DD", USAGE, io);
   const root = resolve(pos.dir);
-  const path = revisionFile(root, name);
-  if (await exists(path)) {
-    io.err(
-      `alukit revision save: ${join(REVISIONS_DIR, `${slug}.json`)} exists; a revision is never overwritten`,
-    );
-    return 1;
-  }
 
-  const project = await loadProject(root, { frozen: args.values.frozen === true });
-  for (const n of project.notices) io.err(`notice: ${n}`);
-  if (project.raw === undefined || project.lock === undefined) {
+  let saved: Saved;
+  let outputs: OutputSummary[];
+  const link = await findServer(root);
+  if (link) {
+    // The server owns the document and holds the edit lock (§7.1): it saves what it holds.
+    const r = await call(link, "POST", "/api/revisions", { name, as_of: asOf });
+    const body = r.body as Partial<Saved> & { message?: string; outputs?: OutputSummary[] };
+    if (r.status !== 200 || body.stamp === undefined) {
+      io.err(`alukit revision save: ${body.message ?? `the server answered ${r.status}`}`);
+      return 1;
+    }
+    saved = body as Saved;
+    outputs = body.outputs ?? [];
+  } else {
+    const project = await loadProject(root, { frozen: args.values.frozen === true });
+    for (const n of project.notices) io.err(`notice: ${n}`);
+    if (project.raw === undefined || project.lock === undefined) {
+      for (const d of project.diagnostics) io.err(diagnosticLine(d));
+      return 1;
+    }
     for (const d of project.diagnostics) io.err(diagnosticLine(d));
-    return 1;
+    const { raw, lock } = project;
+    const git = (await gitStamp(root)) ?? null;
+    const r = await withEditLock(root, () =>
+      saveRevision(root, {
+        name,
+        document: raw,
+        lock,
+        asOf,
+        version: packageVersion(),
+        node: process.version,
+        git,
+      }),
+    );
+    if (!r.ok) {
+      io.err(`alukit revision save: ${r.message}`);
+      return 1;
+    }
+    saved = savedAnswer(r.file, r.rev);
+    outputs = r.rev.outputs.map(outputSummary);
   }
-  for (const d of project.diagnostics) io.err(diagnosticLine(d));
-  const rev = makeRevision({
-    name,
-    document: project.raw,
-    lock: project.lock,
-    asOf,
-    version: packageVersion(),
-    node: process.version,
-    git: (await gitStamp(root)) ?? null,
-  });
-  await withEditLock(root, async () => {
-    await mkdir(join(root, REVISIONS_DIR), { recursive: true });
-    await writeAtomic(path, jsonText(rev));
-  });
 
-  const file = join(REVISIONS_DIR, `${slug}.json`);
-  const variants = rev.outputs.map((o) => variantLabel(o.variant));
-  const errors = rev.outputs.reduce(
-    (n, o) => n + o.check.diagnostics.filter((d) => d.severity === "error").length,
-    0,
-  );
   if (args.values.json) {
-    io.out(jsonText({ file, name, as_of: asOf, stamp: rev.stamp, variants, errors }).trimEnd());
+    io.out(jsonText(saved).trimEnd());
   } else {
     io.out(
-      `saved ${file}: "${name}", as of ${asOf}; ${rev.stamp.hash.slice(0, 19)}…, ${gitText(rev)}`,
+      `saved ${saved.file}: "${name}", as of ${asOf}; ${saved.stamp.hash.slice(0, 19)}…, ${gitText(saved.stamp)}`,
     );
-    for (const o of rev.outputs) io.out(summaryLine(o));
+    for (const o of outputs) io.out(summaryLine(o));
+    const errors = saved.errors;
     if (errors > 0)
       io.err(`warn: the model has ${errors} error${errors === 1 ? "" : "s"} (see alukit check)`);
   }
@@ -203,12 +190,7 @@ async function list(argv: readonly string[], io: Io): Promise<number> {
     return usageError("revision list", `unexpected argument ${args.positionals[1]}`, USAGE, io);
   }
   const root = resolve(args.positionals[0] ?? ".");
-  let files: string[] = [];
-  try {
-    files = (await readdir(join(root, REVISIONS_DIR))).filter((f) => f.endsWith(".json")).sort();
-  } catch {
-    // no revisions yet
-  }
+  const files = await revisionFiles(root);
   const rows: {
     file: string;
     name: string;
@@ -347,10 +329,10 @@ async function show(argv: readonly string[], io: Io): Promise<number> {
     return 0;
   }
   io.out(
-    `"${r.name}", as of ${r.as_of}: alukit ${r.stamp.alukit} on Node ${r.stamp.node}, ${gitText(r)}`,
+    `"${r.name}", as of ${r.as_of}: alukit ${r.stamp.alukit} on Node ${r.stamp.node}, ${gitText(r.stamp)}`,
   );
   io.out(`stamp ${r.stamp.hash}`);
-  for (const x of r.outputs) io.out(summaryLine(x));
+  for (const x of r.outputs) io.out(summaryLine(outputSummary(x)));
   return 0;
 }
 

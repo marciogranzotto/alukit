@@ -16,9 +16,11 @@ import { documentRefs, lockCovers } from "#core/lock/refs.ts";
 import { LOCK_FILE, type Lock, lockText } from "#core/lock/schema.ts";
 import { lockItems } from "#core/lock/source.ts";
 import { projectText } from "#core/project/canonical.ts";
+import { gitStamp } from "#core/project/git.ts";
 import { DOCUMENT, openLiveCatalogs } from "#core/project/open.ts";
 import { parseProject } from "#core/project/parse.ts";
 import { readDocument, readLock, writeAtomic } from "#core/project/store.ts";
+import { type SaveResult, saveRevision } from "#core/revision/files.ts";
 
 /**
  * The server owns the document (design §7.1, review M1). One `ProjectHost` per project holds the
@@ -213,6 +215,8 @@ export class ProjectHost {
   private readonly listeners = new Set<(e: HostEvent) => void>();
   private readonly recent = new Map<string, Promise<CommandsAnswer>>();
   private snap: Snapshot;
+  /** The current revision in other variants than the default, each computed on first ask. */
+  private variantSnaps = new Map<string, Snapshot>();
   private catalogDiagnostics: Diagnostic[];
   /** The live catalogs as last opened, and when: the catalog browser reads them (§8). */
   private live: { set: CatalogSet; named: string[]; at: number } | undefined;
@@ -303,9 +307,19 @@ export class ProjectHost {
     return (this.opts.today ?? localDate)();
   }
 
-  /** The current revision's derived model and checks. */
-  snapshot(): Snapshot {
-    return this.snap;
+  /**
+   * The current revision's derived model and checks, in a variant (§4.10): the one named, else
+   * the document's default, as `--variant` on the CLI. A name the document does not list is the
+   * caller's to refuse first (`selectedVariant`); here it derives with derive's own error.
+   */
+  snapshot(variant?: string): Snapshot {
+    if (variant === undefined || variant === this.snap.derived.variant) return this.snap;
+    let s = this.variantSnaps.get(variant);
+    if (!s) {
+      s = this.compute(variant);
+      this.variantSnaps.set(variant, s);
+    }
+    return s;
   }
 
   /**
@@ -374,6 +388,38 @@ export class ProjectHost {
       }
       this.setStatus({ readOnly: false });
       return { ok: true, rev: this.rev };
+    });
+  }
+
+  /**
+   * Saves a revision of the current state (§4.13) into `revisions/`, in the queue: between
+   * steps, after any direct edit not yet taken in. Refused while read-only: the files are not
+   * what the server holds.
+   */
+  saveRevision(input: {
+    name: string;
+    asOf: string;
+    version: string;
+  }): Promise<SaveResult | { ok: false; kind: "read-only"; message: string }> {
+    return this.run(async () => {
+      await this.takeInFiles();
+      if (this.statusValue.readOnly) {
+        return {
+          ok: false as const,
+          kind: "read-only" as const,
+          message: this.statusValue.message,
+        };
+      }
+      const { doc, lock } = this.state;
+      return saveRevision(this.dir, {
+        name: input.name,
+        document: doc,
+        lock,
+        asOf: input.asOf,
+        version: input.version,
+        node: process.version,
+        git: (await gitStamp(this.dir)) ?? null,
+      });
     });
   }
 
@@ -586,10 +632,10 @@ export class ProjectHost {
     }
   }
 
-  private compute(): Snapshot {
+  private compute(variant?: string): Snapshot {
     const state = this.state;
     const items = lockItems(state.lock);
-    const derived = derive(state.doc, items);
+    const derived = derive(state.doc, items, { variant });
     const outputs = modelOutputs(derived, items);
     // The same checks as `alukit check` and a headless `alukit do`: mass() and cost() evaluate.
     const check = checkModel({
@@ -612,6 +658,7 @@ export class ProjectHost {
   /** Moves the snapshot to the current revision; the diagnostics it added and resolved. */
   private advance(before: Snapshot): DiagnosticsDelta {
     this.snap = this.compute();
+    this.variantSnaps.clear();
     const was = new Set(before.check.diagnostics.map(key));
     const now = new Set(this.snap.check.diagnostics.map(key));
     return {
