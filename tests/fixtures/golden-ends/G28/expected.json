@@ -1,0 +1,51 @@
+{
+  "case": "G28",
+  "rule": "bars bearing on a placeholder's box, at a pose (M6, gap G-B)",
+  "design": "the motor's box at (600,0,0) turned 90° about z: rail along x 480.00, rail along -y 300.00, post 220.00. At the point (600,0,0), unturned: 500.00, 280.00, 220.00. With its mount datum at (0,40,0): 520.00, 300.00, 220.00. Moved to (600,0,-20): the post 240.00. A project item with no box cannot be the through member: an item error on c1, and the ends stay at their design points",
+  "expect": {
+    "bars": {
+      "b1": { "cut_mm": 480, "ends": { "b": { "by": "c1", "move_mm": -120, "angle_deg": 0 } } },
+      "b2": { "cut_mm": 300, "ends": { "b": { "by": "c1", "move_mm": -100, "angle_deg": 0 } } },
+      "b3": { "cut_mm": 220, "ends": { "b": { "by": "c1", "move_mm": -80, "angle_deg": 0 } } }
+    },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "at a point, unturned",
+      "patch": { "connections": { "c1": { "through": { "at": [600, 0, 0] } } } },
+      "expect": {
+        "bars": { "b1": { "cut_mm": 500 }, "b2": { "cut_mm": 280 }, "b3": { "cut_mm": 220 } },
+        "errors": []
+      }
+    },
+    {
+      "name": "mount datum at (0,40,0)",
+      "patch": { "items": { "motor": { "datums": { "mount": [0, 40, 0] } } } },
+      "expect": {
+        "bars": { "b1": { "cut_mm": 520 }, "b2": { "cut_mm": 300 }, "b3": { "cut_mm": 220 } },
+        "errors": []
+      }
+    },
+    {
+      "name": "moved to (600,0,-20)",
+      "patch": { "connections": { "c1": { "through": { "at": { "pos": [600, 0, -20] } } } } },
+      "expect": {
+        "bars": { "b1": { "cut_mm": 480 }, "b2": { "cut_mm": 300 }, "b3": { "cut_mm": 240 } },
+        "errors": []
+      }
+    },
+    {
+      "name": "a project item with no box",
+      "patch": {
+        "items": {
+          "motor": { "kind": "generic", "name": "Gear motor", "bbox_mm": null, "mass_kg": null }
+        }
+      },
+      "expect": {
+        "bars": { "b1": { "cut_mm": 600 }, "b2": { "cut_mm": 400 }, "b3": { "cut_mm": 300 } },
+        "errors": [{ "code": "item", "entity": "c1" }]
+      }
+    }
+  ]
+}

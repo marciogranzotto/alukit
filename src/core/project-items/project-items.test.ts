@@ -1,8 +1,10 @@
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { bom } from "../bom/bom.ts";
+import { cutList } from "../cutlist/cutlist.ts";
 import { derive } from "../derive/derive.ts";
 import type { ItemSource } from "../items.ts";
+import { order } from "../order/order.ts";
 import { openProject } from "../project/open.ts";
 import { parseProject } from "../project/parse.ts";
 import { FIXTURES, mergePatch } from "../testing.ts";
@@ -300,5 +302,37 @@ describe("placeholders and generic items", () => {
     ]);
     // The plate: 100 × 60 × 5 of steel, 0.2355 kg each, rounded once per line: 0.471.
     expect(own[0]?.lines[0]?.mass_kg).toBe(0.471);
+  });
+});
+
+describe("a placeholder as a butt's through body (gap G-B, golden case G28)", () => {
+  it("is counted once, with the connection, and holds only its own order line", async () => {
+    // G28's lengths are in golden.test.ts; here, what the body adds to the outputs (§4.5: it is
+    // drawn and counted with the connection, not also a part).
+    const p = await openProject(join(FIXTURES, "golden-ends", "G28"));
+    const d = derive(p.raw, p.items);
+    expect(d.diagnostics.filter((x) => x.severity === "error")).toEqual([]);
+    const b = bom({ derived: d, items: p.items });
+    const held = b.groups.find((g) => g.kind === "placeholder");
+    expect(held?.lines.map((l) => [l.item, l.qty, l.mass_kg, l.sources])).toEqual([
+      ["project:motor", 1, 2.8, ["c1"]],
+    ]);
+    const cl = cutList({ derived: d, items: p.items });
+    const o = order({
+      derived: d,
+      items: p.items,
+      bom: b,
+      cutList: cl,
+      diagnostics: [...d.diagnostics, ...cl.diagnostics, ...b.diagnostics],
+      asOf: "2026-11-26",
+    });
+    // The bars are bought from their supplier, unheld; the motor's line is in the unsourced
+    // group, and only that group is held for it. Unpriced, it is a placeholder still: the one
+    // reason says why (no missing-price besides).
+    expect(o.suppliers.map((s) => [s.supplier, s.status, s.reasons.map((r) => r.rule)])).toEqual([
+      ["test-vendor", "READY", []],
+      [null, "BLOCKED", ["placeholder"]],
+    ]);
+    expect(o.totals.unpriced).toBe(1);
   });
 });
