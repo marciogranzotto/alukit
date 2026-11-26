@@ -15,7 +15,6 @@ export interface Io {
 const PLANNED: readonly (readonly [string, string])[] = [
   ["snapshot <dir>", "render a view to PNG"],
   ["catalog search | import", "find items; run a vendor importer"],
-  ["skill install", "link the agent skill"],
 ];
 
 /** The first word of each usage alternative: "cutlist | bom" gives cutlist and bom. */

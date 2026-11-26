@@ -25,6 +25,10 @@ export const PUBLISH = {
     "    the model as binary glTF: Y up, metres, one node per bar, part and fastener, each",
     "    named <id> <label|item> with its id, item, SKU, options and cut length in extras",
   ],
+  skill: [
+    "alukit skill install [--dir <skills folder>]",
+    "    link the agent skill into ~/.claude/skills/alukit (refuses to replace another target)",
+  ],
 } as const;
 
 export type PublishCommand = keyof typeof PUBLISH;
