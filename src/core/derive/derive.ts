@@ -22,12 +22,14 @@ import type {
   RailLayout,
   StockPiece,
 } from "./types.ts";
+import { applyVariant } from "./variant.ts";
 
 /**
- * `derive(doc, items) → Derived` (design §5): a pure function. M3a runs stages 1–3: resolve
- * (params), place (points, frames, runs, pivots, pattern copies) and ends (two sweeps, modifiers,
- * lengths). It never throws on document content: problems are diagnostics, and an entity that
- * cannot resolve is left out while the rest derives (§5.1).
+ * `derive(doc, items, { variant }) → Derived` (design §5): a pure function. Stage 1 applies the
+ * variant (§4.10: the one named, else the document's default) and values params; then place
+ * (points, frames, runs, pivots, pattern copies), ends (two sweeps, modifiers, lengths) and
+ * attach (stage 4). It never throws on document content: problems are diagnostics, and an
+ * entity that cannot resolve is left out while the rest derives (§5.1).
  */
 
 /**
@@ -72,7 +74,10 @@ export interface DerivedBar {
 }
 
 export interface Derived {
+  /** The document the variant builds, parsed. */
   doc: Doc;
+  /** The variant derived (§4.10); undefined for the document as written. */
+  variant?: string;
   params: ReadonlyMap<string, number>;
   nodes: ReadonlyMap<string, V3>;
   /** Placed bars whose ends resolved, in id order. */
@@ -95,12 +100,19 @@ function sortedKeys<T>(m: ReadonlyMap<string, T>): string[] {
   return [...m.keys()].sort(compareIds);
 }
 
-export function derive(raw: unknown, items: ItemSource): Derived {
-  const parsed = parseProject(raw);
+export interface DeriveOptions {
+  /** The variant to derive; absent: the document's default variant, if it names one. */
+  variant?: string;
+}
+
+export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}): Derived {
+  // Stage 1: the variant (§4.10) and the document it builds, then params in dependency order.
+  const v = applyVariant(raw, items, opts.variant);
+  const parsed = parseProject(v.raw);
   const ctx = new Ctx(parsed.doc, items);
   for (const d of parsed.diagnostics) ctx.d.add(d);
+  for (const d of v.diagnostics) ctx.d.add(d);
 
-  // Stage 1: params, in dependency order.
   const params = ctx.allParams();
 
   // Stage 2: pattern copies, then everything placed in id order (each resolves its own
@@ -142,6 +154,7 @@ export function derive(raw: unknown, items: ItemSource): Derived {
 
   return {
     doc: ctx.doc,
+    ...(v.variant !== undefined ? { variant: v.variant } : {}),
     params,
     nodes,
     bars,

@@ -175,6 +175,7 @@ function hardwareJson(hw: readonly HardwareUse[]) {
 export function derivedJson(d: Derived): Record<string, unknown> {
   return {
     schema: DERIVED_SCHEMA,
+    ...(d.variant !== undefined ? { variant: d.variant } : {}),
     params: Object.fromEntries([...d.params].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
     nodes: sortedObject([...d.nodes].map(([id, v]) => [id, pt(v)] as [string, number[]])),
     bars: sortedObject([...d.bars].map(([id, b]) => [id, barJson(b)] as [string, unknown])),

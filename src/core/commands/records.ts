@@ -4,7 +4,7 @@ import { compareIds } from "../ids.ts";
 import { diffLocks } from "../lock/diff.ts";
 import { pinLock } from "../lock/pin.ts";
 import { documentRefs } from "../lock/refs.ts";
-import { ItemRef, OrderChoice, Param, ParamName } from "../project/schema.ts";
+import { ItemRef, OrderChoice, Param, ParamName, Variant, VariantName } from "../project/schema.ts";
 import {
   fieldSchema,
   getEntity,
@@ -20,7 +20,7 @@ import {
 } from "./doc.ts";
 import { create, failed, patch, replace, requireEntity, SetArgs, withDoc } from "./helpers.ts";
 import { paramReaders } from "./refs.ts";
-import { type CommandDef, done, refuse } from "./types.ts";
+import { type CommandDef, type CommandError, done, refuse } from "./types.ts";
 import { checkEntity, exprErrors, itemResolves, schemaErrors } from "./validate.ts";
 
 /**
@@ -285,8 +285,6 @@ export const label: CommandDef<z.infer<typeof Label>> = {
 // ---------------------------------------------------------------------------------------------
 // Records: variants, checks, open items, decisions
 
-const VariantName = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
-
 function variantsOf(doc: Record<string, unknown>): {
   all: Record<string, unknown>;
   list: Record<string, unknown>;
@@ -295,20 +293,59 @@ function variantsOf(doc: Record<string, unknown>): {
   return { all, list: isObject(all.list) ? all.list : {} };
 }
 
+/**
+ * A variant's own problems (§4.10): the items it swaps, on both sides, resolve, and its params'
+ * expressions read params of the document or of the variant itself.
+ */
+function variantErrors(
+  ctx: Parameters<CommandDef["apply"]>[0],
+  name: string,
+  v: Variant,
+): CommandError[] {
+  const doc = ctx.state.doc;
+  const errors: CommandError[] = [];
+  const at = `variants/list/${name}`;
+  for (const [from, to] of Object.entries(v.swap ?? {})) {
+    for (const ref of [from, to]) {
+      if (itemResolves(ctx, doc, ref)) continue;
+      errors.push({
+        code: "item",
+        field: `${at}/swap`,
+        refs: [ref],
+        message: `${at}/swap: no catalog item ${ref} (in the lock, or the project's catalogs)`,
+      });
+    }
+  }
+  const params = { ...(isObject(doc.params) ? doc.params : {}), ...(v.params ?? {}) };
+  const scope = { ...doc, params };
+  for (const [p, value] of Object.entries(v.params ?? {})) {
+    const src = typeof value === "object" ? value.v : value;
+    if (typeof src === "string") errors.push(...exprErrors(scope, src, p, `${at}/params/${p}`));
+  }
+  return errors;
+}
+
 function writeVariants(
   ctx: Parameters<CommandDef["apply"]>[0],
   all: Record<string, unknown>,
-  changed: string,
+  name: string,
 ) {
   const errors = schemaErrors(fieldSchema("variants"), all, undefined, "variants");
   if (errors.length > 0) return failed(errors);
-  return done(withDoc(ctx, withField(ctx.state.doc, "variants", all)), { changed: [changed] });
+  const v = (all.list as Record<string, Variant>)[name] as Variant;
+  const problems = variantErrors(ctx, name, v);
+  if (problems.length > 0) return failed(problems);
+  return done(withDoc(ctx, withField(ctx.state.doc, "variants", all)), {
+    changed: [`variants/${name}`],
+  });
 }
 
 const AddVariant = z.strictObject({
   name: VariantName,
-  variant: Record_.describe('params, swaps: { "params": { "H": "1100" }, "swap": { … } } (§4.10)'),
-  default: z.boolean().optional().describe("open this variant by default"),
+  variant: Variant.describe(
+    'the params it overrides and the items it swaps: { "params": { "H": "1100" }, "swap": { … } } (§4.10)',
+  ),
+  default: z.boolean().optional().describe("derive this variant when none is named"),
 });
 
 export const addVariant: CommandDef<z.infer<typeof AddVariant>> = {
@@ -322,7 +359,7 @@ export const addVariant: CommandDef<z.infer<typeof AddVariant>> = {
     return writeVariants(
       ctx,
       { ...all, ...(a.default ? { default: a.name } : {}), list: { ...list, [a.name]: a.variant } },
-      `variants/${a.name}`,
+      a.name,
     );
   },
 };
@@ -345,7 +382,7 @@ export const setVariant: CommandDef<z.infer<typeof SetVariant>> = {
     return writeVariants(
       ctx,
       { ...all, ...(a.default ? { default: a.name } : {}), list: { ...list, [a.name]: v } },
-      `variants/${a.name}`,
+      a.name,
     );
   },
 };

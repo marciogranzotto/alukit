@@ -21,6 +21,7 @@ import {
   type PriceBand,
   type RuleAction,
   type Run,
+  type Variants,
 } from "./schema.ts";
 
 /**
@@ -53,6 +54,8 @@ export interface Doc {
   open: OpenItem[];
   /** The project's switches for the order rules (§5.5); a rule it leaves out keeps its default. */
   order_rules: Partial<Record<OrderRule, RuleAction>>;
+  /** The variants (§4.10), as written; derive has applied one already (`Derived.variant`). */
+  variants?: Variants;
   /** Every other top-level field, as validated. */
   rest: Record<string, unknown>;
 }
@@ -215,6 +218,9 @@ export function parseProject(raw: unknown): ParseResult {
         break;
       case "order_rules":
         doc.order_rules = r.data as Doc["order_rules"];
+        break;
+      case "variants":
+        doc.variants = r.data as Variants;
         break;
       default:
         doc.rest[key] = r.data;

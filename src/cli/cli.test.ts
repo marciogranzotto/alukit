@@ -31,14 +31,18 @@ describe("cli", () => {
 
   it("lists planned commands as not implemented yet, and the project commands as usable", () => {
     expect(helpText()).toContain("(not implemented yet)");
-    expect(helpText()).toMatch(/\n {2}derive <dir> \[--json\] \[--frozen\]\n/);
-    expect(helpText()).toMatch(/\n {2}cutlist <dir> \[--format md\|csv\|json\] \[--frozen\]\n/);
-    expect(helpText()).toMatch(/\n {2}bom <dir> \[--format md\|csv\|json\] \[--frozen\]\n/);
+    expect(helpText()).toMatch(/\n {2}derive <dir> \[--json\] \[--variant v\] \[--frozen\]\n/);
     expect(helpText()).toMatch(
-      /\n {2}order <dir> \[--format md\|csv\|json\] \[--as-of YYYY-MM-DD\] \[--frozen\]\n/,
+      /\n {2}cutlist <dir> \[--format md\|csv\|json\] \[--variant v\] \[--frozen\]\n/,
     );
     expect(helpText()).toMatch(
-      /\n {2}costs <dir> \[--format md\|csv\|json\] \[--as-of YYYY-MM-DD\] \[--frozen\]\n/,
+      /\n {2}bom <dir> \[--format md\|csv\|json\] \[--variant v\] \[--frozen\]\n/,
+    );
+    expect(helpText()).toMatch(
+      /\n {2}order <dir> \[--format md\|csv\|json\] \[--as-of YYYY-MM-DD\] \[--variant v\] \[--frozen\]\n/,
+    );
+    expect(helpText()).toMatch(
+      /\n {2}costs <dir> \[--format md\|csv\|json\] \[--as-of YYYY-MM-DD\] \[--variant v\] \[--frozen\]\n/,
     );
     expect(helpText()).toMatch(/\n {2}fmt <dir>\.\.\. \[--check\]\n/);
     for (const cmd of [
