@@ -274,7 +274,8 @@ alukit diff <a> [<b>] [--variant v]... [--as-of YYYY-MM-DD] [--format md|json]
     its own lock. One side and two --variant compare two variants of it
 alukit revision save [<dir>] <name> [--as-of YYYY-MM-DD] [--frozen] [--json]
 alukit revision list [<dir>] [--json]
-alukit revision show [<dir>] <name> [--variant v] [--output derive|cutlist|bom|order|costs|check]
+alukit revision show [<dir>] <name> [--variant v]
+                     [--output derive|cutlist|bom|order|costs|machining|check]
                      [--format md|csv|json]
 alukit revision verify [<dir>] <name> [--json]
     revisions/<name>.json: the document, its lock, the outputs of every variant and a

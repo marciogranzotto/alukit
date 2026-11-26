@@ -1,6 +1,6 @@
 import type { Bom } from "../bom/bom.ts";
 import { type CheckResult, checkModel } from "../check/check.ts";
-import { checkedOrder, modelOutputs, outputAccessors } from "../check/outputs.ts";
+import { checkedMachining, checkedOrder, modelOutputs, outputAccessors } from "../check/outputs.ts";
 import type { CutList } from "../cutlist/cutlist.ts";
 import { type Derived, derive } from "../derive/derive.ts";
 import { derivedJson } from "../derive/output.ts";
@@ -8,15 +8,17 @@ import { type Diagnostic, sortDiagnostics } from "../diagnostics.ts";
 import type { ItemSource } from "../items.ts";
 import { lockHash } from "../lock/pin.ts";
 import type { Lock } from "../lock/schema.ts";
+import type { MachiningSheet } from "../machining/machining.ts";
 import { type CostsOutput, costsOf } from "../order/format.ts";
 import type { Order } from "../order/order.ts";
 
 /**
  * A project's outputs for one variant, as the CLI prints them in JSON (design §5.1 stages 1–6):
- * the derived model, the cut list, the bill of materials, the order list, the costs and the
- * model's checks. One function, so that what a revision stores (§4.13), what `revision verify`
- * recomputes and what `alukit diff` compares are the same numbers as `alukit derive --json`,
- * `cutlist`, `bom`, `order` and `costs --format json` print.
+ * the derived model, the cut list, the bill of materials, the order list, the costs, the
+ * machining sheet (M6) and the model's checks. One function, so that what a revision stores
+ * (§4.13), what `revision verify` recomputes and what `alukit diff` compares are the same numbers
+ * as `alukit derive --json`, `cutlist`, `bom`, `order`, `costs` and `machining --format json`
+ * print.
  */
 
 export interface Outputs {
@@ -28,6 +30,8 @@ export interface Outputs {
   bom: Bom;
   order: Order;
   costs: CostsOutput;
+  /** The machining sheet, with the problems met on the way to it (`checkedMachining`). */
+  machining: MachiningSheet;
   /** The project's checks and the model's diagnostics, as `alukit check` finds them (§5.5). */
   check: { checks: CheckResult[]; diagnostics: Diagnostic[] };
 }
@@ -76,6 +80,7 @@ export function deriveOutputs(input: OutputsInput): { derived: Derived; outputs:
     bom: { ...b, diagnostics: sortDiagnostics([...derived.diagnostics, ...b.diagnostics]) },
     order,
     costs: costsOf(order),
+    machining: checkedMachining(derived, outputs),
     check: { checks: checked.checks, diagnostics: checked.diagnostics },
   });
   return { derived, outputs: outputsJson };

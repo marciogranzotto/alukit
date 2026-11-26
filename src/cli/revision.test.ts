@@ -56,6 +56,7 @@ describe("alukit revision", () => {
       ["bom", ["bom", dir, "--format", "json"]],
       ["order", ["order", dir, "--format", "json", "--as-of", AS_OF]],
       ["costs", ["costs", dir, "--format", "json", "--as-of", AS_OF]],
+      ["machining", ["machining", dir, "--format", "json"]],
     ];
     for (const [what, args] of pairs) {
       const stored = await out([
@@ -73,6 +74,10 @@ describe("alukit revision", () => {
     // Markdown from the stored outputs, as the command prints it.
     const md = await out(["revision", "show", dir, "r1", "--output", "order"]);
     expect(md).toBe(await out(["order", dir, "--as-of", AS_OF]));
+    const sheet = await out(["revision", "show", dir, "r1", "--output", "machining"]);
+    expect(sheet).toBe(await out(["machining", dir]));
+    const csv = ["revision", "show", dir, "r1", "--output", "machining", "--format", "csv"];
+    expect((await capture(csv)).code).toBe(2);
   });
 
   it("reports drift in a stored output, and a document edited after the save", async () => {

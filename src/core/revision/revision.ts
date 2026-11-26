@@ -157,7 +157,7 @@ export function storedOutputs(r: Revision, variant?: string): Outputs | undefine
 
 export interface OutputDrift {
   variant?: string;
-  /** Which output: derived, cutlist, bom, order, costs, check. */
+  /** Which output: derived, cutlist, bom, order, costs, machining, check. */
   output: keyof Omit<Outputs, "variant">;
   changes: FieldChange[];
 }
@@ -172,7 +172,7 @@ export interface Verification {
   drift: OutputDrift[];
 }
 
-const OUTPUT_KEYS = ["derived", "cutlist", "bom", "order", "costs", "check"] as const;
+const OUTPUT_KEYS = ["derived", "cutlist", "bom", "order", "costs", "machining", "check"] as const;
 
 const label = (v: string | undefined) => v ?? "(no variant)";
 

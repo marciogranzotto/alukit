@@ -7,6 +7,7 @@ import { isDate, localDate } from "#core/dates.ts";
 import { jsonText } from "#core/derive/output.ts";
 import type { Diagnostic } from "#core/diagnostics.ts";
 import type { FieldChange } from "#core/lock/diff.ts";
+import { machiningJson, machiningMarkdown } from "#core/machining/format.ts";
 import {
   costsCsv,
   costsJson,
@@ -43,7 +44,7 @@ import { publishUsageOf } from "./publish-usage.ts";
  */
 
 const USAGE = publishUsageOf("revision");
-const OUTPUTS = ["derive", "cutlist", "bom", "order", "costs", "check"] as const;
+const OUTPUTS = ["derive", "cutlist", "bom", "order", "costs", "machining", "check"] as const;
 type OutputName = (typeof OUTPUTS)[number];
 
 async function exists(path: string): Promise<boolean> {
@@ -288,6 +289,13 @@ function printOutput(o: Outputs, what: OutputName, format: "md" | "csv" | "json"
         stderr(o.costs.diagnostics);
       }
       return;
+    case "machining":
+      if (format === "json") io.out(machiningJson(o.machining).trimEnd());
+      else {
+        io.out(machiningMarkdown({ ...o.machining, diagnostics: [] }).trimEnd());
+        stderr(o.machining.diagnostics);
+      }
+      return;
   }
 }
 
@@ -309,6 +317,9 @@ async function show(argv: readonly string[], io: Io): Promise<number> {
   const format = args.values.format ?? "md";
   if (format !== "md" && format !== "csv" && format !== "json") {
     return usageError("revision show", "--format takes md, csv or json", USAGE, io);
+  }
+  if (what === "machining" && format === "csv") {
+    return usageError("revision show", "the machining sheet takes --format md or json", USAGE, io);
   }
   const r = await loadRevision(revisionFile(resolve(pos.dir), pos.name), io, "revision show");
   if (!r) return 1;
@@ -372,7 +383,7 @@ async function verify(argv: readonly string[], io: Io): Promise<number> {
   }
   if (ok) {
     io.out(
-      `verified: zero drift in ${r.outputs.length} variant${r.outputs.length === 1 ? "" : "s"} (derive, cutlist, bom, order, costs, check)`,
+      `verified: zero drift in ${r.outputs.length} variant${r.outputs.length === 1 ? "" : "s"} (derive, cutlist, bom, order, costs, machining, check)`,
     );
   }
   return ok ? 0 : 1;

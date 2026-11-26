@@ -13,7 +13,8 @@ export const PUBLISH = {
   revision: [
     "alukit revision save [<dir>] <name> [--as-of YYYY-MM-DD] [--frozen] [--json]",
     "alukit revision list [<dir>] [--json]",
-    "alukit revision show [<dir>] <name> [--variant v] [--output derive|cutlist|bom|order|costs|check]",
+    "alukit revision show [<dir>] <name> [--variant v]",
+    "                     [--output derive|cutlist|bom|order|costs|machining|check]",
     "                     [--format md|csv|json]",
     "alukit revision verify [<dir>] <name> [--json]",
     "    revisions/<name>.json: the document, its lock, the outputs of every variant and a",
