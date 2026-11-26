@@ -197,6 +197,23 @@ function computeBar(ctx: Ctx, id: string): PlacedBar | undefined {
   }
   const item = found.bar;
   const opt = barOptions(spec.opt, ctx.doc.defaults.bar?.opt, item.options);
+  // A copy carries its template's options, so only the template reports them.
+  if (!copy) {
+    for (const [name, value] of Object.entries(opt)) {
+      const values = item.options[name];
+      if (values === undefined) {
+        d.error("option", id, `${ref} has no option "${name}"`, { field: `opt/${name}` });
+      } else if (!values.includes(value)) {
+        const from = spec.opt?.[name] === undefined ? " (from defaults.bar.opt)" : "";
+        d.error(
+          "option",
+          id,
+          `${name} "${value}"${from} is not one of ${ref}'s: ${values.join(", ")}`,
+          { field: `opt/${name}` },
+        );
+      }
+    }
+  }
 
   const A = resolvePoint(ctx, spec.a, { id, field: "a", copy });
   if (!A) return undefined;

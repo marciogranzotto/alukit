@@ -220,6 +220,26 @@ describe("warnings (§4.5)", () => {
   });
 });
 
+describe("bar options (§3.6)", () => {
+  it("takes the defaults only for options the item has, and refuses values it does not offer", () => {
+    const d = run({
+      bars: {
+        b1: { a: [0, 0, 0], b: [500, 0, 0], opt: { finish: "black" } },
+        b2: { item: "test-geo:FB-50x10", a: [0, 100, 0], b: [500, 100, 0] },
+        b3: { a: [0, 200, 0], b: [500, 200, 0], opt: { finish: "gold" } },
+        b4: { a: [0, 300, 0], b: [500, 300, 0], opt: { colour: "red" } },
+      },
+    });
+    expect(d.bars.get("b1")?.placed.opt).toEqual({ finish: "black" });
+    expect(d.bars.get("b2")?.placed.opt).toEqual({});
+    expect(codes(d)).toEqual([
+      ["option", "b3"],
+      ["option", "b4"],
+    ]);
+    expect(cut(d, "b3")).toBe(500); // placed all the same
+  });
+});
+
 describe("butts (§4.5)", () => {
   const g17 = (conn: Record<string, unknown>) =>
     run({
