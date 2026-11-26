@@ -245,9 +245,18 @@ export function createTools(viewer: Viewer): Tools {
   let current: Snap | undefined;
 
   function drawPreview(e: ToolPointer | undefined): void {
-    const { start, end } = drawState.value;
+    const { start, end: under } = drawState.value;
     const bar = palette.value.bar;
     const o = drawOptions.value;
+    // A typed length is what Enter commits: preview that, along the axis under the pointer.
+    const len = typed.value ? parseLength(typed.value) : undefined;
+    const end =
+      start && under && len !== undefined ? (typedEnd(start, under.p, len) ?? under) : under;
+    if (!bar) {
+      viewer.setOverlay({});
+      show(e, "no bar in the palette: set one from the catalog");
+      return;
+    }
     const ghost =
       start && end && bar?.section
         ? previewPlacement(start.p, end.p, o.roll, bar.section, o.anchor)
@@ -435,6 +444,13 @@ export function createTools(viewer: Viewer): Tools {
     },
   };
 
+  // A bar without the anchor in use (a rail's `mount` on a T-slot) starts from the centre.
+  const offPalette = palette.subscribe((p) => {
+    const anchors = p.bar?.anchors ?? ["c"];
+    if (!anchors.includes(drawOptions.value.anchor))
+      drawOptions.value = { ...drawOptions.value, anchor: "c" };
+  });
+
   const offPicks = connectPicks.subscribe((picks) => {
     viewer.setHighlight(new Set(picks.filter((p) => p.kind === "bar").map((p) => p.ref)));
     if (activeTool.value === "connect")
@@ -573,6 +589,7 @@ export function createTools(viewer: Viewer): Tools {
     dispose() {
       offModel();
       offPicks();
+      offPalette();
       offTool();
       viewer.setTool(undefined);
     },
