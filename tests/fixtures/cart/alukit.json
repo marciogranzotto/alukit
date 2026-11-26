@@ -1,10 +1,10 @@
 {
   "schema": "alukit.project/1",
   "name": "Cart (synthetic)",
-  "catalogs": ["../catalogs/test", "../catalogs/test-geo"],
+  "catalogs": ["../catalogs/test", "../catalogs/test-geo", "../catalogs/test-gen"],
   "currency": "BRL",
   "price_basis": "regular",
-  "ids": { "b": 32, "c": 33, "pt": 1, "r": 1 },
+  "ids": { "b": 34, "c": 35, "p": 2, "pt": 2, "r": 2 },
   "defaults": {
     "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
     "cutting": { "kerf_mm": 3, "trim_mm": 5 }
@@ -170,9 +170,25 @@
       "b": ["W + 150", 20, 800],
       "ends": { "b": { "cut": "angle" } },
       "label": "handle grip, bearing on the arm's end through an end plate"
+    },
+    "b33": {
+      "item": "test:RAIL20",
+      "a": [130, "D / 2", "H"],
+      "b": [600, "D / 2", "H"],
+      "anchor": "mount",
+      "holes": { "factory": "b", "stock_mm": 1000 },
+      "label": "linear rail on the middle rail, left piece: its factory end at the joint"
+    },
+    "b34": {
+      "item": "test:RAIL20",
+      "a": [600, "D / 2", "H"],
+      "b": [1070, "D / 2", "H"],
+      "anchor": "mount",
+      "holes": { "factory": "a", "stock_mm": 1000 },
+      "label": "linear rail, right piece: its factory end at the joint"
     }
   },
-  "runs": { "r1": ["b11", "b12"] },
+  "runs": { "r1": ["b11", "b12"], "r2": ["b33", "b34"] },
   "connections": {
     "c1": { "type": "butt", "through": "b5", "ends": ["b1.b", "b2.b", "b7.a", "b8.a"] },
     "c2": { "type": "butt", "through": "b6", "ends": ["b3.b", "b4.b", "b7.b", "b8.b"] },
@@ -248,6 +264,7 @@
       "fastening": "bolt",
       "fastener": { "bar": "test:M10-ROD", "len_mm": 140 },
       "stack": [
+        "test-geo:NUT-M10",
         "test-geo:WSH-M10",
         { "item": "test-geo:TUBE-18x2", "inside": "b18", "len_mm": "bore" },
         "test-geo:WSH-M10",
@@ -269,6 +286,31 @@
       "through": "b31.b",
       "ends": ["b32.b"],
       "connector": "test-geo:PLT-8"
+    },
+    "c34": { "type": "splice", "ends": ["b33.b", "b34.a"] },
+    "c35": {
+      "type": "face",
+      "bars": ["r2", "r1"],
+      "fastening": "tnut",
+      "fastener": "test-gen:SCR-M5x25",
+      "stack": ["test-gen:TNUT-M5"],
+      "stations": {
+        "rail_holes": { "along": "r2", "every": 2, "plus": ["first", "last", "joint"] }
+      },
+      "label": "rail screws into T-nuts in the middle rail's top groove, at every other hole"
+    }
+  },
+  "parts": {
+    "p1": {
+      "item": "test:CAR20",
+      "on": { "bar": "r2", "at_mm": 100, "face": "+y" },
+      "label": "carriage"
+    },
+    "p2": {
+      "item": "test:TNUT-M8",
+      "qty": 10,
+      "unplaced": true,
+      "why": "spares for light fixings"
     }
   },
   "patterns": {
@@ -279,6 +321,13 @@
       "count": 7,
       "skip": [3],
       "label": "slats every 150, leaving room for the beam at W / 2"
+    },
+    "pt2": {
+      "template": ["p1"],
+      "along": "r2",
+      "pitch_mm": 300,
+      "count": 3,
+      "label": "carriages at fixed stops, the third across the rail joint"
     }
   }
 }

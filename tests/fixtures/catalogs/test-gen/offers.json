@@ -1,0 +1,29 @@
+{
+  "schema": "alukit.offers/1",
+  "offers": {
+    "RAIL-G-1500": {
+      "item": "RAIL-G",
+      "sale": { "mode": "stock", "length_mm": 1500, "factory_E_mm": 30 },
+      "price": { "regular_minor": 21000, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "BAR-G-1500": {
+      "item": "BAR-G",
+      "sale": { "mode": "stock", "length_mm": 1500 },
+      "price": { "regular_minor": 1500, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "CAR-G": {
+      "item": "CAR-G",
+      "price": { "regular_minor": 9000, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "SCR-M5x25-100": {
+      "item": "SCR-M5x25",
+      "pack": 100,
+      "price": { "regular_minor": 1500, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "TNUT-M5-50": {
+      "item": "TNUT-M5",
+      "pack": 50,
+      "price": { "regular_minor": 2500, "per": "unit", "read": "2026-11-26", "src": "src" }
+    }
+  }
+}

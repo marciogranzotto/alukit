@@ -1,0 +1,8 @@
+{
+  "schema": "alukit.section/1",
+  "id": "RAIL-G",
+  "fidelity": "parametric",
+  "props_ok": false,
+  "generator": "rail",
+  "params": { "w_mm": 20, "h_mm": 18 }
+}

@@ -184,3 +184,127 @@ export interface EndReport {
   bevel?: number;
   cut?: "angle" | "square";
 }
+
+// ---------------------------------------------------------------------------------------------
+// Stage 4: attach and generate (design §5.1)
+
+/** A rail's hole layout (§4.7). Positions are along the axis from design point A. */
+export interface RailLayout {
+  /** How it was set: from a factory end, drilled to order and centred, or an end distance given. */
+  how: "factory" | "drilled" | "E_a" | "E_b";
+  /** The factory end, for `factory`. */
+  factory?: "a" | "b";
+  /** The stock length the piece is cut from, when nesting must keep it there (§4.7, §5.3). */
+  stock_mm?: number;
+  pitch: number;
+  /** Hole centres along the axis from design point A, ascending. */
+  holes: number[];
+  /** End distances along the box centre line, from each end face to the nearest hole. */
+  E_a: number;
+  E_b: number;
+}
+
+/** A hole in a run or a rail, numbered along it from its start (§4.7). */
+export interface RailHole {
+  /** The piece that holds it. */
+  bar: string;
+  /** Along that piece's axis from its design point A. */
+  s: number;
+  /** Along the run (or the bar) from its first design point A. */
+  r: number;
+}
+
+/** A part laid on a station or at a pose (§4.7), in world terms. */
+export interface PlacedPart {
+  placed: true;
+  id: string;
+  item: string;
+  kind: string;
+  opt: Readonly<Record<string, string>>;
+  /** On a station: the bar it landed on (a run's piece) and the distance from that bar's A. */
+  bar?: string;
+  s?: number;
+  /** The datum that landed on the station or pose (`run`, `mount`), or `origin`. */
+  datum: string;
+  point: V3;
+  /** The item's own axes in world terms (§3.2, §4.7), and where its origin lands. */
+  frame: { x: V3; y: V3; z: V3 };
+  origin: V3;
+  /** A copy's pattern. */
+  pattern?: string;
+}
+
+/** A part entry that is counted, not drawn (§4.7). */
+export interface UnplacedPart {
+  placed: false;
+  id: string;
+  item: string;
+  kind: string;
+  opt: Readonly<Record<string, string>>;
+  qty: number;
+  why: string;
+}
+
+export type DerivedPart = PlacedPart | UnplacedPart;
+
+/** A length cut from bar stock that is not a bar of the document: a fastener or a sleeve (§4.5). */
+export interface StockPiece {
+  /** `<connection>.f<k>` for a fastener, `<connection>.s<k>` for a sleeve. */
+  source: string;
+  item: string;
+  opt: Readonly<Record<string, string>>;
+  len: number;
+}
+
+/** A count of an item the BOM lists, and the entity it came from (§5.4). */
+export interface HardwareUse {
+  item: string;
+  opt: Readonly<Record<string, string>>;
+  qty: number;
+  source: string;
+}
+
+/** Where a fastener passes one layer: the body and its interval along the axis from the head. */
+export interface StationLayer {
+  /** The bar (a run's piece) or part. */
+  id: string;
+  from: number;
+  to: number;
+}
+
+/** One fastener of a face connection (§4.5). */
+export interface FaceStation {
+  /** 1-based, in the order the stations are written. */
+  k: number;
+  /** The first layer's piece and the distance along it from its design point A. */
+  bar: string;
+  s: number;
+  /** The offset across the first layer's face, in §4.3's u. */
+  across: number;
+  /** On the first layer's face toward the second, and the axis from head to nut. */
+  point: V3;
+  axis: V3;
+  layers: StationLayer[];
+  /**
+   * The layers' depths and the declared gaps (§4.5): for a tnut the last layer only to its
+   * groove's lip; for a screw without its tapped layer.
+   */
+  grip: number;
+  /** A fastener cut from bar stock: its piece. */
+  piece?: string;
+  /** Sleeves cut from bar stock: their pieces and lengths. */
+  sleeves: { piece: string; len: number }[];
+}
+
+/** A face connection's contacts and fastenings (§4.5). */
+export interface FaceResult {
+  fastening: "none" | "bolt" | "tnut" | "screw";
+  layers: string[];
+  /** Each adjacent pair of layers: the faces in contact and their declared gap. */
+  contacts: { faces: [string, string]; gap: number }[];
+  stations: FaceStation[];
+  /** The fastener at each station: a catalog item, or a length of bar stock. */
+  fastener?: { item: string; len?: number };
+  /** The loose hardware from head to nut at each station; sleeves are in `stations`. */
+  stack: { item: string; qty: number }[];
+}

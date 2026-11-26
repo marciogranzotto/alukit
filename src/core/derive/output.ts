@@ -1,8 +1,8 @@
 import { compareIds } from "../ids.ts";
 import { QUANTUM, quantize } from "../quantum.ts";
 import type { V3 } from "../vec.ts";
-import type { Derived, DerivedBar } from "./derive.ts";
-import type { EndReport } from "./types.ts";
+import type { Derived, DerivedBar, ResolvedOp } from "./derive.ts";
+import type { DerivedPart, EndReport, FaceResult, HardwareUse } from "./types.ts";
 
 /**
  * `derive --json` (design §7.3, §9): the derived model as `alukit.derived/1`, a contract for
@@ -54,20 +54,122 @@ function barJson(b: DerivedBar) {
       [len(p.box.x1), len(p.box.y1)],
     ],
     ends: { a: endJson(b.ends.a), b: endJson(b.ends.b) },
-    ...(b.ops.length > 0
+    ...(b.ops.length > 0 ? { ops: b.ops.map(opJson) } : {}),
+    ...(b.rail
       ? {
-          ops: b.ops.map((o) => ({
-            op: o.op,
-            face: o.face,
-            from: o.from,
-            at_mm: len(o.at),
-            ...(o.d !== undefined ? { d_mm: len(o.d) } : {}),
-            ...(o.thread ? { thread: o.thread } : {}),
-            ...(o.depth !== undefined ? { depth_mm: len(o.depth) } : {}),
-          })),
+          rail: {
+            how: b.rail.how,
+            ...(b.rail.factory ? { factory: b.rail.factory } : {}),
+            ...(b.rail.stock_mm !== undefined ? { stock_mm: len(b.rail.stock_mm) } : {}),
+            pitch_mm: len(b.rail.pitch),
+            E_a_mm: len(b.rail.E_a),
+            E_b_mm: len(b.rail.E_b),
+            holes_mm: b.rail.holes.map(len),
+          },
         }
       : {}),
   };
+}
+
+/** An op as written or generated; `by` names the connection that generated it. */
+function opJson(o: ResolvedOp) {
+  if (o.op === "end-tap") {
+    return {
+      op: o.op,
+      from: o.from,
+      thread: o.thread,
+      ...(o.depth !== undefined ? { depth_mm: len(o.depth) } : {}),
+      by: o.by,
+    };
+  }
+  const across = o.across === undefined ? 0 : len(o.across);
+  return {
+    op: o.op,
+    face: o.face,
+    from: o.from,
+    at_mm: len(o.at),
+    ...(across !== 0 ? { across_mm: across } : {}),
+    ...(o.d !== undefined ? { d_mm: len(o.d) } : {}),
+    ...(o.thread ? { thread: o.thread } : {}),
+    ...(o.depth !== undefined ? { depth_mm: len(o.depth) } : {}),
+    ...(o.csk ? { csk: { d_mm: len(o.csk.d), angle_deg: ang(o.csk.angle) } } : {}),
+    ...(o.cbore ? { cbore: { d_mm: len(o.cbore.d), depth_mm: len(o.cbore.depth) } } : {}),
+    ...(o.by ? { by: o.by } : {}),
+  };
+}
+
+function sortedOpt(opt: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(Object.entries(opt).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)));
+}
+
+function partJson(p: DerivedPart) {
+  const head = { item: p.item, kind: p.kind, opt: sortedOpt(p.opt) };
+  if (!p.placed) return { ...head, unplaced: true, qty: p.qty, why: p.why };
+  return {
+    ...head,
+    ...(p.pattern ? { pattern: p.pattern } : {}),
+    ...(p.bar !== undefined ? { bar: p.bar, s_mm: len(p.s as number) } : {}),
+    datum: p.datum,
+    point: pt(p.point),
+    frame: { x: dir(p.frame.x), y: dir(p.frame.y), z: dir(p.frame.z) },
+    origin: pt(p.origin),
+  };
+}
+
+function fasteningJson(f: FaceResult) {
+  return {
+    fastening: f.fastening,
+    layers: f.layers,
+    contacts: f.contacts.map((c) => ({ faces: c.faces, gap_mm: len(c.gap) })),
+    ...(f.fastener
+      ? {
+          fastener: {
+            item: f.fastener.item,
+            ...(f.fastener.len !== undefined ? { len_mm: len(f.fastener.len) } : {}),
+          },
+        }
+      : {}),
+    stack: f.stack,
+    stations: f.stations.map((s) => ({
+      k: s.k,
+      bar: s.bar,
+      s_mm: len(s.s),
+      across_mm: len(s.across),
+      point: pt(s.point),
+      axis: dir(s.axis),
+      grip_mm: len(s.grip),
+      layers: s.layers.map((l) => ({ id: l.id, from_mm: len(l.from), to_mm: len(l.to) })),
+      ...(s.piece ? { piece: s.piece } : {}),
+      ...(s.sleeves.length > 0
+        ? { sleeves: s.sleeves.map((x) => ({ piece: x.piece, len_mm: len(x.len) })) }
+        : {}),
+    })),
+  };
+}
+
+/** Hardware uses summed per item, options and source, in id order. */
+function hardwareJson(hw: readonly HardwareUse[]) {
+  const sum = new Map<
+    string,
+    { item: string; opt: Record<string, string>; source: string; qty: number }
+  >();
+  for (const h of hw) {
+    const opt = sortedOpt(h.opt);
+    const k = JSON.stringify([h.item, opt, h.source]);
+    const e = sum.get(k);
+    if (e) e.qty += h.qty;
+    else sum.set(k, { item: h.item, opt, source: h.source, qty: h.qty });
+  }
+  return [...sum.values()].sort(
+    (a, b) =>
+      compareIds(a.item, b.item) ||
+      (JSON.stringify(a.opt) < JSON.stringify(b.opt)
+        ? -1
+        : JSON.stringify(a.opt) > JSON.stringify(b.opt)
+          ? 1
+          : 0) ||
+      compareIds(a.source, b.source),
+  );
 }
 
 export function derivedJson(d: Derived): Record<string, unknown> {
@@ -82,6 +184,17 @@ export function derivedJson(d: Derived): Record<string, unknown> {
     pivots: sortedObject(
       [...d.pivots].map(([id, p]) => [id, { point: pt(p.P), normal: dir(p.n) }]),
     ),
+    parts: sortedObject([...d.parts].map(([id, p]) => [id, partJson(p)] as [string, unknown])),
+    fastenings: sortedObject(
+      [...d.fastenings].map(([id, f]) => [id, fasteningJson(f)] as [string, unknown]),
+    ),
+    pieces: d.pieces.map((p) => ({
+      source: p.source,
+      item: p.item,
+      opt: sortedOpt(p.opt),
+      len_mm: len(p.len),
+    })),
+    hardware: hardwareJson(d.hardware),
     diagnostics: d.diagnostics,
   };
 }

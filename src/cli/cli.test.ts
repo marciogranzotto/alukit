@@ -28,15 +28,17 @@ describe("cli", () => {
   });
 
   it("lists planned commands as not implemented yet, and the project commands as usable", () => {
-    expect(helpText()).toContain("bom | order | costs <dir>");
+    expect(helpText()).toContain("order | costs <dir>");
     expect(helpText()).toContain("(not implemented yet)");
     expect(helpText()).toMatch(/\n {2}derive <dir> \[--json\]\n/);
     expect(helpText()).toMatch(/\n {2}cutlist <dir> \[--format md\|csv\|json\]\n/);
+    expect(helpText()).toMatch(/\n {2}bom <dir> \[--format md\|csv\|json\]\n/);
   });
 
-  it("refuses planned and unknown commands", async () => {
-    expect((await capture(["bom"])).code).toBe(2);
+  it("refuses planned and unknown commands, and a project command with no folder", async () => {
+    expect((await capture(["order"])).code).toBe(2);
     expect((await capture(["nope"])).code).toBe(2);
+    expect((await capture(["bom"])).code).toBe(2);
   });
 
   it("runs under Node with no flag and no warning", () => {
