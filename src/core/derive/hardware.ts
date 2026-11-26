@@ -9,7 +9,7 @@ import type { Ctx } from "./context.ts";
 import type { DerivedBar, HoleOp } from "./derive.ts";
 import { type GenOut, stockOptions } from "./fastenings.ts";
 import { boxCentre, faceLocal, facePlane, onBar, resolveStation } from "./place.ts";
-import type { Copy } from "./types.ts";
+import type { Copy, StockPiece } from "./types.ts";
 
 /**
  * Hardware and machining from connectors (design §3.4, §5.1). Each connection counts its
@@ -24,7 +24,8 @@ import type { Copy } from "./types.ts";
  *   from it on its `+y` face, or holes in the through bar where the butting bar meets it;
  * - a splice's parts, and its tap in both spliced ends.
  *
- * A connector that does not fit a joined bar's system is a `fit` error.
+ * Fit is judged by role: a butting bar by its system, the through bar by its system or by the
+ * sleeve a chosen fastener set puts in its bore. A bar held neither way is a `fit` error.
  */
 
 interface Roles {
@@ -38,6 +39,13 @@ interface Roles {
   connector?: string;
   /** A butt's spacer, for where the butting bar meets the through bar's face. */
   spacer: number;
+}
+
+/** A mount's fastener set, chosen by system (§3.4), used once per hole of the mount. */
+interface ChosenSet {
+  mount: number;
+  holes: number;
+  entries: NonNullable<NonNullable<ConnectorItem["mounts"]>[number]["fasteners"]>[string];
 }
 
 function endOf(ref: string): { bar: string; end: "a" | "b" } {
@@ -176,9 +184,11 @@ class ConnectorGen {
     if (found.item.kind !== "connector") return;
     const item = found.item;
     const home = found.id.slice(0, found.id.indexOf(":"));
-    this.fit(found.id, item, home);
+    const fits = item.fits.map((s) => fullRef(s, home));
+    const sets = this.spec.type === "face" ? [] : this.chosenSets(item, home, fits);
+    this.fit(found.id, fits, sets);
     if (this.spec.type === "face") return;
-    this.mounts(item, home);
+    this.mounts(sets, home);
     this.requires(item);
     if (item.splice) this.splice(item, home);
   }
@@ -191,90 +201,123 @@ class ConnectorGen {
     return out;
   }
 
-  private fit(itemId: string, item: ConnectorItem, home: string): void {
-    const fits = item.fits.map((s) => fullRef(s, home));
-    for (const b of this.joined()) {
-      const sys = b.placed.item.system;
-      if (sys !== undefined && fits.includes(sys)) continue;
-      this.error(
-        "fit",
-        `${itemId} fits ${fits.join(", ")}; ${b.placed.id} is ${sys ? `a ${sys}` : `${b.placed.item.id}, of no system`}`,
-        { field: "connector", refs: [b.placed.id] },
-      );
-    }
-  }
-
-  private mounts(item: ConnectorItem, home: string): void {
-    const { roles, id } = this;
-    const systems = this.joined()
-      .map((b) => b.placed.item.system)
-      .filter((s): s is string => s !== undefined);
+  /**
+   * Each mount's fastener set: the one keyed by the system of a joined bar the connector fits,
+   * the through bar's first (a butt does not place its connector in v1, so which bar a mount
+   * bears on is not known). A mount with sets but none for those systems is a `fit` error; with
+   * no joined bar of a fitted system there is nothing to choose by, and `fit` names the bars.
+   */
+  private chosenSets(item: ConnectorItem, home: string, fits: readonly string[]): ChosenSet[] {
+    const systems = [
+      ...new Set(
+        this.joined()
+          .map((b) => b.placed.item.system)
+          .filter((s): s is string => s !== undefined && fits.includes(s)),
+      ),
+    ];
+    const out: ChosenSet[] = [];
     for (const [mi, m] of (item.mounts ?? []).entries()) {
-      if (!m.fasteners) continue;
+      if (!m.fasteners || systems.length === 0) continue;
       const sets = Object.entries(m.fasteners).map(([k, v]) => [fullRef(k, home), v] as const);
       const set = systems.map((s) => sets.find(([k]) => k === s)).find((x) => x !== undefined);
       if (!set) {
-        this.error(
-          "fit",
-          `mounts[${mi}] has no fastener set for ${systems.join(" or ") || "bars of no system"}`,
-          { field: "connector" },
-        );
+        this.error("fit", `mounts[${mi}] has no fastener set for ${systems.join(" or ")}`, {
+          field: "connector",
+        });
         continue;
       }
-      const holes = (m.holes?.length ?? 0) || 1;
-      for (const e of set[1]) {
+      out.push({ mount: mi, holes: (m.holes?.length ?? 0) || 1, entries: set[1] });
+    }
+    return out;
+  }
+
+  /**
+   * Fit by role (§3.4; acceptance gap A1). A butting bar is held at its end by its system, which
+   * the connector must fit. The through bar is held by its system, or by its bore: a chosen
+   * fastener set puts a sleeve in it (`inside: "through"`), and the sleeve then needs it hollow.
+   * A bar held neither way is a `fit` error naming it. The through bar is judged only when a
+   * fastener set was chosen: with none, a butting bar has already failed, and that is the error
+   * to fix.
+   */
+  private fit(itemId: string, fits: readonly string[], sets: readonly ChosenSet[]): void {
+    const through = this.roles.through?.bar;
+    const sleeved = sets.some((s) => s.entries.some((e) => "inside" in e));
+    for (const b of this.joined()) {
+      const sys = b.placed.item.system;
+      if (sys !== undefined && fits.includes(sys)) continue;
+      const isThrough = b === through;
+      if (isThrough && sleeved) continue; // held by its bore; the sleeve checks it is hollow
+      if (isThrough && sets.length === 0 && this.roles.butting.length > 0) continue;
+      const what = sys ? `a ${sys}` : `${b.placed.item.id}, of no system`;
+      const how = isThrough ? ", and no fastener set of the connector sets a sleeve in it" : "";
+      this.error("fit", `${itemId} fits ${fits.join(", ")}; ${b.placed.id} is ${what}${how}`, {
+        field: "connector",
+        refs: [b.placed.id],
+      });
+    }
+  }
+
+  private mounts(sets: readonly ChosenSet[], home: string): void {
+    const { roles, id } = this;
+    for (const set of sets) {
+      for (const e of set.entries) {
         if ("inside" in e) {
-          for (let u = 0; u < roles.units * holes; u++)
-            this.mountSleeve(fullRef(e.item, home), e.len_mm);
+          const sleeve = this.mountSleeve(fullRef(e.item, home), e.len_mm);
+          if (!sleeve) continue;
+          for (let u = 0; u < roles.units * set.holes; u++) {
+            this.sleeves++;
+            this.out.pieces.push({ source: `${id}.s${this.sleeves}`, ...sleeve });
+          }
           continue;
         }
         this.out.hardware.push({
           item: fullRef(e.item, home),
           opt: {},
-          qty: e.qty * holes * roles.units,
+          qty: e.qty * set.holes * roles.units,
           source: id,
         });
       }
     }
   }
 
-  /** A sleeve in the through bar's bore, along the joint's normal (§3.4, §4.5). */
-  private mountSleeve(itemRef: string, len: number | "bore"): void {
-    const { ctx, roles, id } = this;
+  /**
+   * A sleeve in the through bar's bore, along the joint's normal (§3.4, §4.5): it needs a through
+   * bar, and a hollow one (RHS or tube) whatever its length, since it sits in the bore. `bore` is
+   * the inside depth along the first butting end's normal.
+   */
+  private mountSleeve(
+    itemRef: string,
+    len: number | "bore",
+  ): Omit<StockPiece, "source"> | undefined {
+    const { ctx, roles } = this;
     const found = ctx.items.item(itemRef);
     if (!found.ok || !found.bar) {
       this.error(
         "item",
         found.ok ? `${itemRef} is not a bar: a sleeve is cut from one` : found.message,
-        {
-          field: "connector",
-        },
+        { field: "connector" },
       );
-      return;
+      return undefined;
     }
-    let L: number | undefined = typeof len === "number" ? len : undefined;
-    if (len === "bore") {
-      const t = roles.through?.bar;
-      const first = roles.butting[0];
-      const n = first?.bar.ends[first.end].normal;
-      L = t && n ? insideDepth(t, n) : undefined;
-      if (L === undefined) {
-        this.error(
-          "fit",
-          `a sleeve of ${itemRef} needs a hollow through bar (RHS or tube) for its bore`,
-          { field: "connector" },
-        );
-        return;
-      }
+    const t = roles.through?.bar;
+    const first = roles.butting[0];
+    const n = first?.bar.ends[first.end].normal;
+    const bore = t && n ? insideDepth(t, n) : undefined;
+    if (bore === undefined) {
+      this.error(
+        "fit",
+        t
+          ? `a sleeve of ${itemRef} needs a hollow through bar (RHS or tube); ${t.placed.id} is ${t.placed.item.id}`
+          : `a sleeve of ${itemRef} sits in the through bar's bore, but a ${this.spec.type} here has no through bar`,
+        { field: "connector", ...(t ? { refs: [t.placed.id] } : {}) },
+      );
+      return undefined;
     }
-    this.sleeves++;
-    const piece = `${id}.s${this.sleeves}`;
-    this.out.pieces.push({
-      source: piece,
+    return {
       item: found.id,
       opt: stockOptions(ctx, found.bar),
-      len: L as number,
-    });
+      len: typeof len === "number" ? len : bore,
+    };
   }
 
   private requires(item: ConnectorItem): void {
