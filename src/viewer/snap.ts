@@ -74,8 +74,8 @@ export interface Ray {
 /** World point to screen pixels, or undefined when it is behind the camera. */
 export type Project = (p: V3) => P2 | undefined;
 
-/** Snap radii in pixels: a point wins inside its radius, a line inside its own. */
-export const SNAP_PX = { point: 10, line: 7 } as const;
+/** Snap radii in pixels: a point wins inside its radius (a face centre inside a smaller one), a line inside its own. */
+export const SNAP_PX = { point: 10, centre: 6, line: 7 } as const;
 
 /** The default grid step (§8: 10 mm). */
 export const GRID_MM = 10;
@@ -261,7 +261,7 @@ const TIE_PX2 = 0.25;
 export function findSnap(targets: SnapTargets, o: SnapOptions): Snap | undefined {
   const step = o.step ?? GRID_MM;
   const skip = o.skipBars ?? new Set<string>();
-  const rp = SNAP_PX.point ** 2;
+  const radius2 = (rank: number) => (rank === 0 ? SNAP_PX.point : SNAP_PX.centre) ** 2;
   const depth = (p: V3) => dot(sub(p, o.ray.o), o.ray.d);
   let best: { snap: Snap; score: number; depth: number } | undefined;
   for (const pt of targets.points) {
@@ -270,7 +270,7 @@ export function findSnap(targets: SnapTargets, o: SnapOptions): Snap | undefined
     const sp = o.project(pt.p);
     if (!sp) continue;
     const d2 = dist2(sp, o.at);
-    if (d2 > rp) continue;
+    if (d2 > radius2(pt.rank)) continue;
     // A rank is worth 3 px: an end beats a face centre drawn almost on it.
     const score = Math.sqrt(d2) + pt.rank * 3;
     const z = depth(pt.p);
