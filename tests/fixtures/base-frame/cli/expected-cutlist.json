@@ -1,0 +1,99 @@
+{
+  "schema": "alukit.cutlist/1",
+  "price_basis": "regular",
+  "groups": [
+    {
+      "item": "test:TS40",
+      "name": "Profile 40x40 (parametric)",
+      "opt": {
+        "finish": "anodised"
+      },
+      "mode": "cut",
+      "lines": [
+        {
+          "count": 2,
+          "cut_mm": 1120,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "machining": [],
+          "sources": [
+            "b9",
+            "b10"
+          ],
+          "ordered_mm": 1120,
+          "billed_mm": 1120
+        },
+        {
+          "count": 4,
+          "cut_mm": 860,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "machining": [],
+          "sources": [
+            "b1",
+            "b2",
+            "b3",
+            "b4"
+          ],
+          "ordered_mm": 860,
+          "billed_mm": 860
+        },
+        {
+          "count": 2,
+          "cut_mm": 440,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "machining": [],
+          "sources": [
+            "b7",
+            "b8"
+          ],
+          "ordered_mm": 440,
+          "billed_mm": 440
+        }
+      ],
+      "pieces": 8,
+      "total_mm": 6560,
+      "offer": "test:TS40-c7",
+      "supplier": "test-vendor",
+      "currency": "BRL"
+    },
+    {
+      "item": "test:TS4080",
+      "name": "Profile 40x80 (parametric)",
+      "opt": {
+        "finish": "anodised"
+      },
+      "mode": "cut",
+      "lines": [
+        {
+          "count": 2,
+          "cut_mm": 1200,
+          "ends": {
+            "a": "square",
+            "b": "square"
+          },
+          "machining": [],
+          "sources": [
+            "b5",
+            "b6"
+          ],
+          "ordered_mm": 1200,
+          "billed_mm": 1200
+        }
+      ],
+      "pieces": 2,
+      "total_mm": 2400,
+      "offer": "test:TS4080-c7",
+      "supplier": "test-vendor",
+      "currency": "BRL"
+    }
+  ],
+  "diagnostics": []
+}
