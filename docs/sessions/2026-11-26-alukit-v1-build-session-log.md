@@ -42,6 +42,9 @@ in the gitignored `internal/session-notes.md`.*
 | M5 core: variants, diff, revisions, GLB, skill | **done**, merged `80c05d0` (19:29), pushed | Variants (applied first in derive); `alukit diff` across files, revisions, git refs and variants, each side on its own lock; `revision save/list/show/verify` with stored outputs (zero drift); a deterministic GLB writer with no three.js (`GLTFLoader` loads it); the skill, generated from help and schemas, with `skill install`. Calls: `docs/notes/m5-decisions.md`. |
 | M6 custom parts, placeholders | **done**, merged `2ded043` (19:08), pushed | Plates and bent angles with threaded, countersunk and counterbored holes; `alukit machining` (byte-exact against the hand golden); a placeholder holds only its own order group; gap G-B resolved without a new rule (golden G28). Calls: `docs/notes/m6-decisions.md`. |
 | M4b draw tool + catalog browser + `snapshot` | **done**, merged `a25d275` (19:52), pushed | Analytic snapping, work plane, draw/connect/place/pattern/measure tools, orthographic views, catalog browser, `alukit snapshot`. A Playwright mouse run draws the cart's base frame; its cut list and BOM are byte-identical to the CLI fixture's. Calls: `docs/notes/m4b-decisions.md`. |
+| Docs: README, guide, notes index, design-vs-built | **done**, merged `f242435` (20:04), pushed | Real screenshot made by `alukit snapshot` (`docs/images/cart-iso.png`). 17 design-vs-built entries. |
+| M4c: close the design-vs-built feature gaps | running (Opus, worktree), launched 20:05 | variant switcher, export button, clipping plane, Open items / Params / Decisions tabs, pivot and face in the connect tool, `catalog search` / `import` |
+| Full acceptance (§13), internal | running (Opus, worktree), launched 19:32 | outputs in `internal/acceptance/` only |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
 | M2b rest of Forseti | **done** (17:43), merged, pushed | All 1,196 orderable SKUs map to offers (1,208 offers, 1,034 items: 497 generic, 235 fasteners, 151 accessories, 100 connectors, 31 bars, 12 panels, 8 carriages). All 27 profile stems have sections (8 exact, 19 parametric). New connectors are marked as having no mounting model yet. Gate: 322 tests. Calls: [`docs/notes/m2b-decisions.md`](../notes/m2b-decisions.md). |
@@ -245,3 +248,14 @@ in the gitignored `internal/session-notes.md`.*
   - The skill's worked example ends with a snapshot.
   - No golden or existing expectation changed.
 - **19:32**: Full acceptance (§13) launched on Opus in a worktree; its outputs are internal.
+- **19:56**: CI green on `8f88691`, the merge of all v1 milestones.
+- **20:04**: The documentation pass merged (Sonnet; the coordinator re-ran the gate: PASS, 531).
+  - A user README with a quickstart, CLI table, catalogs, agents and development.
+  - `docs/guide.md`, `docs/notes/README.md` (index of the 13 notes).
+  - `docs/notes/design-vs-built.md`: 17 entries. The biggest: G-A's bar-named normal (already in
+    draft 2.2); the viewer lacks parts of §8; the work plane defaults to the ground.
+  - The coordinator looked at the screenshot: the frame, rails with carriages, braces, plate and
+    placeholder all render. One lower diagonal seems to reach outside the footprint. M4c checks
+    whether the fixture means that, without touching goldens.
+- **20:05**: M4c launched to close the design-vs-built entries that are missing features rather
+  than deliberate deviations.
