@@ -39,7 +39,7 @@ in the gitignored `internal/session-notes.md`.*
 | std / ref-hiwin verification | **done** (16:09), merged, pushed | 40 rows: 33 verified, 5 corrected, 3 partly unverifiable. Table: [`docs/notes/std-hiwin-verification.md`](../notes/std-hiwin-verification.md). |
 | M3b part 1: generation + BOM | running (Opus, worktree), launched 16:10 | G22–G25, cart extended |
 | M3b part 2: commands, canonical form, lock | running (Opus, worktree), launched 16:10 | §6, §4.13, `fmt`, `do`, `query`, `check` |
-| Early acceptance slice | running (Sonnet), launched 16:10 | internal: the reference frame's T-slot cut list against its record |
+| Early acceptance slice | **passed** (16:14) | All 75 T-slot pieces of the reference frame are within 0.5 mm of the record's drawn length; the largest difference is 0.04 mm. No AluKit bugs. Two pieces needed stand-ins (gaps G-A and G-B below). Details are internal. |
 | M1 catalog core | **done** (14:56), pushed `54ff321` | 94 tests. The 40x40 básico computes 553.53 mm², Ix 9.1287 and Iy 9.1307 cm⁴. 8 generators, worst 0.0025% from closed form. 43 schema calls in [`docs/notes/m1-decisions.md`](../notes/m1-decisions.md). Re-verified by the coordinator. |
 | M2a first catalogs | **done** (15:51), fast-forwarded and pushed | forseti: 103 items, 159 offers, 8 exact + 3 parametric sections. std: 19 items. ref-hiwin: 12. `catalog check` passes on all three. The importer is byte-deterministic. 107 tests (+1 skipped without the importer inputs). |
 
@@ -126,3 +126,11 @@ in the gitignored `internal/session-notes.md`.*
 - **16:10**: Pushed `737b549`. M3b split in two parallel tracks (generation + BOM; commands,
   canonical form and lock). Part 3 (offers, order list, costs) follows part 1. The early acceptance
   slice runs alongside, internal only.
+- **16:14**: Early acceptance slice passed (75/75, max 0.04 mm). Two gaps it relied on stand-ins
+  for:
+  - **G-A:** a strut end bearing on a shoe that is mitred square to the strut can't be derived yet.
+    The slice typed the trim as `extend_mm`. Draft 2.1 (§16) claims the end-bearing butt with
+    `spacer_mm` covers this case, so either the claim or the implementation is short. Queued for
+    M3b part 3's review: prove it with a golden case or fix the rule.
+  - **G-B:** a placeholder body needs project items (M6). The slice placed a catalog bracket by
+    hand.
