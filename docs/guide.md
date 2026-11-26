@@ -60,7 +60,7 @@ Anywhere a number goes, an expression may go.
 **Points** are `[x, y, z]`, a node id, a point on a bar that follows it (`{ "on": ... }`), or a
 hinge (`{ "pivot": "c13" }`). **Bars** run from end `a` to end `b`; `item` picks the profile (or
 the `defaults`), `anchor` names the section point that sits on the line, `roll_deg` turns the
-section.
+section. `alukit catalog search "40x40" --kind bar` finds an item's id.
 
 ```json
 "bars": {
@@ -185,13 +185,18 @@ The left side has the **Project** tree (bars, connections, parts, patterns, item
 **Catalog** browser (vendor, kind, family, search; each card shows the section, key data with its
 source, options and offers, and **Set as palette**). The centre is the 3D view, the right side
 the properties of the selection (every catalog number says where it comes from), and the bottom
-drawer holds the outputs.
+drawer holds the outputs and the document's records.
+
+The top bar has the project's name, the **variant** every view shows (when the project has
+variants; edits still go to the document), undo and redo naming the step, the **revision** (its
+name when the current state is a saved revision, else "unsaved"; click it to save one or verify
+one), and **Export GLB**, which downloads the variant shown as `alukit export glb` writes it.
 
 | Tool | Key | How |
 |---|---|---|
 | Select | `V` | click to pick, Ctrl or Cmd-click to toggle, Shift-drag a box, `Esc` clears |
 | Draw bar | `B` | click a start, then click an end, or type a length and press `Enter` |
-| Connect | `C` | pick a through bar and the ends that butt, two ends for a miter or splice, or two or more bars for a face joint, then apply |
+| Connect | `C` | pick a through bar and the ends that butt, two ends for a miter or splice, or two or more bars for a face joint, then apply. A face joint takes a fastening (none, bolt, T-nut, screw) with its fastener, stack and stations; a pivot takes a station on a face as its base, then the ends it carries, and a hinge |
 | Place part | `P` | click a face or groove; type the distance from an end; roll in quarter turns |
 | Pattern | button | take the selection as the template, click the bar to repeat along, give pitch and count |
 | Measure | `M` | two snapped points: the distance and its components |
@@ -213,12 +218,16 @@ While drawing:
   `Shift` with it redoes.
 
 Views: the toolbar has Iso, Top, Front, Side, Left, Back and Bottom, `O` toggles perspective and
-orthographic, `F` fits the selection (or everything). A hinge, a bolted face joint and anything
-else the tools do not cover is one `alukit do` away.
+orthographic, `F` fits the selection (or everything). **Section** cuts the view with a plane
+square to X, Y or Z: move it with its slider, **Flip** shows the other side. It changes only
+what you see; clicks and snaps ignore what it hides. Anything the tools do not cover is one
+`alukit do` away.
 
 Every gesture is one step in the history. The drawer's tabs hold the outputs described next; its
-Order and Costs tabs have a date for the staleness of prices. If the file on disk stops being
-valid, a banner says why and the tools are disabled until it is fixed.
+Order and Costs tabs have a date for the staleness of prices. Its **Open items**, **Params** and
+**Decisions** tabs edit those records: add or resolve an open item, set or remove a param, record
+a decision, each one step that undo takes back. If the file on disk stops being valid, a banner
+says why and the tools are disabled until it is fixed.
 
 ## Reading the outputs
 
@@ -303,6 +312,8 @@ alukit revision verify my-frame "v1"     # re-derive and report any drift; exit 
 
 `verify` opens no catalog: it derives again from the stored document and lock and compares every
 output. The report names every field that moved; a different AluKit or Node version is noted, not counted as drift.
+While `alukit serve` runs, `revision save` goes through the server, as the app's revision panel
+does.
 
 `alukit diff <a> [<b>]` shows what moved between two sides: entities, cut lengths, BOM and order
 lines, prices, totals and the lock. A side is a project folder or its `alukit.json`, a revision
@@ -321,7 +332,7 @@ alukit diff . --variant standard --variant tall  # one side, two variants
 `alukit export glb <dir> -o model.glb` writes the model as binary glTF: Y up, metres, a node per
 bar, part and fastener named `<id> <label|item>`, with the item, SKU, options and cut length in
 `extras`. A project plate's or angle's holes are children of its node. The same project gives the
-same bytes. `alukit snapshot <dir> --view iso --size 1600x1000 -o shot.png` renders a view to
+same bytes, and the app's Export GLB downloads them. `alukit snapshot <dir> --view iso --size 1600x1000 -o shot.png` renders a view to
 PNG in headless Chromium; the document can name its own views.
 
 Next: the [design](design.md) for the rules behind each of these, and the

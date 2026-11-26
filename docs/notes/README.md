@@ -18,5 +18,6 @@ cite them as "m4a decision 13". Where the build differs from the design, see
 | [`m3b-order-decisions.md`](m3b-order-decisions.md) | M3b part 3: offer selection, the order list per supplier, the order rules, cost lines and totals, price bands |
 | [`m4a-decisions.md`](m4a-decisions.md) | M4a, the viewer and the server that owns the document: history and the watcher, the API and its security, rendering, the drawer's tabs, `pnpm dev` |
 | [`m4b-decisions.md`](m4b-decisions.md) | M4b, drawing with the mouse: the base-frame oracle, draw/connect/place/pattern/measure, snapping, the work plane, the catalog browser, cameras and `snapshot` |
+| [`m4c-decisions.md`](m4c-decisions.md) | M4c, the v1 gaps: `?variant=` on the API, export and revisions through the server, the variant switch, the section plane, the record tabs, pivots and fastened joints in Connect, `catalog search`/`import`, `derive --select`; the cart image's "brace" |
 | [`m5-decisions.md`](m5-decisions.md) | M5: variants, diff, revisions and their stamps, the GLB writer and its shared mesh modules, the agent skill |
 | [`m6-decisions.md`](m6-decisions.md) | M6: project items (plates, bent angles, generic items, placeholders), hole features, mass formulas, the machining sheet, gap G-B |
