@@ -174,6 +174,31 @@ describe("direct edits", () => {
     expect(await text(dir)).toBe(projectText(h.state.doc));
   });
 
+  it("come before a command that arrives first: a step never writes over an unseen edit", async () => {
+    // No watcher here: the edit is on disk, and nothing has reported it.
+    const { h, dir } = await host();
+    const doc = JSON.parse(await text(dir));
+    doc.nodes.n1 = [540, 0, 100];
+    await writeFile(join(dir, DOCUMENT), JSON.stringify(doc));
+    const a = await h.commands({ commands: [addNode([1, 2, 3])], source: "ui", baseRev: 0 });
+    expect(a).toMatchObject({
+      ok: true,
+      rev: 2,
+      between: [{ rev: 1, source: "file", what: "file edit" }],
+    });
+    const nodes = JSON.parse(await text(dir)).nodes;
+    expect(nodes).toEqual({ n1: [540, 0, 100], n2: [1, 2, 3] });
+
+    // An undo right after an unseen edit takes that edit back: it is the latest step.
+    doc.nodes.n1 = [540, 0, 120];
+    await writeFile(
+      join(dir, DOCUMENT),
+      JSON.stringify({ ...doc, nodes: { ...doc.nodes, n2: [1, 2, 3] } }),
+    );
+    expect(await h.undo("ui")).toMatchObject({ ok: true, step: { source: "file" } });
+    expect(JSON.parse(await text(dir)).nodes.n1).toEqual([540, 0, 100]);
+  });
+
   it("pin an item a direct edit newly names into the lock", async () => {
     const { h, dir } = await host();
     const doc = JSON.parse(await text(dir));
@@ -254,11 +279,17 @@ describe("direct edits", () => {
   });
 
   it("are seen by the watcher, whether an editor writes in place or by rename", async () => {
+    // fs.watch alone (no stat poll). On macOS its FSEvents stream starts some time after `watch`
+    // returns, with no signal when it is live, and an event before that is never reported (the
+    // poll covers that window in the product). So the first edit is written again until seen.
     const { h, dir } = await host("golden-ends/G27", { settleMs: 20, pollMs: 0 });
     const doc = JSON.parse(await text(dir));
     doc.nodes.n1 = [540, 0, 100];
-    await writeFile(join(dir, DOCUMENT), JSON.stringify(doc));
-    await until(() => h.rev === 1);
+    for (let attempt = 0; h.rev === 0; attempt++) {
+      if (attempt === 5) throw new Error("the watcher never reported an edit");
+      await writeFile(join(dir, DOCUMENT), JSON.stringify(doc));
+      await until(() => h.rev === 1, 1000).catch(() => {});
+    }
 
     doc.nodes.n1 = [540, 0, 120];
     await writeFile(join(dir, ".alukit.json.swp"), JSON.stringify(doc));

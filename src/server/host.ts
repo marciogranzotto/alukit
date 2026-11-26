@@ -257,7 +257,14 @@ export class ProjectHost {
       disk.lock = sha(text);
     }
     const host = new ProjectHost(opts, { doc: raw, lock }, disk, live.diagnostics);
-    if (opts.watch !== false) host.startWatching();
+    if (opts.watch !== false) {
+      host.startWatching();
+      // An edit between the read above and the watchers starting would be reported by neither:
+      // the stat poll's baseline is taken as it starts. Read once more now; anything later, the
+      // poll sees even while fs.watch's own stream is still starting (macOS FSEvents starts
+      // it after `watch` returns).
+      await host.checkFiles();
+    }
     return host;
   }
 
@@ -327,6 +334,8 @@ export class ProjectHost {
   /** "Restore last good" (§7.1): writes the last good state over files that are not valid. */
   restore(): Promise<{ ok: boolean; rev: number; message?: string }> {
     return this.run(async () => {
+      // A fix saved a moment ago, before the watcher saw it, is not to be overwritten.
+      await this.takeInFiles();
       if (!this.statusValue.readOnly) {
         return { ok: true, rev: this.rev, message: "the files already hold the current state" };
       }
@@ -381,6 +390,9 @@ export class ProjectHost {
   }
 
   private async applyNow(req: CommandsRequest): Promise<CommandsAnswer> {
+    // A direct edit the watcher has not reported yet (it waits for a burst to settle) comes
+    // first: otherwise this step's write would replace it unseen.
+    await this.takeInFiles();
     const rev0 = this.rev;
     const between = this.log().filter(
       (e) => req.baseRev !== undefined && e.rev > req.baseRev && e.rev <= rev0,
@@ -423,6 +435,7 @@ export class ProjectHost {
   }
 
   private async move(which: "undo" | "redo", source: string): Promise<HistoryAnswer> {
+    await this.takeInFiles();
     const rev0 = this.rev;
     if (this.statusValue.readOnly) {
       return { ok: false, kind: "read-only", message: this.statusValue.message, rev: rev0 };
