@@ -21,9 +21,9 @@ import { type P2, simplifyRing } from "./outline.ts";
 /**
  * What drawing needs beyond the derived model (design §8, §9): each bar's section and where the
  * section sits on the design line, the sections' display outlines (§3.5: simplified at
- * 0.05 mm) with their grooves and datums, parts' boxes, the shapes and holes of the project's
- * plates and bent angles (§4.8), and fasteners' positions; the grooves and datums are what the
- * draw tool snaps to (§8). Built from a derived model and the items it was derived
+ * 0.05 mm) with their grooves and datums, parts' boxes and datums, the shapes and holes of the
+ * project's plates and bent angles (§4.8), and fasteners' positions; the grooves and datums are
+ * what the draw tool snaps to (§8). Built from a derived model and the items it was derived
  * with, on the server for the viewer and in the CLI for the GLB writer, so both draw the same
  * shapes. Items are read as derive reads them: the catalogs' and the document's own
  * (`projectItems`). No three.js.
@@ -130,12 +130,20 @@ export function meshDisplay(derived: Derived, items: ItemSource): MeshInput["dis
     const r = own.resolved.get(p.item);
     const shape = r ? shapeOf(r) : undefined;
     const m = r?.view.mass_kg;
+    const named =
+      (found.ok ? (found.item as { datums?: Readonly<Record<string, V3>> }).datums : undefined) ??
+      {};
+    const datums: Record<string, V3> = {};
+    for (const k of Object.keys(named).sort()) {
+      datums[k] = (named[k] as V3).map(len) as unknown as V3;
+    }
     parts[id] = {
       ...(box ? { box } : {}),
       translucent: !box || p.kind === "placeholder",
       ...(p.kind === "placeholder" ? { placeholder: true } : {}),
       ...(shape ? { shape } : {}),
       ...(m ? { mass_kg: mass(m.v), mass_src: m.src } : {}),
+      ...(Object.keys(datums).length > 0 ? { datums } : {}),
     };
   }
 

@@ -1,11 +1,14 @@
-import type { BarJson, V3, ViewBar, ViewSection } from "../mesh/model.ts";
+import { insidePolygon } from "#core/project-items/geometry.ts";
+import type { BarJson, PartJson, V3, ViewBar, ViewPart, ViewSection } from "../mesh/model.ts";
 
 /**
  * Snapping (design §8): analytic, from the derived model, never a raycast against meshes. The
  * targets are nodes, bar ends, face centres, and lines along each bar (its design line, the
  * centre line of each face of its placed box, and the centre line of each groove), on which a
- * point lands at a station (§4.3); then the grid on the work plane. Pure: the caller gives the
- * pointer's ray and a projection to the screen, so a test needs no renderer.
+ * point lands at a station (§4.3); each placed part's datums and face centres, catalog parts and
+ * the project's own plates, bent angles and placeholders alike (§4.8); then the grid on the work
+ * plane. Pure: the caller gives the pointer's ray and a projection to the screen, so a test needs
+ * no renderer.
  */
 
 export type Face = "+x" | "-x" | "+y" | "-y";
@@ -17,6 +20,8 @@ export type SnapRef =
   | { kind: "end"; bar: string; end: "a" | "b" }
   /** A point on a bar: on its design line, or on a face's or a groove's centre line. */
   | { kind: "station"; bar: string; at_mm: number; face?: Face; groove?: string }
+  /** A point of a placed part (a datum, a face centre): a document point cannot name a part, so it is written as coordinates. */
+  | { kind: "part"; part: string }
   | { kind: "grid" }
   | { kind: "free" };
 
@@ -60,9 +65,11 @@ export interface SnapTargets {
 export interface SnapModel {
   nodes: Readonly<Record<string, V3>>;
   bars: Readonly<Record<string, BarJson>>;
+  parts?: Readonly<Record<string, PartJson>>;
   display: {
     bars: Readonly<Record<string, ViewBar>>;
     sections: Readonly<Record<string, ViewSection>>;
+    parts?: Readonly<Record<string, ViewPart>>;
   };
 }
 
@@ -135,6 +142,74 @@ export function grooveLines(
   return out;
 }
 
+/** A plate's outline centroid (area-weighted), when the outline has area and holds it. */
+function plateCentre(outline: readonly P2[]): P2 | undefined {
+  let a = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < outline.length; i++) {
+    const [x0, y0] = outline[i] as P2;
+    const [x1, y1] = outline[(i + 1) % outline.length] as P2;
+    const c = x0 * y1 - x1 * y0;
+    a += c;
+    cx += (x0 + x1) * c;
+    cy += (y0 + y1) * c;
+  }
+  if (Math.abs(a) < 1e-9) return undefined;
+  const p: P2 = [cx / (3 * a), cy / (3 * a)];
+  // A concave outline's centroid may lie in a notch, off the plate.
+  return insidePolygon(p, outline) ? p : undefined;
+}
+
+/**
+ * A part's snap points in its own frame (§3.2): its datums, and its origin unless a datum is
+ * there; then the centre of each face it has, which are on the material: a box's six faces; a
+ * plate's front (z = T) and back (z = 0) at its outline's centroid, when that lies on the plate;
+ * a bent angle's flats, inside and outside, at the middle of each leg's flat (M6: leg a on the
+ * mounting face along +y, leg b rising along +z, each flat from R + T to the leg's length).
+ */
+export function partPoints(
+  view: ViewPart | undefined,
+): { local: V3; name: string; rank: number }[] {
+  const out: { local: V3; name: string; rank: number }[] = [];
+  const datums = view?.datums ?? {};
+  for (const [name, d] of Object.entries(datums))
+    out.push({ local: d, name: `datum ${name}`, rank: 0 });
+  if (!Object.values(datums).some((d) => d[0] === 0 && d[1] === 0 && d[2] === 0)) {
+    out.push({ local: [0, 0, 0], name: "origin", rank: 0 });
+  }
+  const shape = view?.shape;
+  if (shape?.kind === "plate") {
+    const c = plateCentre(shape.outline);
+    if (c) {
+      out.push({ local: [c[0], c[1], shape.thickness], name: "front face centre", rank: 1 });
+      out.push({ local: [c[0], c[1], 0], name: "back face centre", rank: 1 });
+    }
+  } else if (shape?.kind === "bent-angle") {
+    const { thickness: T, radius: R, length: L } = shape;
+    const [a, b] = shape.legs;
+    const ya = (R + T + a) / 2;
+    const zb = (R + T + b) / 2;
+    out.push({ local: [L / 2, ya, 0], name: "leg a outside centre", rank: 1 });
+    out.push({ local: [L / 2, ya, T], name: "leg a inside centre", rank: 1 });
+    out.push({ local: [L / 2, 0, zb], name: "leg b outside centre", rank: 1 });
+    out.push({ local: [L / 2, T, zb], name: "leg b inside centre", rank: 1 });
+  } else if (view?.box) {
+    const [[x0, y0, z0], [x1, y1, z1]] = view.box;
+    const c: V3 = [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2];
+    const faces: [string, V3][] = [
+      ["+x", [x1, c[1], c[2]]],
+      ["-x", [x0, c[1], c[2]]],
+      ["+y", [c[0], y1, c[2]]],
+      ["-y", [c[0], y0, c[2]]],
+      ["+z", [c[0], c[1], z1]],
+      ["-z", [c[0], c[1], z0]],
+    ];
+    for (const [f, p] of faces) out.push({ local: p, name: `${f} face centre`, rank: 1 });
+  }
+  return out;
+}
+
 /** The snap targets of a model (§8). */
 export function snapTargets(m: SnapModel): SnapTargets {
   const points: SnapPoint[] = [];
@@ -184,6 +259,20 @@ export function snapTargets(m: SnapModel): SnapTargets {
           label: `${id} groove ${g.name}`,
         });
       }
+    }
+  }
+  for (const [id, part] of Object.entries(m.parts ?? {})) {
+    if (part.unplaced || !part.frame || !part.origin) continue;
+    const { x, y, z } = part.frame;
+    const o = part.origin;
+    for (const lp of partPoints(m.display.parts?.[id])) {
+      const [lx, ly, lz] = lp.local;
+      points.push({
+        p: addScaled(addScaled(addScaled(o, x, lx), y, ly), z, lz),
+        ref: { kind: "part", part: id },
+        label: `${id} ${lp.name}`,
+        rank: lp.rank,
+      });
     }
   }
   return { points, lines };

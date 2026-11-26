@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BarJson, V3, ViewSection } from "../mesh/model.ts";
+import type { BarJson, PartJson, V3, ViewPart, ViewSection } from "../mesh/model.ts";
 import {
   barCommands,
   endUnder,
@@ -10,7 +10,15 @@ import {
   typedEnd,
   writtenPoint,
 } from "./draw.ts";
-import { findSnap, meetLine, type P2, type Ray, type SnapModel, snapTargets } from "./snap.ts";
+import {
+  findSnap,
+  meetLine,
+  type P2,
+  partPoints,
+  type Ray,
+  type SnapModel,
+  snapTargets,
+} from "./snap.ts";
 import { facePlane, GROUND, gridSnap, onGrid, rayFace, rayPlane } from "./workplane.ts";
 
 /**
@@ -154,6 +162,123 @@ describe("snapping (§8)", () => {
     expect(meetLine([0, 0, 1000], [1, 0, 0], { a: [1200, 0, 0], t: [0, 0, 1], len: 900 })).toBe(
       undefined,
     );
+  });
+});
+
+describe("snapping to parts (§8, §4.8)", () => {
+  /** A part placed with its frame turned a quarter about Z: local x is world +Y. */
+  const turned = (origin: V3): PartJson => ({
+    item: "project:x",
+    kind: "plate",
+    opt: {},
+    frame: { x: [0, 1, 0], y: [-1, 0, 0], z: [0, 0, 1] },
+    origin,
+    point: origin,
+  });
+  const local = (view: ViewPart) => partPoints(view).map((p) => [p.name, p.local]);
+
+  it("offers a box's datums, its origin and its six face centres", () => {
+    const box: ViewPart = {
+      box: [
+        [-60, -45, 0],
+        [60, 45, 110],
+      ],
+      translucent: true,
+      placeholder: true,
+      datums: { top: [0, 0, 110] },
+    };
+    expect(local(box)).toEqual([
+      ["datum top", [0, 0, 110]],
+      ["origin", [0, 0, 0]],
+      ["+x face centre", [60, 0, 55]],
+      ["-x face centre", [-60, 0, 55]],
+      ["+y face centre", [0, 45, 55]],
+      ["-y face centre", [0, -45, 55]],
+      ["+z face centre", [0, 0, 110]],
+      ["-z face centre", [0, 0, 0]],
+    ]);
+    // A datum at the origin stands for it.
+    expect(local({ translucent: false, datums: { mount: [0, 0, 0] } })).toEqual([
+      ["datum mount", [0, 0, 0]],
+    ]);
+  });
+
+  it("puts a plate's face centres at its outline's centroid, and only on the plate", () => {
+    const plate = (outline: P2[]): ViewPart => ({
+      translucent: false,
+      shape: { kind: "plate", thickness: 8, outline, holes: [] },
+    });
+    expect(
+      local(
+        plate([
+          [0, 0],
+          [100, 0],
+          [100, 60],
+          [0, 60],
+        ]),
+      ),
+    ).toEqual([
+      ["origin", [0, 0, 0]],
+      ["front face centre", [50, 30, 8]],
+      ["back face centre", [50, 30, 0]],
+    ]);
+    // A thin L: its centroid falls in the notch, off the plate, so no face centre.
+    const l = plate([
+      [0, 0],
+      [100, 0],
+      [100, 5],
+      [5, 5],
+      [5, 100],
+      [0, 100],
+    ]);
+    expect(local(l)).toEqual([["origin", [0, 0, 0]]]);
+  });
+
+  it("puts a bent angle's face centres on the middle of each leg's flat", () => {
+    const angle: ViewPart = {
+      translucent: false,
+      shape: { kind: "bent-angle", thickness: 3, legs: [40, 30], length: 50, radius: 3, holes: [] },
+    };
+    // Each flat runs from R + T = 6 to the leg's length: leg a's middle at y = 23, leg b's at z = 18.
+    expect(local(angle)).toEqual([
+      ["origin", [0, 0, 0]],
+      ["leg a outside centre", [25, 23, 0]],
+      ["leg a inside centre", [25, 23, 3]],
+      ["leg b outside centre", [25, 0, 18]],
+      ["leg b inside centre", [25, 3, 18]],
+    ]);
+  });
+
+  it("places them by the part's frame and writes them as coordinates", () => {
+    const m: SnapModel = {
+      nodes: {},
+      bars: {},
+      parts: {
+        p8: turned([900, 580, 128]),
+        p2: { item: "x", kind: "part", opt: {}, unplaced: true },
+      },
+      display: {
+        bars: {},
+        sections: {},
+        parts: {
+          p8: {
+            box: [
+              [-60, -45, 0],
+              [60, 45, 110],
+            ],
+            translucent: true,
+          },
+        },
+      },
+    };
+    const t = snapTargets(m);
+    expect(t.points.every((p) => p.ref.kind === "part" && p.ref.part === "p8")).toBe(true);
+    const plusX = t.points.find((p) => p.label === "p8 +x face centre");
+    // Local +x is world +Y: 60 along it from the origin, 55 up.
+    expect(plusX?.p).toEqual([900, 640, 183]);
+    const top = findSnap(t, { ...over(900, 238), project: front.project });
+    expect(top).toMatchObject({ ref: { kind: "part", part: "p8" }, label: "p8 +z face centre" });
+    expect(writtenPoint(top as NonNullable<typeof top>, {})).toEqual([900, 580, 238]);
   });
 });
 

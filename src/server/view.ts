@@ -11,9 +11,9 @@ import type { Snapshot } from "./host.ts";
  * - `derived`: the derived model as `alukit.derived/1` (§7.3), the contract report builders read;
  * - `display`: what drawing and snapping need beyond it: each bar's section and where the
  *   section sits on the design line, the sections' display outlines (§3.5: simplified at
- *   0.05 mm) with their grooves and datums, parts' boxes,
- *   the shapes and holes of the project's plates and bent angles (§4.8), and fasteners'
- *   positions (`meshDisplay`, which the GLB writer uses too, §9);
+ *   0.05 mm) with their grooves and datums, parts' boxes and datums, the shapes and holes of the
+ *   project's plates and bent angles (§4.8), and fasteners' positions (`meshDisplay`, which the
+ *   GLB writer uses too, §9);
  * - `items`: the catalog entries the model uses, as the lock pins them, with their provenance
  *   (§1, principle 3), for the properties panel;
  * - `check`, `cutlist`, `bom`: the bottom drawer's tables (§8).

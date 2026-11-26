@@ -214,7 +214,12 @@ export function createTools(viewer: Viewer): Tools {
 
   const offModel = model.subscribe((m) => {
     if (!m) return;
-    targets = snapTargets({ nodes: m.derived.nodes, bars: m.derived.bars, display: m.display });
+    targets = snapTargets({
+      nodes: m.derived.nodes,
+      bars: m.derived.bars,
+      parts: m.derived.parts,
+      display: m.display,
+    });
     // A new revision moves what was under the pointer.
     if (pointer) handler()?.move?.(pointer);
   });

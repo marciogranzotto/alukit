@@ -90,6 +90,8 @@ export interface ViewPart {
   /** A project item's mass, computed from its material or entered, and its source (§3.3). */
   mass_kg?: number;
   mass_src?: string;
+  /** The item's named points in its own frame (`mount`, §4.7), which the draw tool snaps to (§8). */
+  datums?: Record<string, V3>;
 }
 
 /**

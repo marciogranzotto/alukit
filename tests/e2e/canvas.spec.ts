@@ -136,3 +136,29 @@ test("selection: the tree and a box pick entities; properties show derived value
   await page.getByRole("tab", { name: "Checks" }).click();
   await expect(page.getByTestId("checks")).toContainText("0 errors");
 });
+
+test("the tools snap to the project's own items: a placeholder's face centre and origin", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await openTab(page, served, 0);
+  const clickOn = async (p: [number, number, number], says: RegExp) => {
+    const at = await page.evaluate((q) => window.__alukit?.screen(q), p);
+    if (!at) throw new Error(`${p} is not on the screen`);
+    await page.mouse.move(at[0], at[1], { steps: 4 });
+    await expect
+      .poll(async () => (await page.evaluate(() => window.__alukit?.tool()))?.hint ?? "", {
+        timeout: 2000,
+      })
+      .toMatch(says);
+    await page.mouse.click(at[0], at[1]);
+  };
+  // Measure the gear motor p8 (a placeholder at a world pose, box 120 x 90 x 110 from its
+  // origin): from its top face's centre down to its origin.
+  await page.getByTestId("tool-measure").click();
+  await clickOn([900, 580, 238], /^p8 \+z face centre$/);
+  await clickOn([900, 580, 128], /^p8 origin$/);
+  await expect(page.getByTestId("measure-result")).toContainText("110.00 mm");
+  expect(errors).toEqual([]);
+});
