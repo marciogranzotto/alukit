@@ -35,7 +35,11 @@ in the gitignored `internal/session-notes.md`.*
 | M0 scaffold | **done** (14:16), pushed `81a8a8e` | Every done-when check passed in a fresh clone on Node 26.13.1 / pnpm 12.23.0 (agent), and again on the coordinator's own run. First CI run on GitHub: **success** (run 45866365568). |
 | M1.5 paper model | **done** (14:48) | 254 of 254 bodies in the document: 88 clean, 166 awkward, 0 missing. 20 schema gaps (P1–P20) with fixes. The end-plane rules reproduce every drawn bar length within 0.05 mm. Public summary: [`docs/reviews/m1.5-paper-model-findings.md`](../reviews/m1.5-paper-model-findings.md). |
 | Design draft 2.1 | **done** (15:08), pushed `9093d70` | P1–P20 resolved (two v1 exclusions); new golden cases G17–G26; §16 resolution table; four additive catalog-schema changes, handed to M2a. |
-| M3a geometry core | running (Opus, own worktree), launched 15:10 | project schema, expressions, frames, end planes (two sweeps), connections, cut list, golden cases, cart fixture |
+| M3a geometry core | **done** (16:08), merged `9ab4355`, pushed | G1–G21 and the §4.4 frame table pass to 0.01 mm; no design golden value was wrong. The cart's 37 bars equal an independent hand table. `derive --json` is byte-identical across runs and processes. 198 tests on its branch, 211 after merge. 39 calls in [`docs/notes/m3a-decisions.md`](../notes/m3a-decisions.md). |
+| std / ref-hiwin verification | **done** (16:09), merged, pushed | 40 rows: 33 verified, 5 corrected, 3 partly unverifiable. Table: [`docs/notes/std-hiwin-verification.md`](../notes/std-hiwin-verification.md). |
+| M3b part 1: generation + BOM | running (Opus, worktree), launched 16:10 | G22–G25, cart extended |
+| M3b part 2: commands, canonical form, lock | running (Opus, worktree), launched 16:10 | §6, §4.13, `fmt`, `do`, `query`, `check` |
+| Early acceptance slice | running (Sonnet), launched 16:10 | internal: the reference frame's T-slot cut list against its record |
 | M1 catalog core | **done** (14:56), pushed `54ff321` | 94 tests. The 40x40 básico computes 553.53 mm², Ix 9.1287 and Iy 9.1307 cm⁴. 8 generators, worst 0.0025% from closed form. 43 schema calls in [`docs/notes/m1-decisions.md`](../notes/m1-decisions.md). Re-verified by the coordinator. |
 | M2a first catalogs | **done** (15:51), fast-forwarded and pushed | forseti: 103 items, 159 offers, 8 exact + 3 parametric sections. std: 19 items. ref-hiwin: 12. `catalog check` passes on all three. The importer is byte-deterministic. 107 tests (+1 skipped without the importer inputs). |
 
@@ -52,6 +56,9 @@ in the gitignored `internal/session-notes.md`.*
 - **pnpm's release-age policy.** pnpm 12 refused vite 8.4.0 (published 2026-11-26) under its
   minimum-release-age rule, so `pnpm-workspace.yaml` carries `minimumReleaseAgeExclude:
   [vite@8.4.0]`. Drop the exclusion once 8.4.0 is old enough.
+- **HIWIN MP/MY editions disagree.** The cited G99TE24-2410 prints 140/280/490/700 N·m. HIWIN
+  GmbH's 2013 and 2024 catalogues print 100/200/330/530. The catalog keeps the cited values, with a
+  note that the lower ones are conservative. Pick one before loads (v2).
 - **std and ref-hiwin values from recall.** The `std` catalog's standard table and clause numbers
   (DIN/ISO) were written by an agent from recall. The values match common tables, but the
   citations needed a check; done 2026-11-26, see `docs/notes/std-hiwin-verification.md`. The
@@ -106,3 +113,16 @@ in the gitignored `internal/session-notes.md`.*
   - Lint failed after the merge, though M2a had reported it passing: Biome was scanning the
     agents' worktrees in `.claude/worktrees/` and their nested `biome.json`. Fixed with Biome's
     force-ignore `!!.claude`.
+- **16:08**: M3a done (11 commits). Merged with `--no-ff`; the only conflict was the README
+  status line.
+  - Non-obvious calls: a `miter` declares the angle cut on both ends; pattern `count` includes the
+    template; a point never reads a cut (keeps placement iteration-free); `end-far` is measured
+    along the face normal.
+  - The merged tree is green: 211 tests, build, e2e, and all three catalog checks.
+- **16:09**: std / ref-hiwin verification merged.
+  - Corrected: HIWIN's minimum rail end distance (6/7/8/9 mm from HIWIN GmbH's catalogue, not
+    estimates); the steel-density citation (EN 1991-1-1, not 1993-1-1); the RHS citation.
+  - Flagged: HIWIN editions disagree on MP/MY (140–700 against 100–530 N·m).
+- **16:10**: Pushed `737b549`. M3b split in two parallel tracks (generation + BOM; commands,
+  canonical form and lock). Part 3 (offers, order list, costs) follows part 1. The early acceptance
+  slice runs alongside, internal only.
