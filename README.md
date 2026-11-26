@@ -26,6 +26,10 @@ through a documented file format and a CLI.
 - The order list per supplier (cheapest pack cover, kits, price bands, cost lines covering
   machining, READY or BLOCKED by named rules) and the costs and totals: `alukit order <dir>` and
   `alukit costs <dir>`.
+- Project items (M6): custom plates and bent angles with through, threaded, countersunk and
+  counterbored holes, weighed from their material; generic items and placeholders, which bars
+  can bear on and which hold only their own order line; and the machining sheet, each custom
+  part's holes from its datum: `alukit machining <dir>`.
 
 The app still draws an empty scene.
 

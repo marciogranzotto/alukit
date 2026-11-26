@@ -63,7 +63,11 @@ export function projectQuantum(path: readonly PathKey[]): number | undefined {
   if (typeof path[path.length - 1] === "number" && k === path.length - 2) {
     if (POINT_KEYS.has(key)) return 100;
     if (path.length === 3 && path[0] === "nodes") return 100;
+    // A project item's named datum, `datums.mount` (§4.8).
+    if (path[k - 1] === "datums") return 100;
   }
+  // A plate's outline, a list of [x, y] points in mm (§4.8).
+  if (key === "outline" && k === path.length - 3 && typeof path[k + 1] === "number") return 100;
   return undefined;
 }
 
