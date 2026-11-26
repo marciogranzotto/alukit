@@ -8,7 +8,9 @@ a priced bill of materials from real suppliers, the machining on each bar and an
 list. Catalogs can be your own, imported or created. Agents can drive the whole thing
 through a documented file format and a CLI.
 
-**Status: scaffold (milestone M0). The app draws an empty scene; nothing else works yet.**
+**Status: milestone M1, the catalog core.** Catalog schemas, the three-layer merge, section
+generators and section properties, and `alukit catalog check`, which compares computed section
+properties against published ones. The app still draws an empty scene.
 
 | Document                                                                   | What                                                                                                 |
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -40,7 +42,10 @@ pnpm exec playwright install chromium   # once, for the end-to-end test
 | `pnpm lint` / `pnpm format` | Biome check / format |
 | `pnpm typecheck` | TypeScript 7, no emit |
 
-The CLI runs straight from the sources, with no build step: `node src/cli/main.ts --help`.
+The CLI runs straight from the sources, with no build step: `node src/cli/main.ts --help`. For
+example, `node src/cli/main.ts catalog check tests/fixtures/catalogs/test` checks the synthetic test
+catalog. Internal imports use `package.json` subpath imports (`#core/*`, `#catalog/*`), which Node,
+TypeScript, Vite and Vitest all resolve.
 
 ## License
 
