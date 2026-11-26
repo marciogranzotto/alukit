@@ -1,0 +1,9 @@
+{
+  "schema": "alukit.offers/1",
+  "offers": {
+    "VALVE-O-eu": {
+      "item": "test-order:VALVE-O",
+      "price": { "regular_minor": 1200, "per": "unit", "read": "2026-11-26", "src": "src" }
+    }
+  }
+}

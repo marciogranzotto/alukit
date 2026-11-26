@@ -1,0 +1,27 @@
+{
+  "schema": "alukit.project/1",
+  "name": "Order rules (synthetic): every supplier READY until a test patches it",
+  "catalogs": ["../catalogs/test", "../catalogs/test-order", "../catalogs/test-order-eu"],
+  "currency": "BRL",
+  "fx": {
+    "EUR": { "v": 6.2, "src": "src", "ref": "a bank's rate, synthetic", "read": "2026-11-26" }
+  },
+  "bars": {
+    "b1": {
+      "item": "test-order:FLAT-O",
+      "opt": { "finish": "raw" },
+      "a": [0, 0, 0],
+      "b": [600, 0, 0]
+    },
+    "b2": {
+      "item": "test-order:FLAT-O",
+      "opt": { "finish": "raw" },
+      "a": [0, 100, 0],
+      "b": [600, 100, 0]
+    }
+  },
+  "parts": {
+    "p1": { "item": "test-order:SCR-O", "qty": 37, "unplaced": true, "why": "screws" },
+    "p2": { "item": "test-order:VALVE-O", "qty": 2, "unplaced": true, "why": "valves" }
+  }
+}

@@ -132,10 +132,16 @@ export function orderLines(ctx: LineContext): Work[] {
     if (cov.services_on) push(servicesOn, cov.services_on.supplier, c);
   }
   /** The cost line that covers something, with an error naming both when two do. */
-  const oneCover = (cs: readonly CostLine[], what: string): CostLine => {
+  /**
+   * The cost line that covers something, with an error naming both when two do. The error also
+   * names the item covered, so it holds the order of whoever sells that item (§5.5).
+   */
+  const oneCover = (cs: readonly CostLine[], item: string, what = item): CostLine => {
     const ids = [...new Set(cs.map((c) => c.id))].sort(compareIds);
     if (ids.length > 1) {
-      d.error("covers", ids[0], `${ids.join(" and ")} both cover ${what}`, { refs: ids });
+      d.error("covers", ids[0], `${ids.join(" and ")} both cover ${what}`, {
+        refs: [...ids, item],
+      });
     }
     return cs.find((c) => c.id === ids[0]) as CostLine;
   };
@@ -500,7 +506,9 @@ export function orderLines(ctx: LineContext): Work[] {
         ...(sv.by === "supplier" ? (servicesBy.get(s) ?? []) : []),
         ...(servicesOn.get(s) ?? []),
       ];
-      if (cs.length > 0) sv.covered_by = oneCover(cs, `the machining on ${w.offer.sku}`).id;
+      if (cs.length > 0) {
+        sv.covered_by = oneCover(cs, w.line.item, `the machining on ${w.offer.sku}`).id;
+      }
     }
   }
   return works;

@@ -1,0 +1,72 @@
+{
+  "schema": "alukit.offers/1",
+  "offers": {
+    "FLAT-O-c": {
+      "item": "FLAT-O",
+      "options": { "finish": "raw" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10,
+        "min_bill_mm": 1000,
+        "bill": "line"
+      },
+      "price": { "regular_minor": 5000, "per": "m", "read": "2026-11-26", "src": "src" }
+    },
+    "SCR-O-10": {
+      "item": "SCR-O",
+      "pack": 10,
+      "price": { "regular_minor": 650, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "SCR-O-50": {
+      "item": "SCR-O",
+      "pack": 50,
+      "price": {
+        "regular_minor": 2700,
+        "sale_minor": 2300,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src"
+      }
+    },
+    "BOX-O-K2": {
+      "item": "BOX-O",
+      "kit": [{ "item": "BOX-O", "qty": 2 }, { "item": "SCR-O", "qty": 4 }],
+      "price": { "regular_minor": 3000, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "CLAMP-O-zn": {
+      "item": "CLAMP-O",
+      "options": { "finish": "zinc" },
+      "price": { "regular_minor": 500, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "NUT-O-20": {
+      "item": "NUT-O",
+      "pack": 20,
+      "price": { "regular_minor": 400, "per": "unit", "read": "2026-11-26", "src": "src" },
+      "in_stock": false
+    },
+    "NUT-O-5": {
+      "item": "NUT-O",
+      "pack": 5,
+      "price": { "regular_minor": 150, "per": "unit", "read": "2026-11-26", "src": "src" },
+      "in_stock": true
+    },
+    "LAMP-O": {
+      "item": "LAMP-O",
+      "price": {
+        "regular_minor": 9900,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "est",
+        "ref": "a price by phone, synthetic"
+      }
+    },
+    "OLD-O": {
+      "item": "OLD-O",
+      "price": { "regular_minor": 1200, "per": "unit", "read": "2026-09-01", "src": "src" }
+    }
+  }
+}

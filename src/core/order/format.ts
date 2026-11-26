@@ -121,6 +121,17 @@ function totalsMarkdown(t: Totals): string[] {
   return out;
 }
 
+/** What a cost line covers, or the share a contingency takes. */
+function coversText(c: CostOut): string {
+  if (c.pct !== undefined) return `${c.pct} % of the subtotal`;
+  if (!c.covers) return "";
+  return [
+    ...(c.covers.services ? [`${c.covers.supplier}'s machining`] : []),
+    ...(c.covers.services_on ? [`machining on ${c.covers.services_on.supplier}'s bars`] : []),
+    ...(c.covers.items ?? []),
+  ].join(", ");
+}
+
 function costsMarkdown(costs: readonly CostOut[]): string[] {
   if (costs.length === 0) return [];
   const out = [
@@ -131,15 +142,7 @@ function costsMarkdown(costs: readonly CostOut[]): string[] {
   ];
   for (const c of costs) {
     const cur = c.currency ? ` ${c.currency}` : "";
-    const covers = c.covers
-      ? [
-          ...(c.covers.services ? [`${c.covers.supplier}'s machining`] : []),
-          ...(c.covers.services_on ? [`machining on ${c.covers.services_on.supplier}'s bars`] : []),
-          ...(c.covers.items ?? []),
-        ].join(", ")
-      : c.pct !== undefined
-        ? `${c.pct} % of the subtotal`
-        : "";
+    const covers = coversText(c);
     const conv = c.converted ? ` (${money(c.converted.likely_minor)} at ${c.converted.rate})` : "";
     out.push(
       `| ${c.id} | ${c.label} | ${c.kind} | ${c.supplier ?? ""} | ${money(c.low_minor ?? 0)} | ${money(c.likely_minor ?? 0)}${cur}${conv} | ${money(c.high_minor ?? 0)} | ${c.src} | ${covers} |`,
@@ -183,7 +186,7 @@ export function orderMarkdown(o: Order): string {
     }
     if (s.costs.length > 0) out.push(`Cost lines: ${s.costs.join(", ")}.`, "");
     out.push(
-      `Supplier total: ${money(s.totals.likely_minor)} (${money(s.totals.low_minor)} to ${money(s.totals.high_minor)}).`,
+      `Supplier total${o.currency ? ` in ${o.currency}` : ""}: ${money(s.totals.likely_minor)} (${money(s.totals.low_minor)} to ${money(s.totals.high_minor)}).`,
       "",
     );
   }
@@ -197,14 +200,21 @@ function csvCell(s: string | number | undefined): string {
   return /[",\n]/.test(t) ? `"${t.replaceAll('"', '""')}"` : t;
 }
 
-const ORDER_CSV = [
+/**
+ * The CSV columns: one table for order lines, cost lines and totals, told apart by `row`. `id` is
+ * a cost line's; `kind` is the item's kind on a line, the cost's kind on a cost line; `price_src`
+ * is where the amount came from on both.
+ */
+const CSV_COLUMNS = [
   "row",
   "supplier",
   "status",
+  "id",
   "sku",
   "offer",
   "item",
   "name",
+  "kind",
   "options",
   "qty",
   "unit",
@@ -223,62 +233,86 @@ const ORDER_CSV = [
   "details",
 ] as const;
 
-/** One row per order line, then one per cost line, then the totals. */
-export function orderCsv(o: Order): string {
-  const rows: string[] = [ORDER_CSV.join(",")];
-  const row = (cells: Partial<Record<(typeof ORDER_CSV)[number], string | number | undefined>>) =>
-    rows.push(ORDER_CSV.map((k) => csvCell(cells[k])).join(","));
-  const m = (x: number | undefined) => (x === undefined ? undefined : money(x));
-  for (const s of o.suppliers) {
-    for (const l of s.lines) {
-      row({
-        row: "line",
-        supplier: s.supplier ?? "",
-        status: s.status,
-        sku: l.sku,
-        offer: l.offer,
-        item: l.item,
-        name: l.name,
-        options: optText(l.opt),
-        qty: l.qty,
-        unit: l.unit,
-        pack: l.pack,
-        length_mm: l.length_mm === undefined ? undefined : mm(l.length_mm),
-        unit_price: m(l.unit_price_minor),
-        currency: l.currency,
-        low: m(l.low_minor),
-        likely: m(l.likely_minor),
-        high: m(l.high_minor),
-        range: l.range,
-        price_src: l.price_src,
-        read: l.read,
-        covered_by: l.covered_by,
-        for: itemsText(l.bom),
-        details: detailText(l),
-      });
-    }
-  }
-  for (const c of o.costs) costRow(row, c);
-  totalRows(row, o.totals);
+type Column = (typeof CSV_COLUMNS)[number];
+type Row = (cells: Partial<Record<Column, string | number | undefined>>) => void;
+
+/** The columns `alukit costs` prints: the cost lines' and the totals' only. */
+const COSTS_COLUMNS: readonly Column[] = [
+  "row",
+  "supplier",
+  "id",
+  "name",
+  "kind",
+  "currency",
+  "low",
+  "likely",
+  "high",
+  "price_src",
+  "details",
+];
+
+function csvTable(columns: readonly Column[], fill: (row: Row) => void): string {
+  const rows: string[] = [columns.join(",")];
+  fill((cells) => rows.push(columns.map((k) => csvCell(cells[k])).join(",")));
   return `${rows.join("\n")}\n`;
 }
 
-type Row = (cells: Partial<Record<string, string | number | undefined>>) => void;
+/** One row per order line, then one per cost line, then the totals. */
+export function orderCsv(o: Order): string {
+  const m = (x: number | undefined) => (x === undefined ? undefined : money(x));
+  return csvTable(CSV_COLUMNS, (row) => {
+    for (const s of o.suppliers) {
+      for (const l of s.lines) {
+        row({
+          row: "line",
+          supplier: s.supplier ?? "",
+          status: s.status,
+          sku: l.sku,
+          offer: l.offer,
+          item: l.item,
+          name: l.name,
+          kind: l.kind,
+          options: optText(l.opt),
+          qty: l.qty,
+          unit: l.unit,
+          pack: l.pack,
+          length_mm: l.length_mm === undefined ? undefined : mm(l.length_mm),
+          unit_price: m(l.unit_price_minor),
+          currency: l.currency,
+          low: m(l.low_minor),
+          likely: m(l.likely_minor),
+          high: m(l.high_minor),
+          range: l.range,
+          price_src: l.price_src,
+          read: l.read,
+          covered_by: l.covered_by,
+          for: itemsText(l.bom),
+          details: detailText(l),
+        });
+      }
+    }
+    for (const c of o.costs) costRow(row, c);
+    totalRows(row, o.totals);
+  });
+}
 
 function costRow(row: Row, c: CostOut): void {
+  const conv = c.converted
+    ? `at ${c.converted.rate}: ${money(c.converted.low_minor)}, ${money(c.converted.likely_minor)}, ${money(c.converted.high_minor)}`
+    : undefined;
   row({
     row: "cost",
     supplier: c.supplier,
-    sku: c.id,
+    id: c.id,
     name: c.label,
-    unit: c.kind,
+    kind: c.kind,
     currency: c.currency,
     low: c.low_minor === undefined ? undefined : money(c.low_minor),
     likely: c.likely_minor === undefined ? undefined : money(c.likely_minor),
     high: c.high_minor === undefined ? undefined : money(c.high_minor),
     price_src: c.src,
     read: c.read,
-    details: c.pct !== undefined ? `${c.pct} % of the subtotal` : undefined,
+    details: [coversText(c), conv].filter((x) => x).join("; ") || undefined,
   });
 }
 
@@ -343,25 +377,10 @@ export function costsMarkdownDoc(c: CostsOutput): string {
 }
 
 export function costsCsv(c: CostsOutput): string {
-  const head = [
-    "row",
-    "supplier",
-    "sku",
-    "name",
-    "unit",
-    "currency",
-    "low",
-    "likely",
-    "high",
-    "price_src",
-    "read",
-    "details",
-  ];
-  const rows: string[] = [head.join(",")];
-  const row: Row = (cells) => rows.push(head.map((k) => csvCell(cells[k])).join(","));
-  for (const x of c.costs) costRow(row, x);
-  totalRows(row, c.totals);
-  return `${rows.join("\n")}\n`;
+  return csvTable(COSTS_COLUMNS, (row) => {
+    for (const x of c.costs) costRow(row, x);
+    totalRows(row, c.totals);
+  });
 }
 
 export function costsJson(c: CostsOutput): string {

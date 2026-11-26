@@ -245,8 +245,8 @@ function reacher(
       }
       const cost = costs.find((c) => c.id === name);
       if (cost) {
-        if (cost.supplier === undefined) return "all";
-        out.add(cost.supplier);
+        // A cost line with no supplier is in no supplier's order; alone it reaches all.
+        if (cost.supplier !== undefined) out.add(cost.supplier);
         continue;
       }
       for (const k of keysOf(related(name))) out.add(k);

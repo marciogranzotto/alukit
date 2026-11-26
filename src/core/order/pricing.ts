@@ -59,13 +59,14 @@ export function priceLines(
   d: Diagnostics,
 ): void {
   const bands = doc.price_bands;
-  const used = new Set<number>();
+  /** Bands that select some catalog-priced line, whether or not a more specific one wins it. */
+  const selected = new Set<number>();
   for (const w of works) {
     if (!w.money || !w.field) continue;
     let m: Money = w.money;
     if (w.money.quoted) w.line.range = "quote";
     else if (w.offer) {
-      const b = bandFor(bands, w.line.item, w.offer.supplier, w.line.kind, d);
+      const b = bandFor(bands, w.line.item, w.offer.supplier, w.line.kind, selected, d);
       if (b !== undefined) {
         const band = bands[b] as PriceBand;
         m = {
@@ -75,7 +76,6 @@ export function priceLines(
         };
         w.line.range = "band";
         w.line.band = b;
-        used.add(b);
       }
     }
     const currency = w.offer?.currency ?? pc;
@@ -94,9 +94,10 @@ export function priceLines(
     if (w.field.field === "sale") w.line.on_sale = true;
     if (w.offer) w.line.read = w.offer.price.read;
   }
+  // A band that selects nothing is likely a misspelt supplier or item.
   bands.forEach((b, i) => {
-    if (used.has(i)) return;
-    d.warn("price-band", undefined, `price_bands[${i}] prices no line${bandWhat(b)}`, {
+    if (selected.has(i)) return;
+    d.warn("price-band", undefined, `price_bands[${i}] selects no line${bandWhat(b)}`, {
       field: `price_bands[${i}]`,
     });
   });
@@ -108,6 +109,7 @@ function bandFor(
   item: string,
   supplier: string,
   kind: string,
+  selected: Set<number>,
   d: Diagnostics,
 ): number | undefined {
   const rank = (b: PriceBand) =>
@@ -119,6 +121,7 @@ function bandFor(
       ? [{ i, r: rank(b) }]
       : [],
   );
+  for (const h of hits) selected.add(h.i);
   if (hits.length === 0) return undefined;
   const top = Math.max(...hits.map((h) => h.r));
   const best = hits.filter((h) => h.r === top);

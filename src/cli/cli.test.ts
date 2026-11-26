@@ -188,6 +188,79 @@ describe("alukit derive, cutlist and bom", () => {
     expect(r.err.join("\n")).toMatch(/^error angled-end b2\.a: /m);
   });
 
+  it("prints the order list, and exits 0 when every supplier is ready", async () => {
+    const md = await capture(["order", project("order"), "--as-of", "2026-11-26"]);
+    expect(md.code).toBe(0);
+    expect(md.out.join("\n")).toMatch(
+      /^# Order list\n\nREADY\. Prices on the regular basis in BRL/,
+    );
+    expect(md.out.join("\n")).toMatch(/^## shop-eu: READY$/m);
+    expect(md.err).toEqual([]);
+    const csv = await capture([
+      "order",
+      project("order"),
+      "--format",
+      "csv",
+      "--as-of",
+      "2026-11-26",
+    ]);
+    expect(csv.out.join("\n").split("\n")[0]).toMatch(/^row,supplier,status,id,sku,offer,item,/);
+    expect(csv.out.join("\n")).toMatch(
+      /^line,shop-a,READY,,SCR-O-10,test-order:SCR-O-10,test-order:SCR-O,.*,fastener,,4,pack,10,,6\.50,BRL,26\.00,26\.00,26\.00,/m,
+    );
+    expect(csv.out.join("\n")).toMatch(/^total,,,,,,,total,,.*,BRL,234\.80,234\.80,234\.80,/m);
+  });
+
+  it("exits 1 when a supplier is blocked, and says why on stderr", async () => {
+    const r = await capture(["order", project("cart"), "--as-of", "2026-11-26"]);
+    expect(r.code).toBe(1);
+    expect(r.out.join("\n")).toMatch(/^## test-vendor: BLOCKED$/m);
+    expect(r.err).toEqual([
+      "BLOCKED test-gen-vendor: open-item: O1: confirm the rail screws' length against the rail's counterbore",
+      "BLOCKED test-vendor: est-price: test:PSU-24V: the price of test:PSU-24V is an estimate",
+      "BLOCKED (unsourced): missing-price: test:SPL-STUD: no offer",
+    ]);
+  });
+
+  it("prints the costs and totals in each format", async () => {
+    const md = await capture(["costs", project("cart"), "--as-of", "2026-11-26"]);
+    expect(md.code).toBe(0);
+    expect(md.out.join("\n")).toMatch(/^\| \*\*Total\*\* \| 5018\.09 \| 5566\.85 \| 6649\.41 \|$/m);
+    const json = await capture([
+      "costs",
+      project("cart"),
+      "--format",
+      "json",
+      "--as-of",
+      "2026-11-26",
+    ]);
+    const c = JSON.parse(json.out.join("\n"));
+    expect([c.schema, c.costs.length, c.totals.total.likely_minor]).toEqual([
+      "alukit.costs/1",
+      5,
+      556685,
+    ]);
+    const csv = await capture([
+      "costs",
+      project("cart"),
+      "--format",
+      "csv",
+      "--as-of",
+      "2026-11-26",
+    ]);
+    const rows = csv.out.join("\n").split("\n");
+    expect(rows[0]).toBe("row,supplier,id,name,kind,currency,low,likely,high,price_src,details");
+    expect(rows).toContain(
+      'cost,,K4,"freight, quoted in dollars",freight,USD,20.00,30.00,45.00,est,"at 5.5: 110.00, 165.00, 247.50"',
+    );
+    expect(rows).toContain("total,,,total,,BRL,5018.09,5566.85,6649.41,,");
+  });
+
+  it("refuses a date that is not one", async () => {
+    expect((await capture(["order", project("cart"), "--as-of", "2026-02-30"])).code).toBe(2);
+    expect((await capture(["costs", project("cart"), "--as-of"])).code).toBe(2);
+  });
+
   it("refuses bad usage with exit 2", async () => {
     expect((await capture(["cutlist"])).code).toBe(2);
     expect((await capture(["cutlist", "x", "--format", "pdf"])).code).toBe(2);

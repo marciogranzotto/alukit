@@ -1,0 +1,8 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-order-eu",
+  "name": "A second supplier, in euros, of another catalog's items (synthetic)",
+  "vendor": "shop-eu",
+  "currency": "EUR",
+  "prov": { "src": "est", "note": "synthetic test data for the order list (M3b), not a vendor's" }
+}
