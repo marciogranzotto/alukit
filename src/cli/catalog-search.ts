@@ -85,7 +85,7 @@ export async function searchCommand(a: SearchArgs, io: Io): Promise<number> {
   const more = found.total - found.items.length;
   if (more > 0) {
     io.out(
-      `… ${more} more of ${found.total}: narrow the query, add --kind, or raise --limit (${SEARCH_LIMIT} at most)`,
+      `… ${more} more of ${found.total}: narrow the query${a.kind === undefined ? ", add --kind," : ""} or raise --limit (${SEARCH_LIMIT} at most)`,
     );
   }
   return 0;
