@@ -43,7 +43,7 @@ in the gitignored `internal/session-notes.md`.*
 | M6 custom parts, placeholders | **done**, merged `2ded043` (19:08), pushed | Plates and bent angles with threaded, countersunk and counterbored holes; `alukit machining` (byte-exact against the hand golden); a placeholder holds only its own order group; gap G-B resolved without a new rule (golden G28). Calls: `docs/notes/m6-decisions.md`. |
 | M4b draw tool + catalog browser + `snapshot` | **done**, merged `a25d275` (19:52), pushed | Analytic snapping, work plane, draw/connect/place/pattern/measure tools, orthographic views, catalog browser, `alukit snapshot`. A Playwright mouse run draws the cart's base frame; its cut list and BOM are byte-identical to the CLI fixture's. Calls: `docs/notes/m4b-decisions.md`. |
 | Docs: README, guide, notes index, design-vs-built | **done**, merged `f242435` (20:04), pushed | Real screenshot made by `alukit snapshot` (`docs/images/cart-iso.png`). 17 design-vs-built entries. |
-| M4c: close the design-vs-built feature gaps | running (Opus, worktree), launched 20:05 | variant switcher, export button, clipping plane, Open items / Params / Decisions tabs, pivot and face in the connect tool, `catalog search` / `import` |
+| M4c: close the design-vs-built feature gaps | **done**, merged (20:53), pushed | variant switcher, export button, clipping plane, Open items / Params / Decisions tabs, pivot and face in the connect tool, `catalog search` / `import` |
 | Full acceptance (§13), internal | **ran** (20:40): the four numeric tests pass; overall **fail** on two model gaps | Cut list: 214 pieces, largest difference 0.05 mm. Mass: within 0.09 % once the record's own errors are set aside. Cost: every vendor line to the cent on a frozen lock. Counts: pass. Every exception is an error in the record. Fails on A1 and A3, below. |
 | Gap A3: face contact on real section faces | running (Opus, worktree), launched 20:50 | golden G29 |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | running (Opus, worktree), launched 20:50 | goldens G30+ |
@@ -262,7 +262,8 @@ in the gitignored `internal/session-notes.md`.*
     draft 2.2); the viewer lacks parts of §8; the work plane defaults to the ground.
   - The coordinator looked at the screenshot: the frame, rails with carriages, braces, plate and
     placeholder all render. One lower diagonal seems to reach outside the footprint. M4c checks
-    whether the fixture means that, without touching goldens.
+    whether the fixture means that, without touching goldens. **Corrected at 20:53:** it is the
+    cart's push-handle grip (`b32`), outside the frame on purpose; the braces are all inside.
 - **20:05**: M4c launched to close the design-vs-built entries that are missing features rather
   than deliberate deviations.
 - **20:40**: Full acceptance done. Results are internal; this is a sanitized summary.
@@ -289,3 +290,14 @@ in the gitignored `internal/session-notes.md`.*
 - **20:50**: Two Opus agents launched on the gaps, in worktrees: A3 alone (geometry), and A1, A2,
   A4–A7 together. After both merge, the acceptance converter is re-run using the new constructs;
   the target is an overall pass.
+- **20:53**: M4c merged, without conflicts; the coordinator re-ran the gate (PASS, 555 tests).
+  - The top bar has a variant switcher (`?variant=` on every `/api/*`), Export GLB (byte-identical
+    to the CLI's), and the revision with save and verify.
+  - A section plane, which only clips the picture.
+  - Open items, Params and Decisions tabs, one undoable batch per edit.
+  - The connect tool now makes pivots and fastened face joints, with errors in its panel.
+  - CLI: `catalog search`, `catalog import forseti` (no network without `--fetch`; reproduces
+    `catalogs/forseti` byte for byte), and `derive --select`.
+  - Design-vs-built entries 3, 4, 5 and 12 are closed; the rest stay as recorded deviations.
+  - Calls in `docs/notes/m4c-decisions.md`. Notably, edits made while viewing a variant go to the
+    base document.
