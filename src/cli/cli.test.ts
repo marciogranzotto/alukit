@@ -1,12 +1,13 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { helpText, run } from "./cli.ts";
 
 const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {
   version: string;
 };
-const main = new URL("./main.ts", import.meta.url).pathname;
+const main = fileURLToPath(new URL("./main.ts", import.meta.url));
 
 function capture(argv: string[]) {
   const out: string[] = [];

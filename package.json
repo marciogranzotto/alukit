@@ -12,6 +12,10 @@
   "bin": {
     "alukit": "./src/cli/main.ts"
   },
+  "imports": {
+    "#core/*": "./src/core/*",
+    "#catalog/*": "./src/catalog/*"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

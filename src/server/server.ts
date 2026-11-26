@@ -1,7 +1,8 @@
-import { readFile } from "node:fs/promises";
-import { createServer, type Server } from "node:http";
+import { readFile, realpath } from "node:fs/promises";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { extname, join, normalize, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // TODO(M4a, design §7.2): the per-start token (.alukit/owner.json, Authorization on /api), the
 // Host and Origin checks, JSON-only bodies, project-path confinement, and the document's command
@@ -35,40 +36,91 @@ export interface RunningServer {
   close: () => Promise<void>;
 }
 
-const defaultDist = resolve(new URL("../../dist", import.meta.url).pathname);
+// fileURLToPath, not URL.pathname: pathname keeps percent-escapes, so a checkout under a folder
+// with a space in its name would look for "my%20folder/dist".
+const defaultDist = fileURLToPath(new URL("../../dist", import.meta.url));
+
+/** True when `path` is `root` itself or lies under it. Both must be absolute and normalised. */
+function isInside(root: string, path: string): boolean {
+  return path === root || path.startsWith(root.endsWith(sep) ? root : root + sep);
+}
+
+function send(res: ServerResponse, status: number, text?: string): void {
+  if (text === undefined) {
+    res.writeHead(status).end();
+    return;
+  }
+  res.writeHead(status, { "content-type": "text/plain; charset=utf-8" }).end(text);
+}
+
+async function handle(root: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const method = req.method ?? "GET";
+  let path: string;
+  try {
+    // A malformed escape such as "%E0%A4%A" makes decodeURIComponent throw; uncaught, that
+    // would take the whole server down.
+    path = decodeURIComponent((req.url ?? "/").split("?")[0] ?? "/");
+  } catch {
+    send(res, 400, "bad request");
+    return;
+  }
+  if (path.includes("\0")) {
+    send(res, 400, "bad request");
+    return;
+  }
+
+  if (path === "/api/health") {
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+  if (method !== "GET" && method !== "HEAD") {
+    res.writeHead(405, { allow: "GET, HEAD" }).end();
+    return;
+  }
+
+  // Lexical check: a leading "/" makes normalize() drop any ".." that would climb above root.
+  const file = join(root, normalize(path === "/" ? "/index.html" : path));
+  if (!isInside(root, file)) {
+    send(res, 403);
+    return;
+  }
+  // Physical check: a symbolic link inside dist/ must not lead outside it.
+  let real: string;
+  let realRoot: string;
+  try {
+    [real, realRoot] = await Promise.all([realpath(file), realpath(root)]);
+  } catch {
+    send(res, 404, "not found");
+    return;
+  }
+  if (!isInside(realRoot, real)) {
+    send(res, 403);
+    return;
+  }
+  let body: Buffer;
+  try {
+    body = await readFile(real);
+  } catch {
+    // A directory, or a file that vanished between the two calls.
+    send(res, 404, "not found");
+    return;
+  }
+  res.writeHead(200, {
+    "content-type": MIME[extname(real)] ?? "application/octet-stream",
+    "cache-control": "no-cache",
+  });
+  res.end(method === "HEAD" ? undefined : body);
+}
 
 export function createAppServer(distDir: string = defaultDist): Server {
   const root = resolve(distDir);
-  return createServer(async (req, res) => {
-    const method = req.method ?? "GET";
-    const path = decodeURIComponent((req.url ?? "/").split("?")[0] ?? "/");
-
-    if (path === "/api/health") {
-      res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: true }));
-      return;
-    }
-    if (method !== "GET" && method !== "HEAD") {
-      res.writeHead(405, { allow: "GET, HEAD" }).end();
-      return;
-    }
-    const rel = normalize(path === "/" ? "/index.html" : path);
-    const file = join(root, rel);
-    if (file !== root && !file.startsWith(root + sep)) {
-      res.writeHead(403).end();
-      return;
-    }
-    try {
-      const body = await readFile(file);
-      res.writeHead(200, {
-        "content-type": MIME[extname(file)] ?? "application/octet-stream",
-        "cache-control": "no-cache",
-      });
-      res.end(method === "HEAD" ? undefined : body);
-    } catch {
-      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-      res.end("not found");
-    }
+  return createServer((req, res) => {
+    handle(root, req, res).catch(() => {
+      // Never let one request's failure become an unhandled rejection that ends the process.
+      if (res.headersSent) res.destroy();
+      else send(res, 500, "internal error");
+    });
   });
 }
 
