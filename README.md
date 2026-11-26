@@ -1,100 +1,174 @@
 # AluKit
 
-Plan mechanical builds made from catalog parts, starting with aluminium T-slot extrusion,
-in the browser.
+Plan builds made from catalog parts, starting with aluminium T-slot extrusion, in the browser.
 
-You lay out the frame in 3D and AluKit gives you what you need to build it: the cut list,
-a priced bill of materials from real suppliers, the machining on each bar and an order
-list. Catalogs can be your own, imported or created. Agents can drive the whole thing
-through a documented file format and a CLI.
+You lay out a frame in 3D and AluKit derives what you need to build it: the **cut list**, a
+priced **bill of materials**, the machining on each bar, an **order list** per supplier that tells
+you when it is not ready to send, and a **GLB** of the model. Everything comes from one JSON
+document, so the same project can be edited by hand, in the browser, or by an agent through the
+CLI.
 
-**Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core), M3b
-(generation with the bill of materials; the edit path; offers, the order list and costs), M4a
-(the viewer and the server that owns the document), M4b (drawing with the mouse), M5 (variants,
-diff, revisions, the GLB export, snapshots and the agent skill) and M6 (project items and the
-machining sheet).**
-- Catalog schemas, the three-layer merge, section generators and section properties, and
-  `alukit catalog check`, which compares computed section properties against published ones.
-- Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): every
-  orderable SKU, with a section for every profile stem), `std` (standard steel shapes and
-  fasteners) and `ref-hiwin` (the HIWIN HG parts that rails and blocks clone).
-- The project format, placement and end planes, and the cut list: `alukit derive <dir>` and
-  `alukit cutlist <dir>`.
-- Generation: rail holes from factory ends or drilled, parts on stations, bolted, screwed and
-  T-nut face connections with their clearance holes, taps, rods and sleeves, connectors' hardware
-  and machining; and the bill of materials with masses: `alukit bom <dir>`.
-- Editing through commands, the one edit path: `alukit new`, `alukit do` (a batch of commands,
-  applied atomically) and `alukit add`, `alukit query`, `alukit check`; the canonical form
-  (`alukit fmt`) and the lock file that pins catalog data (`alukit lock update`).
-- The order list per supplier (cheapest pack cover, kits, price bands, cost lines covering
-  machining, READY or BLOCKED by named rules) and the costs and totals: `alukit order <dir>` and
-  `alukit costs <dir>`.
-- Project items (M6): custom plates and bent angles with through, threaded, countersunk and
-  counterbored holes, weighed from their material; generic items and placeholders, which bars
-  can bear on and which hold only their own order line; and the machining sheet, each custom
-  part's holes from its datum: `alukit machining <dir>`.
-- The server and the viewer: `alukit serve <dir>` owns the project and opens it in the browser,
-  which draws the derived model (bars, parts, and the project's plates and bent angles with their
-  holes marked, and placeholders outlined), selects by click or box, and shows properties (with
-  where each catalog number comes from), the project tree, the cut list, the machining sheet, the
-  BOM, the order, the costs and the checks. CLI edits go through a running server and appear live
-  in every tab; `alukit undo`, `redo` and `log` use its history. A direct edit of `alukit.json` is
-  taken in as a step, or makes the project read-only while the file is not valid. The server
-  answers only its own page, with a per-start token.
-- Drawing with the mouse: draw a bar from the palette (snapping to nodes, bar ends, face and
-  groove centre lines, face centres, parts' datums and face centres, and the grid; the line
-  follows X, Y or Z, Shift frees it in the work plane; type a length, R rolls, A cycles the
-  anchor; ends butt where they meet others), connect ends and bars, place a part on a face or
-  groove, pattern the selection along a bar, measure; a catalog browser (vendor, kind, family,
-  search, item cards with sections and offers, and the project's own items, read only) sets the
-  palette; standard views, orthographic or perspective, and fit to selection.
-- Variants that override params, swap items and scope entities (`only_in`, `not_in`), on every
-  output with `--variant`. `alukit diff` compares two sides (folders, revisions, git refs or
-  variants), each with its own lock. `alukit revision save | list | show | verify` stores the
-  document, its lock and every output, and replays them to show any drift. `alukit export glb`
-  writes the model as binary glTF (bars, parts with the project's plates, bent angles and
-  placeholders, their holes, fasteners), the same bytes for the same project. `alukit snapshot
-  <dir> -o shot.png --view iso` renders a named view to PNG in headless Chromium.
-- The agent skill, [`skills/alukit/SKILL.md`](skills/alukit/SKILL.md), with a reference
-  generated from the code and a worked example that a test runs; `alukit skill install` links it
-  into `~/.claude/skills/alukit`.
+![A cart frame in the viewer: posts, rails, braces, a linear rail with carriages, a plate and a bracket](docs/images/cart-iso.png)
 
-| Document                                                                   | What                                                                                                 |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| [`BRAINSTORM.md`](BRAINSTORM.md)                                           | the decisions so far, the ideas, the roadmap                                                         |
-| [`docs/design.md`](docs/design.md)                                         | the v1 design: catalogs, the project format, the solver, the agent interface, the viewer, milestones |
-| [`docs/research/forseti-inventory.md`](docs/research/forseti-inventory.md) | a survey of the first vendor catalog ([Forseti](https://loja.forsetisolucoes.com.br), Brazil)        |
+*The synthetic cart project in [`tests/fixtures/cart`](tests/fixtures/cart), rendered by
+`alukit snapshot`.*
 
-It runs locally: a small Node server with the app in your browser, and no hosting. Your
-projects live wherever you keep them and are never part of this repository.
+AluKit runs locally: a small Node server with the app in your browser, and no hosting. Your
+projects live in folders you choose and are never part of this repository.
+
+## Quickstart
+
+You need Node 26 (see `.nvmrc`) and pnpm 12. Node 26 does not ship Corepack, so install pnpm
+yourself.
+
+```sh
+git clone https://github.com/marciogranzotto/alukit.git && cd alukit
+nvm install && nvm use                     # Node from .nvmrc
+npm install -g pnpm@12.23.0                # the version in package.json's packageManager
+pnpm install --frozen-lockfile
+pnpm build                                 # the app, once; `alukit serve` and `snapshot` need it
+alias alukit="node $PWD/src/cli/main.ts"   # the CLI runs from the sources, with no build step
+```
+
+Make a project in a folder of your own, using the built-in Forseti catalog, and open it:
+
+```sh
+alukit new ~/frames/my-frame --name "My frame" --catalog forseti --currency BRL
+alukit serve ~/frames/my-frame             # prints http://127.0.0.1:<port>/#t=<token> and opens it
+```
+
+(`ALUKIT_PROJECT=~/frames/my-frame pnpm dev` does the same inside Vite's dev server, with hot
+reload, and prints the address with its token.)
+
+In the browser, open the **Catalog** tab, choose a profile and press **Set as palette**, then
+press `B` and click twice to draw a bar (or click once, type a length and press Enter). Draw a
+leg, then a rail onto its top: the ends butt where they meet. See the [guide](docs/guide.md) for
+the tools and keys.
+
+Read what you drew from a terminal, while the server runs or not:
+
+```sh
+alukit check  ~/frames/my-frame            # errors and warnings; exit 1 on an error
+alukit cutlist ~/frames/my-frame           # every piece, its length and its end cuts
+alukit bom    ~/frames/my-frame            # items, quantities and mass
+alukit order  ~/frames/my-frame            # per supplier: READY or BLOCKED, and why
+alukit export glb ~/frames/my-frame -o my-frame.glb
+```
+
+`alukit order` exits 1 while any supplier is blocked (a missing price, an open item, a
+placeholder, an estimated price), so an unfinished order cannot slip through a script. Every
+output takes `--format md|csv|json`. A project to try all of this on is
+[`tests/fixtures/cart`](tests/fixtures/cart): `alukit order tests/fixtures/cart`.
+
+## The CLI at a glance
+
+Every command takes the project folder first. `--json` gives machine output on the commands that
+support it; `alukit --help` and `alukit <command> --help` list the options.
+
+| Command | Does |
+|---|---|
+| `new <dir>` | create a project: the document, its lock and a `.gitignore` line for `.alukit/` |
+| `serve <dir>` | run the project's server and open the app; edits from tabs and the CLI go through it |
+| `do <dir> '<json>'` | apply a batch of commands atomically (also `-f file` or `-` for stdin) |
+| `add bar\|point\|connection\|part <dir>` | one entity, as sugar over `do` |
+| `query <dir> <selector>` | read entities back: `b7`, `tag:leg`, `item:forseti:PF40-01`, `connections of b2` |
+| `check <dir>` | validate, derive and run the checks; exit 1 on an error |
+| `derive <dir> --json` | the full derived model, for report builders |
+| `cutlist` `bom` `order` `costs <dir>` | the outputs; `order` exits 1 when blocked |
+| `machining <dir>` | the machining sheet for the project's own plates and bent angles |
+| `undo` `redo` `log <dir>` | the running server's history, across the app and the CLI |
+| `fmt <dir>` | rewrite the files into canonical form (`--check` only reports) |
+| `lock update <dir>` | refresh the lock from the live catalogs and show what moved |
+| `diff <a> [<b>]` | compare folders, revisions, git refs or variants |
+| `revision save\|list\|show\|verify` | named snapshots of the document, lock and every output |
+| `snapshot <dir> -o x.png` | render a view to PNG in headless Chromium |
+| `export glb <dir> -o x.glb` | the model as binary glTF |
+| `catalog check\|show\|schema` | work on catalogs |
+| `skill install` | link the agent skill into `~/.claude/skills/alukit` |
+
+`--variant <name>` selects a variant on every output; `--frozen` makes an item the lock does not
+pin an error instead of reading it from the live catalog.
+
+## Catalogs
+
+A catalog is a folder of JSON: items (profiles, tubes, rails, connectors, fasteners, materials),
+the sections they extrude, and the offers that say who sells them, in what lengths and for how
+much. Built in:
+
+- `forseti`: every orderable SKU of the Forseti shop, with a section for every profile stem; built
+  by the importer in [`importers/forseti`](importers/forseti/README.md).
+- `std`: standard steel shapes, fasteners and materials.
+- `ref-hiwin`: the HIWIN HG rails and blocks that linear-rail items clone.
+
+How `std` and `ref-hiwin` were checked is in
+[`docs/notes/std-hiwin-verification.md`](docs/notes/std-hiwin-verification.md).
+
+**Your own catalog** is a folder you name by path. Start from the synthetic one in
+[`tests/fixtures/catalogs/test`](tests/fixtures/catalogs/test) (`catalog.json`, `offers.json`,
+`sections/`, optional `families/` and `overrides.json`), and ask the CLI for the exact shape:
+
+```sh
+alukit catalog schema            # the JSON Schema of every catalog file
+alukit catalog check ./my-parts  # computed against published values, references, offers
+alukit new my-project --catalog ./my-parts --catalog forseti
+```
+
+Catalogs merge in layers (vendor data, your overrides, then the project), and every number keeps
+its source and read date. The design has the rules, in
+[§3](docs/design.md). A project that needs a part no catalog has (a plate, a bent angle, a
+placeholder for something not chosen yet) declares it as a project item instead; see the
+[guide](docs/guide.md#items).
+
+## Working with agents
+
+AluKit is built to be driven by an agent: the project is plain JSON, `alukit do` applies
+validated, atomic commands, and every number the CLI prints is derived, never computed by the
+agent. The skill in [`skills/alukit/SKILL.md`](skills/alukit/SKILL.md) teaches the format, the
+commands and the workflow, with a worked example that a test runs.
+
+```sh
+alukit skill install      # links the skill into ~/.claude/skills/alukit
+```
+
+It refuses to replace a link that points somewhere else; `--dir <folder>` links into another
+skills folder. An agent can look at what it built with `alukit snapshot <dir> --view iso -o
+shot.png` (headless Chromium through Playwright; `pnpm exec playwright install chromium` once).
+
+## Documentation
+
+| Document | What |
+|---|---|
+| [`docs/guide.md`](docs/guide.md) | the user guide: the project folder, the document, drawing, reading the outputs, locks, revisions |
+| [`docs/design.md`](docs/design.md) | the v1 design: catalogs, the project format, the solver, the agent interface, the viewer |
+| [`docs/notes/`](docs/notes/README.md) | the decisions made while building each milestone, and [where the build differs from the design](docs/notes/design-vs-built.md) |
+| [`BRAINSTORM.md`](BRAINSTORM.md) | the early decisions, the ideas, the roadmap |
+| [`docs/research/forseti-inventory.md`](docs/research/forseti-inventory.md) | a survey of the first vendor catalog |
 
 ## Development
 
-Node 26 (see `.nvmrc`) and pnpm 12, with no Corepack (Node 26 does not ship it):
-
 ```sh
-nvm install && nvm use          # Node from .nvmrc
-npm install -g pnpm@12.23.0     # the version in package.json's packageManager
-pnpm install --frozen-lockfile
-pnpm exec playwright install chromium   # once, for the end-to-end test
+nvm use && pnpm install --frozen-lockfile
+pnpm exec playwright install chromium    # once, for the end-to-end tests and snapshots
 ```
 
 | Script | Does |
 |---|---|
-| `pnpm dev` | Vite dev server with hot reload; `ALUKIT_PROJECT=<dir> pnpm dev` mounts that project's server in it and prints the address with its token |
+| `pnpm dev` | Vite dev server with hot reload; `ALUKIT_PROJECT=<dir> pnpm dev` mounts that project's server in it |
 | `pnpm build` | builds the app into `dist/` |
-| `pnpm serve <dir>` | serves a project and the built app on 127.0.0.1 (a free port) through the CLI |
+| `pnpm serve <dir>` | serves a project and the built app on 127.0.0.1 (a free port) |
 | `pnpm test` | unit tests (Vitest) |
 | `pnpm test:e2e` | end-to-end tests (Playwright, Chromium, one worker); run `pnpm build` first |
 | `pnpm lint` / `pnpm format` | Biome check / format |
-| `pnpm typecheck` | TypeScript 7, no emit |
+| `pnpm typecheck` | TypeScript, no emit |
 | `pnpm skill` | regenerates the skill's command reference from the code (a test fails while it is behind) |
 
-The CLI runs straight from the sources, with no build step: `node src/cli/main.ts --help`. For
-example, `node src/cli/main.ts catalog check tests/fixtures/catalogs/test` checks the synthetic test
-catalog. Internal imports use `package.json` subpath imports (`#core/*`, `#catalog/*`), which Node,
-TypeScript, Vite and Vitest all resolve.
+The gate before a change lands is: install, lint, typecheck, test, build, `test:e2e`, and
+`alukit catalog check` on `forseti`, `std` and `ref-hiwin`. CI
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the same steps on every push and pull
+request. Internal imports use `package.json` subpath imports (`#core/*`, `#catalog/*`), which
+Node, TypeScript, Vite and Vitest all resolve.
 
 ## License
 
-[MIT](LICENSE). Use anything here as you like; keeping the copyright notice (attribution) is the only condition.
+[MIT](LICENSE). Use anything here as you like; keeping the copyright notice (attribution) is the
+only condition.
