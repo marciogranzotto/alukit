@@ -1,6 +1,6 @@
 # AluKit: design (v1)
 
-*Draft 2.1, 2026-11-26. Built from the decisions D1–D16 in [`BRAINSTORM.md`](../BRAINSTORM.md),
+*Draft 2.2, 2026-11-26. Built from the decisions D1–D16 in [`BRAINSTORM.md`](../BRAINSTORM.md),
 the Forseti survey [`research/forseti-inventory.md`](research/forseti-inventory.md), review 1
 [`reviews/design-review-1.md`](reviews/design-review-1.md), the lessons and wishlist from the
 reference project (an internal lab rack), and the M1.5 paper model of that project's frame
@@ -11,6 +11,16 @@ resolved, and section 16 does the same for the paper model's gaps.*
 
 *Provenance labels: **verified** (run or checked against a source, with how), **read** (from the
 named document), **inferred** (reasoning, not checked).*
+
+## Draft 2.2 — what changed (2026-11-26)
+
+- **A shoe mitred square to a strut (gap G-A; §4.5, §16).** A plane's `normal` may name a bar:
+  square to its axis, still a placement provider. The strut's end butts through the shoe's
+  end, so both derive. Draft 2.1's construction, the shoe through the strut's end, left the
+  strut's length typed. Golden case G27.
+- Implementation decisions taken while building M0–M3b are recorded per milestone in
+  `docs/notes/` (m1, m2a, m2b, m3a, m3b-gen, m3b-doc, std-hiwin verification); where a note and
+  this design disagree on a detail, the note records what was built and why.
 
 ## Draft 2.1 — what changed (2026-11-26)
 
@@ -531,7 +541,7 @@ from **exactly one provider**:
 | Provider | Plane |
 |---|---|
 | a connection that claims the end (`butt`, `miter`, `splice`, `pivot`) | per type, below |
-| `ends.<a\|b>.plane`: `{ "point": <point>, "normal": [x, y, z] }` | as given |
+| `ends.<a\|b>.plane`: `{ "point": <point>, "normal": [x, y, z] }`, or `"normal": "<bar>"` (*2.2*) | as given; with a bar, square to that bar's axis: a shoe mitred square to a strut (G27) |
 | `ends.<a\|b>.plane`: `{ "face": { "bar": "b2", "face": "+x" } }` (*2.1*) | the unbounded plane of that face of `b2`'s placed bounding box: an end stopped by, or aligned with, a face its centre line misses (G19) |
 | `ends.<a\|b>.plane`: `{ "of": "b2.a" }` (*2.1*) | the plane of `b2.a`'s end face (below): a flush end (G18) |
 | neither (the default) | through the design point, square to the axis |
@@ -562,7 +572,9 @@ bar's cut. A bar bearing on another bar's end, or flush with it, needs one bound
 
 - **Placement providers** depend only on placed sections and points: the default,
   `ends.<x>.plane` as `point` and `normal` or as `face`, a `butt` through a bar's side faces or
-  through a body, `miter`, `splice`, `pivot`, and a through bar's own end (`cover`, `node`).
+  through a body, `miter`, `splice`, `pivot`, and a through bar's own end (`cover`, `node`). A
+  `normal` that names a bar reads only that bar's axis, which its design points fix (§4.3), so
+  it stays a placement provider (*2.2*).
 - **End providers** read an end face: a `butt` whose `through` names an end, `ends.<x>.plane` as
   `of`, and a free end counted from the cut (§4.3), which reads its own end `a`.
 
@@ -592,10 +604,13 @@ placeholder, a generic or a plate), at a point or at a pose `{ "pos", "rot_deg" 
 connection; it is not also a part.
 
 **Bearing on an end** (*2.1*). A strut that bears at an angle on a block's end face names that end
-as `through` (G17). A short block mitred square to a strut is the block's end butting through the
-strut's end, with the strut's end plate as `spacer_mm`. A flat bar whose ends are flush with a
-beam's cut ends takes `ends.<x>.plane: { "of": … }` (G18), so it follows when the beam's cut
-changes.
+as `through` (G17). A **shoe mitred square to a strut** (*2.2*) is cut on
+`ends.<x>.plane: { "point": <point>, "normal": "<strut>" }` with `cut: "angle"`, and the strut's
+end butts through the shoe's end, with an end plate as `spacer_mm`: the shoe's cut follows the
+strut's angle and the strut's length follows the shoe (G27). The reverse, the shoe's end
+butting through the strut's end, suits a strut whose length is the input. A flat bar whose ends
+are flush with a beam's cut ends takes `ends.<x>.plane: { "of": … }` (G18), so it follows when
+the beam's cut changes.
 
 **A multi-layer joint** (*2.1*) is one `face` connection. A bolt through strap, packer, beam,
 packer, strap lists all five in `bars`, so a packer cut to length is both a bar on the cut list and
@@ -652,7 +667,8 @@ vertical; else the lowest id. Its end, if any, covers. All of it can be changed.
 Each row is a small document in `tests/fixtures/golden-ends/` with its expected outputs. M3a is
 done when all pass to 0.01 mm (§12). 40x40 sections, centre anchors, square cuts and lengths in mm
 unless stated. Values were worked by hand and re-computed with a script (verified 2026-11-26;
-G17–G26 for draft 2.1 the same way, with G6 recomputed by the same script as a control).
+G17–G26 for draft 2.1 the same way, with G6 recomputed by the same script as a control; G27 for
+draft 2.2 by `golden-ends/G27/by_hand.py`).
 
 | # | Setup | Rule exercised | Expected |
 |---|---|---|---|
@@ -677,6 +693,7 @@ G17–G26 for draft 2.1 the same way, with G6 recomputed by the same script as a
 | G19 | c (0,−500,0)→(0,500,0); beam (0,0,100)→(1000,0,100), end a `plane: {face: {bar: c, face: "-x"}}` | a face the centre line misses (along +Y, local x is −X, so c's `-x` face is world X = +20) | beam 980.00. The same end as a `butt` through c: error (G15) |
 | G20 | G18 plus b3 (1500,0,40)→(1000,0,40), `butt` through `b2.b` | a chain of end providers | error naming the butt and b2.b's `of`; b3 500.00, at its design point (it would be 530.00) |
 | G21 | b2 a = `{on: {bar: b1, at_mm: 500}}` on b1 (0,0,0)→(1000,0,0), b = `{len_mm: 80, dir: "+z", from: "a.cut"}`; `butt` through b1 | a free end counted from the cut | b2 80.00; without `from`, 60.00 |
+| G27 | beam b1 (0,0,0)→(1000,0,0); shoe b2 from `{on: {bar: b1, at_mm: 540, face: "+y"}}` to n1 = (540,0,80), `butt` through b1, end b `plane: {point: n1, normal: "b3"}`, `cut: "angle"`; strut b3 (0,0,800)→(600,0,0), `butt` through `b2.b` | a strut bearing on a shoe mitred square to it (*2.2*) | shoe long point 75.00, centre line 60.00, short point 45.00; 36.87°. Strut 900.00, square. With `spacer_mm: 8`: 892.00. With n1 at z = 100: shoe 95.00, 80.00, 65.00; strut 884.00. Strut redrawn (140,0,380)→(620,0,20): shoe 86.67, 60.00, 33.33; 53.13°; strut 500.00. With the normal typed as (3, 0, −4), that redraw is an `angled-end` error on b3.b (16.26°) and the strut is 600.00 |
 
 The frame table in §4.4 is the golden set for orientation.
 
@@ -1504,7 +1521,7 @@ listed in the changelog at the top.
 
 | Gap | Resolution |
 |---|---|
-| P1 An end plane taken from another bar | Adopted. `butt.through` may name an end; `ends.<x>.plane` takes `of` (flush) and `face` (a face the centre line misses); placement and end providers, resolved in two sweeps, with a chain an error: §4.5. Golden cases G17–G20. One improvement: the findings left a short block mitred square to a strut as a v1 exclusion. It is now the block's end butting through the strut's end, with the strut's end plate as `spacer_mm` (§4.5). The strut's own length stays a design input (`extend_mm`), since the reference project only estimates it |
+| P1 An end plane taken from another bar | Adopted. `butt.through` may name an end; `ends.<x>.plane` takes `of` (flush) and `face` (a face the centre line misses); placement and end providers, resolved in two sweeps, with a chain an error: §4.5. Golden cases G17–G20. The findings left a shoe mitred square to a strut as a v1 exclusion. Draft 2.1 wrote it as the shoe's end butting through the strut's end, which leaves the strut's length typed (`extend_mm`); the early acceptance slice had to type it (gap G-A). *2.2*: a plane's `normal` may name a bar, so the shoe is cut square to the strut's axis and the strut's end butts through the shoe's end. Both derive, in the same two sweeps (§4.5, G27; [`notes/g-a-end-bearing.md`](notes/g-a-end-bearing.md)) |
 | P2 Bolted joints through more than two bodies | Adopted. `face` takes two or more layers head to nut, with `gaps_mm`; one fastener per station passes every layer; the grip sums the layers and gaps; a packer cut to length is both a bar and a layer: §4.5. G25. Clearance holes per layer: §4.5, §5.1, call 27 |
 | P3 Fasteners cut from bar stock | Adopted. `fastener: { "bar", "len_mm" }`: a piece per station, on the cut list and nested like any bar: §4.5, §5.3. G25 |
 | P4 Sleeves inside a hollow section | Adopted. A stack sleeve `{ "item", "inside", "len_mm" }` with `bore` in its expression: §4.5. A connector's `mounts` may list one: §3.4. G25 |
