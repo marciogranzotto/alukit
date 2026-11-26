@@ -1,7 +1,8 @@
 import type { Derived, DerivedBar } from "../derive/derive.ts";
 import { type Diagnostic, Diagnostics } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
-import type { ItemSource, OfferInfo } from "../items.ts";
+import type { ItemSource, OfferInfo, SaleInfo } from "../items.ts";
+import { amount, type Basis, barPrice, basisPrice } from "../order/price.ts";
 import type { Face } from "../project/schema.ts";
 import { QUANTUM, quantize, roundHalfAway, snapCeil } from "../quantum.ts";
 import { add, dot, scale, sub, type V3 } from "../vec.ts";
@@ -436,21 +437,48 @@ export function derivedPieces(derived: Derived): Piece[] {
 // ---------------------------------------------------------------------------------------------
 // Offers and modes
 
-function matches(offer: OfferInfo, opt: Readonly<Record<string, string>>): boolean {
+/** True when the offer sells these options: every option it names has the value asked for. */
+export function offerMatches(offer: OfferInfo, opt: Readonly<Record<string, string>>): boolean {
   return Object.entries(offer.options).every(([k, v]) => opt[k] === v);
 }
 
-function basisPrice(o: OfferInfo, basis: string): number {
-  const sale = o.sale_minor;
-  if (basis === "sale") return sale ?? o.regular_minor;
-  if (basis === "lowest") return sale === null ? o.regular_minor : Math.min(sale, o.regular_minor);
-  return o.regular_minor;
+/** True when `choice` (as written in the project's `order` map) names this offer. */
+export function namesOffer(offer: OfferInfo, choice: string): boolean {
+  return offer.sku === choice || offer.sku.endsWith(`:${choice}`);
 }
 
-/** A stock bar's price in minor units, from an offer priced per bar, per metre or per unit. */
-function barPrice(o: OfferInfo, len: number, basis: string): number {
-  const p = basisPrice(o, basis);
-  return o.per === "m" ? roundHalfAway((p * len) / 1000) : p;
+/**
+ * A supplier-cut piece's ordered and billed lengths (§5.3): the cut length rounded to `res_mm`,
+ * then billed in `step_mm` steps, rounded up, with `min_bill_mm` per piece where set. A line-level
+ * minimum (`bill: "line"`) is the order list's.
+ */
+export function cutBilling(cut_mm: number, sale: SaleInfo): { ordered: number; billed: number } {
+  const res = sale.res_mm ?? 1;
+  const step = sale.step_mm ?? res;
+  const ordered = q(roundHalfAway(cut_mm / res) * res);
+  let billed = q(snapCeil(ordered / step) * step);
+  if (sale.min_bill_mm !== undefined && sale.bill !== "line") {
+    billed = Math.max(billed, sale.min_bill_mm);
+  }
+  return { ordered, billed };
+}
+
+/**
+ * The cheapest of several cut offers for a group's lines on the project's basis: each piece is
+ * billed by the offer's own steps and priced once; ties go to SKU order (the offers come sorted).
+ */
+function cheapestCut(offers: readonly OfferInfo[], lines: readonly CutLine[], basis: Basis) {
+  let best: { offer: OfferInfo; cost: number } | undefined;
+  for (const o of offers) {
+    const p = basisPrice(o.price, basis).v;
+    const sale = o.sale as SaleInfo;
+    const cost = lines.reduce(
+      (s, l) => s + l.count * amount(p, o.price.per, cutBilling(l.cut_mm, sale).billed),
+      0,
+    );
+    if (!best || cost < best.cost) best = { offer: o, cost };
+  }
+  return best?.offer;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -487,9 +515,9 @@ export function cutList(input: CutListInput): CutList {
     const found = items.item(first.item);
     const name = found.ok ? (found.item.name ?? first.item) : first.item;
     const choice = doc.order[first.item];
-    const offers = items.offers(first.item).filter((o) => o.sale && matches(o, first.opt));
+    const offers = items.offers(first.item).filter((o) => o.sale && offerMatches(o, first.opt));
     const chosen = choice?.offer
-      ? offers.find((o) => o.sku === choice.offer || o.sku.endsWith(`:${choice.offer}`))
+      ? offers.find((o) => namesOffer(o, choice.offer as string))
       : undefined;
     if (choice?.offer && !chosen) {
       d.error(
@@ -527,18 +555,14 @@ export function cutList(input: CutListInput): CutList {
 
     if (mode === "cut") {
       const offer =
-        (chosen?.sale?.mode === "cut" ? chosen : undefined) ?? (cutOffers[0] as OfferInfo);
-      const sale = offer.sale as NonNullable<OfferInfo["sale"]>;
+        (chosen?.sale?.mode === "cut" ? chosen : undefined) ??
+        (cheapestCut(cutOffers, lines, basis) as OfferInfo);
+      const sale = offer.sale as SaleInfo;
       group.offer = offer.sku;
       group.supplier = offer.supplier;
       if (offer.currency) group.currency = offer.currency;
       for (const line of lines) {
-        const res = sale.res_mm ?? 1;
-        const step = sale.step_mm ?? res;
-        const ordered = q(roundHalfAway(line.cut_mm / res) * res);
-        let billed = q(snapCeil(ordered / step) * step);
-        if (sale.min_bill_mm !== undefined && sale.bill !== "line")
-          billed = Math.max(billed, sale.min_bill_mm);
+        const { ordered, billed } = cutBilling(line.cut_mm, sale);
         line.ordered_mm = ordered;
         line.billed_mm = billed;
         if (sale.min_mm !== undefined && line.cut_mm < sale.min_mm) {
