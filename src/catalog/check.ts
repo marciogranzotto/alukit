@@ -4,7 +4,8 @@ import { type SectionProperties, sectionProperties } from "#core/section-propert
 import { type Diagnostic, sortDiagnostics } from "./diagnostics.ts";
 import { type BuiltSection, buildSection, type CatalogSet } from "./link.ts";
 import { type LoadedCatalog, type LoadedItem, splitRef } from "./load.ts";
-import { num, type Valued } from "./schema/common.ts";
+import { CENTRED_NOTE } from "./rails.ts";
+import { isValuedObject, num, type Valued } from "./schema/common.ts";
 import type { BarItem } from "./schema/items.ts";
 
 /**
@@ -433,14 +434,19 @@ function checkOffers(set: CatalogSet, cat: LoadedCatalog, add: Add): void {
           field,
         );
       } else if (it.rail) {
-        const e = num(offer.sale.factory_E_mm);
+        const fe = offer.sale.factory_E_mm;
+        const e = num(fe);
         const lo = num(it.rail.E_min_mm);
         const hi = num(it.rail.E_max_mm);
+        const what =
+          isValuedObject(fe) && fe.note === CENTRED_NOTE
+            ? `the centred layout's factory_E_mm ${e} (the offer states none)`
+            : `factory_E_mm ${e}`;
         if (e < lo || e > hi) {
           add(
             "warn",
             "factory-E-range",
-            `factory_E_mm ${e} is outside the rail's end distance range ${lo}–${hi}`,
+            `${what} is outside the rail's end distance range ${lo}–${hi}`,
             [file],
             entity,
             field,
