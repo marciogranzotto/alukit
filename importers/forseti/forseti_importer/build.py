@@ -411,7 +411,14 @@ class Build:
                 self.notes["kits not emitted (contents not all emitted yet)"].append(
                     f"{p['sku']}: {', '.join(unresolved)}")
                 continue
-            self.offer(p["sku"], kit[0]["item"], p, "unit", kit=kit)
+            # The main item comes first (§3.2): the one the kit's SKU names, <item>-K<base>,
+            # wherever the description lists it (CT100-888-K4590 lists its bracket third).
+            m = re.fullmatch(r"(.+)-K[0-9A-Z]+", p["sku"])
+            main = m.group(1) if m else None
+            if main not in {line["item"] for line in kit}:
+                raise ValueError(f"{p['sku']}: the kit does not list the item its SKU names")
+            kit.sort(key=lambda line: line["item"] != main)
+            self.offer(p["sku"], main, p, "unit", kit=kit)
 
     # --- output ---------------------------------------------------------------------------------
 
