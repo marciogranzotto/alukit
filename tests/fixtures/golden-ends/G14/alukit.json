@@ -2,26 +2,16 @@
   "schema": "alukit.project/1",
   "name": "G14",
   "catalogs": ["../../catalogs/test", "../../catalogs/test-geo"],
-  "defaults": { "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } } },
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } }
+  },
   "bars": {
     "b1": { "a": [0, 0, 0], "b": [0, 0, 2000], "label": "post" },
     "b2": { "a": [0, 0, 0], "b": [2000, 0, 0], "label": "horizontal" },
     "b3": { "a": { "pivot": "c1" }, "b": { "pivot": "c2" }, "label": "brace" }
   },
   "connections": {
-    "c1": {
-      "type": "pivot",
-      "base": { "bar": "b1", "at_mm": 1500, "face": "+x" },
-      "axis": "across",
-      "connector": "test-geo:HNG-15",
-      "ends": ["b3.a"]
-    },
-    "c2": {
-      "type": "pivot",
-      "base": { "bar": "b2", "at_mm": 1000, "face": "+y" },
-      "axis": "across",
-      "connector": "test-geo:HNG-15",
-      "ends": ["b3.b"]
-    }
+    "c1": { "type": "pivot", "base": { "bar": "b1", "at_mm": 1500, "face": "+x" }, "axis": "across", "ends": ["b3.a"], "connector": "test-geo:HNG-15" },
+    "c2": { "type": "pivot", "base": { "bar": "b2", "at_mm": 1000, "face": "+y" }, "axis": "across", "ends": ["b3.b"], "connector": "test-geo:HNG-15" }
   }
 }

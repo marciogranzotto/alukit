@@ -1,0 +1,30 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test": { "hash": "sha256:c6d7c475d4baca3dbbb15d6b2a08d99c75084a2562cc1881d7a0eea1bbb5659a", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-geo": { "hash": "sha256:769a73b8847e08e76b593726b24f27dfb2f4a7844f679f382b9edebf58374b2e", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-geo:RHS-100x50x4": { "hash": "sha256:99708e1b40c0d61f3e304669d1535e3e99c09078f51c004d69bb57a9d471286c", "item": { "kind": "bar", "name": "RHS 100x50x4", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "shape": "rhs", "section": "RHS-100x50x4" } },
+    "test:TS40": { "hash": "sha256:7f2d44e6a46260b8782338a4e2c51f099d848c4cab84f75dd71fdfe85dee9009", "item": { "kind": "bar", "name": "Profile 40x40 (parametric)", "code": "TS40", "material": "al-6063-t5", "options": { "finish": ["anodised", "black"] }, "prov": { "src": "est", "note": "synthetic test data, not a vendor's" }, "shape": "tslot", "section": "TS40", "system": "s40-c8", "mass_kg_per_m": 1.493, "area_mm2": 553, "Ix_mm4": 91200, "Iy_mm4": 91200, "core": { "bore_mm": 6.8, "tap": "M8" } } }
+  },
+  "offers": {
+    "test-geo:RHS-100x50x4-6000": { "hash": "sha256:cee16c444c9cb1a1b482d0cd67f88c3c23dd534d0337d2b0a72a8ef5eb4486b8", "offer": { "item": "RHS-100x50x4", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 28900, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test:TS40-c7": { "hash": "sha256:a7377fee01436ccb6e114391ebb883e0a816aa646005893b1f47e21bfd0c1d70", "offer": { "item": "TS40", "options": { "finish": "anodised" }, "sale": { "mode": "cut", "min_mm": 40, "max_mm": 3000, "tol_mm": 1, "res_mm": 1, "step_mm": 10 }, "price": { "regular_minor": 12650, "sale_minor": 11385, "per": "m", "read": "2026-11-26", "src": "src" }, "in_stock": true } },
+    "test:TS40-pp-c7": { "hash": "sha256:bc8170af558703d0f224094c62bbff67cf781e7af4e18906046dd4acb88870b3", "offer": { "item": "TS40", "options": { "finish": "black" }, "sale": { "mode": "cut", "min_mm": 40, "max_mm": 3000, "tol_mm": 1, "res_mm": 1, "step_mm": 10 }, "price": { "regular_minor": 13900, "sale_minor": null, "per": "m", "read": "2026-11-26", "src": "src" }, "in_stock": true } }
+  },
+  "sections": {
+    "test-geo:RHS-100x50x4": { "hash": "sha256:6186ad1c03840373d24d600286ba46daac27e1e0d48630069f28be0f471f3c56", "section": { "schema": "alukit.section/1", "id": "RHS-100x50x4", "fidelity": "parametric", "props_ok": true, "generator": "rhs", "params": { "b_mm": 50, "h_mm": 100, "t_mm": 4, "ro_mm": 6 } } },
+    "test:TS40": { "hash": "sha256:c2d8c5b42fff26a8aeef9d4110af2bf9c049cac3d4ef8a85be0294d97b8b9d5d", "section": { "schema": "alukit.section/1", "id": "TS40", "fidelity": "parametric", "props_ok": false, "generator": "tslot", "params": { "w_mm": 40, "h_mm": 40, "groove": "c8", "bores": [{ "at_mm": [0, 0], "d_mm": 6.8 }] } } }
+  },
+  "materials": {
+    "test:al-6063-t5": { "hash": "sha256:e0c482b7732d94a71938e8fe5ddb0fecedb37039f991accf85a370fb368642c2", "material": { "name": "Aluminium 6063-T5", "alloy": "6063", "temper": "T5", "E_MPa": 69000, "G_MPa": 25900, "nu": 0.33, "density_kg_per_m3": 2700, "Rp02_MPa": { "v": 110, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" }, "Rm_MPa": { "v": 150, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" }, "alpha_per_K": 0.0000234 } },
+    "test:s235": { "hash": "sha256:642f592f18278ab312b5939c9a0525dcc6ec0aa40a5c52253e599e27cf2ea6ab", "material": { "name": "Steel S235", "E_MPa": 210000, "G_MPa": 81000, "nu": 0.3, "density_kg_per_m3": 7850, "Rp02_MPa": 235, "Rm_MPa": 360, "alpha_per_K": 0.000012 } }
+  },
+  "grooves": {
+    "test:c8": { "hash": "sha256:d0d9d5c23fc3205a5fd7202229075da350ef157baa05880012e81405f1dc5892", "groove": { "opening_mm": 8.2, "lip_mm": 2.2, "depth_mm": 12.25, "undercut_mm": 14.5, "class": "standard" } }
+  },
+  "systems": {
+    "test:s40-c8": { "hash": "sha256:e76600165e0023babbe826be9199e4ca0156a33c640bf1a058c2265e86ee253c", "system": { "type": "tslot", "series_mm": 40, "groove": "c8" } }
+  }
+}

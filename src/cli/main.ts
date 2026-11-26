@@ -8,8 +8,15 @@ process.stdout.on("error", (e: NodeJS.ErrnoException) => {
   throw e;
 });
 
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 const code = await run(process.argv.slice(2), {
   out: (text) => process.stdout.write(`${text}\n`),
   err: (text) => process.stderr.write(`${text}\n`),
+  stdin: readStdin,
 });
 process.exitCode = code;
