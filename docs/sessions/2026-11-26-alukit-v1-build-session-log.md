@@ -39,8 +39,10 @@ in the gitignored `internal/session-notes.md`.*
 | std / ref-hiwin verification | **done** (16:09), merged, pushed | 40 rows: 33 verified, 5 corrected, 3 partly unverifiable. Table: [`docs/notes/std-hiwin-verification.md`](../notes/std-hiwin-verification.md). |
 | M3b part 1: generation + BOM | **done** (17:03), merged, pushed `a9bfc3c` | G22–G25 pass with the design's values; the cart's cut list and BOM equal the hand tables; `alukit bom`; 240 tests after merge. Calls in [`docs/notes/m3b-gen-decisions.md`](../notes/m3b-gen-decisions.md). |
 | M3b part 3: offers, order list, costs | running (Opus, worktree), launched 17:05 | pack cover, blocking rules, price bands (G26), `alukit order` |
-| Gap G-A: end bearing on a square-mitred shoe | running (Opus, worktree), launched 17:05 | golden case G27, or the smallest rule change |
-| M3b part 2: commands, canonical form, lock | running (Opus, worktree), launched 16:10 | §6, §4.13, `fmt`, `do`, `query`, `check` |
+| Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
+| M4a viewer + server | running (Opus, worktree), launched 17:27 | includes the G-A follow-up: commands treat `plane.normal` bar names as references |
+| M2b rest of Forseti | running (Sonnet, worktree), launched 17:27 | all 1,196 SKUs; a section for every profile stem |
+| M3b part 2: commands, canonical form, lock | **done** (17:15), merged `7a1e18d`, pushed | All 36 §6 commands, pure, with undo/redo restoring document and lock byte for byte; atomic batches; canonical form + `fmt`; the lock pins catalog data and derive reads only the lock; `new/do/add/query/check/lock update`. Calls: [`docs/notes/m3b-doc-decisions.md`](../notes/m3b-doc-decisions.md). |
 | Early acceptance slice | **passed** (16:14) | All 75 T-slot pieces of the reference frame are within 0.5 mm of the record's drawn length; the largest difference is 0.04 mm. No AluKit bugs. Two pieces needed stand-ins (gaps G-A and G-B below). Details are internal. |
 | M1 catalog core | **done** (14:56), pushed `54ff321` | 94 tests. The 40x40 básico computes 553.53 mm², Ix 9.1287 and Iy 9.1307 cm⁴. 8 generators, worst 0.0025% from closed form. 43 schema calls in [`docs/notes/m1-decisions.md`](../notes/m1-decisions.md). Re-verified by the coordinator. |
 | M2a first catalogs | **done** (15:51), fast-forwarded and pushed | forseti: 103 items, 159 offers, 8 exact + 3 parametric sections. std: 19 items. ref-hiwin: 12. `catalog check` passes on all three. The importer is byte-deterministic. 107 tests (+1 skipped without the importer inputs). |
@@ -144,3 +146,19 @@ in the gitignored `internal/session-notes.md`.*
     its last command, so a failure wouldn't have stopped the push. Nothing broke (every check
     passed), but merges now go through a fail-fast gate script before pushing.
 - **17:05**: M3b part 3 (offers, order, costs) and the G-A investigation launched in parallel.
+- **17:15**: M3b part 2 done (4 commits).
+  - Its merge with part 1 conflicted in six files (CLI and the cart fixture). An Opus agent resolved
+    it, keeping both sides: the cart is part 1's extended content in part 2's canonical form.
+  - The lock was updated for part 1's items, and a permanent test now checks that every fixture
+    derives the same from its lock as from the live catalogs.
+  - One real conflict fixed: `splitBar` located holes by position in a list that part 1 extended.
+  - No golden, cut-list or BOM value changed. Gate: 313 tests.
+- **17:15**: Gap G-A done.
+  - Answer (b): the end-bearing butt couldn't derive a strut bearing on a shoe mitred square to it
+    without a typed value that goes stale when the strut is redrawn.
+  - New rule: a plane's `normal` may name a bar. G27's numbers were re-derived by the coordinator
+    (strut 900 mm, end moved −100; shoe cut at 36.87°, ±15 mm). Merged after creating G27's lock and
+    canonical form; gate 319 tests.
+- **17:27**: Pushed `1d827cf`. Launched M4a (viewer and server, with the G-A command follow-up
+  folded in) and M2b (the rest of Forseti), both in worktrees. M3b part 3 is still running; it
+  predates part 2's locks, so its merge will need lock updates.
