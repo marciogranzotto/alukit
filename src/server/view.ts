@@ -1,3 +1,4 @@
+import type { BuiltSection } from "#catalog/link.ts";
 import { derivedJson } from "#core/derive/output.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
 import { QUANTUM, quantize } from "#core/quantum.ts";
@@ -37,24 +38,39 @@ function ring(r: readonly (readonly [number, number])[]): P2[] {
   return simplifyRing(r).map(([x, y]) => [len(x), len(y)] as P2);
 }
 
+/**
+ * A section as the app draws and snaps to it: the display outline (§3.5), the nominal box, and
+ * the grooves and datums in section coordinates, which the draw tool snaps to (§8) and anchors
+ * on (§4.4).
+ */
+export function viewSection(s: BuiltSection): ViewSection {
+  const datums: Record<string, P2> = {};
+  for (const k of Object.keys(s.datums).sort()) {
+    const d = s.datums[k] as readonly [number, number];
+    datums[k] = [len(d[0]), len(d[1])];
+  }
+  return {
+    fidelity: s.fidelity,
+    outline: ring(s.draw.outline),
+    holes: s.draw.holes.map(ring),
+    bbox: [
+      [s.bbox_mm[0][0], s.bbox_mm[0][1]],
+      [s.bbox_mm[1][0], s.bbox_mm[1][1]],
+    ],
+    grooves: s.grooves
+      .map((g) => ({ face: g.face, at_mm: len(g.at_mm) }))
+      .sort((a, b) => (a.face < b.face ? -1 : a.face > b.face ? 1 : a.at_mm - b.at_mm)),
+    datums,
+  };
+}
+
 export function viewModel(snap: Snapshot) {
   const { derived, items, state } = snap;
   const sections: Record<string, ViewSection> = {};
   const bars: Record<string, ViewBar> = {};
   for (const [id, b] of derived.bars) {
     const item = b.placed.item;
-    if (!sections[item.sectionId]) {
-      const s = item.section;
-      sections[item.sectionId] = {
-        fidelity: s.fidelity,
-        outline: ring(s.draw.outline),
-        holes: s.draw.holes.map(ring),
-        bbox: [
-          [s.bbox_mm[0][0], s.bbox_mm[0][1]],
-          [s.bbox_mm[1][0], s.bbox_mm[1][1]],
-        ],
-      };
-    }
+    if (!sections[item.sectionId]) sections[item.sectionId] = viewSection(item.section);
     const pm = item.mass_kg_per_m;
     bars[id] = {
       section: item.sectionId,

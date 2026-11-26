@@ -62,13 +62,14 @@ export async function openProject(
 
 /**
  * The live catalogs a document names (§3.1), linked, with their errors as `catalog`
- * diagnostics. The lock pins from these (§4.13); derive reads the lock.
+ * diagnostics. The lock pins from these (§4.13); derive reads the lock. `named` holds the ids of
+ * the catalogs the document names, apart from those linked in only because they are referenced.
  */
 export async function openLiveCatalogs(
   dir: string,
   raw: unknown,
   builtinDir: string = BUILTIN_DIR,
-): Promise<{ set: CatalogSet; diagnostics: Diagnostic[] }> {
+): Promise<{ set: CatalogSet; diagnostics: Diagnostic[]; named: string[] }> {
   const diagnostics: Diagnostic[] = [];
   const names =
     typeof raw === "object" &&
@@ -77,7 +78,7 @@ export async function openLiveCatalogs(
       ? ((raw as { catalogs: unknown[] }).catalogs.filter((c) => typeof c === "string") as string[])
       : [];
   const dirs = names.map((n) => (isPath(n) ? resolve(dir, n) : join(builtinDir, n)));
-  if (dirs.length === 0) return { set: linkCatalogs([]).set, diagnostics };
+  if (dirs.length === 0) return { set: linkCatalogs([]).set, diagnostics, named: [] };
   const [first, ...rest] = dirs as [string, ...string[]];
   const opened = await openCatalog(first, { extra: rest, cwd: dir, builtinDir });
   for (const d of opened.diagnostics) {
@@ -89,5 +90,5 @@ export async function openLiveCatalogs(
       message: `${d.code}: ${d.message}`,
     });
   }
-  return { set: opened.set, diagnostics };
+  return { set: opened.set, diagnostics, named: opened.named };
 }

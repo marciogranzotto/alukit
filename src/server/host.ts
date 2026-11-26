@@ -214,6 +214,8 @@ export class ProjectHost {
   private readonly recent = new Map<string, Promise<CommandsAnswer>>();
   private snap: Snapshot;
   private catalogDiagnostics: Diagnostic[];
+  /** The live catalogs as last opened, and when: the catalog browser reads them (§8). */
+  private live: { set: CatalogSet; named: string[]; at: number } | undefined;
   private watcher: FSWatcher | undefined;
   /** The stat poll's listener, to remove exactly it on close. */
   private poll: (() => void) | undefined;
@@ -224,13 +226,14 @@ export class ProjectHost {
     opts: HostOptions,
     state: State,
     disk: { doc?: string; lock?: string },
-    catalogs: Diagnostic[],
+    live: { set: CatalogSet; diagnostics: Diagnostic[]; named: string[] },
   ) {
     this.dir = opts.dir;
     this.opts = opts;
     this.history = new History(state);
     this.disk = disk;
-    this.catalogDiagnostics = catalogs;
+    this.catalogDiagnostics = live.diagnostics;
+    this.live = { set: live.set, named: live.named, at: Date.now() };
     this.snap = this.compute();
   }
 
@@ -256,7 +259,7 @@ export class ProjectHost {
       await writeAtomic(join(opts.dir, LOCK_FILE), text);
       disk.lock = sha(text);
     }
-    const host = new ProjectHost(opts, { doc: raw, lock }, disk, live.diagnostics);
+    const host = new ProjectHost(opts, { doc: raw, lock }, disk, live);
     if (opts.watch !== false) {
       host.startWatching();
       // An edit between the read above and the watchers starting would be reported by neither:
@@ -303,6 +306,21 @@ export class ProjectHost {
   /** The current revision's derived model and checks. */
   snapshot(): Snapshot {
     return this.snap;
+  }
+
+  /**
+   * The live catalogs the document names (§3.1), and their ids, for browsing them (§8). They
+   * are opened again for each batch and each direct edit (M4a decision 13); a browse longer
+   * than `maxAgeMs` after the last open opens them again, so a catalog edited while the server
+   * runs is seen. Reading only: the queue is not needed.
+   */
+  async catalogs(maxAgeMs = 5000): Promise<{ set: CatalogSet; named: string[] }> {
+    const now = Date.now();
+    if (!this.live || now - this.live.at > maxAgeMs) {
+      const live = await openLiveCatalogs(this.dir, this.state.doc, this.opts.builtinDir);
+      this.live = { set: live.set, named: live.named, at: now };
+    }
+    return { set: this.live.set, named: this.live.named };
   }
 
   subscribe(listener: (e: HostEvent) => void): () => void {
@@ -410,6 +428,7 @@ export class ProjectHost {
     }
     const live = await openLiveCatalogs(this.dir, this.state.doc, this.opts.builtinDir);
     this.catalogDiagnostics = live.diagnostics;
+    this.live = { set: live.set, named: live.named, at: Date.now() };
     const r = applyBatch(this.state, req.commands, this.env(live.set));
     if (!r.ok) return { ok: false, kind: "refused", failed: r.failed, rev: rev0 };
     try {
@@ -507,6 +526,7 @@ export class ProjectHost {
     let lock = files.state.lock ?? this.state.lock;
     const live = await openLiveCatalogs(this.dir, raw, this.opts.builtinDir);
     this.catalogDiagnostics = live.diagnostics;
+    this.live = { set: live.set, named: live.named, at: Date.now() };
     const refs = documentRefs(raw);
     let lockWritten: string | undefined;
     if (!files.state.lock || !lockCovers(lock, refs)) {

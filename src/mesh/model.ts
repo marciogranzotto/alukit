@@ -59,6 +59,10 @@ export interface ViewSection {
   outline: P2[];
   holes: P2[][];
   bbox: [P2, P2];
+  /** Grooves by face, their centres in section coordinates, as numbered (§4.3): by increasing coordinate. */
+  grooves?: { face: "+x" | "-x" | "+y" | "-y"; at_mm: number }[];
+  /** Named points in section coordinates (`mount`, `heel`): anchors (§4.4). */
+  datums?: Record<string, P2>;
 }
 
 export interface ViewBar {
