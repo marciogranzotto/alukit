@@ -5,6 +5,7 @@ import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
 import { QUANTUM, quantize } from "#core/quantum.ts";
 import { threadDiameter } from "#core/threads.ts";
 import { addScaled, type V3 } from "#core/vec.ts";
+import type { ViewBar, ViewFastener, ViewPart, ViewSection } from "../mesh/model.ts";
 import { type P2, simplifyRing } from "../mesh/outline.ts";
 import type { Snapshot } from "./host.ts";
 
@@ -26,40 +27,6 @@ import type { Snapshot } from "./host.ts";
  */
 
 export const VIEW_SCHEMA = "alukit.view/1";
-
-export interface ViewSection {
-  fidelity: string;
-  /** The display outline: one ring, counter-clockwise or not as the source wrote it. */
-  outline: P2[];
-  holes: P2[][];
-  bbox: [P2, P2];
-}
-
-export interface ViewBar {
-  section: string;
-  /** Section point s lands at s + shift in the bar's local x, y (anchor and offset, §4.4). */
-  shift: P2;
-  /** Mass by the BOM's rule (centre-line length × mass per metre, §5.4), and its source. */
-  mass_kg?: number;
-  mass_src?: string;
-}
-
-export interface ViewPart {
-  /** The item's bounding box in its own frame (§3.2), when the catalog gives one. */
-  box?: [V3, V3];
-  /** Drawn translucent: a placeholder (§4.8), or an item with no box, drawn as a marker. */
-  translucent: boolean;
-}
-
-/** One fastener of a face connection, drawn as a rod from its head along its axis. */
-export interface ViewFastener {
-  connection: string;
-  k: number;
-  head: V3;
-  axis: V3;
-  len: number;
-  d: number;
-}
 
 const len = (x: number) => quantize(x, QUANTUM.len_mm);
 const mass = (x: number) => quantize(x, QUANTUM.mass_kg);
