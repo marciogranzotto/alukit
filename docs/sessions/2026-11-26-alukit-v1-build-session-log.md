@@ -35,7 +35,8 @@ in the gitignored `internal/session-notes.md`.*
 | M0 scaffold | **done** (14:16), pushed `81a8a8e` | Every done-when check passed in a fresh clone on Node 26.13.1 / pnpm 12.23.0 (agent), and again on the coordinator's own run. First CI run on GitHub: **success** (run 45866365568). |
 | M1.5 paper model | **done** (14:48) | 254 of 254 bodies in the document: 88 clean, 166 awkward, 0 missing. 20 schema gaps (P1–P20) with fixes. The end-plane rules reproduce every drawn bar length within 0.05 mm. Public summary: [`docs/reviews/m1.5-paper-model-findings.md`](../reviews/m1.5-paper-model-findings.md). |
 | Design draft 2.1 | running (Opus), launched 14:50 | folds in P1–P20 |
-| M1 catalog core | running (Opus), launched 14:17 | includes a folded-in review of M0 |
+| M1 catalog core | **done** (14:56), pushed `54ff321` | 94 tests. The 40x40 básico computes 553.53 mm², Ix 9.1287 and Iy 9.1307 cm⁴. 8 generators, worst 0.0025% from closed form. 43 schema calls in [`docs/notes/m1-decisions.md`](../notes/m1-decisions.md). Re-verified by the coordinator. |
+| M2a first catalogs | running (Opus, own worktree), launched 14:57 | Forseti importer, the reference project's items, `std`, `ref-hiwin` |
 
 ## Decisions taken autonomously
 
@@ -76,3 +77,13 @@ in the gitignored `internal/session-notes.md`.*
     its drawing. That went to the reference project's session as an FYI; details are internal.
 - **14:50**: Design draft 2.1 launched on Opus to fold in P1–P20. Its catalog-schema changes will
   reach M1's code as a follow-up.
+- **14:56**: M1 done (7 commits).
+  - The M0 review it folded in fixed two real server bugs: a malformed URL escape crashed the
+    process, and a symlink inside `dist/` could serve files outside it.
+  - It also fixed paths with spaces and EPIPE on `| head`, and adopted subpath imports (`#core/*`).
+  - Non-obvious calls:
+    - a stale override is an error and is not applied;
+    - duplicate JSON keys are errors;
+    - arcs are flattened at a fixed 0.5° step (a chord tolerance failed 0.1% on small rods);
+    - fixtures live in `tests/fixtures/catalogs/`, since `catalogs/` is for shipped catalogs.
+- **14:57**: M1 pushed. M2a launched in its own worktree; it merges after review.
