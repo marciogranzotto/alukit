@@ -13,6 +13,26 @@ export const PROJECT_COMMANDS = ["derive", "cutlist"] as const;
 
 /** The editing and housekeeping commands (design §6, §7.3, §4.13), each in its own module. */
 export const USAGE = {
+  new: [
+    "alukit new <dir> [--name <name>] [--catalog <id|path>]... [--currency <code>]",
+    "    create a project: alukit.json, alukit.lock.json and a .gitignore line for .alukit/",
+  ],
+  check: [
+    "alukit check <dir> [--json] [--frozen]",
+    "    validate, derive and run the checks; exit 1 on an error",
+  ],
+  do: [
+    "alukit do <dir> '<json>' | -f <file> | -  [--json] [--as <name>]",
+    "    apply a batch of commands atomically, from an argument, a file or stdin",
+  ],
+  add: [
+    "alukit add bar|point|connection|part <dir> [options] [--json]",
+    "    add one entity, as sugar over `do`; `alukit add <what> --help` lists the options",
+  ],
+  query: [
+    "alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]",
+    "    entities by id, kind, tag:<t>, item:<ref>, or `<kind> of <id>`; bounded output",
+  ],
   fmt: [
     "alukit fmt <dir>... [--check]",
     "    rewrite alukit.json and alukit.lock.json into canonical form; --check: exit 1 if one would change",

@@ -23,7 +23,8 @@ export interface OpenedProject {
   diagnostics: Diagnostic[];
 }
 
-function isPath(name: string): boolean {
+/** A catalog entry is a folder path (relative to the project) rather than a built-in id. */
+export function isPath(name: string): boolean {
   return name.startsWith(".") || name.includes("/") || name.includes("\\");
 }
 

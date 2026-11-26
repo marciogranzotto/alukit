@@ -33,7 +33,10 @@ describe("cli", () => {
     expect(helpText()).toMatch(/\n {2}derive <dir> \[--json\] \[--frozen\]\n/);
     expect(helpText()).toMatch(/\n {2}cutlist <dir> \[--format md\|csv\|json\] \[--frozen\]\n/);
     expect(helpText()).toMatch(/\n {2}fmt <dir>\.\.\. \[--check\]\n/);
-    expect(helpText()).not.toMatch(/fmt .*not implemented/);
+    for (const cmd of ["new", "check", "do", "add", "query", "lock update", "fmt"]) {
+      expect(helpText()).toMatch(new RegExp(`\\n {2}${cmd} `));
+      expect(helpText()).not.toMatch(new RegExp(`\\n {2}${cmd} .*not implemented`));
+    }
   });
 
   it("refuses planned and unknown commands", async () => {
