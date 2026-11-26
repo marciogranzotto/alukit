@@ -3,7 +3,7 @@ import { EditLockHeld } from "#core/project/store.ts";
 import { parseOptions, usageError } from "./args.ts";
 import type { Io } from "./cli.ts";
 import { diagnosticLine } from "./project.ts";
-import { SERVER_USAGE } from "./server-usage.ts";
+import { SERVER_USAGE_OF } from "./server-usage.ts";
 
 /**
  * `alukit serve <dir> [--port N] [--no-open]` (design §7.1, §7.3): runs the project's server and
@@ -11,7 +11,7 @@ import { SERVER_USAGE } from "./server-usage.ts";
  * removes `.alukit/owner.json` and releases the edit lock.
  */
 
-const SERVE_USAGE = SERVER_USAGE.split("\n").slice(0, 2).join("\n");
+const SERVE_USAGE = SERVER_USAGE_OF.serve;
 
 /** Opens a URL in the default browser, without waiting for it. */
 function openBrowser(url: string): void {

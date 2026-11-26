@@ -46,17 +46,6 @@ code {
   height: 100%;
 }
 
-/* The banners render only when they have something to say: pin the main row and the drawer to
-   their rows, or with no banner the main row is placed in an auto row and the 1fr row lies empty
-   below it (the viewport shrinks to the tree's height). */
-.app > .main {
-  grid-row: 4;
-}
-
-.app > .drawer {
-  grid-row: 5;
-}
-
 /* Top bar */
 
 .topbar {
@@ -160,7 +149,11 @@ code {
 
 /* Main area */
 
+/* The banners (rows 2 and 3) render only when they have something to say: the main area and the
+   drawer name their rows, or with no banner the main area is placed in an auto row and the 1fr row
+   lies empty below it (the viewport shrinks to the tree's height). */
 .main {
+  grid-row: 4;
   display: grid;
   grid-template-columns: minmax(180px, 260px) 1fr minmax(220px, 320px);
   min-height: 0;
@@ -400,6 +393,7 @@ table.kv td {
 /* Drawer */
 
 .drawer {
+  grid-row: 5;
   background: var(--panel);
   border-top: 1px solid var(--line);
   display: flex;
@@ -575,4 +569,297 @@ table.grid.totals th {
 
 table.grid tr.total td {
   font-weight: 600;
+}
+
+/* Tools (§8): the tool bar over the viewport, the hint by the pointer, the active tool's panel */
+
+.toolbar {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  pointer-events: none;
+}
+
+.toolbar .tb {
+  pointer-events: auto;
+  background: rgb(34 39 46 / 0.92);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.toolbar .tb.on {
+  border-color: var(--accent);
+  color: #ffd7a1;
+}
+
+.toolbar .tb:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.toolbar .sep {
+  width: 10px;
+}
+
+.tool-hint {
+  position: fixed;
+  z-index: 10;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgb(15 18 22 / 0.88);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.tool-panel {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.tool-panel h3 {
+  font-size: 12px;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.tool-panel p {
+  margin: 4px 0;
+}
+
+.tp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.tool-panel input,
+.tool-panel select,
+.catalog select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 4px;
+  max-width: 9em;
+}
+
+.tp-btn,
+.cd-primary {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.tp-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.tool-panel .picks {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+}
+
+.tool-status {
+  font-variant-numeric: tabular-nums;
+}
+
+.hint-text {
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.palette code {
+  color: #ffd7a1;
+}
+
+/* Left: project tree and catalog browser */
+
+.left-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.ltab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--dim);
+}
+
+.ltab.on {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.cat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ctree .cat-list {
+  padding-left: 12px;
+}
+
+.cat-node,
+.cat-leaf {
+  width: 100%;
+  display: flex;
+  gap: 6px;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cat-node {
+  font-weight: 600;
+}
+
+.cat-node.on,
+.cat-leaf.selected {
+  color: #ffd7a1;
+}
+
+.cat-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.catalog .count {
+  color: var(--dim);
+  font-weight: 400;
+}
+
+.catalog .list-count {
+  padding: 4px 8px;
+  margin: 0;
+  font-size: 11px;
+}
+
+.catalog .card {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--line);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.catalog .card:hover,
+.catalog .card.selected {
+  background: var(--panel-2);
+}
+
+.catalog .card-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.catalog .card-text .sub {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thumb {
+  flex: none;
+  fill: var(--text);
+  background: var(--bg);
+  border-radius: 3px;
+}
+
+.thumb.none {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+.card-detail {
+  margin: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-2);
+}
+
+.card-detail .card-head {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.card-detail .card-head > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-detail .close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--dim);
+}
+
+.cd-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.cd-primary {
+  margin: 6px 0;
+  border-color: var(--accent);
+}
+
+.card-detail td.prov-est {
+  color: var(--warn);
+}
+
+/* Snapshot mode (§7.3): the viewport alone */
+
+.app.snapshot {
+  display: block;
+}
+
+.viewport.snapshot {
+  position: fixed;
+  inset: 0;
 }

@@ -28,6 +28,11 @@ export interface Opened {
   set: CatalogSet;
   /** The target's id, when it loaded. */
   target?: string;
+  /**
+   * The ids of the catalogs asked for, the target and the extras, in order: not those loaded
+   * only because they are referenced.
+   */
+  named: string[];
   diagnostics: Diagnostic[];
 }
 
@@ -88,11 +93,15 @@ export async function openCatalog(target: string, options: OpenOptions = {}): Pr
         files: [],
         message: `no catalog folder at "${target}", and no built-in catalog with that id`,
       });
-      return { set: linkCatalogs([]).set, diagnostics };
+      return { set: linkCatalogs([]).set, named: [], diagnostics };
     }
   }
   const main = await load(targetDir);
-  for (const dir of options.extra ?? []) await load(resolve(cwd, dir));
+  const named: string[] = main ? [main.id] : [];
+  for (const dir of options.extra ?? []) {
+    const extra = await load(resolve(cwd, dir));
+    if (extra && !named.includes(extra.id)) named.push(extra.id);
+  }
 
   // Load referenced catalogs until nothing new is named.
   const siblings = dirname(targetDir);
@@ -119,6 +128,7 @@ export async function openCatalog(target: string, options: OpenOptions = {}): Pr
   return {
     set: linked.set,
     ...(main ? { target: main.id } : {}),
+    named,
     diagnostics: sortDiagnostics(diagnostics),
   };
 }

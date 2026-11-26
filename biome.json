@@ -17,7 +17,9 @@
       "!**/alukit.lock.json",
       "!**/*.md",
       "!tests/fixtures/cart/expected-order.json",
-      "!tests/fixtures/cart/expected-machining.json"
+      "!tests/fixtures/cart/expected-machining.json",
+      "!tests/fixtures/base-frame/cli/expected-cutlist.json",
+      "!tests/fixtures/base-frame/cli/expected-bom.json"
     ]
   },
   "formatter": {

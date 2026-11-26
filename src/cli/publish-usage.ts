@@ -1,6 +1,6 @@
 /**
- * The usage of the commands that compare, publish and export (design §7.3, §4.13, §9, §7.5),
- * apart from the commands themselves so that `--help` and `--version` load no schemas.
+ * The usage of the commands that compare, publish, render and export (design §7.3, §4.13, §9,
+ * §7.5), apart from the commands themselves so that `--help` and `--version` load no schemas.
  */
 export const PUBLISH = {
   diff: [
@@ -20,6 +20,11 @@ export const PUBLISH = {
     "    revisions/<name>.json: the document, its lock, the outputs of every variant and a",
     "    stamp; show prints what was stored; verify re-derives it and exits 1 on any drift",
     "    (<dir> defaults to the current folder)",
+  ],
+  snapshot: [
+    "alukit snapshot <dir> -o <file.png> [--view <name>] [--size <w>x<h>]",
+    "    render a view to PNG in headless Chromium, on the running server or an ephemeral one:",
+    "    a view the document names, or iso, top, front, side, left, back, bottom (1600x1000, iso)",
   ],
   export: [
     "alukit export glb <dir> -o <file.glb> [--variant v] [--frozen]",

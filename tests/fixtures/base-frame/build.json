@@ -1,0 +1,118 @@
+{
+  "commands": [
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS40",
+        "a": [0, 0, 0],
+        "b": [0, 0, "H"],
+        "anchor": "-x-y",
+        "tags": ["post"]
+      }
+    },
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS40",
+        "a": ["W", 0, 0],
+        "b": ["W", 0, "H"],
+        "anchor": "+x-y",
+        "tags": ["post"]
+      }
+    },
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS40",
+        "a": [0, "D", 0],
+        "b": [0, "D", "H"],
+        "anchor": "-x+y",
+        "tags": ["post"]
+      }
+    },
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS40",
+        "a": ["W", "D", 0],
+        "b": ["W", "D", "H"],
+        "anchor": "+x+y",
+        "tags": ["post"]
+      }
+    },
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS4080",
+        "a": [0, 0, "H"],
+        "b": ["W", 0, "H"],
+        "anchor": "+x+y",
+        "roll_deg": 90,
+        "label": "top rail, front"
+      }
+    },
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS4080",
+        "a": [0, "D", "H"],
+        "b": ["W", "D", "H"],
+        "anchor": "+x-y",
+        "roll_deg": 90,
+        "label": "top rail, back"
+      }
+    },
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS40",
+        "a": [0, 0, "H"],
+        "b": [0, "D", "H"],
+        "anchor": "+x+y",
+        "label": "top rail, left"
+      }
+    },
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS40",
+        "a": ["W", 0, "H"],
+        "b": ["W", "D", "H"],
+        "anchor": "-x+y",
+        "label": "top rail, right"
+      }
+    },
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS40",
+        "a": [0, 0, "Hb"],
+        "b": ["W", 0, "Hb"],
+        "anchor": "-x",
+        "label": "base rail, front"
+      }
+    },
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS40",
+        "a": [0, "D", "Hb"],
+        "b": ["W", "D", "Hb"],
+        "anchor": "+x",
+        "label": "base rail, back"
+      }
+    },
+    {
+      "cmd": "addConnection",
+      "args": { "type": "butt", "through": "b5", "ends": ["b1.b", "b2.b", "b7.a", "b8.a"] }
+    },
+    {
+      "cmd": "addConnection",
+      "args": { "type": "butt", "through": "b6", "ends": ["b3.b", "b4.b", "b7.b", "b8.b"] }
+    },
+    { "cmd": "autoConnect", "args": { "at": [0, 0, "Hb"] } },
+    { "cmd": "autoConnect", "args": { "at": ["W", 0, "Hb"] } },
+    { "cmd": "autoConnect", "args": { "at": [0, "D", "Hb"] } },
+    { "cmd": "autoConnect", "args": { "at": ["W", "D", "Hb"] } }
+  ]
+}

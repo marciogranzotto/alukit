@@ -123,6 +123,45 @@ async function send(path: string, body: unknown, what: string): Promise<void> {
   }
 }
 
+/**
+ * Sends a batch of commands as one step (§7.1: a gesture is committed as one command batch, with
+ * source `ui`). Resolves true when applied; a refusal is shown as the notice, naming the
+ * command and why.
+ */
+export async function applyCommands(
+  commands: readonly { cmd: string; args?: unknown }[],
+  what: string,
+): Promise<boolean> {
+  busy.value = true;
+  try {
+    const r = await post<{
+      ok?: boolean;
+      message?: string;
+      status?: { message?: string };
+      failed?: { index: number; cmd?: string; errors?: { message: string }[] };
+    }>("/api/commands", {
+      commands,
+      source: "ui",
+      ...(model.value ? { baseRev: model.value.rev } : {}),
+    });
+    if (r.status === 200 && r.body.ok !== false) {
+      notice.value = undefined;
+      return true;
+    }
+    const f = r.body.failed;
+    const why = f
+      ? `${f.cmd ?? `command ${f.index + 1}`}: ${(f.errors ?? []).map((e) => e.message).join("; ")}`
+      : (r.body.status?.message ?? r.body.message ?? `the server answered ${r.status}`);
+    notice.value = { text: `${what}: ${why}`, error: true };
+    return false;
+  } catch (e) {
+    notice.value = { text: `${what}: ${(e as Error).message}`, error: true };
+    return false;
+  } finally {
+    busy.value = false;
+  }
+}
+
 export const undo = () => send("/api/undo", { source: "ui" }, "undo");
 export const redo = () => send("/api/redo", { source: "ui" }, "redo");
 export const restore = () => send("/api/restore", {}, "restore");

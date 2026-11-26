@@ -10,8 +10,9 @@ through a documented file format and a CLI.
 
 **Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core), M3b
 (generation with the bill of materials; the edit path; offers, the order list and costs), M4a
-(the viewer and the server that owns the document), M5 (variants, diff, revisions, the GLB
-export and the agent skill; snapshots to come) and M6 (project items and the machining sheet).**
+(the viewer and the server that owns the document), M4b (drawing with the mouse), M5 (variants,
+diff, revisions, the GLB export, snapshots and the agent skill) and M6 (project items and the
+machining sheet).**
 - Catalog schemas, the three-layer merge, section generators and section properties, and
   `alukit catalog check`, which compares computed section properties against published ones.
 - Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): every
@@ -40,17 +41,22 @@ export and the agent skill; snapshots to come) and M6 (project items and the mac
   in every tab; `alukit undo`, `redo` and `log` use its history. A direct edit of `alukit.json` is
   taken in as a step, or makes the project read-only while the file is not valid. The server
   answers only its own page, with a per-start token.
+- Drawing with the mouse: draw a bar from the palette (snapping to nodes, bar ends, face and
+  groove centre lines, face centres and the grid; the line follows X, Y or Z, Shift frees it in
+  the work plane; type a length, R rolls, A cycles the anchor; ends butt where they meet others),
+  connect ends and bars, place a part on a face or groove, pattern the selection along a bar,
+  measure; a catalog browser (vendor, kind, family, search, item cards with sections and offers)
+  sets the palette; standard views, orthographic or perspective, and fit to selection.
 - Variants that override params, swap items and scope entities (`only_in`, `not_in`), on every
   output with `--variant`. `alukit diff` compares two sides (folders, revisions, git refs or
   variants), each with its own lock. `alukit revision save | list | show | verify` stores the
   document, its lock and every output, and replays them to show any drift. `alukit export glb`
   writes the model as binary glTF (bars, parts with the project's plates, bent angles and
-  placeholders, their holes, fasteners), the same bytes for the same project.
+  placeholders, their holes, fasteners), the same bytes for the same project. `alukit snapshot
+  <dir> -o shot.png --view iso` renders a named view to PNG in headless Chromium.
 - The agent skill, [`skills/alukit/SKILL.md`](skills/alukit/SKILL.md), with a reference
   generated from the code and a worked example that a test runs; `alukit skill install` links it
   into `~/.claude/skills/alukit`.
-
-Drawing with the mouse comes next (M4b).
 
 | Document                                                                   | What                                                                                                 |
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |

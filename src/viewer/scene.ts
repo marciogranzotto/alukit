@@ -21,6 +21,7 @@ import {
   Mesh,
   MeshLambertMaterial,
   type Object3D,
+  OrthographicCamera,
   PerspectiveCamera,
   Raycaster,
   Scene,
@@ -39,10 +40,13 @@ import {
 } from "../mesh/bars.ts";
 import { type Mat4, type MeshData, mulMatrix } from "../mesh/data.ts";
 import { HOLE_SEGMENTS, holeMarks, partMesh } from "../mesh/items.ts";
-import type { BarJson, MeshInput, ViewSection } from "../mesh/model.ts";
+import type { BarJson, MeshInput, V3, ViewSection } from "../mesh/model.ts";
 import { fastenerMatrix, holeMatrix, partShape } from "../mesh/place.ts";
 import { rodMesh } from "../mesh/solids.ts";
 import { barColour, COLOURS, partColour, TRANSLUCENT_OPACITY } from "../mesh/style.ts";
+import { Overlay, type OverlayState } from "./overlay.ts";
+import type { P2, Ray } from "./snap.ts";
+import { type DocView, fromThree, isStandard, viewFrom } from "./views.ts";
 
 CameraControls.install({
   THREE: THREE as unknown as Parameters<typeof CameraControls.install>[0]["THREE"],
@@ -67,16 +71,64 @@ export interface ViewerStats {
 
 export type SelectMode = "replace" | "toggle" | "add";
 
+export type Projection = "perspective" | "orthographic";
+
+/** The pointer as a tool reads it: where, and which modifier keys are held. */
+export interface ToolPointer {
+  clientX: number;
+  clientY: number;
+  shiftKey: boolean;
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+}
+
+/**
+ * A tool (design §8: draw, connect, place, pattern, measure) takes the viewport's pointer while
+ * it is active: `move` on hover, `click` on a click that did not drag the camera. Dragging still
+ * orbits, pans and zooms; box select belongs to the select tool, which is no tool.
+ */
+export interface ToolHandler {
+  move?(e: ToolPointer): void;
+  click?(e: ToolPointer): void;
+  leave?(): void;
+}
+
 export interface Viewer {
   canvas: HTMLCanvasElement;
   setModel(m: MeshInput): void;
   setSelection(ids: ReadonlySet<string>): void;
+  /** Entities a tool has picked (a connection's bars), drawn in their own colour. */
+  setHighlight(ids: ReadonlySet<string>): void;
   /** Called with the entities a click or a box picked, and how they combine with the selection. */
   onSelect(cb: (ids: string[], mode: SelectMode) => void): void;
+  setTool(tool: ToolHandler | undefined): void;
+  /** What the active tool draws over the model. */
+  setOverlay(state: OverlayState): void;
+  /** The pointer's ray in world coordinates (Z up, mm), for analytic snapping (§8). */
+  ray(clientX: number, clientY: number): Ray;
+  /** A world point's position on the page, in CSS pixels; undefined behind the camera. */
+  project(p: V3): P2 | undefined;
+  /** The entity under the pointer, and where its body was hit, in world coordinates. */
+  pickAt(clientX: number, clientY: number): { id: string; p: V3 } | undefined;
+  /**
+   * Looks from a standard view (iso, top, front, right or side, left, back, bottom), fitted to
+   * the model, or from one of the document's named views (§4.2). False for an unknown name.
+   */
+  setView(name: string, views?: Readonly<Record<string, DocView>>, animate?: boolean): boolean;
+  setProjection(p: Projection): void;
+  projection(): Projection;
   fitView(): void;
+  /** Fits the camera to the given entities, or to the whole model when there are none. */
+  fitSelection(ids: ReadonlySet<string>): void;
+  /** Renders now, whatever changed: a snapshot reads the canvas right after. */
+  renderNow(): void;
   stats(): ViewerStats;
   dispose(): void;
 }
+
+/** What a standard view fits when the model is empty: a metre cube on the ground (three's frame). */
+const EMPTY_BOX = new Box3(new Vector3(0, 0, -1000), new Vector3(1000, 1000, 0));
 
 /** Below this angle between faces a part's edge is smooth and not drawn (degrees), as a bar's. */
 const PART_EDGE_DEG = 30;
@@ -116,6 +168,9 @@ export function createViewer(container: HTMLElement): Viewer {
   const content = new Group();
   content.name = "model";
   world.add(content);
+  const overlay = new Overlay();
+  world.add(overlay.group);
+  world.updateMatrixWorld(true);
 
   scene.add(new AmbientLight(0xffffff, 0.9));
   const sun = new DirectionalLight(0xffffff, 1.8);
@@ -125,8 +180,12 @@ export function createViewer(container: HTMLElement): Viewer {
   fill.position.set(-900, 400, -700);
   scene.add(fill);
 
-  const camera = new PerspectiveCamera(45, 1, 5, 200_000);
-  camera.position.set(2000, 1500, 2000);
+  const persp = new PerspectiveCamera(45, 1, 5, 200_000);
+  persp.position.set(2000, 1500, 2000);
+  // Frustum in CSS pixels at zoom 1, set on resize; a negative near keeps the whole model in
+  // front of an orthographic camera wherever it orbits.
+  const ortho = new OrthographicCamera(-1, 1, 1, -1, -200_000, 200_000);
+  let camera: PerspectiveCamera | OrthographicCamera = persp;
   const controls = new CameraControls(camera, renderer.domElement);
   controls.setTarget(0, 0, 0, false);
 
@@ -175,6 +234,7 @@ export function createViewer(container: HTMLElement): Viewer {
     edgeSegments: 0,
   };
   let selection: ReadonlySet<string> = new Set();
+  let highlight: ReadonlySet<string> = new Set();
   let fitted = false;
 
   function clear(): void {
@@ -402,35 +462,153 @@ export function createViewer(container: HTMLElement): Viewer {
 
   function paint(): void {
     const sel = new Color(COLOURS.selected);
+    const hi = new Color(COLOURS.highlight);
+    const colourOf = (id: string, own: number) =>
+      highlight.has(id) ? hi : selection.has(id) ? sel : new Color(own);
     for (const g of instanced) {
       if (g.fixed) continue;
       g.ids.forEach((id, i) => {
-        g.mesh.setColorAt(i, selection.has(id) ? sel : new Color(g.colours[i]));
+        g.mesh.setColorAt(i, colourOf(id, g.colours[i] as number));
       });
       if (g.mesh.instanceColor) g.mesh.instanceColor.needsUpdate = true;
     }
     for (const s of single) {
-      (s.mesh.material as MeshLambertMaterial).color.set(selection.has(s.id) ? sel : s.colour);
+      (s.mesh.material as MeshLambertMaterial).color.copy(colourOf(s.id, s.colour));
     }
     invalidate();
   }
 
-  function fitView(): void {
-    const box = new Box3().setFromObject(content);
-    if (box.isEmpty()) return;
+  /** The model's box in three's frame, or the empty project's metre cube. */
+  function modelBox(): Box3 {
+    const box = new Box3();
+    for (const c of content.children) if (c.name !== "edges") box.expandByObject(c);
+    return box.isEmpty() ? EMPTY_BOX.clone() : box;
+  }
+
+  /** The box of some entities in three's frame: bars by their corners, parts by their meshes. */
+  function boxOf(ids: ReadonlySet<string>): Box3 {
+    const box = new Box3();
+    if (!model) return box;
+    const toThree = world.matrixWorld;
+    for (const id of ids) {
+      const bar = model.bars[id];
+      const view = model.display.bars[id];
+      const section = view ? model.display.sections[view.section] : undefined;
+      if (bar && view && section) {
+        for (const c of barCorners(bar, section, view))
+          box.expandByPoint(new Vector3(...c).applyMatrix4(toThree));
+      }
+      for (const s of single) if (s.id === id && model.parts[id]) box.expandByObject(s.mesh);
+    }
+    return box;
+  }
+
+  /**
+   * Fits a box (three's frame) looking from `from` (toward the camera; the current direction when
+   * not given): every corner inside the view with a margin. camera-controls' own fitToBox turns
+   * the view to the nearest axis, so an iso view would not stay iso.
+   */
+  function fitBox(box: Box3, animate: boolean, from?: Vector3): void {
+    const target = controls.getTarget(new Vector3());
+    const dir = (from ?? controls.getPosition(new Vector3()).sub(target)).clone().normalize();
+    const f = dir.clone().negate();
+    const up = new Vector3(0, 1, 0);
+    // Straight down (or up), screen up is world +Y (three's −Z): right is +X.
+    let right = f.clone().cross(up);
+    right = right.lengthSq() < 1e-12 ? new Vector3(1, 0, 0) : right.normalize();
+    const u = right.clone().cross(f).normalize();
     const c = box.getCenter(new Vector3());
-    const r = Math.max(box.getSize(new Vector3()).length() / 2, 50);
-    // An iso view from the front right, above (model +x, −y, +z; three's frame is Y up).
-    const dir = new Vector3(1, 0.8, 1).normalize();
-    void controls.setLookAt(
-      c.x + dir.x * r * 2.6,
-      c.y + dir.y * r * 2.6,
-      c.z + dir.z * r * 2.6,
-      c.x,
-      c.y,
-      c.z,
-      false,
-    );
+    const corners: Vector3[] = [];
+    for (const x of [box.min.x, box.max.x])
+      for (const y of [box.min.y, box.max.y])
+        for (const z of [box.min.z, box.max.z]) corners.push(new Vector3(x, y, z).sub(c));
+    const w = Math.max(container.clientWidth, 1);
+    const h = Math.max(container.clientHeight, 1);
+    const margin = 1.12;
+    const radius = Math.max(box.getSize(new Vector3()).length() / 2, 50);
+    if (camera === ortho) {
+      let ex = 1;
+      let ey = 1;
+      for (const q of corners) {
+        ex = Math.max(ex, Math.abs(q.dot(right)));
+        ey = Math.max(ey, Math.abs(q.dot(u)));
+      }
+      const zoom = Math.min(w / (2 * ex * margin), h / (2 * ey * margin));
+      const pos = c.clone().addScaledVector(dir, radius * 4 + 1000);
+      void controls.setLookAt(pos.x, pos.y, pos.z, c.x, c.y, c.z, animate);
+      void controls.zoomTo(zoom, animate);
+    } else {
+      const tanV = Math.tan(((persp.fov / 2) * Math.PI) / 180);
+      const tanH = tanV * (w / h);
+      // A corner at depth z beyond the centre is in view when |x| ≤ (d + z)·tan: d is the most
+      // any corner asks for.
+      let d = 0;
+      for (const q of corners) {
+        const z = q.dot(f);
+        d = Math.max(
+          d,
+          (Math.abs(q.dot(right)) * margin) / tanH - z,
+          (Math.abs(q.dot(u)) * margin) / tanV - z,
+        );
+      }
+      d = Math.max(d, radius * 0.5);
+      const pos = c.clone().addScaledVector(dir, d);
+      void controls.setLookAt(pos.x, pos.y, pos.z, c.x, c.y, c.z, animate);
+    }
+    invalidate();
+  }
+
+  /** The iso view, fitted to the model (§8: the first model a tab draws is shown whole). */
+  function fitView(): void {
+    setView("iso", undefined, false);
+  }
+
+  function setView(
+    name: string,
+    views: Readonly<Record<string, DocView>> = {},
+    animate = false,
+  ): boolean {
+    const named = Object.hasOwn(views, name) ? views[name] : undefined;
+    if (named) {
+      const p = new Vector3(...named.pos).applyMatrix4(world.matrixWorld);
+      const t = new Vector3(...named.target).applyMatrix4(world.matrixWorld);
+      void controls.setLookAt(p.x, p.y, p.z, t.x, t.y, t.z, animate);
+      invalidate();
+      return true;
+    }
+    if (!isStandard(name)) return false;
+    const from = viewFrom(name);
+    // World Z up to three's Y up, as the world root turns it.
+    const dir = new Vector3(from[0], from[2], -from[1]).normalize();
+    // Exactly down or up: lean a hair toward world −Y, so the screen's up is world +Y.
+    if (Math.abs(dir.y) > 1 - 1e-9) dir.set(0, Math.sign(dir.y), 1e-6).normalize();
+    fitBox(modelBox(), animate, dir);
+    return true;
+  }
+
+  function setProjection(p: Projection): void {
+    if ((p === "orthographic") === (camera === ortho)) return;
+    const target = controls.getTarget(new Vector3());
+    const pos = controls.getPosition(new Vector3());
+    const dist = pos.distanceTo(target);
+    const h = Math.max(container.clientHeight, 1);
+    const tanHalf = Math.tan(((persp.fov / 2) * Math.PI) / 180);
+    if (p === "orthographic") {
+      // The same apparent size at the target: zoom is pixels per millimetre there.
+      ortho.zoom = h / (2 * dist * tanHalf);
+      ortho.updateProjectionMatrix();
+      camera = ortho;
+      controls.camera = ortho;
+      controls.mouseButtons.wheel = CameraControls.ACTION.ZOOM;
+      void controls.setLookAt(pos.x, pos.y, pos.z, target.x, target.y, target.z, false);
+    } else {
+      const d = h / (2 * ortho.zoom * tanHalf);
+      const at = pos.clone().sub(target).normalize().multiplyScalar(d).add(target);
+      camera = persp;
+      controls.camera = persp;
+      controls.mouseButtons.wheel = CameraControls.ACTION.DOLLY;
+      void controls.setLookAt(at.x, at.y, at.z, target.x, target.y, target.z, false);
+    }
     invalidate();
   }
 
@@ -445,18 +623,40 @@ export function createViewer(container: HTMLElement): Viewer {
   rectEl.hidden = true;
   container.appendChild(rectEl);
 
-  function pick(clientX: number, clientY: number): string | undefined {
+  function castFrom(clientX: number, clientY: number): void {
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
+  }
+
+  function pickAt(clientX: number, clientY: number): { id: string; p: V3 } | undefined {
+    castFrom(clientX, clientY);
     const hits = raycaster.intersectObjects(content.children as Object3D[], false);
     for (const h of hits) {
       const g = instanced.find((x) => x.mesh === h.object);
-      if (g && h.instanceId !== undefined) return g.ids[h.instanceId];
       const s = single.find((x) => x.mesh === h.object);
-      if (s) return s.id;
+      const id = g && h.instanceId !== undefined ? g.ids[h.instanceId] : s?.id;
+      if (id) return { id, p: fromThree([h.point.x, h.point.y, h.point.z]) };
     }
     return undefined;
+  }
+
+  function pick(clientX: number, clientY: number): string | undefined {
+    return pickAt(clientX, clientY)?.id;
+  }
+
+  function ray(clientX: number, clientY: number): Ray {
+    castFrom(clientX, clientY);
+    const o = raycaster.ray.origin;
+    const d = raycaster.ray.direction;
+    return { o: fromThree([o.x, o.y, o.z]), d: fromThree([d.x, d.y, d.z]) };
+  }
+
+  function project(p: V3): P2 | undefined {
+    const v = new Vector3(...p).applyMatrix4(world.matrixWorld).project(camera);
+    if (!(v.z >= -1 && v.z <= 1)) return undefined;
+    const r = renderer.domElement.getBoundingClientRect();
+    return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
   }
 
   /** Entities whose body lies wholly inside a screen rectangle (window selection). */
@@ -496,17 +696,24 @@ export function createViewer(container: HTMLElement): Viewer {
     return out;
   }
 
+  let tool: ToolHandler | undefined;
   let down: { x: number; y: number; box: boolean } | undefined;
   const el = renderer.domElement;
   const onDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
-    down = { x: e.clientX, y: e.clientY, box: e.shiftKey };
-    if (e.shiftKey) {
+    // A tool owns the click; Shift is its modifier (a free line), not a box.
+    const box = e.shiftKey && !tool;
+    down = { x: e.clientX, y: e.clientY, box };
+    if (box) {
       controls.enabled = false;
       el.setPointerCapture(e.pointerId);
     }
   };
   const onMove = (e: PointerEvent) => {
+    if (tool && !down && e.buttons === 0) {
+      tool.move?.(e);
+      return;
+    }
     if (!down?.box) return;
     const cr = container.getBoundingClientRect();
     rectEl.hidden = false;
@@ -537,12 +744,18 @@ export function createViewer(container: HTMLElement): Viewer {
     }
     // A click, not a drag of the camera.
     if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) return;
+    if (tool) {
+      tool.click?.(e);
+      return;
+    }
     const id = pick(e.clientX, e.clientY);
     selectCb(id ? [id] : [], additive ? "toggle" : "replace");
   };
+  const onLeave = () => tool?.leave?.();
   el.addEventListener("pointerdown", onDown);
   el.addEventListener("pointermove", onMove);
   el.addEventListener("pointerup", onUp);
+  el.addEventListener("pointerleave", onLeave);
 
   // ---------------------------------------------------------------------------------------------
   // Size and frames
@@ -552,8 +765,13 @@ export function createViewer(container: HTMLElement): Viewer {
     renderer.setSize(w, h, false);
     renderer.domElement.style.width = `${w}px`;
     renderer.domElement.style.height = `${h}px`;
-    camera.aspect = w / Math.max(h, 1);
-    camera.updateProjectionMatrix();
+    persp.aspect = w / Math.max(h, 1);
+    persp.updateProjectionMatrix();
+    ortho.left = -w / 2;
+    ortho.right = w / 2;
+    ortho.top = h / 2;
+    ortho.bottom = -h / 2;
+    ortho.updateProjectionMatrix();
     invalidate();
   };
   const observer = new ResizeObserver(resize);
@@ -579,7 +797,8 @@ export function createViewer(container: HTMLElement): Viewer {
       model = m;
       build(m);
       paint();
-      if (!fitted && content.children.length > 1) {
+      // The first model is shown whole, even an empty one; later revisions keep the view.
+      if (!fitted) {
         fitView();
         fitted = true;
       }
@@ -588,10 +807,38 @@ export function createViewer(container: HTMLElement): Viewer {
       selection = ids;
       paint();
     },
+    setHighlight(ids) {
+      highlight = ids;
+      paint();
+    },
     onSelect(cb) {
       selectCb = cb;
     },
+    setTool(t) {
+      tool?.leave?.();
+      tool = t;
+      el.style.cursor = t ? "crosshair" : "";
+    },
+    setOverlay(state) {
+      overlay.set(state);
+      invalidate();
+    },
+    ray,
+    project,
+    pickAt,
+    setView,
+    setProjection,
+    projection: () => (camera === ortho ? "orthographic" : "perspective"),
     fitView,
+    fitSelection(ids) {
+      const box = ids.size > 0 ? boxOf(ids) : modelBox();
+      fitBox(box.isEmpty() ? modelBox() : box, true);
+    },
+    renderNow() {
+      controls.update(0);
+      renderer.render(scene, camera);
+      dirty = false;
+    },
     stats: () => ({ ...counts }),
     dispose() {
       cancelAnimationFrame(frame);
@@ -599,7 +846,9 @@ export function createViewer(container: HTMLElement): Viewer {
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
+      el.removeEventListener("pointerleave", onLeave);
       clear();
+      overlay.dispose();
       for (const u of unitCache.values()) u.geometry.dispose();
       controls.dispose();
       renderer.dispose();

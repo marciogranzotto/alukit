@@ -1,0 +1,52 @@
+{
+  "schema": "alukit.bom/1",
+  "groups": [
+    {
+      "kind": "bar",
+      "lines": [
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "opt": {
+            "finish": "anodised"
+          },
+          "qty": 8,
+          "length_mm": 6560,
+          "unit_mass_kg": 1.493,
+          "mass_kg": 9.794,
+          "mass_src": "est",
+          "sources": [
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "b7",
+            "b8",
+            "b9",
+            "b10"
+          ]
+        },
+        {
+          "item": "test:TS4080",
+          "name": "Profile 40x80 (parametric)",
+          "opt": {
+            "finish": "anodised"
+          },
+          "qty": 2,
+          "length_mm": 2400,
+          "unit_mass_kg": 2.743,
+          "mass_kg": 6.583,
+          "mass_src": "est",
+          "sources": [
+            "b5",
+            "b6"
+          ]
+        }
+      ],
+      "mass_kg": 16.377
+    }
+  ],
+  "mass_kg": 16.377,
+  "mass_unknown": [],
+  "diagnostics": []
+}

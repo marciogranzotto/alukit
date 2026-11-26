@@ -4,16 +4,27 @@ import type { AddressInfo } from "node:net";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import type { CatalogSet } from "#catalog/link.ts";
 import { CHECK_SCHEMA } from "#core/check/check.ts";
 import { checkedMachining, checkedOrder } from "#core/check/outputs.ts";
 import { isDate } from "#core/dates.ts";
 import { derivedJson } from "#core/derive/output.ts";
 import { sortDiagnostics } from "#core/diagnostics.ts";
 import { lockHash } from "#core/lock/pin.ts";
+import type { Lock } from "#core/lock/schema.ts";
 import { machiningJson } from "#core/machining/format.ts";
 import { costsJson, costsOf, orderJson } from "#core/order/format.ts";
 import { DOCUMENT } from "#core/project/open.ts";
 import { acquireEditLock, SERVE } from "#core/project/store.ts";
+import {
+  CATALOG_SCHEMA,
+  type CatalogEntry,
+  catalogIndex,
+  catalogTree,
+  itemCard,
+  listed,
+  searchCatalog,
+} from "./catalog.ts";
 import { type CommandsAnswer, type HistoryAnswer, type HostOptions, ProjectHost } from "./host.ts";
 import { removeOwner, writeOwner } from "./owner.ts";
 import {
@@ -44,6 +55,9 @@ import { viewModel } from "./view.ts";
  * | `GET /api/derived`, `/api/cutlist`, `/api/bom`, `/api/check` | as the CLI's `--json` outputs |
  * | `GET /api/order`, `/api/costs` `[?as_of=YYYY-MM-DD]` | as `alukit order` and `costs --format json`, from the lock; today by default |
  * | `GET /api/machining` | as `alukit machining --format json`: the custom parts' holes, the machined bars |
+ * | `GET /api/catalog` | the catalogs the document names, as vendor › kind › family with counts (§8) |
+ * | `GET /api/catalog/items` `[?q=&vendor=&kind=&family=&limit=&offset=]` | items matching a search |
+ * | `GET /api/catalog/item?id=<catalog>:<code>` | one item's card: key data, section, options, offers |
  * | `GET /api/log` | the log of steps, undos and redos |
  * | `GET /api/events` | the event stream: SSE wire format, read with `fetch` |
  * | `POST /api/commands` | `{ commands, source, id?, baseRev?, strict? }`: one step |
@@ -203,7 +217,28 @@ interface Ctx {
   project: ProjectHost;
   /** The model answer of the current revision, serialised once. */
   model: { rev: number; text: string } | undefined;
+  /** The catalog browser's index, built once per opening of the catalogs and lock. */
+  catalog: { live: CatalogSet; named: string[]; lock: Lock; entries: CatalogEntry[] } | undefined;
   streams: Set<ServerResponse>;
+}
+
+/** The catalog browser's index of the live catalogs and the lock, kept while neither changes. */
+async function catalogEntries(
+  ctx: Ctx,
+): Promise<{ live: CatalogSet; named: string[]; lock: Lock; entries: CatalogEntry[] }> {
+  const { set: live, named } = await ctx.project.catalogs();
+  const lock = ctx.project.state.lock;
+  if (ctx.catalog?.live !== live || ctx.catalog.lock !== lock) {
+    ctx.catalog = { live, named, lock, entries: catalogIndex(live, lock, named) };
+  }
+  return ctx.catalog;
+}
+
+/** A whole number from a query, or undefined; anything else is the caller's 400. */
+function intParam(q: URLSearchParams, name: string): number | undefined | "bad" {
+  const v = q.get(name);
+  if (v === null) return undefined;
+  return /^\d{1,6}$/.test(v) ? Number(v) : "bad";
 }
 
 async function serveStatic(root: string, method: string, path: string, res: ServerResponse) {
@@ -354,6 +389,47 @@ async function api(
           lock: lockHash(snap.state.lock),
         });
         sendJson(res, 200, path === "/api/order" ? orderJson(o) : costsJson(costsOf(o)), snap.rev);
+        return;
+      }
+      case "/api/catalog": {
+        const { live, named, entries } = await catalogEntries(ctx);
+        sendJson(res, 200, {
+          schema: CATALOG_SCHEMA,
+          catalogs: named.flatMap((id) => {
+            const c = live.catalogs.get(id);
+            return c ? [{ id: c.id, name: c.name, ...(c.vendor ? { vendor: c.vendor } : {}) }] : [];
+          }),
+          count: entries.length,
+          tree: catalogTree(entries),
+        });
+        return;
+      }
+      case "/api/catalog/items": {
+        const limit = intParam(query, "limit");
+        const offset = intParam(query, "offset");
+        if (limit === "bad" || offset === "bad") {
+          sendJson(res, 400, { ok: false, message: "limit and offset take whole numbers" });
+          return;
+        }
+        const { live, lock, entries } = await catalogEntries(ctx);
+        const opt = (k: string) => query.get(k) ?? undefined;
+        const found = searchCatalog(entries, {
+          ...(opt("q") !== undefined ? { q: opt("q") } : {}),
+          ...(opt("vendor") !== undefined ? { vendor: opt("vendor") } : {}),
+          ...(opt("kind") !== undefined ? { kind: opt("kind") } : {}),
+          ...(opt("family") !== undefined ? { family: opt("family") } : {}),
+          ...(limit !== undefined ? { limit } : {}),
+          ...(offset !== undefined ? { offset } : {}),
+        });
+        sendJson(res, 200, { total: found.total, items: listed(found.items, live, lock) });
+        return;
+      }
+      case "/api/catalog/item": {
+        const id = query.get("id") ?? "";
+        const { live, lock, entries } = await catalogEntries(ctx);
+        const card = itemCard(id, live, lock, entries);
+        if (!card) sendJson(res, 404, { ok: false, message: `no item ${id}` });
+        else sendJson(res, 200, card);
         return;
       }
       case "/api/log":
@@ -533,6 +609,7 @@ export async function openSession(options: SessionOptions): Promise<Session> {
     token,
     project,
     model: undefined,
+    catalog: undefined,
     streams: new Set(),
   };
   let closing: Promise<void> | undefined;

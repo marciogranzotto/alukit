@@ -1,3 +1,4 @@
+import type { BuiltSection } from "#catalog/link.ts";
 import type { Derived } from "#core/derive/derive.ts";
 import type { ItemSource } from "#core/items.ts";
 import type { ResolvedHole, ResolvedProjectItem } from "#core/project-items/resolve.ts";
@@ -20,11 +21,12 @@ import { type P2, simplifyRing } from "./outline.ts";
 /**
  * What drawing needs beyond the derived model (design §8, §9): each bar's section and where the
  * section sits on the design line, the sections' display outlines (§3.5: simplified at
- * 0.05 mm), parts' boxes, the shapes and holes of the project's plates and bent angles (§4.8),
- * and fasteners' positions. Built from a derived model and the items it was derived with, on the
- * server for the viewer and in the CLI for the GLB writer, so both draw the same shapes. Items
- * are read as derive reads them: the catalogs' and the document's own (`projectItems`). No
- * three.js.
+ * 0.05 mm) with their grooves and datums, parts' boxes, the shapes and holes of the project's
+ * plates and bent angles (§4.8), and fasteners' positions; the grooves and datums are what the
+ * draw tool snaps to (§8). Built from a derived model and the items it was derived
+ * with, on the server for the viewer and in the CLI for the GLB writer, so both draw the same
+ * shapes. Items are read as derive reads them: the catalogs' and the document's own
+ * (`projectItems`). No three.js.
  */
 
 const len = (x: number) => quantize(x, QUANTUM.len_mm);
@@ -35,6 +37,29 @@ function ring(r: readonly (readonly [number, number])[]): P2[] {
 }
 
 const p2 = (p: readonly [number, number]): P2 => [len(p[0]), len(p[1])];
+
+/**
+ * A section as the app draws and snaps to it: the display outline (§3.5), the nominal box, and
+ * the grooves and datums in section coordinates, which the draw tool snaps to (§8) and anchors
+ * on (§4.4). The catalog browser's card shows the same.
+ */
+export function viewSection(s: BuiltSection): ViewSection {
+  const datums: Record<string, P2> = {};
+  for (const k of Object.keys(s.datums).sort()) datums[k] = p2(s.datums[k] as P2);
+  return {
+    fidelity: s.fidelity,
+    outline: ring(s.draw.outline),
+    holes: s.draw.holes.map(ring),
+    bbox: [
+      [s.bbox_mm[0][0], s.bbox_mm[0][1]],
+      [s.bbox_mm[1][0], s.bbox_mm[1][1]],
+    ],
+    grooves: s.grooves
+      .map((g) => ({ face: g.face, at_mm: len(g.at_mm) }))
+      .sort((a, b) => (a.face < b.face ? -1 : a.face > b.face ? 1 : a.at_mm - b.at_mm)),
+    datums,
+  };
+}
 
 function holeView(h: ResolvedHole): ViewHole {
   const mouth = h.csk ?? h.cbore;
@@ -87,18 +112,7 @@ export function meshDisplay(derived: Derived, items: ItemSource): MeshInput["dis
   const bars: Record<string, ViewBar> = {};
   for (const [id, b] of derived.bars) {
     const item = b.placed.item;
-    if (!sections[item.sectionId]) {
-      const s = item.section;
-      sections[item.sectionId] = {
-        fidelity: s.fidelity,
-        outline: ring(s.draw.outline),
-        holes: s.draw.holes.map(ring),
-        bbox: [
-          [s.bbox_mm[0][0], s.bbox_mm[0][1]],
-          [s.bbox_mm[1][0], s.bbox_mm[1][1]],
-        ],
-      };
-    }
+    if (!sections[item.sectionId]) sections[item.sectionId] = viewSection(item.section);
     const pm = item.mass_kg_per_m;
     bars[id] = {
       section: item.sectionId,

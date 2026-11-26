@@ -13,7 +13,6 @@ export interface Io {
 
 /** The planned commands (design §7.3), not implemented yet. */
 const PLANNED: readonly (readonly [string, string])[] = [
-  ["snapshot <dir>", "render a view to PNG"],
   ["catalog search | import", "find items; run a vendor importer"],
 ];
 

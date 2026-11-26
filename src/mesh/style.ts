@@ -19,6 +19,8 @@ export const COLOURS = {
   fastener: 0xc9a227,
   edge: 0x15181c,
   selected: 0xff9f1c,
+  /** What a tool has picked (a connection's bars): the viewer's only, as the selection is. */
+  highlight: 0x38bdf8,
 } as const;
 
 /** The opacity of a translucent part: a placeholder, or an item with no box (a marker). */

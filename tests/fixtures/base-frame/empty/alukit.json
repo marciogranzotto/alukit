@@ -1,0 +1,17 @@
+{
+  "schema": "alukit.project/1",
+  "name": "Cart base frame",
+  "catalogs": ["../../catalogs/test"],
+  "currency": "BRL",
+  "price_basis": "regular",
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
+    "cutting": { "kerf_mm": 3, "trim_mm": 5 }
+  },
+  "params": {
+    "D": "600",
+    "H": { "v": 900, "src": "meas", "note": "under a bench top" },
+    "Hb": "100",
+    "W": "1200"
+  }
+}

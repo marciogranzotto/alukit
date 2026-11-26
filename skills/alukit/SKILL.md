@@ -281,6 +281,9 @@ alukit revision verify [<dir>] <name> [--json]
     revisions/<name>.json: the document, its lock, the outputs of every variant and a
     stamp; show prints what was stored; verify re-derives it and exits 1 on any drift
     (<dir> defaults to the current folder)
+alukit snapshot <dir> -o <file.png> [--view <name>] [--size <w>x<h>]
+    render a view to PNG in headless Chromium, on the running server or an ephemeral one:
+    a view the document names, or iso, top, front, side, left, back, bottom (1600x1000, iso)
 alukit export glb <dir> -o <file.glb> [--variant v] [--frozen]
     the model as binary glTF: Y up, metres, one node per bar, part and fastener, each
     named <id> <label|item> with its id, item, SKU, options and cut length in extras;
@@ -367,6 +370,7 @@ string; `<…>` is a string of that form; `?` marks an optional field.
   - `end` (optional): `string` — or a bar end, at its design point
   - `connector` (optional): `string` — defaults.butt.connector when absent
   - `qty` (optional): `integer`
+  - `optional` (optional): `boolean` — do nothing, rather than refuse, when nothing butts at the point (the draw tool sends one for each end of a bar it adds)
 - **`addPart`** (parts and patterns): place a part on a station or at a world pose, or add an unplaced line (§4.7)
   - `{ item: <a catalog item: "<catalog>:<code>">, opt?: { <key>: string }, on: { bar: <a bar: b<number>> | <a run: r<number>>, at_mm: expr, from?: "a" | "b" | "a.cut" | "b.cut", face?: "+x" | "-x" | "+y" | "-y", groove?: <a groove: "+y.1", numbered by increasing section coordinate>, off_mm?: [expr, expr] }, roll_deg?: expr, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
   - `{ item: <a catalog item: "<catalog>:<code>">, opt?: { <key>: string }, at: { pos: [expr, expr, expr], rot_deg?: [expr, expr, expr] }, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`

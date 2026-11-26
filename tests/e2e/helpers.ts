@@ -46,6 +46,17 @@ export function cli(
   });
 }
 
+/** A scratch copy of a fixture project with its catalogs beside it, served by nothing. */
+export async function scratchProject(
+  project = "cart",
+): Promise<{ dir: string; remove(): Promise<void> }> {
+  const base = await mkdtemp(join(tmpdir(), "alukit-e2e-"));
+  await cp(join(FIXTURES, "catalogs"), join(base, "catalogs"), { recursive: true });
+  const dir = join(base, ...project.split("/"));
+  await cp(join(FIXTURES, ...project.split("/")), dir, { recursive: true });
+  return { dir, remove: () => rm(base, { recursive: true, force: true }) };
+}
+
 /** A scratch copy of a fixture project, served by `alukit serve`. */
 export async function serve(project = "cart"): Promise<Served> {
   const base = await mkdtemp(join(tmpdir(), "alukit-e2e-"));
