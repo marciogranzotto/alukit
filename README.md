@@ -8,16 +8,39 @@ a priced bill of materials from real suppliers, the machining on each bar and an
 list. Catalogs can be your own, imported or created. Agents can drive the whole thing
 through a documented file format and a CLI.
 
-**Status: design phase. There is no code yet.**
+**Status: scaffold (milestone M0). The app draws an empty scene; nothing else works yet.**
 
-| Document | What |
-|---|---|
-| [`BRAINSTORM.md`](BRAINSTORM.md) | the decisions so far, the ideas, the roadmap |
-| [`docs/design.md`](docs/design.md) | the v1 design: catalogs, the project format, the solver, the agent interface, the viewer, milestones |
-| [`docs/research/forseti-inventory.md`](docs/research/forseti-inventory.md) | a survey of the first vendor catalog ([Forseti](https://loja.forsetisolucoes.com.br), Brazil) |
+| Document                                                                   | What                                                                                                 |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| [`BRAINSTORM.md`](BRAINSTORM.md)                                           | the decisions so far, the ideas, the roadmap                                                         |
+| [`docs/design.md`](docs/design.md)                                         | the v1 design: catalogs, the project format, the solver, the agent interface, the viewer, milestones |
+| [`docs/research/forseti-inventory.md`](docs/research/forseti-inventory.md) | a survey of the first vendor catalog ([Forseti](https://loja.forsetisolucoes.com.br), Brazil)        |
 
 It runs locally: a small Node server with the app in your browser, and no hosting. Your
 projects live wherever you keep them and are never part of this repository.
+
+## Development
+
+Node 26 (see `.nvmrc`) and pnpm 12, with no Corepack (Node 26 does not ship it):
+
+```sh
+nvm install && nvm use          # Node from .nvmrc
+npm install -g pnpm@12.23.0     # the version in package.json's packageManager
+pnpm install --frozen-lockfile
+pnpm exec playwright install chromium   # once, for the end-to-end test
+```
+
+| Script | Does |
+|---|---|
+| `pnpm dev` | Vite dev server with hot reload |
+| `pnpm build` | builds the app into `dist/` |
+| `pnpm serve` | serves `dist/` on 127.0.0.1 (a free port) through the CLI |
+| `pnpm test` | unit tests (Vitest) |
+| `pnpm test:e2e` | end-to-end test (Playwright, Chromium); run `pnpm build` first |
+| `pnpm lint` / `pnpm format` | Biome check / format |
+| `pnpm typecheck` | TypeScript 7, no emit |
+
+The CLI runs straight from the sources, with no build step: `node src/cli/main.ts --help`.
 
 ## License
 
