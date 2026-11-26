@@ -37,7 +37,9 @@ in the gitignored `internal/session-notes.md`.*
 | Design draft 2.1 | **done** (15:08), pushed `9093d70` | P1–P20 resolved (two v1 exclusions); new golden cases G17–G26; §16 resolution table; four additive catalog-schema changes, handed to M2a. |
 | M3a geometry core | **done** (16:08), merged `9ab4355`, pushed | G1–G21 and the §4.4 frame table pass to 0.01 mm; no design golden value was wrong. The cart's 37 bars equal an independent hand table. `derive --json` is byte-identical across runs and processes. 198 tests on its branch, 211 after merge. 39 calls in [`docs/notes/m3a-decisions.md`](../notes/m3a-decisions.md). |
 | std / ref-hiwin verification | **done** (16:09), merged, pushed | 40 rows: 33 verified, 5 corrected, 3 partly unverifiable. Table: [`docs/notes/std-hiwin-verification.md`](../notes/std-hiwin-verification.md). |
-| M3b part 1: generation + BOM | running (Opus, worktree), launched 16:10 | G22–G25, cart extended |
+| M3b part 1: generation + BOM | **done** (17:03), merged, pushed `a9bfc3c` | G22–G25 pass with the design's values; the cart's cut list and BOM equal the hand tables; `alukit bom`; 240 tests after merge. Calls in [`docs/notes/m3b-gen-decisions.md`](../notes/m3b-gen-decisions.md). |
+| M3b part 3: offers, order list, costs | running (Opus, worktree), launched 17:05 | pack cover, blocking rules, price bands (G26), `alukit order` |
+| Gap G-A: end bearing on a square-mitred shoe | running (Opus, worktree), launched 17:05 | golden case G27, or the smallest rule change |
 | M3b part 2: commands, canonical form, lock | running (Opus, worktree), launched 16:10 | §6, §4.13, `fmt`, `do`, `query`, `check` |
 | Early acceptance slice | **passed** (16:14) | All 75 T-slot pieces of the reference frame are within 0.5 mm of the record's drawn length; the largest difference is 0.04 mm. No AluKit bugs. Two pieces needed stand-ins (gaps G-A and G-B below). Details are internal. |
 | M1 catalog core | **done** (14:56), pushed `54ff321` | 94 tests. The 40x40 básico computes 553.53 mm², Ix 9.1287 and Iy 9.1307 cm⁴. 8 generators, worst 0.0025% from closed form. 43 schema calls in [`docs/notes/m1-decisions.md`](../notes/m1-decisions.md). Re-verified by the coordinator. |
@@ -134,3 +136,11 @@ in the gitignored `internal/session-notes.md`.*
     M3b part 3's review: prove it with a golden case or fix the rule.
   - **G-B:** a placeholder body needs project items (M6). The slice placed a catalog bracket by
     hand.
+- **17:03**: M3b part 1 done (7 commits) and merged; the merged tree is green (240 tests).
+  - Non-obvious calls: a rail's holes are one record on the bar (count, pitch, E at each end);
+    `stock_mm` must be named when stock lengths give different factory E; a sleeve sits against the
+    nut-side inner wall; cut-list identity compares machining by physical position.
+  - Process fix: a merge-and-push command chained after a check group whose exit status came from
+    its last command, so a failure wouldn't have stopped the push. Nothing broke (every check
+    passed), but merges now go through a fail-fast gate script before pushing.
+- **17:05**: M3b part 3 (offers, order, costs) and the G-A investigation launched in parallel.
