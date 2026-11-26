@@ -39,9 +39,9 @@ in the gitignored `internal/session-notes.md`.*
 | std / ref-hiwin verification | **done** (16:09), merged, pushed | 40 rows: 33 verified, 5 corrected, 3 partly unverifiable. Table: [`docs/notes/std-hiwin-verification.md`](../notes/std-hiwin-verification.md). |
 | M3b part 1: generation + BOM | **done** (17:03), merged, pushed `a9bfc3c` | G22–G25 pass with the design's values; the cart's cut list and BOM equal the hand tables; `alukit bom`; 240 tests after merge. Calls in [`docs/notes/m3b-gen-decisions.md`](../notes/m3b-gen-decisions.md). |
 | M3b part 3: offers, order list, costs | **done**, merged `a2dda75` (18:11), pushed | The cart's order list and totals match the hand golden byte for byte. G26 passes. Pack cover is an exact DP checked against brute force for needs 1–60. 7 blocking rules + 1 warning, each tested both ways. Calls: `docs/notes/m3b-order-decisions.md`. |
-| M5 core: variants, diff, revisions, GLB, skill | running (Opus, worktree), launched 18:14 | `snapshot` deferred to M4b |
+| M5 core: variants, diff, revisions, GLB, skill | **done**, merged `80c05d0` (19:29), pushed | Variants (applied first in derive); `alukit diff` across files, revisions, git refs and variants, each side on its own lock; `revision save/list/show/verify` with stored outputs (zero drift); a deterministic GLB writer with no three.js (`GLTFLoader` loads it); the skill, generated from help and schemas, with `skill install`. Calls: `docs/notes/m5-decisions.md`. |
 | M6 custom parts, placeholders | **done**, merged `2ded043` (19:08), pushed | Plates and bent angles with threaded, countersunk and counterbored holes; `alukit machining` (byte-exact against the hand golden); a placeholder holds only its own order group; gap G-B resolved without a new rule (golden G28). Calls: `docs/notes/m6-decisions.md`. |
-| M4b draw tool + catalog browser + `snapshot` | running (Opus, worktree), launched 18:32 | |
+| M4b draw tool + catalog browser + `snapshot` | **built** (19:19); merge next | Analytic snapping, work plane, draw/connect/place/pattern/measure tools, orthographic views, catalog browser, `alukit snapshot`. A Playwright mouse run draws the cart's base frame; its cut list and BOM are byte-identical to the CLI fixture's. Calls: `docs/notes/m4b-decisions.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
 | M2b rest of Forseti | **done** (17:43), merged, pushed | All 1,196 orderable SKUs map to offers (1,208 offers, 1,034 items: 497 generic, 235 fasteners, 151 accessories, 100 connectors, 31 bars, 12 panels, 8 carriages). All 27 profile stems have sections (8 exact, 19 parametric). New connectors are marked as having no mounting model yet. Gate: 322 tests. Calls: [`docs/notes/m2b-decisions.md`](../notes/m2b-decisions.md). |
@@ -70,6 +70,11 @@ in the gitignored `internal/session-notes.md`.*
   (DIN/ISO) were written by an agent from recall. The values match common tables, but the
   citations needed a check; done 2026-11-26, see `docs/notes/std-hiwin-verification.md`. The
   rail minimum end distance, first an estimate, is published by HIWIN GmbH's catalogue.
+- **M4b UX calls (decisions #6, #13, #29 in `docs/notes/m4b-decisions.md`).**
+  - **#6:** §4.5's default connection makes posts butt *into* top rails, so drawing top rails uses
+    auto-connect off plus the connect tool.
+  - **#13:** the work plane defaults to ground XY, where §8 suggests a view-facing plane.
+  - **#29:** `snapshot` always renders in a fresh headless page, never the open tab.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
@@ -224,3 +229,10 @@ in the gitignored `internal/session-notes.md`.*
   - The only test expectations changed are the cart's drawn part count (3 → 6) and the
     box-selection count (42 → 45), from M6's three new parts.
 - **18:55**: M5 core built (6 commits; it merged `main` with M4a mid-way). Its merge is next.
+- **19:19**: M4b built (11 commits). Two layout and key-handling bugs were found by its tests and
+  fixed. `autoConnect` gained an `optional` flag.
+- **19:29**: M5 merged by an Opus agent; the coordinator re-ran the gate (PASS, 493 tests).
+  - M6's item meshes moved into `src/mesh/items.ts`, shared by the viewer and the GLB writer. The
+    GLB now carries plates, angles and placeholders, with hole rods as child nodes.
+  - A bug was found and fixed: a variant swapping a part for a project item crashed derive.
+  - Revisions now also store the machining sheet.
