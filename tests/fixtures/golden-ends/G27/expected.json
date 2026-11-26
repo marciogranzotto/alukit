@@ -1,0 +1,69 @@
+{
+  "case": "G27",
+  "rule": "a strut bearing on a shoe mitred square to it",
+  "design": "shoe long point 75.00, centre line 60.00, short point 45.00; 36.87°. Strut 900.00, square, its end moved -100.00. With spacer_mm 8: 892.00. With n1 at z = 100: shoe 95.00, 80.00, 65.00; strut 884.00. Strut redrawn (140,0,380)->(620,0,20): shoe 86.67, 60.00, 33.33; 53.13°; strut 500.00. With the normal typed as (3, 0, -4) instead, that redraw is an angled-end error on b3.b (16.26°), and b3 is 600.00",
+  "expect": {
+    "bars": {
+      "b1": { "cut_mm": 1000 },
+      "b2": {
+        "cut_mm": 75,
+        "centre_mm": 60,
+        "short_mm": 45,
+        "ends": { "a": { "by": "c1", "move_mm": 0 }, "b": { "by": "plane", "angle_deg": 36.87 } }
+      },
+      "b3": {
+        "cut_mm": 900,
+        "centre_mm": 900,
+        "ends": { "b": { "by": "c2", "move_mm": -100, "angle_deg": 0 } }
+      }
+    },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "spacer_mm 8",
+      "patch": { "connections": { "c2": { "spacer_mm": 8 } } },
+      "expect": { "bars": { "b3": { "cut_mm": 892 } }, "errors": [] }
+    },
+    {
+      "name": "n1 at z = 100",
+      "patch": { "nodes": { "n1": [540, 0, 100] } },
+      "expect": {
+        "bars": {
+          "b2": { "cut_mm": 95, "centre_mm": 80, "short_mm": 65 },
+          "b3": { "cut_mm": 884 }
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "strut redrawn",
+      "patch": { "bars": { "b3": { "a": [140, 0, 380], "b": [620, 0, 20] } } },
+      "expect": {
+        "bars": {
+          "b2": {
+            "cut_mm": 86.67,
+            "centre_mm": 60,
+            "short_mm": 33.33,
+            "ends": { "b": { "angle_deg": 53.13 } }
+          },
+          "b3": { "cut_mm": 500, "ends": { "b": { "by": "c2", "move_mm": -100 } } }
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "strut redrawn, normal typed",
+      "patch": {
+        "bars": {
+          "b2": { "ends": { "b": { "plane": { "normal": [3, 0, -4] } } } },
+          "b3": { "a": [140, 0, 380], "b": [620, 0, 20] }
+        }
+      },
+      "expect": {
+        "bars": { "b3": { "cut_mm": 600, "ends": { "b": { "by": "default" } } } },
+        "errors": [{ "code": "angled-end", "entity": "b3.b", "refs": ["c2"] }]
+      }
+    }
+  ]
+}

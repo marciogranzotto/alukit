@@ -1,0 +1,21 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G27",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo"],
+  "defaults": { "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } } },
+  "nodes": { "n1": [540, 0, 80] },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [1000, 0, 0], "label": "beam" },
+    "b2": {
+      "a": { "on": { "bar": "b1", "at_mm": 540, "face": "+y" } },
+      "b": "n1",
+      "label": "shoe",
+      "ends": { "b": { "plane": { "point": "n1", "normal": "b3" }, "cut": "angle" } }
+    },
+    "b3": { "a": [0, 0, 800], "b": [600, 0, 0], "label": "strut" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"] },
+    "c2": { "type": "butt", "through": "b2.b", "ends": ["b3.b"] }
+  }
+}
