@@ -1,0 +1,61 @@
+# Forseti importer
+
+Builds `catalogs/forseti/catalog.json`, `offers.json` and `sections/` (layer 1, design §3.1, §11)
+from two inputs: a snapshot of the Forseti shop and the Forseti technical catalogue (PDF).
+`families/` and `overrides.json` are hand-written and the importer never touches them.
+
+## Running it
+
+Python 3.11 or later, with [PyMuPDF](https://pypi.org/project/PyMuPDF/) for the PDF; everything
+else is the standard library. Run it with the isolated interpreter (`-I`) of a virtual environment:
+
+```sh
+python3 -m venv .cache/forseti/venv
+.cache/forseti/venv/bin/pip install pymupdf
+.cache/forseti/venv/bin/python -I importers/forseti/import_forseti.py fetch .cache/forseti/snapshots/<date>
+.cache/forseti/venv/bin/python -I importers/forseti/import_forseti.py build .cache/forseti/snapshots/<date> <catalogo_forsetiA4.pdf>
+```
+
+`fetch` refuses a folder that exists, so each snapshot is new and whole. `build` writes into
+`catalogs/forseti` (or a third argument), prints what it emitted and what it left out, and fails
+rather than guess when the data is not where the tables say. `.cache/` is not committed.
+
+The same snapshot and PDF give byte-identical files. `src/catalog/builtin.test.ts` runs the build
+twice and compares both runs with the committed files when `FORSETI_SNAPSHOT`, `FORSETI_PDF` and
+`FORSETI_PYTHON` (an interpreter with PyMuPDF) are set; otherwise it skips.
+
+## What it reads
+
+**The shop**, through the WooCommerce Store API (`/wp-json/wc/store/v1/`): categories, every
+product, every variation (from `products?type=variation`, read again when a pass misses ids), and
+the product page of each profile, which alone states the cut rule (minimum and maximum length,
+resolution, tolerance, price step). GET only, at most one request per second, under the user agent
+in `forseti_importer/fetch.py`. `manifest.json` in the snapshot records every request and the read
+date, which becomes the `read` of every shop fact the build emits.
+
+From it come items (name, code, finish options, thread, length, insertion, the dimensions a
+description tabulates), offers (regular and sale price in minor units, pack, kit contents, stock
+length, cut rule, stock and shipping mass) and the material's identity.
+
+**The catalogue**, `catalogo_forsetiA4.pdf` ("Catálogo técnico 2020", 96 pages). The build checks
+its SHA-256 against `forseti_importer/tables.py`: page numbers in the tables hold for that file
+only. From it come the profiles' printed area, IX, IY and mass (pp. 11–21), the alloy (p. 6), and,
+where a page draws the section as vector paths, the exact outline: line segments chained into
+rings, scaled by the printed width, centred, and turned into the section frame. Groove types are
+measured on those outlines and checked against the printed opening.
+
+## Where the judgement lives
+
+`forseti_importer/tables.py` holds every mapping the build does not derive: which product families
+are emitted, how attributes classify, which pages hold which profile, which kit lines name no
+code, the catalogue's IX/IY convention (IX is about the axis along the long side). A review reads
+that file, not the code. A product the tables do not name is counted and reported, not emitted.
+
+| Module | Does |
+|---|---|
+| `fetch.py` | the snapshot |
+| `store.py` | reads a snapshot: products, variations, prices, cut rules |
+| `pdfcat.py` | the catalogue's tables, vector outlines and groove measurements |
+| `geometry.py` | rings, nesting and section properties (standard library) |
+| `build.py` | items, offers and sections from the two |
+| `emit.py` | canonical JSON: key order kept, ids in the catalog's order, 100 columns |

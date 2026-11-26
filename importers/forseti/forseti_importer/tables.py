@@ -1,0 +1,204 @@
+"""Reviewed tables: every judgement the importer makes, in one place, so a review reads them here
+instead of in the code (design §11: "from a reviewed table in the importer").
+
+Each table says what it maps and where the mapping comes from. A product the tables do not name
+is classified, counted and reported, and not emitted: the families below are the ones whose
+parsing is written and checked.
+"""
+
+from __future__ import annotations
+
+import re
+
+#: The PDF catalogue these tables were reviewed against ("CATÁLOGO TÉCNICO 2020", 96 pages,
+#: created 2022-12-12). The page tables below hold for this file only, so the build refuses any
+#: other: a new edition is re-reviewed, then its hash and read date go here.
+PDF = "catalogo_forsetiA4.pdf"
+PDF_SHA256 = "b40759b99c8ef31aa806d655adcaaa677244844d51c8657b0ca24fa76b32831d"
+PDF_READ = "2026-11-26"
+
+# --- Products --------------------------------------------------------------------------------
+
+#: A profile product: PF<series>-<type>[letter][-pp]-c<n>[p<n>], simple. The `-c7` (or `-C9P1`)
+#: tail is not a finish (survey §1); `-pp` is the black finish.
+PROFILE_SKU = re.compile(r"^(PF\d\d-\d\d[A-Z]?)(-pp)?-c\d+(?:p\d+)?$", re.I)
+
+#: Product families by the parent's (or simple product's) SKU, exactly as the shop lists it.
+#: Value: (family, kind, subtype). Families not listed here are left for M2b.
+FAMILY_BY_SKU: dict[str, tuple[str, str, str | None]] = {
+    "HGXX-01R-c12p2": ("rail", "bar", None),
+    "HGHXX-01CA": ("carriage", "carriage", None),
+    "HGWXX-01CC": ("carriage", "carriage", None),
+    "PCI3-XX-XX": ("socket-screw", "fastener", "screw"),
+    "PCI4-XX-XX": ("socket-screw", "fastener", "screw"),
+    "PCI5-XX-XX": ("socket-screw", "fastener", "screw"),
+    "PCI6-XX-XX": ("socket-screw", "fastener", "screw"),
+    "PCI6-XX-ZP-XX": ("socket-screw", "fastener", "screw"),
+    "PCI8-XX-XX": ("socket-screw", "fastener", "screw"),
+    "PSM-X-XX": ("hex-nut", "fastener", "nut"),
+    "ALM-XX-XX": ("plain-washer", "fastener", "washer"),
+    "APM-X-XXX": ("spring-washer", "fastener", "washer"),
+    "PAM30X-XX-XX": ("hammer-screw", "fastener", "hammer-screw"),
+    "PAM408-XX-XX": ("hammer-screw", "fastener", "hammer-screw"),
+    "PAM408-XXI-XX": ("hammer-screw", "fastener", "hammer-screw"),
+    "PAM458-XX-XXX": ("hammer-screw", "fastener", "hammer-screw"),
+    "PRT20-XX-XXX": ("t-nut", "fastener", "t-nut"),
+    "PRT30-XX-XXX": ("t-nut", "fastener", "t-nut"),
+    "PRT45-XX-XXX": ("t-nut", "fastener", "t-nut"),
+    "PRT50-0X-XX": ("t-nut", "fastener", "t-nut"),
+    "BRX16-XX-XX": ("reducing-bush", "fastener", "insert"),
+    "CT100-XXX": ("bracket", "connector", "bracket"),
+    "CT100-XXXX": ("bracket", "connector", "bracket"),
+    "PLUXX-01": ("union-plate", "connector", "plate"),
+    "PLU40-01-PP": ("union-plate", "connector", "plate"),
+    "CT100-286-K30": ("bracket-kit", "kit", None),
+    "CT100-388-K4050": ("bracket-kit", "kit", None),
+    "CT100-388-K45B": ("bracket-kit", "kit", None),
+    "CT100-788-K4080": ("bracket-kit", "kit", None),
+    "CT100-888-K4590": ("bracket-kit", "kit", None),
+}
+
+#: Variation attributes (design §11): a size makes separate items, an option an item option, a
+#: pack (`Unidades`) a pack, a length a stock offer. `fixings` selects the bare part ("Sem
+#: Fixadores"); the "Com Fixadores" variant is a kit whose contents the shop does not state.
+ATTRIBUTE_CLASS = {
+    "Unidades": "pack",
+    "Comprimento": "length",
+    "Tamanho Guia Linear": "size",
+    "Comprimento do Parafuso": "size",
+    "Rosca": "size",
+    "Para Parafuso": "size",
+    "Rosca Interna": "size",
+    "Largura da Cantoneira": "size",
+    "Para Perfil": "size",
+    "Opção de Fixação": "fixings",
+    "Variação": "label",
+}
+
+#: Variants the shop lists that are not emitted, with the reason.
+SKIP_SKU = {
+    "PLU40-01-K": "the 'with fixings' variant; the shop does not state what the fixings are",
+    "PLU40-01-PP-K": "listed at a price of 0; not a real offer",
+}
+
+#: Products that sell one item in different finishes, by SKU: (item, finish, describes the item).
+#: The item's fields come from the product marked True; the others add their finish and offer.
+FINISH_BY_SKU = {
+    "PLU40-01": ("PLU40-01", "galvanised", True),
+    "PLU40-01-PP": ("PLU40-01", "black", False),
+}
+
+#: Kit lines that name no code: the item they mean, and why. (A line's code is a pack SKU,
+#: <item>-<units>, resolved by the rule that gives item ids.)
+KIT_LINE_FIXES = {
+    ("CT100-788-K4080", "Arruela de Pressão M8"): (
+        "APM-8",
+        "the line names no code; its sibling kits list APM-8-10 for the same line",
+    ),
+}
+
+# --- Profiles ----------------------------------------------------------------------------------
+
+#: Series and slot class (from the name's "Canal <n>") → the system and groove type ids, and the
+#: system's name.
+SYSTEMS = {
+    (20, 6): ("s20-c6", "c6-20", "Base 20, canal 6"),
+    (30, 8): ("s30-c8", "c8-30", "Base 30, canal 8"),
+    (40, 8): ("s40-c8", "c8-40", "Base 40, canal 8"),
+    (45, 10): ("s45-c10", "c10-45", "Base 45, canal 10"),
+    (45, 8): ("s45-c8", "c8-45", "Base 45, canal sextavado M8"),
+}
+
+#: Slot classes the name does not give as "Canal <n>": the 45x90 econômico is "Canal Sextavado
+#: M8", a slot for M8 hex heads and nuts, printed 8.3 mm wide (p. 19).
+SLOT_BY_STEM = {"PF45-12": 8}
+
+#: Where each groove type is measured: on the exact outline of one profile, at one groove.
+#: (face, centre along the face). The opening is cross-checked against the printed value.
+GROOVE_SOURCE = {
+    "c6-20": {"profile": "PF20-14", "face": "+y", "at_mm": 0, "printed_opening_mm": 6, "page": 11},
+    "c8-30": {"profile": "PF30-02", "face": "+x", "at_mm": 15, "printed_opening_mm": 8.2, "page": 15},
+    "c8-40": {"profile": "PF40-01", "face": "+y", "at_mm": 0, "printed_opening_mm": 8.19, "page": 16},
+    "c10-45": {"profile": "PF45-02", "face": "+x", "at_mm": 22.5, "printed_opening_mm": 10.2, "page": 18},
+    "c8-45": {"profile": "PF45-12", "face": "+x", "at_mm": 22.5, "printed_opening_mm": 8.3, "page": 19},
+}
+
+#: Profile stems this import emits, with what the shop's name does not say.
+#:
+#: - `w`, `h`: the section's width (x) and height (y). A name "AxB" is A wide and B tall, so
+#:   sections stand tall.
+#: - `drawn`: the catalogue drawing's width and height. When they are swapped against (w, h), the
+#:   vector outline is turned 90° into the section frame.
+#: - `outline`: the half of the page holding the vector outline, when the page has one
+#:   (survey §4); otherwise `bores` makes a parametric T-slot envelope.
+#: - `bore`: the core bore's diameter as printed on the drawing; `bores`: their centres in the
+#:   section frame, for the parametric envelope.
+#:
+#: The printed IX and IY do not follow the drawing: for every rectangular profile the catalogue
+#: gives IX about the axis along the long side (the weak axis) and IY about the other. Checked
+#: against the five rectangular vector outlines: the 20x60 is drawn standing and the 30x60, 45x90
+#: and 45x90 econômico lying, and in each IX is the weak axis (p. 11, 15, 18, 19). Sections here
+#: stand tall, so IX goes to Iy_mm4 and IY to Ix_mm4. Square profiles print one value for both.
+PROFILES: dict[str, dict] = {
+    "PF20-14": {"page": 11, "w": 20, "h": 60, "drawn": (20, 60), "outline": "bottom", "bore": 4.6},
+    "PF30-02": {"page": 15, "w": 30, "h": 60, "drawn": (60, 30), "outline": "bottom", "bore": 12.1},
+    "PF30-04": {"page": 14, "w": 30, "h": 30, "drawn": (30, 30), "outline": "bottom", "bore": 12.1},
+    "PF40-00": {"page": 16, "w": 40, "h": 40, "drawn": (40, 40), "outline": "top", "bore": 13.7},
+    "PF40-01": {"page": 16, "w": 40, "h": 40, "drawn": (40, 40), "outline": "bottom", "bore": 13.7},
+    "PF40-02": {
+        "page": 17, "w": 40, "h": 80, "drawn": (80, 40), "bore": 13.7,
+        "bores": [(0, -20), (0, 20)],
+    },
+    "PF40-03": {"page": 21, "w": 80, "h": 80, "drawn": (80, 80), "outline": "top", "bore": 13.7},
+    "PF40-03B": {
+        "page": 20, "w": 80, "h": 80, "drawn": (80, 80), "bore": 13.7,
+        "bores": [(-20, -20), (20, -20), (-20, 20), (20, 20)],
+    },
+    "PF40-04": {"page": 17, "w": 40, "h": 40, "drawn": (40, 40), "bore": 13.7, "bores": [(0, 0)]},
+    "PF45-02": {"page": 18, "w": 45, "h": 90, "drawn": (90, 45), "outline": "bottom", "bore": 13.7},
+    "PF45-12": {"page": 19, "w": 45, "h": 90, "drawn": (90, 45), "outline": "bottom", "bore": 6.5},
+}
+
+#: Grooves: one centred on each series cell along each face (a 40x80 has two on each long face
+#: and one on each short face), as every profile drawn on pp. 11–21 shows.
+
+# --- Hardware text --------------------------------------------------------------------------------
+
+#: Description phrases that say how a T-nut or hammer screw goes into the groove.
+INSERTION = {
+    "Montagem pela ponta do perfil": "slide-in",
+    "Montagem pela face do perfil": "drop-in",
+}
+
+#: Dimension letters in the descriptions' per-code tables ("cod: ALM-8 Parafuso: M8 A: 8,4 B: 17
+#: Espessura: 1,6"), by family: the description's label → the dims key (ISO letters).
+DIMS = {
+    "plain-washer": {"A": "d1_mm", "B": "d2_mm", "Espessura": "h_mm"},
+    "spring-washer": {"A": "d1_mm", "B": "d2_mm", "Espessura": "h_mm"},
+    "hex-nut": {"B": "s_mm", "C": "m_mm", "PASSO (mm)": "pitch_mm"},
+}
+
+#: Catalogue pages of the hardware families, for `docs`: the page whose "COD:" heading names the
+#: family (CT100-XXX "base simples" on p. 34 and "base dupla" on p. 35; PRTXX-XX "bloco corrediço
+#: - porca T" on p. 56; PAMXXX-XX "parafuso martelo - canal 8" on p. 58; PCIX-XX on p. 62).
+FAMILY_PAGES = {
+    "union-plate": [29],
+    "plain-washer": [53],
+    "spring-washer": [53],
+    "hex-nut": [53],
+    "t-nut": [56],
+    "hammer-screw": [58],
+    "socket-screw": [62],
+    "reducing-bush": [41],
+}
+ITEM_PAGES = {
+    "CT100-286": [34],
+    "CT100-388": [34],
+    "CT100-788": [35],
+    "CT100-888": [35],
+}
+
+# --- Material ----------------------------------------------------------------------------------
+
+#: Catalogue p. 6: "LIGA: 6063 (DIN AlMgSi 0,5)", "TRATAMENTO TÉRMICO: T5", density, modulus.
+MATERIAL_PAGE = 6

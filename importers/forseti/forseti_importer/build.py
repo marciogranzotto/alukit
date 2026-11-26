@@ -1,0 +1,471 @@
+"""Building catalogs/forseti from a shop snapshot and the PDF catalogue (design §11 steps 1–3).
+
+Facts only: every item and offer field comes from the snapshot or the PDF, through the parsers
+and the reviewed tables, with the source and read date in its provenance. Modelling that no
+source states (mounting geometry, fits, clone references) is layer 2, in families/.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+from collections import defaultdict
+from decimal import Decimal
+
+from . import emit, pdfcat, store, tables
+
+API = "https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products"
+WALK = ("-y", "+x", "+y", "-x")
+
+
+def num(d: Decimal) -> int | float:
+    return int(d) if d == d.to_integral_value() else float(d)
+
+
+def pdf_ref(page: int) -> str:
+    return f"pdf:{tables.PDF}#p{page}"
+
+
+class Build:
+    def __init__(self, snap: store.Snapshot, doc) -> None:
+        self.snap = snap
+        self.doc = doc
+        self.items: dict[str, dict] = {}
+        self.offers: dict[str, dict] = {}
+        self.sections: dict[str, dict] = {}
+        self.grooves: dict[str, dict] = {}
+        self.systems: dict[str, dict] = {}
+        self.materials: dict[str, dict] = {}
+        self.notes: dict[str, list[str]] = defaultdict(list)
+        self.outlines: dict[str, pdfcat.Outline] = {}
+
+    # --- provenance and common fields ----------------------------------------------------------
+
+    def shop_prov(self, p: dict) -> dict:
+        return {"src": "src", "ref": f"url:{p['permalink']}", "read": self.snap.read}
+
+    def pdf_prov(self, page: int) -> dict:
+        return {"src": "src", "ref": pdf_ref(page), "read": tables.PDF_READ}
+
+    def price(self, x: dict, per: str, times: int = 1) -> dict:
+        regular, sale = store.price(x)
+        ref = f"url:{API}/{x['id']}"
+        if times == 1:
+            return {"regular_minor": regular, "sale_minor": sale, "per": per,
+                    "read": self.snap.read, "src": "src", "ref": ref}
+        note = f"{times} × the shop's price per metre"
+        return {
+            "regular_minor": {"v": regular * times, "src": "calc", "note": f"{note}, {regular}"},
+            "sale_minor": None if sale is None else {"v": sale * times, "src": "calc", "note": f"{note}, {sale}"},
+            "per": per, "read": self.snap.read, "src": "calc", "ref": ref,
+        }
+
+    @staticmethod
+    def brand(p: dict) -> str | None:
+        for a in p.get("attributes") or []:
+            if a["name"] == "Marca" and a.get("terms"):
+                return a["terms"][0]["name"]
+        return None
+
+    def offer(self, key: str, item: str, x: dict, per: str, **extra) -> None:
+        if key in self.offers:
+            raise ValueError(f"offer {key} twice")
+        o: dict = {"item": item}
+        for k in ("sku", "options", "pack", "kit", "sale"):
+            if extra.get(k) is not None:
+                o[k] = extra[k]
+        o["price"] = self.price(x, per, extra.get("times", 1))
+        o["in_stock"] = bool(x.get("is_in_stock"))
+        o["url"] = x["permalink"]
+        w = store.weight(x)
+        if w is not None:
+            o["ship_mass_kg"] = w
+        self.offers[key] = o
+
+    def item(self, iid: str, fields: dict) -> None:
+        """Adds an item, or checks that a second product describing it agrees."""
+        prev = self.items.get(iid)
+        if prev is None:
+            self.items[iid] = fields
+        elif {k: v for k, v in prev.items() if k not in ("url", "prov", "options")} != {
+            k: v for k, v in fields.items() if k not in ("url", "prov", "options")
+        }:
+            raise ValueError(f"item {iid}: two products describe it differently")
+
+    # --- material, grooves, systems -------------------------------------------------------------
+
+    def material(self) -> None:
+        page = tables.MATERIAL_PAGE
+        t = self.doc[page - 1].get_text()
+        alloy = re.search(r"LIGA:\s*(\d{4})", t)
+        temper = re.search(r"TRATAMENTO TÉRMICO:\s*(T\d)", t)
+        dens = re.search(r"DENSIDADE:\s*(\d+)\s*Kg/m3", t)
+        e = re.search(r"ESLASTICIDADE:\s*(\d+)\s*N/mm2", t)
+        if not (alloy and temper and dens and e):
+            raise ValueError(f"p. {page}: the alloy data is not where it was")
+        self.materials[f"al-{alloy.group(1)}-{temper.group(1).lower()}"] = {
+            "name": f"Alumínio {alloy.group(1)} {temper.group(1)}",
+            "alloy": alloy.group(1),
+            "temper": temper.group(1),
+            "E_MPa": int(e.group(1)),
+            "density_kg_per_m3": int(dens.group(1)),
+            "prov": self.pdf_prov(page),
+        }
+
+    def groove_types(self) -> None:
+        for gid, src in tables.GROOVE_SOURCE.items():
+            spec = tables.PROFILES[src["profile"]]
+            o = self.outlines[src["profile"]]
+            d = pdfcat.measure_groove(o.outline, o.holes, spec["w"], spec["h"], src["face"], src["at_mm"])
+            if abs(d.opening_mm - src["printed_opening_mm"]) > 0.15:
+                raise ValueError(f"{gid}: measured opening {d.opening_mm}, printed {src['printed_opening_mm']}")
+            gt: dict = {"opening_mm": d.opening_mm, "lip_mm": d.lip_mm, "depth_mm": d.depth_mm,
+                        "undercut_mm": d.undercut_mm}
+            if d.taper_from_mm is not None:
+                gt["taper_from_mm"] = d.taper_from_mm
+                gt["bottom_mm"] = d.bottom_mm
+            gt["class"] = "standard"
+            gt["prov"] = {
+                "src": "calc",
+                "ref": pdf_ref(src["page"]),
+                "read": tables.PDF_READ,
+                "note": (
+                    f"measured along the centre line of the groove on face {src['face']} at "
+                    f"{src['at_mm']} mm of the vector outline of {src['profile']}; printed opening "
+                    f"{src['printed_opening_mm']} mm"
+                ),
+            }
+            self.grooves[gid] = gt
+
+    # --- profiles ---------------------------------------------------------------------------------
+
+    def profiles(self) -> None:
+        printed = pdfcat.profile_tables(self.doc, list(range(10, 22)))
+        stems: dict[str, list[tuple[str, dict]]] = defaultdict(list)
+        for p in self.snap.products:
+            if store.family_of(p) != "profile":
+                continue
+            m = tables.PROFILE_SKU.match(p["sku"])
+            finish = "black" if m.group(2) else "anodised"
+            cats = {c["name"] for c in p["categories"]}
+            if ("Pintura preta" in cats) != (finish == "black"):
+                raise ValueError(f"{p['sku']}: the SKU and the categories disagree on the finish")
+            stems[m.group(1)].append((finish, p))
+        for stem in emit.sorted_ids(stems):
+            if stem not in tables.PROFILES:
+                self.notes["profile stems left for M2b"].append(stem)
+                continue
+            self.profile(stem, sorted(stems[stem], key=lambda fp: (fp[0] != "anodised", fp[1]["id"])),
+                         printed[stem])
+        missing = sorted(set(tables.PROFILES) - set(stems))
+        if missing:
+            raise ValueError(f"profile stems in the tables but not in the shop: {missing}")
+
+    def profile(self, stem: str, products: list[tuple[str, dict]], pr: pdfcat.Printed) -> None:
+        spec = tables.PROFILES[stem]
+        w, h, page = spec["w"], spec["h"], spec["page"]
+        main = products[0][1]
+        name = re.sub(r"\s*[–-]\s*(Anodizado Fosco|Pintura Preta)\s*$", "", store.name(main), flags=re.I)
+        desc = store.text(main.get("description"))
+        m = re.search(r"Canal (\d+)", store.name(main))
+        slot = tables.SLOT_BY_STEM.get(stem) or (int(m.group(1)) if m else None)
+        tap = re.search(r"Centro permite rosca:\s*(M\d+)", desc)
+        series = int(stem[2:4])
+        if (series, slot) not in tables.SYSTEMS:
+            raise ValueError(f"{stem}: no system for series {series}, slot {slot}")
+        sys_id, gid, sys_name = tables.SYSTEMS[(series, slot)]
+        self.systems[sys_id] = {"type": "tslot", "series_mm": series, "groove": gid, "name": sys_name}
+        if pr.A_cm2 is None or pr.IX_cm4 is None or pr.IY_cm4 is None or pr.kg_per_m is None:
+            raise ValueError(f"{stem}: incomplete table on p. {page}")
+        ix, iy = (pr.IX_cm4, pr.IY_cm4) if w == h else (pr.IY_cm4, pr.IX_cm4)
+        grooves = []
+        for face in WALK:
+            length = w if face in ("-y", "+y") else h
+            n = round(length / series)
+            grooves.extend({"face": face, "at_mm": num(Decimal(str((i - (n - 1) / 2) * series)))}
+                           for i in range(n))
+        if "outline" in spec:
+            self.exact_section(stem, spec, grooves, gid)
+        else:
+            self.parametric_section(stem, spec, grooves, gid)
+        core: dict = {"bore_mm": spec["bore"]}
+        if tap:
+            core["tap"] = tap.group(1)
+        finishes = [f for f, _ in products]
+        if len(set(finishes)) != len(finishes):
+            raise ValueError(f"{stem}: two products in one finish")
+        it = {"kind": "bar", "name": name, "code": stem}
+        if self.brand(main):
+            it["brand"] = self.brand(main)
+        it |= {
+            "url": main["permalink"],
+            "docs": [{"ref": pdf_ref(page)}],
+            "material": next(iter(self.materials)),
+            "shape": "tslot",
+            "section": stem,
+            "system": sys_id,
+            "mass_kg_per_m": num(pr.kg_per_m),
+            "area_mm2": num(pr.A_cm2 * 100),
+            "Ix_mm4": num(ix * 10000),
+            "Iy_mm4": num(iy * 10000),
+            "core": core,
+            "options": {"finish": finishes},
+            "prov": self.pdf_prov(page),
+        }
+        self.item(stem, it)
+        for finish, p in products:
+            page_html = self.snap.page(p["id"])
+            rule = store.cut_rule(page_html) if page_html else None
+            if rule is None:
+                raise ValueError(f"{p['sku']}: no cut rule on its product page")
+            if isinstance(rule, store.CutRule):
+                sale = {"mode": "cut", "min_mm": rule.min_mm, "max_mm": rule.max_mm, "tol_mm": rule.tol_mm,
+                        "res_mm": rule.res_mm, "step_mm": rule.step_mm}
+                self.offer(p["sku"], stem, p, "m", options={"finish": finish}, sale=sale)
+            else:
+                for length in rule.lengths_mm:
+                    self.offer(f"{p['sku']}.{length}", stem, p, "bar", sku=p["sku"],
+                               options={"finish": finish}, sale={"mode": "stock", "length_mm": length},
+                               times=length // 1000)
+
+    def exact_section(self, stem: str, spec: dict, grooves: list[dict], gid: str) -> None:
+        o = pdfcat.extract_outline(self.doc, spec["page"], spec["outline"], spec["drawn"], (spec["w"], spec["h"]))
+        self.outlines[stem] = o
+        turned = spec["drawn"] != (spec["w"], spec["h"])
+        note = (
+            f"vector path of {o.segments} segments; the outline is the stroke centreline. "
+            + (f"Drawn {spec['drawn'][0]}x{spec['drawn'][1]}, turned 90° counter-clockwise into "
+               f"the section frame. " if turned else "")
+            + "Centred on its box, coordinates rounded to 0.0001 mm."
+        )
+        w2, h2 = spec["w"] / 2, spec["h"] / 2
+        self.sections[stem] = {
+            "schema": "alukit.section/1",
+            "id": stem,
+            "fidelity": "exact",
+            "props_ok": True,
+            "from": {"ref": pdf_ref(spec["page"]), "method": "vector",
+                     "scale": f"width {spec['drawn'][0]} mm", "read": tables.PDF_READ, "note": note},
+            "bbox_mm": [[num(Decimal(str(-w2))), num(Decimal(str(-h2)))],
+                        [num(Decimal(str(w2))), num(Decimal(str(h2)))]],
+            "grooves": [{**gr, "type": gid} for gr in grooves],
+            "outline": [list(pt) for pt in o.outline],
+            "holes": [[list(pt) for pt in hole] for hole in o.holes],
+        }
+
+    def parametric_section(self, stem: str, spec: dict, grooves: list[dict], gid: str) -> None:
+        w, h = spec["w"], spec["h"]
+        default = [{"face": f, "at_mm": 0} for f in WALK]
+        params: dict = {"w_mm": w, "h_mm": h, "groove": gid}
+        if grooves != default:
+            params["grooves"] = grooves
+        params["bores"] = [{"at_mm": [x, y], "d_mm": spec["bore"]} for x, y in spec["bores"]]
+        self.sections[stem] = {
+            "schema": "alukit.section/1",
+            "id": stem,
+            "fidelity": "parametric",
+            "props_ok": False,
+            "from": {"ref": pdf_ref(spec["page"]), "method": "generator", "read": tables.PDF_READ,
+                     "note": "a T-slot envelope from the printed overall size and core bore, with the "
+                             "groove type measured on the series' vector outline; the page draws "
+                             "this profile as a raster image"},
+            "generator": "tslot",
+            "params": params,
+        }
+
+    # --- hardware -----------------------------------------------------------------------------------
+
+    def hardware(self) -> None:
+        for p in self.snap.products:
+            entry = tables.FAMILY_BY_SKU.get(p["sku"])
+            if entry is None or entry[1] == "kit":
+                continue
+            family, kind, subtype = entry
+            sources = ([p] if p["type"] == "simple" else []) + self.snap.children.get(p["id"], [])
+            for x in sources:
+                if x["sku"] in tables.SKIP_SKU:
+                    self.notes["SKUs not emitted"].append(f"{x['sku']}: {tables.SKIP_SKU[x['sku']]}")
+                    continue
+                self.hardware_offer(p, x, family, kind, subtype)
+
+    def hardware_offer(self, parent: dict, x: dict, family: str, kind: str, subtype: str | None) -> None:
+        a = store.attrs(x, parent) if x is not parent else {}
+        unknown = [k for k in a if k not in tables.ATTRIBUTE_CLASS]
+        if unknown:
+            raise ValueError(f"{x['sku']}: attributes not in the table: {unknown}")
+        sku = x["sku"]
+        pack = None
+        iid = sku
+        if "Unidades" in a:
+            pack = int(re.fullmatch(r"(\d+)un", a["Unidades"]).group(1))
+            if not iid.endswith(f"-{pack}"):
+                raise ValueError(f"{sku}: pack of {pack} but no -{pack} tail")
+            iid = iid[: -len(f"-{pack}")]
+        length = None
+        if "Comprimento" in a:
+            length = int(re.fullmatch(r"(\d+)mm", a["Comprimento"]).group(1))
+            if iid.endswith(f"-{length}"):
+                iid = iid[: -len(f"-{length}")]
+        options = None
+        describes = True
+        if sku in tables.FINISH_BY_SKU:
+            iid, finish, describes = tables.FINISH_BY_SKU[sku]
+            options = {"finish": finish}
+        if a.get("Opção de Fixação") not in (None, "Sem Fixadores"):
+            raise ValueError(f"{sku}: a fixings option the tables do not handle")
+        sizes = [(k, v) for k, v in a.items() if tables.ATTRIBUTE_CLASS[k] == "size"]
+        name = store.name(parent) + (f" ({', '.join(f'{k}: {v}' for k, v in sizes)})" if sizes else "")
+        it: dict = {"kind": kind}
+        if subtype:
+            it["subtype"] = subtype
+        it |= {"name": name, "code": iid}
+        if self.brand(parent):
+            it["brand"] = self.brand(parent)
+        it["url"] = parent["permalink"]
+        pages = tables.ITEM_PAGES.get(iid) or tables.FAMILY_PAGES.get(family)
+        if pages:
+            it["docs"] = [{"ref": pdf_ref(pg)} for pg in pages]
+        desc = store.text(parent.get("description"))
+        if kind == "bar":
+            it["shape"] = "rail"
+        if kind == "fastener":
+            thread = a.get("Rosca") or a.get("Para Parafuso") or a.get("Rosca Interna")
+            if thread is None:
+                m = re.search(r"\bM(\d+)\b", store.name(parent))
+                thread = m and f"M{m.group(1)}"
+            if thread:
+                it["thread"] = thread
+            if "Comprimento do Parafuso" in a:
+                it["length_mm"] = int(re.fullmatch(r"(\d+)mm", a["Comprimento do Parafuso"]).group(1))
+            for phrase, how in tables.INSERTION.items():
+                if phrase in desc:
+                    it["insertion"] = how
+            dims = self.desc_dims(family, desc, iid)
+            if dims:
+                it["dims"] = dims
+        it["prov"] = self.shop_prov(parent)
+        if options:
+            # Every finish in the table's order; check_options confirms each has an offer.
+            it["options"] = {"finish": [f for _, (i, f, _) in tables.FINISH_BY_SKU.items() if i == iid]}
+        if describes:
+            self.item(iid, it)
+        if length is not None:
+            self.offer(sku, iid, x, "bar", sale={"mode": "stock", "length_mm": length})
+        else:
+            self.offer(sku, iid, x, "unit", options=options, pack=pack if pack and pack > 1 else None)
+
+    @staticmethod
+    def desc_dims(family: str, desc: str, iid: str) -> dict | None:
+        keys = tables.DIMS.get(family)
+        if not keys:
+            return None
+        blocks = re.split(r"(?i)\b(?:cod|c[óo]digo):\s*", desc)[1:]
+        for b in blocks:
+            code = b.split()[0]
+            if code != iid:
+                continue
+            out = {}
+            for label, key in keys.items():
+                m = re.search(re.escape(label) + r":\s*(\d+(?:,\d+)?)", b)
+                if m:
+                    out[key] = num(Decimal(m.group(1).replace(",", ".")))
+            return dict(sorted(out.items())) or None
+        return None
+
+    # --- kits -----------------------------------------------------------------------------------
+
+    def kits(self) -> None:
+        by_sku = self.offers
+        for p in self.snap.products:
+            entry = tables.FAMILY_BY_SKU.get(p["sku"])
+            if entry is None or entry[1] != "kit":
+                continue
+            desc = store.text(p.get("description"))
+            body = re.split(r"(?i)Itens do KIT:?", desc, maxsplit=1)
+            if len(body) != 2:
+                raise ValueError(f"{p['sku']}: no 'Itens do KIT' list")
+            lines = re.findall(
+                r"([^:()]+?)\s*(?:\(\s*([A-Z0-9][A-Z0-9-]*)\s*\))?\s*:\s*(\d+)\s*unidades?", body[1]
+            )
+            kit, unresolved = [], []
+            for label, code, qty in lines:
+                label = label.strip()
+                target = None
+                fix = tables.KIT_LINE_FIXES.get((p["sku"], code or label))
+                if fix:
+                    target = fix[0]
+                    self.notes["kit lines resolved by the table"].append(f"{p['sku']}: '{code or label}' → {target}")
+                elif code in self.items:
+                    target = code
+                elif code in by_sku:
+                    target = by_sku[code]["item"]
+                elif code and (m := re.fullmatch(r"(.+)-\d+", code)) and m.group(1) in self.items:
+                    # A pack SKU, <item>-<units>, though not one on sale (PAM408-20-10 is sold
+                    # only as -50): the same rule that gives item ids.
+                    target = m.group(1)
+                if target is None or target not in self.items:
+                    unresolved.append(code or label)
+                    continue
+                kit.append({"item": target, "qty": int(qty)})
+            if unresolved:
+                self.notes["kits not emitted (contents not all emitted yet)"].append(
+                    f"{p['sku']}: {', '.join(unresolved)}")
+                continue
+            self.offer(p["sku"], kit[0]["item"], p, "unit", kit=kit)
+
+    # --- output ---------------------------------------------------------------------------------
+
+    def catalog(self) -> dict:
+        return {
+            "schema": "alukit.catalog/1",
+            "id": "forseti",
+            "name": "Forseti",
+            "vendor": "forseti",
+            "currency": "BRL",
+            "url": "https://loja.forsetisolucoes.com.br",
+            "prov": {"src": "src", "ref": f"url:{API}", "read": self.snap.read},
+            "materials": emit.sorted_map(self.materials),
+            "grooves": emit.sorted_map(self.grooves),
+            "systems": emit.sorted_map(self.systems),
+            "items": emit.sorted_map(self.items),
+        }
+
+
+def build(raw: str, pdf: str, out: str) -> int:
+    snap = store.load(raw)
+    for what in ("products", "variations"):
+        t = snap.totals[what]
+        if t["unique"] != t["total"]:
+            raise SystemExit(f"the snapshot is incomplete: {what} {t['unique']}/{t['total']}")
+    b = Build(snap, pdfcat.open_pdf(pdf))
+    b.material()
+    b.profiles()
+    b.groove_types()
+    b.hardware()
+    b.kits()
+
+    emit.write(os.path.join(out, "catalog.json"), b.catalog())
+    emit.write(os.path.join(out, "offers.json"), {"schema": "alukit.offers/1", "offers": emit.sorted_map(b.offers)})
+    sec_dir = os.path.join(out, "sections")
+    for sid, s in b.sections.items():
+        emit.write(os.path.join(sec_dir, f"{sid}.json"), s)
+    for name in sorted(os.listdir(sec_dir)):
+        if name.endswith(".json") and name[:-5] not in b.sections:
+            os.remove(os.path.join(sec_dir, name))
+            print(f"removed stale sections/{name}")
+
+    kinds = defaultdict(int)
+    for it in b.items.values():
+        kinds[it["kind"]] += 1
+    fid = defaultdict(int)
+    for s in b.sections.values():
+        fid[s["fidelity"]] += 1
+    print(f"read {snap.read}: {len(snap.products)} products, {len(snap.variations)} variations")
+    print(f"items {len(b.items)} ({', '.join(f'{k} {n}' for k, n in sorted(kinds.items()))}), "
+          f"offers {len(b.offers)}, sections {len(b.sections)} "
+          f"({', '.join(f'{k} {n}' for k, n in sorted(fid.items()))})")
+    for k, vs in b.notes.items():
+        print(f"{k}: {len(vs)}")
+        for v in vs:
+            print(f"  {v}")
+    return 0

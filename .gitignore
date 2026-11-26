@@ -8,6 +8,7 @@ projects/
 node_modules/
 dist/
 .DS_Store
+__pycache__/
 
 # Internal notes behind the public docs (never committed)
 internal/
