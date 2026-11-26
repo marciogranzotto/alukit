@@ -707,6 +707,24 @@ describe("items, params, costs and records", () => {
     ).toEqual([...(cart().doc.open as unknown[]), { id: "O2", text: "x", scope: ["b31"] }]);
   });
 
+  it("open items: a scope names suppliers, items, and entities by their ends, pieces and copies", () => {
+    // §4.12 and the order rules (§5.5): only an entity of the document is a reference.
+    const scope = ["supplier:test-vendor", "test:SCR-M8x16", "b5.a", "c23.f1", "b26@2", "K2"];
+    const r = ok(cart(), { cmd: "addOpen", args: { open: { text: "x", blocks: "order", scope } } });
+    const o2 = (doc: RawDoc) => (doc.open as { id: string }[]).find((x) => x.id === "O2");
+    expect(o2(r.state.doc)).toEqual({ id: "O2", text: "x", blocks: "order", scope });
+    for (const bad of ["b99.a", "c99.f1", "b99@2"]) {
+      const e = no(cart(), { cmd: "addOpen", args: { open: { text: "x", scope: [bad] } } });
+      expect(e[0]).toMatchObject({ code: "ref", refs: [bad.replace(/[.@].*$/, "")] });
+    }
+    // A bar named by its end follows the end when the bar is reversed.
+    const rev = ok(r.state, { cmd: "reverseBar", args: { id: "b5" } }).state;
+    expect(o2(rev.doc)).toMatchObject({ scope: [scope[0], scope[1], "b5.b", ...scope.slice(3)] });
+    // Removing an entity it names prunes the scope; a supplier or an item is never pruned.
+    const cut = ok(r.state, { cmd: "removeEntity", args: { id: "b5", cascade: true } }).state;
+    expect(o2(cut.doc)).toMatchObject({ scope: [scope[0], scope[1], ...scope.slice(3)] });
+  });
+
   it("saveView", () => {
     const r = ok(cart(), {
       cmd: "saveView",

@@ -86,3 +86,9 @@ parts and are not here.*
   items give the canonical form its key order (decision 1); cost lines and bands declare their
   fields in §4.11's order (id, label, kind, supplier, amounts, provenance, blocks, covers), since
   that declaration order is the file's.
+
+## Tie-ins after the merge with part 3
+
+| # | Decision | Why |
+|---|---|---|
+| 38 | An open item's scope is read by one grammar (`src/core/project/scope.ts`) in the order rules, the command references and the rewriter: `supplier:<id>` a supplier, `<catalog>:<id>` an item, else an entity by itself, its end (`b3.a`), a stock piece (`c23.f1`) or a pattern copy (`b26@2`). Only an entity of the document, or a project item, is a reference: a cascade prunes it, a missing one refuses the command. A bar end follows `reverseBar` and `splitBar` | Part 2 read every member as an entity id, so `addOpen` refused §4.12's `supplier:<id>` and the forms part 3's rules read (its decision 31) |

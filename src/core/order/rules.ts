@@ -1,6 +1,7 @@
 import type { Derived } from "../derive/derive.ts";
 import type { Diagnostic } from "../diagnostics.ts";
 import { type CostLine, ORDER_RULES, type OrderRule, type RuleAction } from "../project/schema.ts";
+import { scopeName } from "../project/scope.ts";
 import { rateFor } from "./pricing.ts";
 import { cmp, type Key, optText, type Reason, type Work } from "./types.ts";
 
@@ -207,9 +208,9 @@ function reacher(
     return out;
   };
   /** The entities a name stands for; a connection stands for itself first (its hardware). */
-  const related = (name: string): string[] => {
-    const id = name.replace(/^(b\d+(?:@\d+)?)\.[ab]$/, "$1").replace(/\.[fs]\d+$/, "");
-    const conn = doc.connections[id.replace(/@\d+$/, "")];
+  const related = (entity: string, copy = ""): string[] => {
+    const id = `${entity}${copy}`;
+    const conn = doc.connections[entity];
     if (conn) {
       if (keysOf([id]).size > 0) return [id];
       // A connection that buys nothing of its own (a butt with no connector) stands for the bars
@@ -235,12 +236,13 @@ function reacher(
   return (names) => {
     const out = new Set<Key>();
     for (const name of names) {
-      if (name.startsWith("supplier:")) {
-        out.add(name.slice("supplier:".length));
+      const s = scopeName(name);
+      if ("supplier" in s) {
+        out.add(s.supplier);
         continue;
       }
-      if (name.includes(":")) {
-        for (const k of itemKeys.get(name) ?? []) out.add(k);
+      if ("item" in s) {
+        for (const k of itemKeys.get(s.item) ?? []) out.add(k);
         continue;
       }
       const cost = costs.find((c) => c.id === name);
@@ -249,7 +251,8 @@ function reacher(
         if (cost.supplier !== undefined) out.add(cost.supplier);
         continue;
       }
-      for (const k of keysOf(related(name))) out.add(k);
+      // A bar end or a stock piece stands for its bar or connection; a copy for itself.
+      for (const k of keysOf(related(s.entity, s.copy))) out.add(k);
     }
     return out.size > 0 ? out : "all";
   };

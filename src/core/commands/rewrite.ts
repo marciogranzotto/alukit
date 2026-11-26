@@ -1,4 +1,5 @@
 import type { Expr, Face } from "../project/schema.ts";
+import { isBarEnd, scopeName } from "../project/scope.ts";
 import { isObject, type Kind } from "./doc.ts";
 import type { CommandError } from "./types.ts";
 
@@ -81,6 +82,18 @@ function ids(list: unknown, rw: Rewriter): unknown {
   return Array.isArray(list) && rw.id
     ? list.map((x) => (typeof x === "string" ? (rw.id as (s: string) => string)(x) : x))
     : list;
+}
+
+/**
+ * An open item's scope member (§4.12): a bar end as an end, an entity named by its piece or copy
+ * through its own id; suppliers and items are not the document's to rewrite.
+ */
+function scopeMember(x: string, rw: Rewriter): string {
+  const s = scopeName(x);
+  if (!("entity" in s)) return x;
+  if (isBarEnd(s)) return rw.end ? rw.end(x) : x;
+  const id = rw.id ? rw.id(s.entity) : s.entity;
+  return `${id}${s.copy ?? ""}${s.part ?? ""}`;
 }
 
 function ends(list: unknown, rw: Rewriter): unknown {
@@ -214,7 +227,12 @@ export function rewriteEntity(kind: Kind, id: string, value: unknown, rw: Rewrit
       }
       break;
     case "open":
-      if (isObject(value) && rw.id) out = { ...value, scope: ids(value.scope, rw) };
+      if (isObject(value) && Array.isArray(value.scope)) {
+        out = {
+          ...value,
+          scope: value.scope.map((x) => (typeof x === "string" ? scopeMember(x, rw) : x)),
+        };
+      }
       break;
     default:
       break;

@@ -1,6 +1,7 @@
 import { type Ast, FUNCTIONS, freeNames, parseExpr } from "../expr.ts";
 import { itemRefSource } from "../lock/refs.ts";
 import { projectJsonSchema } from "../project/canonical.ts";
+import { scopeName } from "../project/scope.ts";
 import {
   type JsonSchema,
   type PathKey,
@@ -214,13 +215,26 @@ function structural(kind: Kind, id: string, v: unknown, c: Collect): void {
       if (isObject(x.rail_holes)) c.whole(x.rail_holes.along, "rail_holes/along");
       break;
     }
-    case "open":
+    case "open": {
       // A scope emptied would widen the block to the whole order (§4.12): its minimum is one.
-      c.member((v as Record<string, unknown>).scope, ["scope"], 1);
+      // A member names a supplier, an item or an entity (perhaps by its end, piece or copy);
+      // only an entity of the document, or a project item, is a reference.
+      const scope = (v as Record<string, unknown>).scope;
+      if (Array.isArray(scope)) c.member(scope.map(scopeEntity), ["scope"], 1);
       break;
+    }
     default:
       break;
   }
+}
+
+/** The document entity an open item's scope member names, if any. */
+function scopeEntity(name: unknown): string | undefined {
+  if (typeof name !== "string") return undefined;
+  const s = scopeName(name);
+  if ("supplier" in s) return undefined;
+  if ("item" in s) return s.item.startsWith(PROJECT_ITEM) ? s.item : undefined;
+  return s.entity;
 }
 
 /** Expressions inside an entity, and the ids their accessors name. */
