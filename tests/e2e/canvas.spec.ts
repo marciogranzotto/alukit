@@ -162,3 +162,17 @@ test("the tools snap to the project's own items: a placeholder's face centre and
   await expect(page.getByTestId("measure-result")).toContainText("110.00 mm");
   expect(errors).toEqual([]);
 });
+
+test("the catalog browser lists the project's own items, read only", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await openTab(page, served, 0);
+  await page.getByTestId("left-catalog").click();
+  await page.getByTestId("catalog-search").fill("motor plate");
+  await page.locator('.card[data-id="project:plate-a"]').click();
+  const card = page.getByTestId("catalog-card");
+  await expect(card).toHaveAttribute("data-id", "project:plate-a");
+  await expect(card).toContainText("the project's own, read only");
+  await expect(card).toContainText("test:s235");
+  expect(errors).toEqual([]);
+});

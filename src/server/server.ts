@@ -10,12 +10,16 @@ import { checkedMachining, checkedOrder } from "#core/check/outputs.ts";
 import { isDate } from "#core/dates.ts";
 import { derivedJson } from "#core/derive/output.ts";
 import { sortDiagnostics } from "#core/diagnostics.ts";
+import { compareIds } from "#core/ids.ts";
 import { lockHash } from "#core/lock/pin.ts";
 import type { Lock } from "#core/lock/schema.ts";
 import { machiningJson } from "#core/machining/format.ts";
 import { costsJson, costsOf, orderJson } from "#core/order/format.ts";
 import { DOCUMENT } from "#core/project/open.ts";
+import type { Doc } from "#core/project/parse.ts";
 import { acquireEditLock, SERVE } from "#core/project/store.ts";
+import type { ResolvedProjectItem } from "#core/project-items/resolve.ts";
+import { projectItems } from "#core/project-items/source.ts";
 import {
   CATALOG_SCHEMA,
   type CatalogEntry,
@@ -23,6 +27,7 @@ import {
   catalogTree,
   itemCard,
   listed,
+  projectEntries,
   searchCatalog,
 } from "./catalog.ts";
 import { type CommandsAnswer, type HistoryAnswer, type HostOptions, ProjectHost } from "./host.ts";
@@ -209,6 +214,20 @@ function historyStatus(a: HistoryAnswer): number {
   return a.kind === "write" ? 500 : 409;
 }
 
+/** What the catalog browser reads (`catalog.ts`), and what it was built from. */
+interface CatalogIndex {
+  live: CatalogSet;
+  named: string[];
+  lock: Lock;
+  doc: Doc;
+  /** The document's own items, resolved. */
+  own: ReadonlyMap<string, ResolvedProjectItem>;
+  /** The catalogs' and the lock's entries alone. */
+  fromCatalogs: CatalogEntry[];
+  /** Those and the project's items, in id order. */
+  entries: CatalogEntry[];
+}
+
 interface Ctx {
   /** The built app; undefined when another server (Vite's dev server) serves the app. */
   root: string | undefined;
@@ -218,19 +237,27 @@ interface Ctx {
   /** The model answer of the current revision, serialised once. */
   model: { rev: number; text: string } | undefined;
   /** The catalog browser's index, built once per opening of the catalogs and lock. */
-  catalog: { live: CatalogSet; named: string[]; lock: Lock; entries: CatalogEntry[] } | undefined;
+  catalog: CatalogIndex | undefined;
   streams: Set<ServerResponse>;
 }
 
-/** The catalog browser's index of the live catalogs and the lock, kept while neither changes. */
-async function catalogEntries(
-  ctx: Ctx,
-): Promise<{ live: CatalogSet; named: string[]; lock: Lock; entries: CatalogEntry[] }> {
+/**
+ * The catalog browser's index: the live catalogs, the lock, and the document's own items as
+ * derive resolves them (read only, §4.8), kept while none of them changes.
+ */
+async function catalogEntries(ctx: Ctx): Promise<CatalogIndex> {
   const { set: live, named } = await ctx.project.catalogs();
-  const lock = ctx.project.state.lock;
-  if (ctx.catalog?.live !== live || ctx.catalog.lock !== lock) {
-    ctx.catalog = { live, named, lock, entries: catalogIndex(live, lock, named) };
-  }
+  const snap = ctx.project.snapshot();
+  const lock = snap.state.lock;
+  const doc = snap.derived.doc;
+  const c = ctx.catalog;
+  if (c?.live === live && c.lock === lock && c.doc === doc) return c;
+  // The catalogs' entries change with the catalogs and the lock; the project's at a revision.
+  const fromCatalogs =
+    c?.live === live && c.lock === lock ? c.fromCatalogs : catalogIndex(live, lock, named);
+  const own = projectItems(snap.items, doc).resolved;
+  const entries = [...fromCatalogs, ...projectEntries(own)].sort((x, y) => compareIds(x.id, y.id));
+  ctx.catalog = { live, named, lock, doc, own, fromCatalogs, entries };
   return ctx.catalog;
 }
 
@@ -426,8 +453,8 @@ async function api(
       }
       case "/api/catalog/item": {
         const id = query.get("id") ?? "";
-        const { live, lock, entries } = await catalogEntries(ctx);
-        const card = itemCard(id, live, lock, entries);
+        const { live, lock, entries, own } = await catalogEntries(ctx);
+        const card = itemCard(id, live, lock, entries, own);
         if (!card) sendJson(res, 404, { ok: false, message: `no item ${id}` });
         else sendJson(res, 200, card);
         return;

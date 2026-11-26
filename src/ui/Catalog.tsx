@@ -8,7 +8,8 @@ import { activeTool, type PaletteItem, palette } from "./tools.ts";
  * The catalog browser (design §8, left): vendor › kind › family, a search, item cards with a
  * section thumbnail, fidelity and key data, and the chosen item's options and offers. "Set as
  * palette" makes a bar what the draw tool draws with, any other item what the place tool places.
- * Everything comes from the server's catalog API, over the live catalogs and the lock.
+ * Everything comes from the server's catalog API, over the live catalogs and the lock, and the
+ * document's own items (§4.8), read only: they are edited with commands, not here.
  */
 
 interface Filter {
@@ -56,10 +57,22 @@ function money(minor: number, currency?: string): string {
   return `${currency ?? ""} ${(minor / 100).toFixed(2)}`.trim();
 }
 
-function Card({ id, onClose }: { id: string; onClose: () => void }) {
+function Card({
+  id,
+  project,
+  onClose,
+}: {
+  id: string;
+  /** One of the document's own items (§4.8). */
+  project: boolean;
+  onClose: () => void;
+}) {
   const [card, setCard] = useState<ItemCard | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [opt, setOpt] = useState<Record<string, string>>({});
+  // A project item (§4.8) changes with the document, so its card follows each revision; it has
+  // no options to lose.
+  const rev = project ? model.value?.rev : undefined;
   useEffect(() => {
     setCard(undefined);
     setError(undefined);
@@ -67,7 +80,7 @@ function Card({ id, onClose }: { id: string; onClose: () => void }) {
     get<ItemCard>(`/api/catalog/item?id=${encodeURIComponent(id)}`).then(setCard, (e) =>
       setError((e as Error).message),
     );
-  }, [id]);
+  }, [id, rev]);
   if (error) return <div class="card-detail">{error}</div>;
   if (!card) return <div class="card-detail">…</div>;
   const isBar = card.entry.kind === "bar";
@@ -95,6 +108,7 @@ function Card({ id, onClose }: { id: string; onClose: () => void }) {
           <div class="sub">
             {card.entry.vendor} › {card.entry.kind} › {card.entry.family}
             {!card.entry.live && " · from the lock"}
+            {card.entry.project && " · the project's own, read only"}
           </div>
         </div>
         <button type="button" class="close" onClick={onClose} title="Close">
@@ -192,15 +206,17 @@ export function Catalog() {
   const [filter, setFilter] = useState<Filter>({});
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [list, setList] = useState<{ total: number; items: ListedEntry[] } | undefined>();
-  const [chosen, setChosen] = useState<string | undefined>();
+  const [chosen, setChosen] = useState<{ id: string; project: boolean } | undefined>();
   const rev = model.value?.rev;
 
+  // Each revision may add or remove a project item (§4.8), so the tree and the list follow it.
   useEffect(() => {
+    if (rev === undefined) return;
     get<{ tree: CatalogTree[] }>("/api/catalog").then(
       (r) => setTree(r.tree),
       (e) => setError((e as Error).message),
     );
-  }, [rev === undefined]);
+  }, [rev]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -217,7 +233,7 @@ export function Catalog() {
       );
     }, 120);
     return () => clearTimeout(t);
-  }, [q, filter.vendor, filter.kind, filter.family]);
+  }, [q, filter.vendor, filter.kind, filter.family, rev]);
 
   const toggle = (key: string) => {
     const next = new Set(open);
@@ -296,7 +312,9 @@ export function Catalog() {
           </li>
         ))}
       </ul>
-      {chosen && <Card id={chosen} onClose={() => setChosen(undefined)} />}
+      {chosen && (
+        <Card id={chosen.id} project={chosen.project} onClose={() => setChosen(undefined)} />
+      )}
       <p class="sub list-count" data-testid="catalog-count">
         {list ? `${list.total} item${list.total === 1 ? "" : "s"}` : ""}
         {list && list.total > list.items.length ? `, the first ${list.items.length}` : ""}
@@ -306,9 +324,9 @@ export function Catalog() {
           <li key={e.id}>
             <button
               type="button"
-              class={`card${chosen === e.id ? " selected" : ""}`}
+              class={`card${chosen?.id === e.id ? " selected" : ""}`}
               data-id={e.id}
-              onClick={() => setChosen(e.id)}
+              onClick={() => setChosen({ id: e.id, project: e.project === true })}
             >
               {e.thumb ? <SectionThumb s={e.thumb} /> : <span class="thumb none">{e.kind[0]}</span>}
               <span class="card-text">
@@ -319,6 +337,7 @@ export function Catalog() {
                   {e.fidelity ? ` · ${e.fidelity}` : ""}
                   {e.mass_kg_per_m !== undefined ? ` · ${e.mass_kg_per_m} kg/m` : ""}
                   {e.pinned ? " · in use" : ""}
+                  {e.project ? " · the project's own" : ""}
                 </span>
               </span>
             </button>

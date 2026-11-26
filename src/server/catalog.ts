@@ -5,6 +5,9 @@ import { compareIds } from "#core/ids.ts";
 import { catalogItems, type ItemSource, type OfferInfo } from "#core/items.ts";
 import type { Lock } from "#core/lock/schema.ts";
 import { lockItems } from "#core/lock/source.ts";
+import { PROJECT_ITEM } from "#core/project/parse.ts";
+import type { ProjectItem } from "#core/project/schema.ts";
+import type { ResolvedProjectItem } from "#core/project-items/resolve.ts";
 import { viewSection } from "../mesh/display.ts";
 import type { ViewSection } from "../mesh/model.ts";
 import { type P2, simplifyRing } from "../mesh/outline.ts";
@@ -13,11 +16,13 @@ import { type P2, simplifyRing } from "../mesh/outline.ts";
  * The catalog browser's data (design §8, left: vendor › kind › family, search, item cards with
  * a section thumbnail, fidelity and key data; options and offers). It reads the live catalogs the
  * document names, and the lock for an item the lock pins that no live catalog holds any more, so
- * a project whose catalogs are not at hand still shows what it uses (§4.13).
+ * a project whose catalogs are not at hand still shows what it uses (§4.13). The document's own
+ * items (§4.8: plates, bent angles, generic items, placeholders) are listed too, under the vendor
+ * `project`, read only: the browser shows them and can place them, and commands edit them.
  *
  * A **family** is what groups items of one kind as a person looks for them: a bar's system
  * (`s40-c8`), else its shape; a connector's, fastener's or accessory's subtype; a carriage's rail
- * system; a generic item's category.
+ * system; a generic item's category; a project item's material, else its kind.
  */
 
 export const CATALOG_SCHEMA = "alukit.catalog-index/1";
@@ -33,9 +38,14 @@ export interface CatalogEntry {
   code?: string;
   /** The project's lock pins it. */
   pinned: boolean;
-  /** A live catalog holds it; false when only the lock does. */
+  /** A live catalog holds it; false when only the lock does. A project item is always live. */
   live: boolean;
+  /** One of the document's own items (`project:<id>`, §4.8), shown read only. */
+  project?: true;
 }
+
+/** The catalog and vendor the browser lists the document's own items under. */
+const PROJECT_CATALOG = PROJECT_ITEM.slice(0, -1);
 
 function local(ref: string | undefined): string | undefined {
   if (ref === undefined) return undefined;
@@ -106,6 +116,25 @@ export function catalogIndex(
     });
   }
   return out.sort((a, b) => compareIds(a.id, b.id));
+}
+
+/** The document's own items as browser entries (above), in id order. */
+export function projectEntries(resolved: ReadonlyMap<string, ResolvedProjectItem>): CatalogEntry[] {
+  return [...resolved.values()]
+    .map(
+      (r): CatalogEntry => ({
+        id: r.id,
+        catalog: PROJECT_CATALOG,
+        vendor: PROJECT_CATALOG,
+        kind: r.kind,
+        family: local(r.material) ?? r.kind,
+        name: r.name,
+        pinned: false,
+        live: true,
+        project: true,
+      }),
+    )
+    .sort((a, b) => compareIds(a.id, b.id));
 }
 
 export interface CatalogTree {
@@ -268,8 +297,8 @@ export interface OfferCard {
 export interface ItemCard {
   schema: "alukit.catalog-item/1";
   entry: CatalogEntry;
-  /** The item as the catalogs (or the lock) hold it. */
-  item: Item;
+  /** The item as the catalogs (or the lock) hold it; a project item as the document writes it. */
+  item: Item | ProjectItem;
   /** The numbers worth a glance: section and mass data for a bar, box and thread for a part. */
   data: CardValue[];
   options: Readonly<Record<string, readonly string[]>>;
@@ -297,19 +326,66 @@ function cardValue(key: string, v: unknown, itemSrc: string | undefined): CardVa
   return undefined;
 }
 
-/** An item card: the browser's detail view of one item. */
+const mm = (x: number) => Number(x.toFixed(2));
+
+/**
+ * A project item's card (§4.8): what the machining sheet and the BOM read of it, with the mass
+ * computed from its material (`calc`) or entered. No options and no offers: it has neither.
+ */
+function projectCard(entry: CatalogEntry, r: ResolvedProjectItem): ItemCard {
+  const data: CardValue[] = [];
+  if (r.material) data.push({ key: "material", value: r.material });
+  if (r.thickness !== undefined) data.push({ key: "thickness_mm", value: mm(r.thickness) });
+  if (r.angle) {
+    data.push({ key: "legs_mm", value: `${mm(r.angle.legs[0])} × ${mm(r.angle.legs[1])}` });
+    data.push({ key: "length_mm", value: mm(r.angle.length) });
+    data.push({ key: "bend_radius_mm", value: mm(r.angle.radius) });
+    data.push({ key: "blank_mm", value: mm(r.angle.developed), src: "calc" });
+  }
+  const box = r.view.bbox_mm;
+  if (box) {
+    const [a, b] = box;
+    data.push({
+      key: "box_mm",
+      value: [0, 1, 2].map((i) => mm((b[i] ?? 0) - (a[i] ?? 0))).join(" × "),
+    });
+  }
+  if (r.holes.length > 0) data.push({ key: "holes", value: r.holes.length });
+  const mass = r.view.mass_kg;
+  if (mass) data.push({ key: "mass_kg", value: Number(mass.v.toFixed(3)), src: mass.src });
+  data.push({ key: "supplier", value: r.supplier ?? "unsourced" });
+  if (r.price) data.push({ key: "price_minor", value: r.price.v, src: r.price.src });
+  return {
+    schema: "alukit.catalog-item/1",
+    entry,
+    item: r.def,
+    data,
+    options: {},
+    offers: [],
+  };
+}
+
+/**
+ * An item card: the browser's detail view of one item. `own` holds the document's own items,
+ * resolved as derive resolves them.
+ */
 export function itemCard(
   id: string,
   live: CatalogSet,
   lock: Lock,
   entries: readonly CatalogEntry[],
+  own?: ReadonlyMap<string, ResolvedProjectItem>,
 ): ItemCard | undefined {
   const entry = entries.find((e) => e.id === id);
   if (!entry) return undefined;
+  if (entry.project) {
+    const r = own?.get(id);
+    return r ? projectCard(entry, r) : undefined;
+  }
   const source: ItemSource = entry.live ? catalogItems(live) : lockItems(lock);
   const found = source.item(id);
   if (!found.ok) return undefined;
-  // The catalogs and the lock hold catalog items only (a project item's view is no `Item`).
+  // The catalogs and the lock hold catalog items only; a project item comes through `own`.
   const item = found.item as Item;
   const o = item as Record<string, unknown>;
   const itemSrc = (item.prov as { src?: string } | undefined)?.src;

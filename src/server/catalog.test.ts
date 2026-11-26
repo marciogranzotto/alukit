@@ -205,6 +205,44 @@ describe("the catalog API", () => {
     expect((await get(s, "api/catalog/items?limit=x")).status).toBe(400);
   });
 
+  it("lists the project's own items under the vendor project, read only (§4.8)", async () => {
+    const s = await serveCart();
+    const tree = (await get(s, "api/catalog")).body.tree as { vendor: string; count: number }[];
+    expect(tree.find((t) => t.vendor === "project")?.count).toBe(3);
+    const own = await get(s, "api/catalog/items?vendor=project");
+    expect(own.body.items).toEqual([
+      expect.objectContaining({ id: "project:angle-a", kind: "bent-angle", family: "al-6063-t5" }),
+      expect.objectContaining({ id: "project:motor", kind: "placeholder", family: "placeholder" }),
+      expect.objectContaining({ id: "project:plate-a", kind: "plate", family: "s235" }),
+    ]);
+    expect((own.body.items as { project?: boolean }[]).every((e) => e.project === true)).toBe(true);
+    // A search finds them with the catalogs' items.
+    const motor = await get(s, "api/catalog/items?q=gear%20motor");
+    expect((motor.body.items as { id: string }[]).map((e) => e.id)).toContain("project:motor");
+
+    const card = (await get(s, "api/catalog/item?id=project%3Aplate-a")).body as {
+      item: { kind: string; outline: unknown[] };
+      data: { key: string; value: unknown; src?: string }[];
+      options: Record<string, unknown>;
+      offers: unknown[];
+    };
+    // The item as the document writes it, with what the BOM and the machining sheet read of it.
+    expect(card.item.kind).toBe("plate");
+    expect(card.item.outline).toHaveLength(5);
+    const data = Object.fromEntries(card.data.map((d) => [d.key, d]));
+    expect(data.material?.value).toBe("test:s235");
+    expect(data.thickness_mm?.value).toBe(8);
+    expect(data.holes?.value).toBe(4);
+    expect(data.mass_kg?.src).toBe("calc");
+    expect(card.options).toEqual({});
+    expect(card.offers).toEqual([]);
+    const angle = (await get(s, "api/catalog/item?id=project%3Aangle-a")).body as {
+      data: { key: string; value: unknown }[];
+    };
+    expect(angle.data.find((d) => d.key === "legs_mm")?.value).toBe("40 × 30");
+    expect((await get(s, "api/catalog/item?id=project%3Anope")).status).toBe(404);
+  });
+
   it("sends each section's grooves and datums in the view model, for snapping", async () => {
     const s = await serveCart();
     const m = await get(s, "api/model");
