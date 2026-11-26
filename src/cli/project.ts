@@ -9,6 +9,7 @@ import { type Derived, derive } from "#core/derive/derive.ts";
 import { derivedJson, jsonText } from "#core/derive/output.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
 import type { ItemSource } from "#core/items.ts";
+import { lockHash } from "#core/lock/pin.ts";
 import {
   costsCsv,
   costsJson,
@@ -167,6 +168,7 @@ export async function projectCommand(
     const o = orderOf(outputs.priced(), {
       diagnostics: sortDiagnostics([...checked.diagnostics, ...outputs.bom().diagnostics]),
       asOf: asOf ?? today(),
+      ...(loaded.project.lock ? { lock: lockHash(loaded.project.lock) } : {}),
     });
     if (cmd === "order") {
       if (format === "json") io.out(orderJson(o).trimEnd());

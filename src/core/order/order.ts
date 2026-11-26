@@ -84,6 +84,8 @@ export interface RulesInput {
   diagnostics: readonly Diagnostic[];
   /** The order's date, YYYY-MM-DD: prices read more than 30 days before it are stale. */
   asOf: string;
+  /** The content hash of the lock it was derived from (the stamp, §4.13, §9). */
+  lock?: string;
 }
 
 export interface OrderInput extends PriceInput, RulesInput {}
@@ -174,6 +176,7 @@ export function orderOf(priced: PricedOrder, input: RulesInput): Order {
     price_basis: doc.price_basis,
     as_of: asOf,
     oldest_read: reads[0] ?? null,
+    ...(input.lock !== undefined ? { lock: input.lock } : {}),
     status: suppliers.some((s) => s.status === "BLOCKED") ? "BLOCKED" : "READY",
     rules,
     suppliers,

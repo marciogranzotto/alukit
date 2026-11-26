@@ -9,7 +9,7 @@ import {
 import type { LoadedCatalog } from "#catalog/load.ts";
 import { compareIds } from "../ids.ts";
 import type { DocRefs } from "./refs.ts";
-import { emptyLock, LOCK_KINDS, type Lock, type LockKind } from "./schema.ts";
+import { emptyLock, LOCK_KINDS, type Lock, type LockKind, lockText } from "./schema.ts";
 import { lockCatalogSet } from "./source.ts";
 
 /**
@@ -39,6 +39,14 @@ export function sortedJson(x: unknown): string {
 
 export function contentHash(x: unknown): string {
   return `sha256:${createHash("sha256").update(sortedJson(x)).digest("hex")}`;
+}
+
+/**
+ * The lock's content hash, the stamp an output carries (§4.13, §9): sha256 of its canonical text.
+ * A lock file in canonical form hashes the same with any sha256 tool (`shasum -a 256`).
+ */
+export function lockHash(lock: Lock): string {
+  return `sha256:${createHash("sha256").update(lockText(lock), "utf8").digest("hex")}`;
 }
 
 /** The hash of a catalog's loaded content (merged and linked), whatever its files' layout. */

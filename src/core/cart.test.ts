@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -263,14 +264,23 @@ describe("the cart", () => {
     expect(run(["bom", CART, "--format", "json"])).toBe(
       bomJson(bom({ derived: d, items: project.items })),
     );
-    // `alukit order` exits 1, since suppliers are blocked, and prints why; its JSON is the golden.
+    // `alukit order` exits 1, since suppliers are blocked, and prints why. Its JSON is the golden
+    // plus one line, the stamp (§4.13, §9): the lock's hash, which any sha256 tool gives from the
+    // canonical lock file.
     const o = spawnSync(
       process.execPath,
       [MAIN, "order", CART, "--format", "json", "--as-of", AS_OF],
       { encoding: "utf8" },
     );
     expect(o.status).toBe(1);
-    expect(o.stdout).toBe(readFileSync(join(CART, "expected-order.json"), "utf8"));
+    const lock = createHash("sha256").update(readFileSync(join(CART, "alukit.lock.json")));
+    const golden = readFileSync(join(CART, "expected-order.json"), "utf8");
+    expect(o.stdout).toBe(
+      golden.replace(
+        /^( {2}"oldest_read": .*\n)/m,
+        `$1  "lock": "sha256:${lock.digest("hex")}",\n`,
+      ),
+    );
     expect(o.stderr).toMatch(/^BLOCKED test-vendor: est-price: test:PSU-24V: /m);
   });
 });

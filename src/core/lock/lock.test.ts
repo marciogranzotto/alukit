@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -13,7 +14,7 @@ import { order } from "../order/order.ts";
 import { openLiveCatalogs } from "../project/open.ts";
 import { editJson, FIXTURES, fixtureProjects, readJson, scratchFixtures } from "../testing.ts";
 import { diffLocks, fieldChanges } from "./diff.ts";
-import { contentHash, pinLock } from "./pin.ts";
+import { contentHash, lockHash, pinLock } from "./pin.ts";
 import { documentRefs, lockCovers } from "./refs.ts";
 import { type Lock, LockFile, lockText } from "./schema.ts";
 import { lockItems } from "./source.ts";
@@ -213,6 +214,10 @@ describe("pinning (§4.13)", () => {
     for (const dir of fixtureProjects()) {
       const text = readFileSync(join(dir, "alukit.lock.json"), "utf8");
       expect(lockText(LockFile.parse(JSON.parse(text))), dir).toBe(text);
+      // The stamp an output carries is the file's own sha256 (§4.13, §9).
+      expect(lockHash(LockFile.parse(JSON.parse(text))), dir).toBe(
+        `sha256:${createHash("sha256").update(text, "utf8").digest("hex")}`,
+      );
     }
   });
 });

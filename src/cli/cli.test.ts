@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -275,6 +276,25 @@ describe("alukit derive, cutlist and bom", () => {
       'cost,,K4,"freight, quoted in dollars",freight,USD,20.00,30.00,45.00,est,"at 5.5: 110.00, 165.00, 247.50"',
     );
     expect(rows).toContain("total,,,total,,BRL,5018.09,5566.85,6649.41,,");
+  });
+
+  it("states the lock it was derived from in every format (the stamp, §4.13, §9)", async () => {
+    const dir = project("order");
+    // Any sha256 tool gives the stamp from the canonical lock file.
+    const lockFile = readFileSync(join(dir, "alukit.lock.json"));
+    const stamp = `sha256:${createHash("sha256").update(lockFile).digest("hex")}`;
+    const args = [dir, "--as-of", "2026-11-26"];
+    for (const cmd of ["order", "costs"]) {
+      const json = await capture([cmd, ...args, "--format", "json"]);
+      expect(JSON.parse(json.out.join("\n")).lock).toBe(stamp);
+      const md = await capture([cmd, ...args]);
+      expect(md.out.join("\n")).toContain(`\n\nDerived from the lock ${stamp}.\n\n`);
+      const csv = await capture([cmd, ...args, "--format", "csv"]);
+      expect(csv.out.join("\n").split("\n")[1]).toMatch(new RegExp(`^stamp,+lock,+${stamp}$`));
+    }
+    // --frozen derives from the lock alone, and states the same one.
+    const frozen = await capture(["order", ...args, "--format", "json", "--frozen"]);
+    expect(JSON.parse(frozen.out.join("\n")).lock).toBe(stamp);
   });
 
   it("runs the project's checks before the order rules: a failing one holds the order", async () => {

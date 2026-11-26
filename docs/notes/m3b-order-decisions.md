@@ -84,7 +84,8 @@ supplier-less cost lines into the unsourced group).
 ## Not built
 
 - **The lock hash in every output** (§5.4): the lock is part 2's. The order states the basis, the
-  date and the oldest read date.
+  date and the oldest read date. *Since the merge, `order` and `costs` state the lock too (part
+  2's decision 40); the cut list and the BOM do not yet.*
 - **`services.json`** (decision 13).
 - **G-A** from the build session log (a strut end bearing on a square-mitred shoe) was queued for
   "M3b part 3's review"; it is a derive question outside this part's brief and is untouched here.

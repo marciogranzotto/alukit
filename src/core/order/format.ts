@@ -167,6 +167,7 @@ export function orderMarkdown(o: Order): string {
   out.push(
     `${o.status}. Prices on the ${o.price_basis} basis${o.currency ? ` in ${o.currency}` : ""}, as of ${o.as_of}; the oldest was read ${o.oldest_read ?? "(none)"}.`,
     "",
+    ...stampLines(o.lock),
   );
   for (const s of o.suppliers) {
     out.push(`## ${supplierName(s)}: ${s.status}`, "");
@@ -192,6 +193,16 @@ export function orderMarkdown(o: Order): string {
   }
   out.push(...costsMarkdown(o.costs), ...totalsMarkdown(o.totals), ...problems(o.diagnostics));
   return out.join("\n");
+}
+
+/** The lock the output was derived from (§4.13, §9), as a line of its own. */
+function stampLines(lock: string | undefined): string[] {
+  return lock === undefined ? [] : [`Derived from the lock ${lock}.`, ""];
+}
+
+/** The stamp as the first CSV row: `stamp`, named `lock`, the hash in `details`. */
+function stampRow(row: Row, lock: string | undefined): void {
+  if (lock !== undefined) row({ row: "stamp", name: "lock", details: lock });
 }
 
 function csvCell(s: string | number | undefined): string {
@@ -261,6 +272,7 @@ function csvTable(columns: readonly Column[], fill: (row: Row) => void): string 
 export function orderCsv(o: Order): string {
   const m = (x: number | undefined) => (x === undefined ? undefined : money(x));
   return csvTable(CSV_COLUMNS, (row) => {
+    stampRow(row, o.lock);
     for (const s of o.suppliers) {
       for (const l of s.lines) {
         row({
@@ -346,6 +358,8 @@ export interface CostsOutput {
   currency: string | null;
   price_basis: Order["price_basis"];
   as_of: string;
+  /** The stamp: the content hash of the lock it was derived from. */
+  lock?: string;
   costs: CostOut[];
   totals: Totals;
   diagnostics: Diagnostic[];
@@ -357,6 +371,7 @@ export function costsOf(o: Order): CostsOutput {
     currency: o.currency,
     price_basis: o.price_basis,
     as_of: o.as_of,
+    ...(o.lock !== undefined ? { lock: o.lock } : {}),
     costs: o.costs,
     totals: o.totals,
     diagnostics: o.diagnostics,
@@ -369,6 +384,7 @@ export function costsMarkdownDoc(c: CostsOutput): string {
     "",
     `Prices on the ${c.price_basis} basis${c.currency ? ` in ${c.currency}` : ""}, as of ${c.as_of}.`,
     "",
+    ...stampLines(c.lock),
     ...costsMarkdown(c.costs),
     ...totalsMarkdown(c.totals),
     ...problems(c.diagnostics),
@@ -378,6 +394,7 @@ export function costsMarkdownDoc(c: CostsOutput): string {
 
 export function costsCsv(c: CostsOutput): string {
   return csvTable(COSTS_COLUMNS, (row) => {
+    stampRow(row, c.lock);
     for (const x of c.costs) costRow(row, x);
     totalRows(row, c.totals);
   });

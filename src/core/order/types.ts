@@ -194,6 +194,11 @@ export interface Order {
   as_of: string;
   /** The oldest read date of a price the order uses. */
   oldest_read: string | null;
+  /**
+   * The stamp (§4.13, §9): the content hash of the lock the order was derived from, when it was
+   * derived from one. With the basis and the oldest read date, what §5.4 asks every output to state.
+   */
+  lock?: string;
   status: "READY" | "BLOCKED";
   rules: Record<OrderRule, RuleAction>;
   suppliers: SupplierOrder[];
