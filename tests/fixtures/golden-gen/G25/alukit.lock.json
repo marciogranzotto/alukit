@@ -1,8 +1,8 @@
 {
   "schema": "alukit.lock/1",
   "catalogs": {
-    "test": { "hash": "sha256:c6d7c475d4baca3dbbb15d6b2a08d99c75084a2562cc1881d7a0eea1bbb5659a", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
-    "test-geo": { "hash": "sha256:769a73b8847e08e76b593726b24f27dfb2f4a7844f679f382b9edebf58374b2e", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-geo": { "hash": "sha256:5d41a6d7c43671052d74bf5387b76e9c3e428d09da74fbe3088f0ba9ae5f1718", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
   },
   "items": {
     "test-geo:FB-50x10": { "hash": "sha256:940ba09dee00f3db3afa2356302471a9c006e588437214b4a945bd195aecdadc", "item": { "kind": "bar", "name": "Flat bar 50x10", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "shape": "flat", "section": "FB-50x10" } },
@@ -17,7 +17,7 @@
     "test-geo:FB-50x10-3000": { "hash": "sha256:9d37b4cb7995c7bdcd49e6ff6dbbee7e54110fdedfd2640e38041fc21a317785", "offer": { "item": "FB-50x10", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 3000 }, "price": { "regular_minor": 4000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
     "test-geo:FB-50x10-6000": { "hash": "sha256:b32d104b7f16875582c4311172c7670747eb29ab0a17dd8915ca348b76a3b571", "offer": { "item": "FB-50x10", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 7000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
     "test-geo:FB-50x20-6000": { "hash": "sha256:fb2428e30bbbd71a9ca77ee7c3e6c7676e60338cadc53467071ded01cd10e3ce", "offer": { "item": "FB-50x20", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 13500, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
-    "test-geo:NUT-M10-100": { "hash": "sha256:bdb2a9fb9b0edeb208b3dd7113365aaf132e661e7c7c98cdb742ad2a32c5561c", "offer": { "item": "NUT-M10", "pack": 100, "price": { "regular_minor": 2600, "sale_minor": null, "per": "unit", "read": "2026-11-26", "src": "src" } } },
+    "test-geo:NUT-M10-100": { "hash": "sha256:c92741417da3143ca5969b8473b69d28cdebbc3d588b8f84af7664cb268f6ebb", "offer": { "item": "NUT-M10", "pack": 100, "price": { "regular_minor": 2600, "sale_minor": null, "per": "unit", "read": "2026-10-01", "src": "src" } } },
     "test-geo:RHS-100x50x4-6000": { "hash": "sha256:cee16c444c9cb1a1b482d0cd67f88c3c23dd534d0337d2b0a72a8ef5eb4486b8", "offer": { "item": "RHS-100x50x4", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 28900, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
     "test-geo:TUBE-18x2-6000": { "hash": "sha256:5b8167bc4ffd8c994b380ce80135d4f2625e9ec328bab6fa0026c03e9528a035", "offer": { "item": "TUBE-18x2", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 5200, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
     "test-geo:WSH-M10-100": { "hash": "sha256:710fdb11213cd81ce15b01f50a98f2b2cc10ded4cce2cc73789d385872a88145", "offer": { "item": "WSH-M10", "pack": 100, "price": { "regular_minor": 1800, "sale_minor": null, "per": "unit", "read": "2026-11-26", "src": "src" } } },

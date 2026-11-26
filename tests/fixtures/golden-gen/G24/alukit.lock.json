@@ -1,9 +1,9 @@
 {
   "schema": "alukit.lock/1",
   "catalogs": {
-    "test": { "hash": "sha256:c6d7c475d4baca3dbbb15d6b2a08d99c75084a2562cc1881d7a0eea1bbb5659a", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
-    "test-gen": { "hash": "sha256:379a646e4de9603625be96a54b20ca12cc0712e2491952abd35de19b48882b79", "name": "Generation test catalog (synthetic)", "vendor": "test-gen-vendor", "currency": "BRL" },
-    "test-geo": { "hash": "sha256:769a73b8847e08e76b593726b24f27dfb2f4a7844f679f382b9edebf58374b2e", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-gen": { "hash": "sha256:f77a730c23ebcf1a5a751e4a8a43b9aa9d904609888f3690d3527dfa107c6d41", "name": "Generation test catalog (synthetic)", "vendor": "test-gen-vendor", "currency": "BRL" },
+    "test-geo": { "hash": "sha256:5d41a6d7c43671052d74bf5387b76e9c3e428d09da74fbe3088f0ba9ae5f1718", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
   },
   "items": {
     "test-gen:CAR-G": { "hash": "sha256:6441c7aed46ea44fb5a4fa59f366641ed578c0d5fd1e01a02460ecc2289c64ee", "item": { "kind": "carriage", "name": "Carriage G (synthetic)", "prov": { "src": "est", "note": "synthetic test data for generation (M3b), not a vendor's" }, "rail_system": "rail-g", "mass_kg": 0.35, "bbox_mm": [[-35, -22, -5], [35, 22, 20]], "datums": { "run": [0, 0, 0] } } },

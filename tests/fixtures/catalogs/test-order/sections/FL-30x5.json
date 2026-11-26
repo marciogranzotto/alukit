@@ -1,0 +1,8 @@
+{
+  "schema": "alukit.section/1",
+  "id": "FL-30x5",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "generator": "flat",
+  "params": { "b_mm": 30, "t_mm": 5 }
+}

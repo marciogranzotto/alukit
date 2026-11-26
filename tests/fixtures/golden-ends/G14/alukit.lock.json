@@ -1,8 +1,8 @@
 {
   "schema": "alukit.lock/1",
   "catalogs": {
-    "test": { "hash": "sha256:c6d7c475d4baca3dbbb15d6b2a08d99c75084a2562cc1881d7a0eea1bbb5659a", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
-    "test-geo": { "hash": "sha256:769a73b8847e08e76b593726b24f27dfb2f4a7844f679f382b9edebf58374b2e", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-geo": { "hash": "sha256:5d41a6d7c43671052d74bf5387b76e9c3e428d09da74fbe3088f0ba9ae5f1718", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
   },
   "items": {
     "test-geo:HNG-15": { "hash": "sha256:993fddc3755f9726a6882f756a4cd290cfa2828e0ce01393ec718ac4fb9f74c3", "item": { "kind": "connector", "name": "Hinge 40, low", "material": "test:al-6063-t5", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "subtype": "hinge", "fits": ["test:s40-c8"], "mass_kg": 0.1, "bbox_mm": [[-20, -20, 0], [20, 20, 30]], "pivot": { "height_mm": 15, "end_mm": 25, "range_deg": [0, 180] } } },

@@ -11,7 +11,6 @@ export interface Io {
 
 /** The planned commands (design §7.3), not implemented yet. */
 const PLANNED: readonly (readonly [string, string])[] = [
-  ["order | costs <dir>", "the outputs"],
   ["log | undo", "the server's log; undo the latest step"],
   ["diff <a> <b>", "compare projects, revisions or variants"],
   ["revision save|verify <name>", "revisions"],

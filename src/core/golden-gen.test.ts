@@ -1,16 +1,17 @@
 import { basename, join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
+import { bom } from "./bom/bom.ts";
 import { cutList } from "./cutlist/cutlist.ts";
 import { type Derived, derive } from "./derive/derive.ts";
 import type { ItemSource } from "./items.ts";
+import { type MoneyOut, order } from "./order/order.ts";
 import { type OpenedProject, openProject } from "./project/open.ts";
 import { FIXTURES, mergePatch, readJson, shown, subdirs } from "./testing.ts";
 
 /**
- * The generation cases of design §4.6 (G22–G25), M3b's oracle: each folder holds a small
- * document and the values the design's table gives for it, to 0.01 mm. A row's variations
- * ("factory: b", "at at_mm 470") are merge patches of the same document. G26 (price bands) is the
- * order list's, M3b part 3.
+ * The generation and cost cases of design §4.6 (G22–G26), M3b's oracle: each folder holds a small
+ * document and the values the design's table gives for it, to 0.01 mm, and for G26 to the minor
+ * unit. A row's variations ("factory: b", "at at_mm 470") are merge patches of the same document.
  */
 
 interface Expect {
@@ -30,6 +31,11 @@ interface Expect {
   hardware?: Record<string, number>;
   /** Generated holes: how many, their diameters, and how many per bar. */
   holes?: { total: number; d_mm: number[]; per_bar: Record<string, number> };
+  /** The order list: per item, its one line's low, likely and high; and the total. */
+  order?: {
+    lines: Record<string, MoneyOut & { range?: "quote" | "band" }>;
+    total: MoneyOut;
+  };
   errors: { code: string; entity: string; refs?: string[] }[];
 }
 
@@ -118,13 +124,39 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
     for (const h of holes) per[h.bar] = (per[h.bar] ?? 0) + 1;
     expect(per, `${label}: holes per bar`).toEqual(want.holes.per_bar);
   }
+  if (want.order) {
+    const b = bom({ derived: d, items });
+    const o = order({
+      derived: d,
+      items,
+      bom: b,
+      cutList: cl,
+      diagnostics: [...d.diagnostics, ...cl.diagnostics, ...b.diagnostics],
+      asOf: "2026-11-26",
+    });
+    const lines = o.suppliers.flatMap((s) => s.lines);
+    for (const [item, m] of Object.entries(want.order.lines)) {
+      const got = lines.filter((l) => l.item === item);
+      expect(
+        got.map((l) => ({
+          low_minor: l.low_minor,
+          likely_minor: l.likely_minor,
+          high_minor: l.high_minor,
+          range: l.range,
+        })),
+        `${label}: ${item}'s order line`,
+      ).toEqual([m]);
+    }
+    expect(lines.length, `${label}: order lines`).toBe(Object.keys(want.order.lines).length);
+    expect(o.totals.total, `${label}: the total`).toEqual(want.order.total);
+  }
 }
 
 const dirs = subdirs(join(FIXTURES, "golden-gen"));
 
 describe("golden generation cases (design §4.6)", () => {
-  it("has one fixture per case G22–G25", () => {
-    expect(dirs.map((d) => basename(d))).toEqual(["G22", "G23", "G24", "G25"]);
+  it("has one fixture per case G22–G26", () => {
+    expect(dirs.map((d) => basename(d))).toEqual(["G22", "G23", "G24", "G25", "G26"]);
   });
 
   for (const dir of dirs) {

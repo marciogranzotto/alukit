@@ -1,7 +1,7 @@
 {
   "schema": "alukit.lock/1",
   "catalogs": {
-    "test": { "hash": "sha256:c6d7c475d4baca3dbbb15d6b2a08d99c75084a2562cc1881d7a0eea1bbb5659a", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" }
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" }
   },
   "items": {
     "test:SPL-40": { "hash": "sha256:67d996555ec79b4d3214adb2f4364d6511f5a57811eb74a3192ae228d2214fee", "item": { "kind": "connector", "name": "Splice for 40 series", "prov": { "src": "est", "note": "synthetic test data, not a vendor's" }, "subtype": "splice", "fits": ["s40-c8"], "mass_kg": 0.05, "splice": { "parts": [{ "item": "SPL-STUD", "qty": 1 }], "tap": "M8", "tap_depth_mm": 20 } } },

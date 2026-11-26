@@ -10,9 +10,15 @@ export const PROJECT_USAGE = [
   "    the cut list: pieces grouped per item and option, ordered or nested into stock",
   "alukit bom <dir> [--format md|csv|json] [--frozen]",
   "    the bill of materials: every item and quantity, grouped by kind, with mass",
+  "alukit order <dir> [--format md|csv|json] [--as-of YYYY-MM-DD] [--frozen]",
+  "    the order list per supplier, READY or BLOCKED with every reason, and the totals;",
+  "    exits 1 when any supplier is blocked (prices older than 30 days before --as-of,",
+  "    today by default, are stale)",
+  "alukit costs <dir> [--format md|csv|json] [--as-of YYYY-MM-DD] [--frozen]",
+  "    the cost lines and the low, likely and high totals, with their provenance",
 ].join("\n");
 
-export const PROJECT_COMMANDS = ["derive", "cutlist", "bom"] as const;
+export const PROJECT_COMMANDS = ["derive", "cutlist", "bom", "order", "costs"] as const;
 
 /** The editing and housekeeping commands (design §6, §7.3, §4.13), each in its own module. */
 export const USAGE = {

@@ -8,13 +8,13 @@ a priced bill of materials from real suppliers, the machining on each bar and an
 list. Catalogs can be your own, imported or created. Agents can drive the whole thing
 through a documented file format and a CLI.
 
-**Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core) and two parts
-of M3b: generation with the bill of materials, and the edit path.**
+**Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core) and M3b
+(generation with the bill of materials; the edit path; offers, the order list and costs).**
 - Catalog schemas, the three-layer merge, section generators and section properties, and
   `alukit catalog check`, which compares computed section properties against published ones.
-- Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): the
-  profiles, hardware, rails and blocks of a first set), `std` (standard steel shapes and fasteners)
-  and `ref-hiwin` (the HIWIN HG parts that rails and blocks clone).
+- Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): every
+  orderable SKU, with a section for every profile stem), `std` (standard steel shapes and
+  fasteners) and `ref-hiwin` (the HIWIN HG parts that rails and blocks clone).
 - The project format, placement and end planes, and the cut list: `alukit derive <dir>` and
   `alukit cutlist <dir>`.
 - Generation: rail holes from factory ends or drilled, parts on stations, bolted, screwed and
@@ -23,6 +23,9 @@ of M3b: generation with the bill of materials, and the edit path.**
 - Editing through commands, the one edit path: `alukit new`, `alukit do` (a batch of commands,
   applied atomically) and `alukit add`, `alukit query`, `alukit check`; the canonical form
   (`alukit fmt`) and the lock file that pins catalog data (`alukit lock update`).
+- The order list per supplier (cheapest pack cover, kits, price bands, cost lines covering
+  machining, READY or BLOCKED by named rules) and the costs and totals: `alukit order <dir>` and
+  `alukit costs <dir>`.
 
 The app still draws an empty scene.
 

@@ -79,3 +79,10 @@ parts and are not here.*
   too, every fixture project has a current lock and a canonical document, and a test derives each
   one from its lock and from the live catalogs and compares the derived model, cut list and BOM.
   Still open: `mass()` from the BOM's total, and parts in `bbox()`.
+- Done in the merge with part 3 (2026-11-26): `order` and `costs` parse options like the other
+  project commands and derive from the lock (`--frozen` too). `fixtureProjects()` takes in
+  `tests/fixtures/order`; every fixture lock was refreshed (part 3 changed the synthetic catalogs'
+  offers) and every document formatted. Part 3's typed cost lines, price bands, rates and open
+  items give the canonical form its key order (decision 1); cost lines and bands declare their
+  fields in §4.11's order (id, label, kind, supplier, amounts, provenance, blocks, covers), since
+  that declaration order is the file's.

@@ -5,8 +5,9 @@ import {
   generatorContext,
 } from "#catalog/link.ts";
 import { type LoadedSection, splitRef } from "#catalog/load.ts";
-import { type Face, isValuedObject, num, type Src } from "#catalog/schema/common.ts";
+import { type Face, isValuedObject, type Minor, num, type Src } from "#catalog/schema/common.ts";
 import type { BarItem, Item } from "#catalog/schema/items.ts";
+import type { Offer } from "#catalog/schema/offers.ts";
 import { GENERATORS } from "#catalog/sections/generators/index.ts";
 import { sectionProperties } from "./section-properties.ts";
 
@@ -73,16 +74,52 @@ export interface SaleInfo {
   factory_E_mm?: number;
 }
 
+/**
+ * One of an offer's prices (§3.2), in minor units of the offer's currency. A valued field with
+ * `low` and `high` is a quoted range (draft 2.1): it gives an order line its low and high, and no
+ * price band applies (§4.11).
+ */
+export interface PriceField {
+  v: number;
+  low?: number;
+  high?: number;
+  /** The valued field's own provenance, else the price's. */
+  src: Src;
+}
+
+export interface OfferPrice {
+  regular: PriceField;
+  /** null when there is no sale. */
+  sale: PriceField | null;
+  /** What a price is for: one offer unit (a pack, a kit), a metre, a whole bar. */
+  per: "unit" | "m" | "bar";
+  /** The date the price was read. */
+  read: string;
+}
+
+/** A kit's content (§3.2): the first entry is the kit's main item. */
+export interface KitEntry {
+  /** Full item id. */
+  item: string;
+  qty: number;
+  opt: Readonly<Record<string, string>>;
+}
+
 export interface OfferInfo {
-  /** `<catalog>:<sku>`. */
+  /** `<catalog>:<key>`: the offer's key in its catalog's offers.json. */
   sku: string;
+  /** The SKU to order: the offer's `sku` when its key is not the SKU (M2a #8), else its key. */
+  code: string;
   supplier: string;
   currency?: string;
   options: Readonly<Record<string, string>>;
+  /** Units of the item per offer: 1 unless a pack. */
+  pack: number;
+  kit?: readonly KitEntry[];
   sale?: SaleInfo;
-  per: "unit" | "m" | "bar";
-  regular_minor: number;
-  sale_minor: number | null;
+  price: OfferPrice;
+  /** As read; absent when the source does not say. */
+  in_stock?: boolean;
 }
 
 export type ItemLookup =
@@ -94,13 +131,6 @@ export interface ItemSource {
   item(ref: string): ItemLookup;
   /** Every offer of an item, by SKU order. */
   offers(itemId: string): readonly OfferInfo[];
-}
-
-/** A price that may be a bare number or a valued field (draft 2.1 adds quoted ranges, §3.2). */
-function priceValue(x: unknown): number | null {
-  if (typeof x === "number") return x;
-  if (isValuedObject(x)) return x.v;
-  return null;
 }
 
 function cmp(a: string, b: string): number {
@@ -124,41 +154,83 @@ export function catalogItems(set: CatalogSet): ItemSource {
       if (hit) return hit;
       const out = set
         .offersOf(itemId)
-        .map(({ catalog, sku, offer }): OfferInfo => {
-          const s = offer.sale;
-          const sale: SaleInfo | undefined =
-            s === undefined
-              ? undefined
-              : s.mode === "cut"
-                ? {
-                    mode: "cut",
-                    min_mm: s.min_mm,
-                    max_mm: s.max_mm,
-                    res_mm: s.res_mm,
-                    step_mm: s.step_mm,
-                    ...(s.min_bill_mm !== undefined ? { min_bill_mm: s.min_bill_mm } : {}),
-                    ...(s.bill !== undefined ? { bill: s.bill } : {}),
-                  }
-                : {
-                    mode: "stock",
-                    length_mm: s.length_mm,
-                    ...(s.factory_E_mm !== undefined ? { factory_E_mm: num(s.factory_E_mm) } : {}),
-                  };
-          return {
-            sku: `${catalog.id}:${sku}`,
-            supplier: offer.supplier ?? catalog.vendor ?? catalog.id,
-            ...(catalog.currency ? { currency: catalog.currency } : {}),
-            options: offer.options ?? {},
-            ...(sale ? { sale } : {}),
-            per: offer.price.per,
-            regular_minor: priceValue(offer.price.regular_minor) ?? 0,
-            sale_minor: priceValue(offer.price.sale_minor),
-          };
-        })
+        .map(({ catalog, sku, offer }) => offerInfo(catalog, sku, offer))
         .sort((a, b) => cmp(a.sku, b.sku));
       offerCache.set(itemId, out);
       return out;
     },
+  };
+}
+
+/** A catalog's identity as its offers need it: its id, vendor and currency. */
+export interface OfferHome {
+  id: string;
+  vendor?: string;
+  currency?: string;
+}
+
+/** A price as a valued field (§2): a bare number takes the price's provenance. */
+function priceField(x: Minor, src: Src): PriceField {
+  if (!isValuedObject(x)) return { v: x as number, src };
+  return {
+    v: x.v,
+    ...(x.low !== undefined ? { low: x.low } : {}),
+    ...(x.high !== undefined ? { high: x.high } : {}),
+    src: x.src ?? src,
+  };
+}
+
+/**
+ * An offer as derive and the order list read it, from its entry in a catalog's offers.json: full
+ * ids for the SKU and a kit's contents, the supplier (the catalog's vendor by default, §3.2), and
+ * both prices with their provenance and quoted ranges. The lock file (§4.13) pins the same entries,
+ * so whichever source backs an `ItemSource`, the order list prices from this one shape.
+ */
+export function offerInfo(home: OfferHome, key: string, offer: Offer): OfferInfo {
+  const s = offer.sale;
+  const sale: SaleInfo | undefined =
+    s === undefined
+      ? undefined
+      : s.mode === "cut"
+        ? {
+            mode: "cut",
+            min_mm: s.min_mm,
+            max_mm: s.max_mm,
+            res_mm: s.res_mm,
+            step_mm: s.step_mm,
+            ...(s.min_bill_mm !== undefined ? { min_bill_mm: s.min_bill_mm } : {}),
+            ...(s.bill !== undefined ? { bill: s.bill } : {}),
+          }
+        : {
+            mode: "stock",
+            length_mm: s.length_mm,
+            ...(s.factory_E_mm !== undefined ? { factory_E_mm: num(s.factory_E_mm) } : {}),
+          };
+  const p = offer.price;
+  return {
+    sku: `${home.id}:${key}`,
+    code: offer.sku ?? key,
+    supplier: offer.supplier ?? home.vendor ?? home.id,
+    ...(home.currency ? { currency: home.currency } : {}),
+    options: offer.options ?? {},
+    pack: offer.pack ?? 1,
+    ...(offer.kit
+      ? {
+          kit: offer.kit.map((k) => ({
+            item: fullRef(k.item, home.id),
+            qty: k.qty,
+            opt: k.options ?? {},
+          })),
+        }
+      : {}),
+    ...(sale ? { sale } : {}),
+    price: {
+      regular: priceField(p.regular_minor, p.src),
+      sale: p.sale_minor === null ? null : priceField(p.sale_minor, p.src),
+      per: p.per,
+      read: p.read,
+    },
+    ...(offer.in_stock !== undefined ? { in_stock: offer.in_stock } : {}),
   };
 }
 

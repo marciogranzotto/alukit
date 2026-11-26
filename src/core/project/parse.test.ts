@@ -60,7 +60,20 @@ describe("reading a document leniently (design §5.1)", () => {
         p2: { item: "test:SCR-M8x16", qty: "4 * 2", unplaced: true, why: "spares" },
       },
       items: { "plate-a": { kind: "plate", thickness_mm: 4 } },
-      costs: [{ id: "K1", label: "assembly", kind: "labour" }],
+      costs: [
+        {
+          id: "K1",
+          label: "assembly",
+          kind: "labour",
+          low_minor: 50000,
+          likely_minor: 80000,
+          high_minor: 120000,
+          src: "est",
+        },
+        { id: "K2", label: "contingency", kind: "contingency", pct: 10, of: "subtotal" },
+      ],
+      fx: { EUR: { v: 6.2, src: "src", ref: "a bank's rate", read: "2026-11-26" } },
+      order_rules: { "est-price": "warn" },
       price_bands: [{ supplier: "test-vendor", low_pct: -10, high_pct: 25 }],
       order: { "test:SCR-M8x16": { offer: "SCR-M8x16-50" } },
       variants: { default: "base", list: { base: {} } },
@@ -70,6 +83,65 @@ describe("reading a document leniently (design §5.1)", () => {
       views: { iso: { pos: [1, 2, 3], target: [0, 0, 0] } },
     });
     expect(diagnostics).toEqual([]);
+  });
+
+  it("validates cost lines, bands and open items one by one: a bad entry drops only itself", () => {
+    const { doc, diagnostics } = parseProject({
+      ...base,
+      costs: [
+        {
+          id: "K1",
+          label: "assembly",
+          kind: "labour",
+          low_minor: 1,
+          likely_minor: 2,
+          high_minor: 3,
+        },
+        {
+          id: "K2",
+          label: "freight",
+          kind: "freight",
+          low_minor: 5,
+          likely_minor: 4,
+          high_minor: 6,
+        },
+        { id: "K1", label: "again", kind: "other", low_minor: 0, likely_minor: 0, high_minor: 0 },
+        {
+          id: "K3",
+          label: "machining",
+          kind: "machining",
+          low_minor: 0,
+          likely_minor: 0,
+          high_minor: 0,
+          covers: { services: true },
+        },
+      ],
+      price_bands: [
+        { low_pct: -10, high_pct: 25 },
+        { kind: "bar", low_pct: 5, high_pct: 25 },
+        { kind: "bar", low_pct: -5, high_pct: 15 },
+      ],
+      open: [
+        { id: "O1", text: "ask", blocks: "order", scope: ["supplier:x"] },
+        { id: "X1", text: "?" },
+      ],
+      order_rules: { "est-price": "warn", "no-such-rule": "off" },
+    });
+    expect(doc.costs.map((c) => c.id)).toEqual(["K1"]);
+    expect(doc.price_bands).toEqual([{ kind: "bar", low_pct: -5, high_pct: 15 }]);
+    expect(doc.open.map((o) => o.id)).toEqual(["O1"]);
+    expect(doc.order_rules).toEqual({});
+    expect(
+      diagnostics.map((d) => [d.entity ?? null, d.field?.replace(/\/.*$/, "") ?? null]),
+    ).toEqual([
+      [null, "order_rules"],
+      [null, "price_bands[0]"],
+      [null, "price_bands[1]"],
+      ["K1", "costs[2]"],
+      ["K2", "costs[1]"],
+      ["K3", "costs[3]"],
+      ["X1", "open[1]"],
+    ]);
   });
 });
 

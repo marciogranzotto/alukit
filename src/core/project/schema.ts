@@ -393,6 +393,183 @@ export type OrderChoice = z.infer<typeof OrderChoice>;
 
 const Loose = z.record(z.string(), z.unknown());
 
+// ---------------------------------------------------------------------------------------------
+// Costs, price bands, exchange rates, open items and the order rules (§4.11, §4.12, §5.5).
+
+const SrcEnum = z.enum(["src", "meas", "est", "calc"]);
+
+/** Provenance fields (§2), as cost lines and bands carry them. */
+const ProvFields = {
+  src: SrcEnum.optional().describe("absent: est"),
+  ref: z.string().min(1).optional(),
+  read: z.iso.date().optional(),
+  note: z.string().optional(),
+};
+
+export const CostId = z
+  .string()
+  .regex(/^K\d+$/)
+  .describe("a cost line: K<number>");
+export const OpenId = z
+  .string()
+  .regex(/^O\d+$/)
+  .describe("an open item: O<number>");
+
+/** A supplier id, as offers name it (§3.2). */
+export const SupplierId = z.string().min(1);
+
+export const CostKind = z.enum([
+  "machining",
+  "fabrication",
+  "labour",
+  "freight",
+  "lifting",
+  "contingency",
+  "other",
+]);
+
+/**
+ * What a cost line prices as a whole (§4.11): the machining a supplier sells on its own bars
+ * (`supplier` with `services: true`), the machining generated on bars bought from a supplier,
+ * whoever does it (`services_on`), or the BOM lines of some items.
+ */
+export const Covers = z
+  .strictObject({
+    supplier: SupplierId.optional(),
+    services: z.literal(true).optional(),
+    services_on: z.strictObject({ supplier: SupplierId }).optional(),
+    items: z.array(ItemRef).min(1).optional(),
+  })
+  .refine((c) => (c.supplier === undefined) === (c.services === undefined), {
+    message: '"services": true and "supplier" go together',
+  })
+  .refine((c) => c.services !== undefined || c.services_on !== undefined || c.items, {
+    message: "covers names services, services_on or items",
+  });
+export type Covers = z.infer<typeof Covers>;
+
+const MinorInt = z.int().nonnegative();
+
+/*
+ * A cost line's fields in the design's order (§4.11): id, label, kind, supplier, the amounts,
+ * provenance, blocks, then what it covers. The canonical form (§2) writes keys in the order the
+ * schema declares them, so this order is the file's.
+ */
+const CostHead = {
+  id: CostId,
+  label: z.string().min(1),
+};
+const CostSupplier = { supplier: SupplierId.optional() };
+const CostTail = {
+  ...ProvFields,
+  blocks: z.literal("order").nullable().optional().describe('"order": hold its supplier\'s order'),
+};
+
+/** A cost line that is not a part (§4.11): low, likely and high in minor units. */
+export const CostAmounts = z
+  .strictObject({
+    ...CostHead,
+    kind: CostKind,
+    ...CostSupplier,
+    low_minor: MinorInt,
+    likely_minor: MinorInt,
+    high_minor: MinorInt,
+    currency: z
+      .string()
+      .regex(/^[A-Z]{3}$/)
+      .optional()
+      .describe("absent: the project's"),
+    ...CostTail,
+    covers: Covers.optional(),
+  })
+  .refine((c) => c.low_minor <= c.likely_minor && c.likely_minor <= c.high_minor, {
+    message: "a cost line needs low_minor <= likely_minor <= high_minor",
+  });
+
+/** A contingency as a share of the subtotal: its pct applies to each of low, likely and high. */
+export const CostPct = z.strictObject({
+  ...CostHead,
+  kind: z.literal("contingency"),
+  ...CostSupplier,
+  pct: z.number().nonnegative(),
+  of: z.literal("subtotal"),
+  ...CostTail,
+});
+
+export const CostLine = z.union([CostPct, CostAmounts]);
+export type CostLine = z.infer<typeof CostLine>;
+
+/** Item kinds (§3.4), which a price band may select by. */
+export const ItemKind = z.enum([
+  "bar",
+  "connector",
+  "fastener",
+  "carriage",
+  "accessory",
+  "panel",
+  "generic",
+]);
+
+/**
+ * A price band (§4.11, draft 2.1): a catalog-priced line's low and high as percentages of its
+ * likely price, selected by item, supplier or kind.
+ */
+export const PriceBand = z
+  .strictObject({
+    item: ItemRef.optional(),
+    supplier: SupplierId.optional(),
+    kind: ItemKind.optional(),
+    low_pct: z.number().min(-100).max(0),
+    high_pct: z.number().nonnegative(),
+    ...ProvFields,
+    why: z.string().optional(),
+  })
+  .refine((b) => b.item !== undefined || b.supplier !== undefined || b.kind !== undefined, {
+    message: "a price band selects by item, supplier or kind",
+  });
+export type PriceBand = z.infer<typeof PriceBand>;
+
+/** An exchange rate (§4.11): units of the project's currency per unit of another, dated. */
+export const Rate = z.union([
+  z.number().positive(),
+  z.strictObject({
+    v: z.number().positive(),
+    src: SrcEnum.optional(),
+    ref: z.string().min(1).optional(),
+    read: z.iso.date().optional(),
+    note: z.string().optional(),
+  }),
+]);
+export const Fx = z.record(z.string().regex(/^[A-Z]{3}$/), Rate);
+
+/** An open item (§4.12): `blocks: "order"` holds the order of its scope's suppliers, or all. */
+export const OpenItem = z.strictObject({
+  id: OpenId,
+  text: z.string().min(1),
+  blocks: z.literal("order").nullable().optional(),
+  scope: z
+    .array(z.string().min(1))
+    .optional()
+    .describe('entity ids, or "supplier:<id>"; absent or empty: the whole order'),
+});
+export type OpenItem = z.infer<typeof OpenItem>;
+
+/** The order rules (§5.5), in the design's table order. */
+export const ORDER_RULES = [
+  "check-error",
+  "open-item",
+  "placeholder",
+  "missing-price",
+  "est-price",
+  "out-of-stock",
+  "option-not-sold",
+  "stale-price",
+] as const;
+export type OrderRule = (typeof ORDER_RULES)[number];
+export const RuleAction = z.enum(["block", "warn", "off"]);
+export type RuleAction = z.infer<typeof RuleAction>;
+export const OrderRules = z.partialRecord(z.enum(ORDER_RULES), RuleAction);
+
 /** Top-level keys in schema order (design §4.2, with draft 2.1's `runs` and `price_bands`). */
 export const PROJECT_SHAPE = {
   schema: z.literal(PROJECT_SCHEMA),
@@ -403,7 +580,7 @@ export const PROJECT_SHAPE = {
     .regex(/^[A-Z]{3}$/)
     .optional(),
   price_basis: z.enum(["regular", "sale", "lowest"]).optional(),
-  fx: Loose.optional(),
+  fx: Fx.optional(),
   ids: z.record(z.string(), z.int().nonnegative()).optional(),
   defaults: Defaults.optional(),
   params: z.record(ParamName, Param).optional(),
@@ -414,13 +591,13 @@ export const PROJECT_SHAPE = {
   parts: z.record(PartId, Part).optional(),
   patterns: z.record(PatternId, Pattern).optional(),
   items: z.record(z.string(), Loose).optional().describe("project items (§4.8)"),
-  costs: z.array(Loose).optional(),
-  price_bands: z.array(Loose).optional(),
+  costs: z.array(CostLine).optional(),
+  price_bands: z.array(PriceBand).optional(),
   order: z.record(ItemRef, OrderChoice).optional(),
-  order_rules: z.record(z.string(), z.enum(["block", "warn", "off"])).optional(),
+  order_rules: OrderRules.optional(),
   variants: Loose.optional(),
   checks: z.array(Loose).optional(),
-  open: z.array(Loose).optional(),
+  open: z.array(OpenItem).optional(),
   decisions: z.array(Loose).optional(),
   views: Loose.optional(),
 } as const;
@@ -436,4 +613,11 @@ export const ENTITY_MAPS = {
   connections: { id: ConnId, schema: Connection },
   parts: { id: PartId, schema: Part },
   patterns: { id: PatternId, schema: Pattern },
+} as const;
+
+/** The lists validated entry by entry, likewise; `id` names an entry's id field, if it has one. */
+export const ENTITY_LISTS = {
+  costs: { schema: CostLine, id: "id" },
+  price_bands: { schema: PriceBand, id: undefined },
+  open: { schema: OpenItem, id: "id" },
 } as const;

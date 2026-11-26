@@ -1,4 +1,5 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -8,6 +9,16 @@ import { type CutList, cutList } from "./cutlist/cutlist.ts";
 import { cutListCsv, cutListJson, cutListMarkdown } from "./cutlist/format.ts";
 import { derive } from "./derive/derive.ts";
 import { derivedJson, jsonText } from "./derive/output.ts";
+import { sortDiagnostics } from "./diagnostics.ts";
+import {
+  costsCsv,
+  costsJson,
+  costsOf,
+  orderCsv,
+  orderJson,
+  orderMarkdown,
+} from "./order/format.ts";
+import { type Order, order } from "./order/order.ts";
 import { type OpenedProject, openProject } from "./project/open.ts";
 import { FIXTURES, readJson } from "./testing.ts";
 
@@ -25,6 +36,22 @@ import { FIXTURES, readJson } from "./testing.ts";
 
 const CART = join(FIXTURES, "cart");
 const MAIN = fileURLToPath(new URL("../cli/main.ts", import.meta.url));
+/** The order's date in the hand script: no price is stale but the nuts', read 56 days before. */
+const AS_OF = "2026-11-26";
+
+function cartOrder(project: OpenedProject): Order {
+  const derived = derive(project.raw, project.items);
+  const cl = cutList({ derived, items: project.items });
+  const b = bom({ derived, items: project.items });
+  return order({
+    derived,
+    items: project.items,
+    bom: b,
+    cutList: cl,
+    diagnostics: sortDiagnostics([...derived.diagnostics, ...cl.diagnostics, ...b.diagnostics]),
+    asOf: AS_OF,
+  });
+}
 
 interface Expected {
   kerf_mm: number;
@@ -144,11 +171,41 @@ describe("the cart", () => {
     expect(bomProjected(b)).toEqual({ groups: expected.groups, mass_kg: expected.mass_kg });
   });
 
+  it("has the order list and totals worked by hand, byte for byte", () => {
+    // tests/fixtures/cart/hand/cart_by_hand.py writes expected-order.json without AluKit.
+    const expected = readFileSync(join(CART, "expected-order.json"), "utf8");
+    expect(orderJson(cartOrder(project))).toBe(expected);
+  });
+
+  it("orders per supplier: READY or BLOCKED, each for its own reasons", () => {
+    const o = cartOrder(project);
+    expect(o.suppliers.map((s) => [s.supplier, s.status, s.reasons.map((r) => r.rule)])).toEqual([
+      ["test-fab", "READY", []],
+      ["test-gen-vendor", "BLOCKED", ["open-item"]],
+      ["test-geo-vendor", "READY", ["stale-price"]],
+      ["test-steel", "READY", []],
+      ["test-vendor", "BLOCKED", ["est-price"]],
+      [null, "BLOCKED", ["missing-price"]],
+    ]);
+    // 77 screws: the chosen bracket kits bring 40, and §5.4's example covers the 37 left with
+    // 4 packs of 10, not one of 50.
+    const screws = o.suppliers.flatMap((s) =>
+      s.lines.flatMap((l) =>
+        l.bom.filter((b) => b.item === "test:SCR-M8x16").map((b) => [l.sku, l.qty, b.qty]),
+      ),
+    );
+    expect(screws).toEqual([
+      ["BRK-40-K10", 2, 40],
+      ["SCR-M8x16-10", 4, 37],
+    ]);
+  });
+
   it("gives byte-identical output for the same input, run twice", () => {
     const once = () => {
       const d = derive(project.raw, project.items);
       const cl = cutList({ derived: d, items: project.items });
       const b = bom({ derived: d, items: project.items });
+      const o = cartOrder(project);
       return [
         jsonText(derivedJson(d)),
         cutListJson(cl),
@@ -157,6 +214,11 @@ describe("the cart", () => {
         bomJson(b),
         bomCsv(b),
         bomMarkdown(b),
+        orderJson(o),
+        orderCsv(o),
+        orderMarkdown(o),
+        costsJson(costsOf(o)),
+        costsCsv(costsOf(o)),
       ];
     };
     expect(once()).toEqual(once());
@@ -201,5 +263,14 @@ describe("the cart", () => {
     expect(run(["bom", CART, "--format", "json"])).toBe(
       bomJson(bom({ derived: d, items: project.items })),
     );
+    // `alukit order` exits 1, since suppliers are blocked, and prints why; its JSON is the golden.
+    const o = spawnSync(
+      process.execPath,
+      [MAIN, "order", CART, "--format", "json", "--as-of", AS_OF],
+      { encoding: "utf8" },
+    );
+    expect(o.status).toBe(1);
+    expect(o.stdout).toBe(readFileSync(join(CART, "expected-order.json"), "utf8"));
+    expect(o.stderr).toMatch(/^BLOCKED test-vendor: est-price: test:PSU-24V: /m);
   });
 });

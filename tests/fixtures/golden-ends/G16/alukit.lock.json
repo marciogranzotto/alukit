@@ -1,8 +1,8 @@
 {
   "schema": "alukit.lock/1",
   "catalogs": {
-    "test": { "hash": "sha256:c6d7c475d4baca3dbbb15d6b2a08d99c75084a2562cc1881d7a0eea1bbb5659a", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
-    "test-geo": { "hash": "sha256:769a73b8847e08e76b593726b24f27dfb2f4a7844f679f382b9edebf58374b2e", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-geo": { "hash": "sha256:5d41a6d7c43671052d74bf5387b76e9c3e428d09da74fbe3088f0ba9ae5f1718", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
   },
   "items": {
     "test-geo:RHS-100x50x4": { "hash": "sha256:99708e1b40c0d61f3e304669d1535e3e99c09078f51c004d69bb57a9d471286c", "item": { "kind": "bar", "name": "RHS 100x50x4", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "shape": "rhs", "section": "RHS-100x50x4" } },

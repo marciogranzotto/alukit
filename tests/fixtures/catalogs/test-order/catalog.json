@@ -1,0 +1,64 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-order",
+  "name": "Order test catalog (synthetic)",
+  "vendor": "shop-a",
+  "currency": "BRL",
+  "prov": { "src": "est", "note": "synthetic test data for the order list (M3b), not a vendor's" },
+  "items": {
+    "FLAT-O": {
+      "kind": "bar",
+      "name": "Flat 30x5, cut to length (synthetic)",
+      "shape": "flat",
+      "section": "FL-30x5",
+      "material": "test:s235",
+      "options": { "finish": ["raw", "painted"] }
+    },
+    "SCR-O": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Screw, packs of 10 and 50 (synthetic)",
+      "thread": "M6",
+      "mass_kg": 0.008
+    },
+    "BOX-O": {
+      "kind": "generic",
+      "name": "Box sold only in kits (synthetic)",
+      "mass_kg": 0.1
+    },
+    "CLAMP-O": {
+      "kind": "accessory",
+      "name": "Clamp, sold in zinc only (synthetic)",
+      "options": { "finish": ["zinc", "black"] },
+      "mass_kg": 0.05
+    },
+    "NUT-O": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Nut, the pack of 20 out of stock (synthetic)",
+      "thread": "M6",
+      "mass_kg": 0.003
+    },
+    "LAMP-O": {
+      "kind": "generic",
+      "name": "Lamp, priced by phone (synthetic)",
+      "mass_kg": 0.4
+    },
+    "OLD-O": {
+      "kind": "generic",
+      "name": "Grommet, price read long ago (synthetic)",
+      "mass_kg": 0.01
+    },
+    "VALVE-O": {
+      "kind": "generic",
+      "name": "Valve, sold in euros elsewhere (synthetic)",
+      "mass_kg": 0.2
+    },
+    "PIN-O": {
+      "kind": "fastener",
+      "subtype": "pin",
+      "name": "Pin nobody sells (synthetic)",
+      "mass_kg": 0.002
+    }
+  }
+}

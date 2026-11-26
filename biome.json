@@ -15,7 +15,8 @@
       "!pnpm-lock.yaml",
       "!**/alukit.json",
       "!**/alukit.lock.json",
-      "!**/*.md"
+      "!**/*.md",
+      "!tests/fixtures/cart/expected-order.json"
     ]
   },
   "formatter": {

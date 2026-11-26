@@ -1,0 +1,27 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-order": { "hash": "sha256:b18be0dc37bb29169fbb7b9ea054211e8f0040ea72df4d95b571a725e5d0d170", "name": "Order test catalog (synthetic)", "vendor": "shop-a", "currency": "BRL" },
+    "test-order-eu": { "hash": "sha256:0f4c88d8439f90661dd3c54b84db9e594b105a67b1bf6a7da2578fbe94849f6d", "name": "A second supplier, in euros, of another catalog's items (synthetic)", "vendor": "shop-eu", "currency": "EUR" }
+  },
+  "items": {
+    "test-order:FLAT-O": { "hash": "sha256:42f37d8a04f15030f481ad4b716a6c5c4f4396ca15006010c05916eda00430f0", "item": { "kind": "bar", "name": "Flat 30x5, cut to length (synthetic)", "material": "test:s235", "options": { "finish": ["raw", "painted"] }, "prov": { "src": "est", "note": "synthetic test data for the order list (M3b), not a vendor's" }, "shape": "flat", "section": "FL-30x5" } },
+    "test-order:SCR-O": { "hash": "sha256:c6b66b5ad3655e0ccf69979425b6eed132b934cf5ea514426b70f1a347ec1d30", "item": { "kind": "fastener", "name": "Screw, packs of 10 and 50 (synthetic)", "prov": { "src": "est", "note": "synthetic test data for the order list (M3b), not a vendor's" }, "subtype": "screw", "thread": "M6", "mass_kg": 0.008 } },
+    "test-order:VALVE-O": { "hash": "sha256:35a8747b783b4609b550d914b94f196d67b64f61d9d548334bffb878e026b486", "item": { "kind": "generic", "name": "Valve, sold in euros elsewhere (synthetic)", "prov": { "src": "est", "note": "synthetic test data for the order list (M3b), not a vendor's" }, "mass_kg": 0.2 } }
+  },
+  "offers": {
+    "test-order-eu:VALVE-O-eu": { "hash": "sha256:d7d67cbc0b263e2727c0c635d8286b2647b32d3976ed726ae098896cb0052521", "offer": { "item": "test-order:VALVE-O", "price": { "regular_minor": 1200, "sale_minor": null, "per": "unit", "read": "2026-11-26", "src": "src" } } },
+    "test-order:FLAT-O-c": { "hash": "sha256:cd34ca9a37015137c9b2984c0b80f88c79f863b9316800186da5c5b04bc484e4", "offer": { "item": "FLAT-O", "options": { "finish": "raw" }, "sale": { "mode": "cut", "min_mm": 40, "max_mm": 3000, "tol_mm": 1, "res_mm": 1, "step_mm": 10, "min_bill_mm": 1000, "bill": "line" }, "price": { "regular_minor": 5000, "sale_minor": null, "per": "m", "read": "2026-11-26", "src": "src" } } },
+    "test-order:SCR-O-10": { "hash": "sha256:33d5d016b4e7a03ebe9f6d8341d018550efe17d06b276b2d4c5b911419142e85", "offer": { "item": "SCR-O", "pack": 10, "price": { "regular_minor": 650, "sale_minor": null, "per": "unit", "read": "2026-11-26", "src": "src" } } },
+    "test-order:SCR-O-50": { "hash": "sha256:774339a9c9ac1fc2fe934e69f3a21a9a6cb903e8145061ceb0a076011557f793", "offer": { "item": "SCR-O", "pack": 50, "price": { "regular_minor": 2700, "sale_minor": 2300, "per": "unit", "read": "2026-11-26", "src": "src" } } }
+  },
+  "sections": {
+    "test-order:FL-30x5": { "hash": "sha256:11affea8d0ac2cacda9d9530f1a565fbac44b7edd7aea385dc1a59ded9d4ac06", "section": { "schema": "alukit.section/1", "id": "FL-30x5", "fidelity": "parametric", "props_ok": true, "generator": "flat", "params": { "b_mm": 30, "t_mm": 5 } } }
+  },
+  "materials": {
+    "test:s235": { "hash": "sha256:642f592f18278ab312b5939c9a0525dcc6ec0aa40a5c52253e599e27cf2ea6ab", "material": { "name": "Steel S235", "E_MPa": 210000, "G_MPa": 81000, "nu": 0.3, "density_kg_per_m3": 7850, "Rp02_MPa": 235, "Rm_MPa": 360, "alpha_per_K": 0.000012 } }
+  },
+  "grooves": {},
+  "systems": {}
+}

@@ -1,0 +1,25 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-gen": { "hash": "sha256:f77a730c23ebcf1a5a751e4a8a43b9aa9d904609888f3690d3527dfa107c6d41", "name": "Generation test catalog (synthetic)", "vendor": "test-gen-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-gen:BLOCK-G": { "hash": "sha256:afe82e3b74080773b4dab9a4cf7a671bc8464220a9e7d1c700115be98e68513c", "item": { "kind": "generic", "name": "Block G, quoted (synthetic, G26)", "prov": { "src": "est", "note": "synthetic test data for generation (M3b), not a vendor's" }, "mass_kg": 0.2 } },
+    "test-gen:CLIP-G": { "hash": "sha256:b19531979d925e9dd41cb182b0c7f3c8b403d3bc290f55a6f86fc3e01f3be590", "item": { "kind": "generic", "name": "Clip G (synthetic, G26)", "prov": { "src": "est", "note": "synthetic test data for generation (M3b), not a vendor's" }, "mass_kg": 0.01 } },
+    "test-gen:PROF-G": { "hash": "sha256:39d15bdb30d18cdbe91a52a285580c33f604c6ef7408e1a354d178c8fbf06f0f", "item": { "kind": "bar", "name": "Profile G, cut to length (synthetic, G26)", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for generation (M3b), not a vendor's" }, "shape": "flat", "section": "FB-20x10" } }
+  },
+  "offers": {
+    "test-gen:BLOCK-G": { "hash": "sha256:71393bcf3a53d450224e3183d7abe8310d6f890409502ed050c5486e9a6eb423", "offer": { "item": "BLOCK-G", "price": { "regular_minor": { "v": 5000, "ref": "a quote, synthetic", "low": 4500, "high": 6000 }, "sale_minor": null, "per": "unit", "read": "2026-11-26", "src": "src" } } },
+    "test-gen:CLIP-G": { "hash": "sha256:7479f3baa52b96cbdb6c98e0c5d9913b0bd8f97cacc7206a22b5628fa4f7276d", "offer": { "item": "CLIP-G", "price": { "regular_minor": 1005, "sale_minor": null, "per": "unit", "read": "2026-11-26", "src": "src" } } },
+    "test-gen:PROF-G-c": { "hash": "sha256:832789ca937e8b6fa92b23a9c94abd72080b8a90d1f51507f29a0a40b128582a", "offer": { "item": "PROF-G", "sale": { "mode": "cut", "min_mm": 40, "max_mm": 3000, "tol_mm": 1, "res_mm": 1, "step_mm": 10 }, "price": { "regular_minor": 12650, "sale_minor": null, "per": "m", "read": "2026-11-26", "src": "src" } } }
+  },
+  "sections": {
+    "test-gen:FB-20x10": { "hash": "sha256:f7a15c9365cf3f8063b642801d0190a766c125426a3a43233b166505bc0a8122", "section": { "schema": "alukit.section/1", "id": "FB-20x10", "fidelity": "parametric", "props_ok": true, "generator": "flat", "params": { "b_mm": 20, "t_mm": 10 } } }
+  },
+  "materials": {
+    "test:s235": { "hash": "sha256:642f592f18278ab312b5939c9a0525dcc6ec0aa40a5c52253e599e27cf2ea6ab", "material": { "name": "Steel S235", "E_MPa": 210000, "G_MPa": 81000, "nu": 0.3, "density_kg_per_m3": 7850, "Rp02_MPa": 235, "Rm_MPa": 360, "alpha_per_K": 0.000012 } }
+  },
+  "grooves": {},
+  "systems": {}
+}

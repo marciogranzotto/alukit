@@ -4,15 +4,22 @@ import { compareIds } from "../ids.ts";
 import {
   type Bar,
   type Connection,
+  type CostLine,
   type Defaults,
+  ENTITY_LISTS,
   ENTITY_MAPS,
+  type Fx,
   type Node,
+  type OpenItem,
   type OrderChoice,
+  type OrderRule,
   type Param,
   type Part,
   type Pattern,
   PROJECT_SCHEMA,
   PROJECT_SHAPE,
+  type PriceBand,
+  type RuleAction,
   type Run,
 } from "./schema.ts";
 
@@ -38,6 +45,14 @@ export interface Doc {
   parts: Record<string, Part>;
   patterns: Record<string, Pattern>;
   order: Record<string, OrderChoice>;
+  /** Exchange rates by currency (§4.11). */
+  fx: z.infer<typeof Fx>;
+  /** Cost lines, price bands and open items: each entry validated on its own (§4.11, §4.12). */
+  costs: CostLine[];
+  price_bands: PriceBand[];
+  open: OpenItem[];
+  /** The project's switches for the order rules (§5.5); a rule it leaves out keeps its default. */
+  order_rules: Partial<Record<OrderRule, RuleAction>>;
   /** Every other top-level field, as validated. */
   rest: Record<string, unknown>;
 }
@@ -93,6 +108,11 @@ export function parseProject(raw: unknown): ParseResult {
     parts: {},
     patterns: {},
     order: {},
+    fx: {},
+    costs: [],
+    price_bands: [],
+    open: [],
+    order_rules: {},
     rest: {},
   };
   if (!isPlainObject(raw)) {
@@ -136,6 +156,35 @@ export function parseProject(raw: unknown): ParseResult {
       (doc as unknown as Record<string, unknown>)[key] = out;
       continue;
     }
+    const entityList = ENTITY_LISTS[key as keyof typeof ENTITY_LISTS];
+    if (entityList) {
+      if (!Array.isArray(value)) {
+        d.error("schema", undefined, `${key} must be a list`, { field: key });
+        continue;
+      }
+      const out: unknown[] = [];
+      const seen = new Set<string>();
+      value.forEach((entry, i) => {
+        const idField = entityList.id;
+        const id =
+          idField && isPlainObject(entry) && typeof entry[idField] === "string"
+            ? (entry[idField] as string)
+            : undefined;
+        const r = (entityList.schema as z.ZodType).safeParse(entry);
+        if (!r.success) {
+          report(d, r.error, id, [key, i]);
+          return;
+        }
+        if (id !== undefined && seen.has(id)) {
+          d.error("schema", id, `${key}[${i}]: ${id} is listed twice`, { field: `${key}[${i}]` });
+          return;
+        }
+        if (id !== undefined) seen.add(id);
+        out.push(r.data);
+      });
+      (doc as unknown as Record<string, unknown>)[key] = out;
+      continue;
+    }
     const r = (schema as z.ZodType).safeParse(value);
     if (!r.success) {
       report(d, r.error, undefined, [key]);
@@ -160,6 +209,12 @@ export function parseProject(raw: unknown): ParseResult {
         break;
       case "order":
         doc.order = r.data as Doc["order"];
+        break;
+      case "fx":
+        doc.fx = r.data as Doc["fx"];
+        break;
+      case "order_rules":
+        doc.order_rules = r.data as Doc["order_rules"];
         break;
       default:
         doc.rest[key] = r.data;

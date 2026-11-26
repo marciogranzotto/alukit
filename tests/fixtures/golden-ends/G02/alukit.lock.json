@@ -1,7 +1,7 @@
 {
   "schema": "alukit.lock/1",
   "catalogs": {
-    "test": { "hash": "sha256:c6d7c475d4baca3dbbb15d6b2a08d99c75084a2562cc1881d7a0eea1bbb5659a", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" }
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" }
   },
   "items": {
     "test:TS40": { "hash": "sha256:7f2d44e6a46260b8782338a4e2c51f099d848c4cab84f75dd71fdfe85dee9009", "item": { "kind": "bar", "name": "Profile 40x40 (parametric)", "code": "TS40", "material": "al-6063-t5", "options": { "finish": ["anodised", "black"] }, "prov": { "src": "est", "note": "synthetic test data, not a vendor's" }, "shape": "tslot", "section": "TS40", "system": "s40-c8", "mass_kg_per_m": 1.493, "area_mm2": 553, "Ix_mm4": 91200, "Iy_mm4": 91200, "core": { "bore_mm": 6.8, "tap": "M8" } } }

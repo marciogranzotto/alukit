@@ -26,6 +26,7 @@ export function fixtureProjects(): string[] {
     join(FIXTURES, "cart"),
     ...subdirs(join(FIXTURES, "golden-ends")),
     ...subdirs(join(FIXTURES, "golden-gen")),
+    join(FIXTURES, "order"),
   ];
 }
 

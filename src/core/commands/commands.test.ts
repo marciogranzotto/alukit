@@ -359,26 +359,28 @@ describe("connections", () => {
 
 describe("parts and patterns", () => {
   it("addPart pins a newly named item into the lock; setPart, addPattern, setPattern", () => {
+    // test:FOOT-M8 is in the test catalog and not in the cart, so the cart's lock lacks it.
     const env = { ...ENV, live };
     const r = applyBatch(
       cart(),
       [
         {
           cmd: "addPart",
-          args: { item: "test:PSU-24V", on: { bar: "b7", at_mm: 100, groove: "+y.1" } },
+          args: { item: "test:FOOT-M8", on: { bar: "b7", at_mm: 100, groove: "+y.1" } },
         },
-        { cmd: "setPart", args: { id: "p3", set: { on: { at_mm: 120 } } } },
-        { cmd: "addPattern", args: { template: ["p3"], along: "b7", pitch_mm: 100, count: 3 } },
+        // The cart's parts run to p5 (its unplaced lines), so the new part is p6.
+        { cmd: "setPart", args: { id: "p6", set: { on: { at_mm: 120 } } } },
+        { cmd: "addPattern", args: { template: ["p6"], along: "b7", pitch_mm: 100, count: 3 } },
         { cmd: "setPattern", args: { id: "pt3", set: { count: 4 } } },
       ],
       env,
     );
     if (!r.ok) throw new Error(JSON.stringify(r.failed));
     for (const c of ["addPart", "setPart", "addPattern", "setPattern"]) exercised.add(c);
-    expect(r.state.lock.items["test:PSU-24V"]).toBeDefined();
-    expect(cart().lock.items["test:PSU-24V"]).toBeUndefined();
-    expect((r.state.doc.parts as Record<string, unknown>).p3).toEqual({
-      item: "test:PSU-24V",
+    expect(r.state.lock.items["test:FOOT-M8"]).toBeDefined();
+    expect(cart().lock.items["test:FOOT-M8"]).toBeUndefined();
+    expect((r.state.doc.parts as Record<string, unknown>).p6).toEqual({
+      item: "test:FOOT-M8",
       on: { bar: "b7", at_mm: 120, groove: "+y.1" },
     });
     expect((r.state.doc.patterns as Record<string, Record<string, unknown>>).pt3?.count).toBe(4);
@@ -386,7 +388,7 @@ describe("parts and patterns", () => {
     expect(
       no(cart(), {
         cmd: "addPart",
-        args: { item: "test:PSU-24V", on: { bar: "b7", at_mm: 100 } },
+        args: { item: "test:FOOT-M8", on: { bar: "b7", at_mm: 100 } },
       })[0]?.code,
     ).toBe("item");
   });
@@ -575,15 +577,17 @@ describe("items, params, costs and records", () => {
   });
 
   it("cost lines, price bands and offer choices", () => {
+    // The cart already holds cost lines K1–K5 and a chosen kit for test:BRK-40 (its order list).
+    const before = cart().doc;
     const r = ok(
       cart(),
       {
         cmd: "addCost",
         args: {
-          cost: { label: "assembly", kind: "labour", low_minor: 1, likely_minor: 2, high_minor: 3 },
+          cost: { label: "painting", kind: "labour", low_minor: 1, likely_minor: 2, high_minor: 3 },
         },
       },
-      { cmd: "setCost", args: { id: "K1", set: { likely_minor: 4 } } },
+      { cmd: "setCost", args: { id: "K6", set: { high_minor: 4 } } },
       {
         cmd: "setPriceBands",
         args: { bands: [{ supplier: "test-vendor", low_pct: -10, high_pct: 25 }] },
@@ -591,16 +595,25 @@ describe("items, params, costs and records", () => {
       { cmd: "chooseOffer", args: { item: "test:TS40", offer: "TS40-c7", kerf_mm: 2 } },
     );
     expect(r.state.doc.costs).toEqual([
-      { id: "K1", label: "assembly", kind: "labour", low_minor: 1, likely_minor: 4, high_minor: 3 },
+      ...(before.costs as unknown[]),
+      { id: "K6", label: "painting", kind: "labour", low_minor: 1, likely_minor: 2, high_minor: 4 },
     ]);
+    // A cost line is checked against its schema (§4.11): low <= likely <= high.
+    expect(
+      no(r.state, { cmd: "setCost", args: { id: "K6", set: { likely_minor: 5 } } })[0]?.code,
+    ).toBe("schema");
     expect(r.state.doc.price_bands).toEqual([
       { supplier: "test-vendor", low_pct: -10, high_pct: 25 },
     ]);
-    expect(r.state.doc.order).toEqual({ "test:TS40": { offer: "TS40-c7", kerf_mm: 2 } });
-    const cleared = ok(r.state, {
-      cmd: "chooseOffer",
-      args: { item: "test:TS40", offer: null, kerf_mm: null },
+    expect(r.state.doc.order).toEqual({
+      ...(before.order as object),
+      "test:TS40": { offer: "TS40-c7", kerf_mm: 2 },
     });
+    const cleared = ok(
+      r.state,
+      { cmd: "chooseOffer", args: { item: "test:TS40", offer: null, kerf_mm: null } },
+      { cmd: "chooseOffer", args: { item: "test:BRK-40", offer: null } },
+    );
     expect(cleared.state.doc.order).toBeUndefined();
     expect(
       ok(r.state, { cmd: "setPriceBands", args: { bands: [] } }).state.doc.price_bands,
@@ -651,11 +664,12 @@ describe("items, params, costs and records", () => {
           check: { value: "bbox().z", op: "<=", limit: "950", text: "fits under the bench" },
         },
       },
+      // The cart holds open item O1 (its order is held on c35), so this one is O2.
       { cmd: "addOpen", args: { open: { text: "which feet?", blocks: "order", scope: ["b1"] } } },
       { cmd: "addDecision", args: { text: "40-series", why: "stiff enough" } },
       {
         cmd: "resolveOpen",
-        args: { id: "O1", text: "levelling feet M8", why: "the floor is uneven" },
+        args: { id: "O2", text: "levelling feet M8", why: "the floor is uneven" },
       },
     );
     expect(r.state.doc.variants).toEqual({
@@ -665,7 +679,7 @@ describe("items, params, costs and records", () => {
     expect(r.state.doc.checks).toEqual([
       { id: "C1", value: "bbox().z", op: "<=", limit: "950", text: "fits under the bench" },
     ]);
-    expect(r.state.doc.open).toEqual([]);
+    expect(r.state.doc.open).toEqual(cart().doc.open);
     expect(r.state.doc.decisions).toEqual([
       { id: "D1", date: "2026-11-26", text: "40-series", why: "stiff enough" },
       {
@@ -673,7 +687,7 @@ describe("items, params, costs and records", () => {
         date: "2026-11-26",
         text: "levelling feet M8",
         why: "the floor is uneven",
-        resolves: "O1",
+        resolves: "O2",
       },
     ]);
     expect(
@@ -690,7 +704,7 @@ describe("items, params, costs and records", () => {
     }).state;
     expect(
       ok(o, { cmd: "removeEntity", args: { id: "b32", cascade: true } }).state.doc.open,
-    ).toEqual([{ id: "O1", text: "x", scope: ["b31"] }]);
+    ).toEqual([...(cart().doc.open as unknown[]), { id: "O2", text: "x", scope: ["b31"] }]);
   });
 
   it("saveView", () => {

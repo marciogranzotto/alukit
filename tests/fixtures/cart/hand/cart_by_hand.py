@@ -25,17 +25,28 @@ Rules used, from docs/design.md:
   that holds it, cheapest result winning; a factory-drilled rail piece keeps a stock end, with
   no trim there, and stays in the stock length it names (§5.3);
 - the BOM counts every item and option, bars by pieces and total cut length, with mass from the
-  published value, else area × density; a bar's mass by its centre-line length (§3.5, §5.4).
+  published value, else area × density; a bar's mass by its centre-line length (§3.5, §5.4);
+- the order list buys each BOM line on the regular price: supplier-cut pieces priced per metre
+  on their billed length, whole stock bars per bar, other items by the project's choice (a kit,
+  whose contents count against the other needs) or else the cheapest cover of packs; a line takes
+  its offer's quoted range, else the most specific price band, rounded once half away from zero;
+  cost lines cover machining and items; an open item, an estimated price and a missing offer
+  block their suppliers, a price read more than 30 days before the order warns (§4.11, §5.4, §5.5).
 
-Not in the cart: price bands and cost lines (M3b's offers and costs), and M6's plate and
-placeholder.
+Not in the cart: M6's plate and placeholder.
+
+Run with python3 -I; then Biome formats expected-cutlist.json and expected-bom.json, while
+expected-order.json is left exactly as written (it is compared byte for byte).
 """
 
+import datetime
 import functools
+import itertools
 import json
 import math
 import os
 import re
+from fractions import Fraction
 
 # The cart's dimensions (params) and sections.
 W, D, H, HB = 1200, 600, 900, 100
@@ -529,8 +540,17 @@ UNITS = [
     ("fastener", "test:SPL-STUD", 1, 0.015, ["c9"]),
     ("fastener", "test:TNUT-M8", 10, 0.006, ["p2"]),
     ("carriage", "test:CAR20", 3, 0.4, ["p1", "p1@1", "p1@2"]),
+    # Unplaced lines for the order: shelf brackets, their screws and a work light's supply.
+    ("connector", "test:BRK-40", 12, 0.15, ["p3"]),
+    ("fastener", "test:SCR-M8x16", 77, 0.012, ["p4"]),
+    ("generic", "test:PSU-24V", 1, 0.5, ["p5"]),
 ]
-UNPLACED = {"test:TNUT-M8": [{"part": "p2", "qty": 10, "why": "spares for light fixings"}]}
+UNPLACED = {
+    "test:TNUT-M8": [{"part": "p2", "qty": 10, "why": "spares for light fixings"}],
+    "test:BRK-40": [{"part": "p3", "qty": 12, "why": "brackets for a shelf fitted later"}],
+    "test:SCR-M8x16": [{"part": "p4", "qty": 77, "why": "screws for the shelf brackets and a tool rail"}],
+    "test:PSU-24V": [{"part": "p5", "qty": 1, "why": "power supply for a work light"}],
+}
 
 bom_groups = []
 bar_lines = []
@@ -550,7 +570,7 @@ for item, opt_text in items:
         }
     )
 bom_groups.append({"kind": "bar", "lines": bar_lines})
-for kind in ("connector", "fastener", "carriage"):
+for kind in ("connector", "fastener", "carriage", "generic"):
     lines = []
     for k, item, qty, each, sources in UNITS:
         if k != kind:
@@ -577,6 +597,513 @@ bom = {
     "mass_kg": qkg(sum(g["mass_kg"] for g in bom_groups)),
 }
 
+# --- The order list (§5.4, §5.5) and the costs (§4.11) ------------------------------------------
+# Every amount is an integer of minor units (centavos), rounded once where it is made, half away
+# from zero; rounding here works on exact fractions, so no float decides a half.
+
+AS_OF = "2026-11-26"  # the order's date, which the cart test passes too
+
+
+def half_away(x):
+    """An exact rational rounded to an integer, half away from zero."""
+    x = Fraction(x)
+    n = math.floor(abs(x) + Fraction(1, 2))
+    return n if x >= 0 else -n
+
+
+def per_metre(price_per_m, length_mm):
+    return half_away(Fraction(price_per_m) * Fraction(length_mm) / 1000)
+
+
+def band(likely, pct):
+    """A price band on a line's likely minor units, rounded once (G26)."""
+    return half_away(Fraction(likely) * (100 + Fraction(pct)) / 100)
+
+
+# The project's price bands, in its order: the first two for the profile supplier, the third for
+# the steel stockist. A line takes the most specific: supplier with kind before supplier alone.
+BANDS = [("test-vendor", "bar", -5, 15), ("test-vendor", None, -8, 12), ("test-steel", None, -10, 25)]
+
+
+def band_for(supplier, kind):
+    hits = [(i, 2 if k is not None else 1) for i, (s, k, _, _) in enumerate(BANDS) if s == supplier and k in (None, kind)]
+    if not hits:
+        return None
+    top = max(r for _, r in hits)
+    best = [i for i, r in hits if r == top]
+    assert len(best) == 1, "two equally specific bands"
+    return best[0]
+
+
+# Names, kinds and offers, read off tests/fixtures/catalogs/*: who sells what, in packs or kits,
+# at which regular price (the cart's basis), read when, and with what provenance.
+NAMES = {
+    "test:TS40": "Profile 40x40 (parametric)",
+    "test:TS4080": "Profile 40x80 (parametric)",
+    "test:M10-ROD": "Threaded rod M10",
+    "test:RAIL20": "Linear rail 20",
+    "test-geo:RHS-100x50x4": "RHS 100x50x4",
+    "test-geo:FB-50x10": "Flat bar 50x10",
+    "test-geo:FB-50x20": "Flat bar 50x20",
+    "test-geo:TUBE-18x2": "Tube 18x2",
+    "test-geo:HNG-15": "Hinge 40, low",
+    "test-geo:PLT-8": "End plate 8 mm",
+    "test-geo:NUT-M10": "Hex nut M10",
+    "test-geo:WSH-M10": "Washer M10",
+    "test:SPL-40": "Splice for 40 series",
+    "test:SPL-STUD": "Splice stud M8x40",
+    "test:TNUT-M8": "T-nut M8, groove 8",
+    "test:SCR-M8x16": "Socket head cap screw M8x16",
+    "test:BRK-40": "Angle bracket 40",
+    "test:CAR20": "Carriage 20, flanged",
+    "test:PSU-24V": "Power supply 24 V",
+    "test-gen:SCR-M5x25": "Socket head cap screw M5x25",
+    "test-gen:TNUT-M5": "T-nut M5, groove 8",
+}
+# The steel stockist sells test-geo's bars; everything else comes from its catalog's vendor.
+SUPPLIER = {"test:": "test-vendor", "test-geo:": "test-geo-vendor", "test-gen:": "test-gen-vendor"}
+STEEL = {"test-geo:RHS-100x50x4", "test-geo:FB-50x10", "test-geo:FB-50x20", "test-geo:TUBE-18x2"}
+
+
+def supplier_of(item):
+    if item in STEEL:
+        return "test-steel"
+    return SUPPLIER[item[: item.index(":") + 1]]
+
+
+# Unit offers: (offer, SKU, units per offer, regular price, quoted (low, high) or None, src,
+# read, in stock, kit contents per kit or None).
+READ = "2026-11-26"
+UNIT_OFFERS = {
+    "test-geo:HNG-15": [("test-geo:HNG-15", "HNG-15", 1, 3400, None, "src", READ, None, None)],
+    "test-geo:PLT-8": [("test-geo:PLT-8", "PLT-8", 1, 900, None, "src", READ, None, None)],
+    "test-geo:NUT-M10": [("test-geo:NUT-M10-100", "NUT-M10-100", 100, 2600, None, "src", "2026-10-01", None, None)],
+    "test-geo:WSH-M10": [("test-geo:WSH-M10-100", "WSH-M10-100", 100, 1800, None, "src", READ, None, None)],
+    "test-gen:SCR-M5x25": [("test-gen:SCR-M5x25-100", "SCR-M5x25-100", 100, 1500, None, "src", READ, None, None)],
+    "test-gen:TNUT-M5": [("test-gen:TNUT-M5-50", "TNUT-M5-50", 50, 2500, None, "src", READ, None, None)],
+    "test:SPL-40": [("test:SPL-40", "SPL-40", 1, 2400, None, "src", READ, None, None)],
+    "test:SPL-STUD": [],  # the catalog sells no stud on its own
+    "test:TNUT-M8": [
+        ("test:TNUT-M8-10", "TNUT-M8-10", 10, 900, None, "src", READ, None, None),
+        ("test:TNUT-M8-50", "TNUT-M8-50", 50, 3900, None, "src", READ, False, None),
+    ],
+    "test:SCR-M8x16": [
+        ("test:SCR-M8x16-10", "SCR-M8x16-10", 10, 650, None, "src", READ, None, None),
+        ("test:SCR-M8x16-50", "SCR-M8x16-50", 50, 2700, None, "src", READ, None, None),
+    ],
+    "test:BRK-40": [
+        ("test:BRK-40", "BRK-40", 1, 890, None, "src", READ, None, None),
+        (
+            "test:BRK-40-K10",
+            "BRK-40-K10",
+            1,
+            12900,
+            None,
+            "src",
+            READ,
+            None,
+            [("test:BRK-40", 10), ("test:SCR-M8x16", 20), ("test:TNUT-M8", 20)],
+        ),
+    ],
+    # A quoted range: R$ 102.13, from 95.00 to 110.00.
+    "test:CAR20": [("test:CAR20-1", "CAR20-1", 1, 10213, (9500, 11000), "src", READ, None, None)],
+    # A price by phone: an estimate, which blocks its supplier by default (call 13).
+    "test:PSU-24V": [("test:PSU-24V", "PSU-24V", 1, 9900, None, "est", READ, None, None)],
+}
+CUT_PRICE = {"test:TS40-c7": 12650, "test:TS4080-c7": 23100}  # per metre
+STOCK_SUPPLIER = {sku: supplier_of(item) for item, offers in STOCK.items() for sku, _, _ in offers}
+
+# The project's cost lines, its choice of the bracket kit, and its one open item.
+CHOSEN = {"test:BRK-40": "test:BRK-40-K10"}
+COSTS = [
+    {"id": "K1", "label": "assembly", "kind": "labour", "low_minor": 40000, "likely_minor": 60000, "high_minor": 90000, "src": "est"},
+    {
+        "id": "K2",
+        "label": "taps and angled cuts at the profile supplier",
+        "kind": "machining",
+        "supplier": "test-vendor",
+        "low_minor": 6000,
+        "likely_minor": 8000,
+        "high_minor": 12000,
+        "src": "est",
+        "covers": {"supplier": "test-vendor", "services": True},
+    },
+    {
+        "id": "K3",
+        "label": "packers cut from the fabricator's stock, and the steel stack drilled",
+        "kind": "fabrication",
+        "supplier": "test-fab",
+        "low_minor": 15000,
+        "likely_minor": 15000,
+        "high_minor": 15000,
+        "src": "src",
+        "ref": "a written quote, synthetic",
+        "covers": {"services_on": {"supplier": "test-steel"}, "items": ["test-geo:FB-50x20"]},
+    },
+    {
+        "id": "K4",
+        "label": "freight, quoted in dollars",
+        "kind": "freight",
+        "low_minor": 2000,
+        "likely_minor": 3000,
+        "high_minor": 4500,
+        "currency": "USD",
+        "src": "est",
+    },
+]
+USD = Fraction("5.5")  # fx.USD, reais per dollar
+CONTINGENCY_PCT = 10  # K5: 10 % of each of the low, likely and high subtotals
+COVERED_ITEMS = {"test-geo:FB-50x20": "K3"}
+O1 = "O1: confirm the rail screws' length against the rail's counterbore"
+
+
+def service_name(m):
+    """What a service does, not where: a tap in an end, a hole of a size."""
+    if m["op"] == "end-tap":
+        return f"tap {m['thread']} in an end" + (f", {m['depth_mm']:.2f} deep" if "depth_mm" in m else "")
+    return f"hole Ø{m['d_mm']:.2f}" + (f", {m['depth_mm']:.2f} deep" if "depth_mm" in m else "")
+
+
+def piece_services(line):
+    names = [service_name(m) for m in line.get("machining", [])]
+    names += ["angled cut" for e in (line["ends"]["a"], line["ends"]["b"]) if e != "square"]
+    return names
+
+
+def count_services(names, by, covered_by):
+    out = []
+    for what in sorted(set(names)):
+        s = {"what": what, "count": names.count(what), "by": by}
+        if covered_by is not None:
+            s["covered_by"] = covered_by
+        out.append(s)
+    return out
+
+
+def pieces_of(lines):
+    return [{"count": l["count"], "cut_mm": l["cut_mm"], "sources": l["sources"]} for l in lines]
+
+
+KIND = {"test:TS40": "bar"}
+for g in bom_groups:
+    for l in g["lines"]:
+        KIND[l["item"]] = g["kind"]
+
+order_lines = []  # (supplier, line, money or None, sources, missing)
+
+
+def priced_line(base, supplier, offer, money, quoted, src, read, sources):
+    """Fills a priced line's money: its own range, else its band, else low = likely = high."""
+    low, likely, high = money
+    line = dict(base)
+    line["currency"] = "BRL"
+    line["low_minor"], line["likely_minor"], line["high_minor"] = low, likely, high
+    if quoted:
+        line["range"] = "quote"
+    else:
+        b = band_for(supplier, base["kind"])
+        if b is not None:
+            _, _, lo, hi = BANDS[b]
+            line["low_minor"], line["high_minor"] = band(likely, lo), band(likely, hi)
+            line["range"] = "band"
+            line["band"] = b
+    line["price_src"] = src
+    line["read"] = read
+    order_lines.append({"supplier": supplier, "line": line, "offer": offer, "sources": set(sources)})
+
+
+# Bars, as the cut list sells them.
+for g in groups:
+    item = g["item"]
+    head = {"item": item, "name": NAMES[item], "kind": "bar", "opt": g["opt"]}
+    if item in COVERED_ITEMS:
+        k = COVERED_ITEMS[item]
+        names = [n for l in g["lines"] for _ in range(l["count"]) for n in piece_services(l)]
+        line = {
+            **head,
+            "qty": sum(l["count"] for l in g["lines"]),
+            "unit": "piece",
+            "covered_by": k,
+            "bom": [{"item": item, "opt": g["opt"], "qty": sum(l["count"] for l in g["lines"])}],
+            "pieces": pieces_of(g["lines"]),
+            "services": count_services(names, "supplier", k),
+        }
+        order_lines.append({"supplier": "test-fab", "line": line, "offer": None, "sources": {s for l in g["lines"] for s in l["sources"]}})
+        continue
+    if g["mode"] == "cut":
+        offer = g["offer"]
+        for l in g["lines"]:
+            piece = per_metre(CUT_PRICE[offer], l["billed_mm"])
+            names = [n for _ in range(l["count"]) for n in piece_services(l)]
+            base = {
+                **head,
+                "offer": offer,
+                "sku": offer.split(":")[1],
+                "qty": l["count"],
+                "unit": "piece",
+                "length_mm": l["ordered_mm"],
+                "billed_mm": l["billed_mm"],
+                "per": "m",
+                "list_minor": CUT_PRICE[offer],
+                "unit_price_minor": piece,
+            }
+            priced_line(base, "test-vendor", offer, (piece * l["count"],) * 3, False, "src", READ, l["sources"])
+            last = order_lines[-1]["line"]
+            last["bom"] = [{"item": item, "opt": g["opt"], "qty": l["count"]}]
+            last["pieces"] = pieces_of([l])
+            if names:
+                # The supplier's taps and angled cuts, which K2 covers.
+                last["services"] = count_services(names, "supplier", "K2")
+        continue
+    # Whole bars: one SKU each in the cart, every piece in it.
+    for sku, length, price in STOCK[item]:
+        bars = [b for b in g["stock"] if b["sku"] == sku]
+        if not bars:
+            continue
+        inside = [s for b in bars for s in b["sources"]]
+        names = [n for l in g["lines"] for s in l["sources"] if s in inside for n in piece_services(l)]
+        base = {
+            **head,
+            "offer": sku,
+            "sku": sku.split(":")[1],
+            "qty": len(bars),
+            "unit": "bar",
+            "length_mm": length,
+            "per": "bar",
+            "list_minor": price,
+            "unit_price_minor": price,
+        }
+        supplier = STOCK_SUPPLIER[sku]
+        priced_line(base, supplier, sku, (price * len(bars),) * 3, False, "src", READ, {re.sub(r"\.[fs]\d+$", "", s) for s in inside})
+        last = order_lines[-1]["line"]
+        last["bom"] = [{"item": item, "opt": g["opt"], "qty": len(inside)}]
+        last["pieces"] = pieces_of([l for l in g["lines"] if any(s in inside for s in l["sources"])])
+        if names:
+            # Holes in the stockist's whole bars, done by the fabricator: K3 covers them.
+            last["services"] = count_services(names, "buyer", "K3" if supplier == "test-steel" else None)
+
+# Everything else: what each BOM line still needs once the chosen kit has given its contents.
+need = {}
+sources_of = {}
+for g in bom_groups:
+    if g["kind"] == "bar":
+        continue
+    for l in g["lines"]:
+        need[l["item"]] = l["qty"]
+        sources_of[l["item"]] = l["sources"]
+
+
+def unit_line(item, offer, count, served, surplus, extra=None):
+    key, sku, pack, price, quoted, src, read, _, _ = offer
+    base = {"item": item, "name": NAMES[item], "kind": KIND[item], "opt": {}, "offer": key, "sku": sku, "qty": count}
+    base["unit"] = "kit" if extra else ("pack" if pack > 1 else "unit")
+    if pack > 1:
+        base["pack"] = pack
+    if extra:
+        base["kit"] = extra
+    base.update({"per": "unit", "list_minor": price, "unit_price_minor": price})
+    money = (quoted[0] * count, price * count, quoted[1] * count) if quoted else (price * count,) * 3
+    return base, money, quoted is not None, src, read
+
+
+# The bracket kit, chosen: 12 brackets need 2 kits of 10, which also bring 40 screws and 40 T-nuts.
+for item, key in CHOSEN.items():
+    offer = next(o for o in UNIT_OFFERS[item] if o[0] == key)
+    contents = offer[8]
+    main = dict(contents)[item]
+    kits = -(-need[item] // main)  # ceil
+    served, surplus, sources = [], [], set()
+    for it, n in contents:
+        got = kits * n
+        take = min(got, need.get(it, 0))
+        if take:
+            need[it] -= take
+            served.append({"item": it, "opt": {}, "qty": take})
+            sources |= set(sources_of[it])
+        if got > take:
+            surplus.append({"item": it, "opt": {}, "qty": got - take})
+    base, money, quoted, src, read = unit_line(item, offer, kits, served, surplus, [{"item": it, "opt": {}, "qty": n} for it, n in contents])
+    priced_line(base, supplier_of(item), key, money, quoted, src, read, sources)
+    order_lines[-1]["line"]["bom"] = served
+    if surplus:
+        order_lines[-1]["line"]["surplus"] = surplus
+
+
+def covers(item, n):
+    """Every way to buy at least n of an item from its non-kit offers, cheapest first: a brute
+    force over pack counts, ordered by cost, then surplus, then lines, then more of the first SKU."""
+    offers = sorted((o for o in UNIT_OFFERS[item] if o[8] is None), key=lambda o: o[0])
+    best = None
+    for counts in itertools.product(*[range(0, -(-n // o[2]) + 1) for o in offers]):
+        units = sum(c * o[2] for c, o in zip(counts, offers))
+        if units < n:
+            continue
+        key = (sum(c * o[3] for c, o in zip(counts, offers)), units - n, sum(1 for c in counts if c), [-c for c in counts])
+        if best is None or key < best[0]:
+            best = (key, counts)
+    return [(o, c) for o, c in zip(offers, best[1]) if c]
+
+
+unsourced = []
+for item, n in need.items():
+    if n == 0 or item in CHOSEN:
+        continue
+    bought = covers(item, n) if UNIT_OFFERS[item] else []
+    if not bought:
+        line = {"item": item, "name": NAMES[item], "kind": KIND[item], "opt": {}, "qty": n, "unit": "unit", "bom": [{"item": item, "opt": {}, "qty": n}]}
+        order_lines.append({"supplier": None, "line": line, "offer": None, "sources": set(sources_of[item]), "missing": True})
+        continue
+    left = n
+    for i, (offer, count) in enumerate(bought):
+        units = count * offer[2]
+        take = left if i == len(bought) - 1 else min(left, units)
+        left -= take
+        base, money, quoted, src, read = unit_line(item, offer, count, take, units - take)
+        priced_line(base, supplier_of(item), offer[0], money, quoted, src, read, sources_of[item])
+        order_lines[-1]["line"]["bom"] = [{"item": item, "opt": {}, "qty": take}]
+        if units > take:
+            order_lines[-1]["line"]["surplus"] = [{"item": item, "opt": {}, "qty": units - take}]
+
+# Reasons, per supplier: the open item on c35 reaches the rail screws and T-nuts it buys; the
+# phone quote is an estimate; the stud has no offer; the nuts' price is older than 30 days.
+offers_by_key = {o[0]: o for offers in UNIT_OFFERS.values() for o in offers}
+reasons = {}
+
+
+def reason(supplier, rule, action, message, entities):
+    r = {"rule": rule, "action": action, "message": message, "entities": entities}
+    if r not in reasons.setdefault(supplier, []):
+        reasons[supplier].append(r)
+
+
+for e in order_lines:
+    line = e["line"]
+    if e.get("missing"):
+        reason(e["supplier"], "missing-price", "block", f"{line['item']}: no offer", [line["item"]])
+    if "c35" in e["sources"]:
+        reason(e["supplier"], "open-item", "block", O1, ["c35"])
+    offer = offers_by_key.get(e["offer"])
+    if offer is None:
+        continue
+    if offer[5] == "est":
+        reason(e["supplier"], "est-price", "block", f"{offer[0]}: the price of {line['item']} is an estimate", [line["item"]])
+    age = (datetime.date.fromisoformat(AS_OF) - datetime.date.fromisoformat(offer[6])).days
+    if age > 30:
+        reason(e["supplier"], "stale-price", "warn", f"{offer[0]}: price read {offer[6]}, {age} days before {AS_OF}", [line["item"]])
+RULES = ["check-error", "open-item", "placeholder", "missing-price", "est-price", "out-of-stock", "option-not-sold", "stale-price"]
+
+# Lines in a group: bars, connectors, fasteners, carriages, …, generic; by item, offer, longest.
+KIND_ORDER = ["bar", "connector", "fastener", "carriage", "accessory", "panel", "generic"]
+LINE_KEYS = [
+    "item", "name", "kind", "opt", "offer", "sku", "qty", "unit", "pack", "kit", "length_mm", "billed_mm",
+    "line_billed_mm", "per", "list_minor", "unit_price_minor", "currency", "low_minor", "likely_minor",
+    "high_minor", "range", "band", "converted", "price_src", "on_sale", "read", "covered_by", "bom",
+    "surplus", "pieces", "services",
+]
+
+
+def ordered(line):
+    return {k: line[k] for k in LINE_KEYS if k in line}
+
+
+def money3(low, likely, high):
+    return {"low_minor": low, "likely_minor": likely, "high_minor": high}
+
+
+suppliers = sorted({e["supplier"] for e in order_lines if e["supplier"]} | {c["supplier"] for c in COSTS if "supplier" in c}, key=id_key)
+cost_by = {c["id"]: c for c in COSTS}
+supplier_out = []
+for s in suppliers + ([None] if any(e["supplier"] is None for e in order_lines) else []):
+    mine = [e for e in order_lines if e["supplier"] == s]
+    mine.sort(key=lambda e: (KIND_ORDER.index(e["line"]["kind"]), id_key(e["line"]["item"]), e["line"].get("offer", ""), -e["line"].get("length_mm", 0)))
+    rs = sorted(reasons.get(s, []), key=lambda r: (RULES.index(r["rule"]), r["message"]))
+    # A cost line that names no supplier belongs to no supplier's order, not to the unsourced lines.
+    own_costs = [c["id"] for c in COSTS if s is not None and c.get("supplier") == s]
+    priced = [e["line"] for e in mine if "likely_minor" in e["line"]]
+    t = [sum(l[k] for l in priced) + sum(cost_by[c][k] for c in own_costs) for k in ("low_minor", "likely_minor", "high_minor")]
+    supplier_out.append(
+        {
+            "supplier": s,
+            "status": "BLOCKED" if any(r["action"] == "block" for r in rs) else "READY",
+            "reasons": rs,
+            "lines": [ordered(e["line"]) for e in mine],
+            "costs": own_costs,
+            "totals": money3(*t),
+        }
+    )
+
+# Costs and totals: the order lines, then the cost lines (K4 converted at 5.5), then 10 % of each
+# of the low, likely and high subtotals.
+priced = [e["line"] for e in order_lines if "likely_minor" in e["line"]]
+lines_total = [sum(l[k] for l in priced) for k in ("low_minor", "likely_minor", "high_minor")]
+costs_out, cost_total = [], [0, 0, 0]
+for c in COSTS:
+    out = {k: c[k] for k in ("id", "label", "kind", "supplier") if k in c}
+    out["currency"] = c.get("currency", "BRL")
+    out.update(money3(c["low_minor"], c["likely_minor"], c["high_minor"]))
+    conv = [c["low_minor"], c["likely_minor"], c["high_minor"]]
+    if out["currency"] == "USD":
+        conv = [half_away(x * USD) for x in conv]
+        out["converted"] = {"rate": 5.5, **money3(*conv)}
+    cost_total = [a + b for a, b in zip(cost_total, conv)]
+    out.update({k: c[k] for k in ("src", "ref") if k in c})
+    if "covers" in c:
+        out["covers"] = c["covers"]
+    c["conv"] = conv
+    costs_out.append(out)
+subtotal = [a + b for a, b in zip(lines_total, cost_total)]
+contingency = [half_away(Fraction(x * CONTINGENCY_PCT, 100)) for x in subtotal]
+costs_out.append(
+    {"id": "K5", "label": "contingency", "kind": "contingency", "pct": 10, "of": "subtotal", "currency": "BRL", **money3(*contingency), "src": "est"}
+)
+total = [a + b for a, b in zip(subtotal, contingency)]
+# In each currency: the BRL lines and cost lines with the contingency, and the dollars as quoted.
+brl = [lines_total[i] + sum(c[k] for c in COSTS if c.get("currency", "BRL") == "BRL") + contingency[i] for i, k in enumerate(("low_minor", "likely_minor", "high_minor"))]
+usd = [cost_by["K4"][k] for k in ("low_minor", "likely_minor", "high_minor")]
+# Provenance: every catalog price here was read (src) but the power supply's; the cost lines are
+# estimates but K3, a written quote; the contingency is an estimate.
+est = sum(l["likely_minor"] for l in priced if l["price_src"] == "est") + sum(c["conv"][1] for c in COSTS if c["src"] == "est") + contingency[1]
+src = total[1] - est
+share = [
+    {"src": "src", "likely_minor": src, "pct": half_away(Fraction(src * 10000, total[1])) / 100},
+    {"src": "est", "likely_minor": est, "pct": half_away(Fraction(est * 10000, total[1])) / 100},
+]
+order_out = {
+    "schema": "alukit.order/1",
+    "currency": "BRL",
+    "price_basis": "regular",
+    "as_of": AS_OF,
+    "oldest_read": min(e["line"]["read"] for e in order_lines if "read" in e["line"]),
+    "status": "BLOCKED" if any(s["status"] == "BLOCKED" for s in supplier_out) else "READY",
+    "rules": {r: ("warn" if r == "stale-price" else "block") for r in RULES},
+    "suppliers": supplier_out,
+    "costs": costs_out,
+    "totals": {
+        "currency": "BRL",
+        "lines": money3(*lines_total),
+        "costs": money3(*cost_total),
+        "subtotal": money3(*subtotal),
+        "contingency": money3(*contingency),
+        "total": money3(*total),
+        "by_currency": [{"currency": "BRL", **money3(*brl)}, {"currency": "USD", **money3(*usd)}],
+        "share": share,
+        "unpriced": sum(1 for e in order_lines if e.get("missing")),
+    },
+    "diagnostics": [],
+}
+
+
+def as_js(x):
+    """JSON as JavaScript prints it: a float with no fraction prints as an integer."""
+    if isinstance(x, float) and x.is_integer():
+        return int(x)
+    if isinstance(x, dict):
+        return {k: as_js(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [as_js(v) for v in x]
+    return x
+
+
 expected = {
     "about": "The cart's cut list worked by hand: see hand/cart_by_hand.py, which wrote this.",
     "kerf_mm": KERF,
@@ -589,4 +1116,8 @@ with open(os.path.join(here, "..", "expected-cutlist.json"), "w") as f:
     f.write(json.dumps(expected, indent=2, ensure_ascii=False) + "\n")
 with open(os.path.join(here, "..", "expected-bom.json"), "w") as f:
     f.write(json.dumps(bom, indent=2, ensure_ascii=False) + "\n")
-print(json.dumps({"cutlist": expected, "bom": bom}, indent=1))
+# The order list is compared byte for byte with `alukit order --format json`, so it is written
+# exactly as JavaScript's JSON.stringify(x, null, 2) prints it, and Biome leaves it alone.
+with open(os.path.join(here, "..", "expected-order.json"), "w") as f:
+    f.write(json.dumps(as_js(order_out), indent=2, ensure_ascii=False) + "\n")
+print(json.dumps({"cutlist": expected, "bom": bom, "order": as_js(order_out)}, indent=1))
