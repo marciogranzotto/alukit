@@ -31,6 +31,7 @@ machining on each bar and the assembly order. Agents can drive it as well as you
 | D14 | Model scope | **Widen the model** (review B2): anything sold by length (T-slot profile, steel tube or RHS, rod, flat bar, linear rail) is a *bar* with a section and a cut length; face-to-face connections; parts placed at a position along a bar; patterns and splices. Moving parts stay in v3. |
 | D15 | Node | Whatever version is needed, switched with **nvm**. The repo pins Node 26 (the current LTS) in `.nvmrc`; M0 verifies the stack on it and falls back to 24 LTS if something breaks. |
 | D16 | License | **MIT**: anyone may use anything, as long as the copyright notice (the attribution) stays. |
+| D17 | Design draft 2's calls | Kept all four (Marcio, 2026-11-26): the lock file pins catalog data; prices default to regular and estimated prices block the order; no constraint solver in v1; the design keeps its full length. Building starts in autonomous mode with subagents. |
 
 ## Why: the evidence from a real build
 
