@@ -539,23 +539,64 @@ describe("mirror", () => {
 });
 
 describe("items, params, costs and records", () => {
-  it("addItem and setItem", () => {
+  it("addItem and setItem: a project item, checked against its kind's schema and its material", () => {
+    // Design §4.2's example plate.
+    const plate = {
+      kind: "plate",
+      name: "Plate X",
+      material: "test:s235",
+      thickness_mm: 4,
+      outline: [
+        [0, 0],
+        [120, 0],
+        [120, 80],
+        [0, 80],
+      ],
+      holes: [
+        { at: [20, 20], d_mm: 8.5 },
+        { at: [100, 20], thread: "M8" },
+      ],
+    };
     const r = ok(
       cart(),
-      { cmd: "addItem", args: { id: "plate-a", item: { kind: "plate", thickness_mm: 4 } } },
+      { cmd: "addItem", args: { id: "plate-x", item: plate } },
+      { cmd: "setItem", args: { id: "project:plate-x", set: { thickness_mm: 5 } } },
       {
-        cmd: "setItem",
-        args: { id: "project:plate-a", set: { thickness_mm: 5 } },
+        cmd: "addPart",
+        args: { item: "project:plate-x", on: { bar: "b9", at_mm: 300, face: "+y" } },
       },
     );
-    expect(r.results[0]?.created).toEqual(["project:plate-a"]);
-    expect((r.state.doc.items as Record<string, unknown>)["plate-a"]).toEqual({
-      kind: "plate",
+    expect(r.results[0]?.created).toEqual(["project:plate-x"]);
+    expect((r.state.doc.items as Record<string, unknown>)["plate-x"]).toEqual({
+      ...plate,
       thickness_mm: 5,
     });
-    expect(no(r.state, { cmd: "addItem", args: { id: "plate-a", item: {} } })[0]?.code).toBe(
+    // The part derives, placed like a catalog part, and the plate has no problem.
+    const d = derived(r.state);
+    const id = r.results[2]?.created[0] as string;
+    expect(d.parts.get(id)?.item).toBe("project:plate-x");
+    expect(d.diagnostics.filter((x) => x.entity === "project:plate-x")).toEqual([]);
+    expect(no(r.state, { cmd: "addItem", args: { id: "plate-x", item: plate } })[0]?.code).toBe(
       "exists",
     );
+    // A plate needs its outline; its material must be a catalog's.
+    const { outline: _, ...noOutline } = plate;
+    expect(no(cart(), { cmd: "addItem", args: { id: "plate-y", item: noOutline } })[0]?.code).toBe(
+      "schema",
+    );
+    expect(
+      no(cart(), {
+        cmd: "addItem",
+        args: { id: "plate-y", item: { ...plate, material: "test:unobtainium" } },
+      })[0],
+    ).toMatchObject({ code: "item", field: "material", refs: ["test:unobtainium"] });
+    // A part naming a project item that does not exist is refused.
+    expect(
+      no(cart(), {
+        cmd: "addPart",
+        args: { item: "project:nothing", on: { bar: "b9", at_mm: 300 } },
+      })[0]?.code,
+    ).toBe("ref");
   });
 
   it("setParam changes what derives from it, and refuses to remove a param in use", () => {

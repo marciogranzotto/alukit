@@ -1,7 +1,7 @@
 import type { Item } from "#catalog/schema/items.ts";
 import { type ExprScope, evalNumber } from "../expr.ts";
 import { compareIds } from "../ids.ts";
-import { type BarItemInfo, fullRef } from "../items.ts";
+import { type AnyItem, type BarItemInfo, fullRef } from "../items.ts";
 import type { Face, FaceConnT, StackEntry } from "../project/schema.ts";
 import { clearanceHole } from "../threads.ts";
 import { TOL } from "../tolerances.ts";
@@ -116,7 +116,7 @@ function barBody(b: DerivedBar): Body {
 }
 
 /** A placed part's bounding box, as six faces in world terms. */
-function partBody(p: PlacedPart, item: Item): Body | undefined {
+function partBody(p: PlacedPart, item: AnyItem): Body | undefined {
   const box = (item as { bbox_mm?: readonly [V3, V3] }).bbox_mm;
   if (!box) return undefined;
   const axes = [p.frame.x, p.frame.y, p.frame.z] as const;

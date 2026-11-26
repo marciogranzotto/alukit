@@ -19,6 +19,7 @@ import {
   ORDER_SCHEMA,
   type Order,
   optKey,
+  readOf,
   type SupplierOrder,
   supplierOf,
   UNSOURCED,
@@ -169,7 +170,12 @@ export function orderOf(priced: PricedOrder, input: RulesInput): Order {
     };
   });
 
-  const reads = works.flatMap((w) => (w.offer && w.money ? [w.offer.price.read] : [])).sort(cmp);
+  const reads = works
+    .flatMap((w) => {
+      const read = readOf(w);
+      return read !== undefined && w.money ? [read] : [];
+    })
+    .sort(cmp);
   return {
     schema: ORDER_SCHEMA,
     currency: pc ?? null,

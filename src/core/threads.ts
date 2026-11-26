@@ -75,3 +75,67 @@ export function clearanceHole(thread: string): number | undefined {
   const d = threadDiameter(thread);
   return d === undefined ? undefined : ISO273_MEDIUM.get(d);
 }
+
+/**
+ * ISO 261 coarse pitches, nominal diameter d → pitch P, in mm: the sizes ISO 262 selects for
+ * screws, bolts and nuts, 1 to 64 mm (read from the ISO metric screw thread article's table of
+ * ISO 262's sizes, 2026-11-26).
+ */
+const ISO261_COARSE: ReadonlyMap<number, number> = new Map([
+  [1, 0.25],
+  [1.2, 0.25],
+  [1.4, 0.3],
+  [1.6, 0.35],
+  [1.8, 0.35],
+  [2, 0.4],
+  [2.5, 0.45],
+  [3, 0.5],
+  [3.5, 0.6],
+  [4, 0.7],
+  [5, 0.8],
+  [6, 1],
+  [7, 1],
+  [8, 1.25],
+  [10, 1.5],
+  [12, 1.75],
+  [14, 2],
+  [16, 2],
+  [18, 2.5],
+  [20, 2.5],
+  [22, 2.5],
+  [24, 3],
+  [27, 3],
+  [30, 3.5],
+  [33, 3.5],
+  [36, 4],
+  [39, 4],
+  [42, 4.5],
+  [45, 4.5],
+  [48, 5],
+  [52, 5],
+  [56, 5.5],
+  [60, 5.5],
+  [64, 6],
+]);
+
+/**
+ * A metric thread's pitch: the one written (`M10x1.25` gives 1.25), else ISO 261's coarse pitch
+ * for its diameter. Undefined for anything else.
+ */
+export function threadPitch(thread: string): number | undefined {
+  const m = /^M(\d+(?:\.\d+)?)(?:x(\d+(?:\.\d+)?))?$/.exec(thread.trim());
+  if (!m) return undefined;
+  return m[2] !== undefined ? Number(m[2]) : ISO261_COARSE.get(Number(m[1]));
+}
+
+/**
+ * The tap drill of a metric thread: its major diameter minus its pitch, the rule for ISO metric
+ * threads ("major minus pitch", Wikipedia's drill and tap size chart). It gives about three
+ * quarters of the thread's depth: M6 5.00, M8 6.75, M10 8.50. Shops round some sizes to the
+ * drills they stock (M8 6.8); a threaded hole that names its drill as `d_mm` uses that one.
+ */
+export function tapDrill(thread: string): number | undefined {
+  const d = threadDiameter(thread);
+  const p = threadPitch(thread);
+  return d === undefined || p === undefined ? undefined : d - p;
+}

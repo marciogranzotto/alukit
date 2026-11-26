@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
-import { type Bom, bom } from "../bom/bom.ts";
+import { bom } from "../bom/bom.ts";
 import { cutList } from "../cutlist/cutlist.ts";
 import { derive } from "../derive/derive.ts";
 import type { Diagnostic } from "../diagnostics.ts";
@@ -29,15 +29,12 @@ interface Run {
   asOf?: string;
   /** Problems found elsewhere (a project check), fed to `check-error`. */
   diagnostics?: Diagnostic[];
-  /** Edits the BOM before the order reads it (a project item derive cannot place yet). */
-  bom?: (b: Bom) => Bom;
 }
 
 function run(patch: unknown = {}, opts: Run = {}): Order {
   const derived = derive(mergePatch(base, patch), items);
   const cl = cutList({ derived, items });
-  const b0 = bom({ derived, items });
-  const b = opts.bom ? opts.bom(b0) : b0;
+  const b = bom({ derived, items });
   return order({
     derived,
     items,
@@ -171,54 +168,130 @@ describe("open-item: an open item with blocks: order holds its scope's suppliers
   });
 });
 
-describe("placeholder: a placeholder blocks its own line, under unsourced", () => {
-  // Derive resolves project items in M6; here the BOM gets the line a placed item would give.
-  const withBox = (b: Bom): Bom => ({
-    ...b,
-    groups: [
-      ...b.groups,
-      {
-        kind: "generic",
-        lines: [{ item: "project:box", name: "box", opt: {}, qty: 1, sources: ["p9"] }],
-        mass_kg: 0,
-      },
-    ],
-  });
-  const box = (kind: string) => ({
+describe("placeholder: a placeholder blocks its own line's group, and no other", () => {
+  // A placeholder on the first bar, derived and counted like any part (§4.7, §4.8).
+  const box = (extra: Record<string, unknown> = {}) => ({
     items: {
       box: {
-        kind,
+        kind: "placeholder",
         name: "Electronics box, to be chosen",
+        bbox_mm: [
+          [-50, 0, 0],
+          [50, 80, 60],
+        ],
+        mass_kg: 1.2,
         price_minor: { v: 20000, low: 15000, high: 30000 },
+        ...extra,
       },
     },
+    parts: { p9: { item: "project:box", on: { bar: "b1", at_mm: 300, face: "+y" } } },
   });
 
   it("blocks the unsourced group only, and keeps its estimate in the totals", () => {
-    const o = run(box("placeholder"), { bom: withBox });
+    const o = run(box());
     expect(status(o)).toEqual({ ...READY, "(unsourced)": "BLOCKED" });
     expect(reasons(o, "placeholder")).toEqual([
       ["(unsourced)", "block", "project:box: a placeholder, not a part to order"],
     ]);
     const line = o.suppliers.find((s) => s.supplier === null)?.lines[0];
-    expect([line?.low_minor, line?.likely_minor, line?.high_minor, line?.price_src]).toEqual([
+    expect([line?.kind, line?.low_minor, line?.likely_minor, line?.high_minor]).toEqual([
+      "placeholder",
       15000,
       20000,
       30000,
-      "est",
+    ]);
+    expect(line?.price_src).toBe("est");
+    expect(o.totals.lines.likely_minor - run().totals.lines.likely_minor).toBe(20000);
+  });
+
+  it("blocks only its supplier when it names one; the others stay ready", () => {
+    const o = run(box({ supplier: "shop-eu" }));
+    expect(status(o)).toEqual({ "shop-a": "READY", "shop-eu": "BLOCKED" });
+    expect(reasons(o, "placeholder")).toEqual([
+      ["shop-eu", "block", "project:box: a placeholder, not a part to order"],
     ]);
   });
 
   it("does not block a project item that is not a placeholder, or when switched to warn", () => {
-    expect(status(run(box("generic"), { bom: withBox }))).toEqual({
-      ...READY,
-      "(unsourced)": "READY",
-    });
-    const o = run(
-      { ...box("placeholder"), order_rules: { placeholder: "warn" } },
-      { bom: withBox },
-    );
+    const generic = box({ kind: "generic", price_minor: { v: 20000, src: "src" } });
+    expect(status(run(generic))).toEqual({ ...READY, "(unsourced)": "READY" });
+    const o = run({ ...box(), order_rules: { placeholder: "warn" } });
     expect(status(o)).toEqual({ ...READY, "(unsourced)": "READY" });
+  });
+});
+
+describe("project items: made local or by a fabricator, priced by hand (§4.8)", () => {
+  const plate = (extra: Record<string, unknown> = {}) => ({
+    items: {
+      plate: {
+        kind: "plate",
+        name: "Valve plate",
+        material: "test:s235",
+        thickness_mm: 5,
+        outline: [
+          [0, 0],
+          [100, 0],
+          [100, 60],
+          [0, 60],
+        ],
+        price_minor: { v: 4500, src: "src", ref: "a quote", read: "2026-11-20" },
+        ...extra,
+      },
+    },
+    parts: { p9: { item: "project:plate", on: { bar: "b1", at_mm: 300, face: "+y" } } },
+  });
+
+  it("goes to the local group when it names no fabricator, priced as entered", () => {
+    const o = run(plate());
+    expect(status(o)).toEqual({ ...READY, local: "READY" });
+    const line = o.suppliers.find((s) => s.supplier === "local")?.lines[0];
+    expect([line?.kind, line?.qty, line?.likely_minor, line?.price_src, line?.read]).toEqual([
+      "plate",
+      1,
+      4500,
+      "src",
+      "2026-11-20",
+    ]);
+  });
+
+  it("goes to its fabricator's group when it names one", () => {
+    expect(status(run(plate({ supplier: "shop-a" })))).toEqual(READY);
+  });
+
+  it("blocks only its own group for an estimated price, a missing price or an open item", () => {
+    const est = run(plate({ price_minor: 4500 }));
+    expect(status(est)).toEqual({ ...READY, local: "BLOCKED" });
+    expect(reasons(est, "est-price")).toEqual([
+      ["local", "block", "project:plate: its price is an estimate"],
+    ]);
+    const none = run(plate({ price_minor: null }));
+    expect(status(none)).toEqual({ ...READY, local: "BLOCKED" });
+    expect(reasons(none, "missing-price")).toEqual([["local", "block", "project:plate: no price"]]);
+    expect(none.totals.unpriced).toBe(1);
+    const open = run({
+      ...plate({ price_minor: null }),
+      open: [
+        {
+          id: "O1",
+          text: "price the plate with the local shop",
+          blocks: "order",
+          scope: ["project:plate"],
+        },
+      ],
+    });
+    expect(status(open)).toEqual({ ...READY, local: "BLOCKED" });
+    expect(reasons(open, "open-item")).toEqual([
+      ["local", "block", "O1: price the plate with the local shop"],
+    ]);
+  });
+
+  it("warns on a price read more than 30 days before the order", () => {
+    const o = run(plate({ price_minor: { v: 4500, src: "src", read: "2026-09-01" } }));
+    expect(status(o)).toEqual({ ...READY, local: "READY" });
+    expect(reasons(o, "stale-price")).toEqual([
+      ["local", "warn", "project:plate: price read 2026-09-01, 86 days before 2026-11-26"],
+    ]);
+    expect(o.oldest_read).toBe("2026-09-01");
   });
 });
 

@@ -2,6 +2,8 @@ import { z } from "zod";
 import { type Derived, derive } from "../derive/derive.ts";
 import type { ItemSource } from "../items.ts";
 import { lockItems } from "../lock/source.ts";
+import { parseProject } from "../project/parse.ts";
+import { projectItems } from "../project-items/source.ts";
 import { getEntity, KIND_NOUN, type Kind, kindOf, mergePatch, nextId, withEntity } from "./doc.ts";
 import {
   type CommandContext,
@@ -18,17 +20,23 @@ import { checkEntity } from "./validate.ts";
 /** Building blocks shared by the commands. */
 
 export function makeContext(state: State, env: CommandEnv): CommandContext {
+  let locked: ItemSource | undefined;
   let items: ItemSource | undefined;
   let derived: Derived | undefined;
+  const base = () => {
+    locked ??= lockItems(state.lock);
+    return locked;
+  };
   return {
     state,
     env,
     items() {
-      items ??= lockItems(state.lock);
+      // The lock's items and the document's own project items (§4.8), as derive sees them.
+      items ??= projectItems(base(), parseProject(state.doc).doc).source;
       return items;
     },
     derived() {
-      derived ??= derive(state.doc, this.items());
+      derived ??= derive(state.doc, base());
       return derived;
     },
   };

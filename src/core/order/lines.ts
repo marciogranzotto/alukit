@@ -1,4 +1,3 @@
-import type { Src } from "#catalog/schema/common.ts";
 import type { Bom } from "../bom/bom.ts";
 import {
   type CutGroup,
@@ -11,8 +10,10 @@ import {
 import type { Derived } from "../derive/derive.ts";
 import type { Diagnostics } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
-import type { ItemSource, OfferInfo, PriceField } from "../items.ts";
+import type { ItemSource, OfferInfo } from "../items.ts";
+import { PROJECT_ITEM } from "../project/parse.ts";
 import type { CostLine } from "../project/schema.ts";
+import { projectItems } from "../project-items/source.ts";
 import { cheapestCover } from "./cover.ts";
 import { amount, type Basis, basisPrice, fieldMoney, times } from "./price.ts";
 import {
@@ -442,7 +443,7 @@ export function orderLines(ctx: LineContext): Work[] {
   // Packs and units for whatever is left.
   for (const n of needs) {
     if (n.remaining === 0) continue;
-    if (n.item.startsWith("project:")) {
+    if (n.item.startsWith(PROJECT_ITEM)) {
       works.push(projectLine(ctx, n));
       n.remaining = 0;
       continue;
@@ -515,19 +516,19 @@ export function orderLines(ctx: LineContext): Work[] {
 }
 
 /**
- * A project item (§4.8) on the order: unsourced, and priced by its own `price_minor` when it
- * states one (a placeholder's estimate). A placeholder blocks its own line (§5.5).
+ * A project item (§4.8) on the order: one line under its supplier (a plate or a bent angle that
+ * names none is made `local`; a placeholder or a generic item that names none is unsourced),
+ * priced per unit by its own `price_minor`, in the project's currency. A placeholder blocks its own
+ * line's group and no other (§5.5); an item with no price is a missing price there.
  */
 function projectLine(ctx: LineContext, n: Need): Work {
-  const id = n.item.slice("project:".length);
-  const defs = (ctx.derived.doc.rest.items ?? {}) as Record<string, Record<string, unknown>>;
-  const def = defs[id];
-  const placeholder = def?.kind === "placeholder";
-  const field = projectPrice(def?.price_minor);
+  const r = projectItems(ctx.items, ctx.derived.doc).resolved.get(n.item);
+  const placeholder = r?.kind === "placeholder";
+  const field = r?.price;
   const one = field && fieldMoney(field, (x) => x);
   const line: OrderLine = {
     item: n.item,
-    name: typeof def?.name === "string" ? def.name : n.name,
+    name: r?.name ?? n.name,
     kind: n.kind,
     opt: n.opt,
     qty: n.remaining,
@@ -536,26 +537,13 @@ function projectLine(ctx: LineContext, n: Need): Work {
     bom: [{ item: n.item, opt: n.opt, qty: n.remaining }],
   };
   return {
-    key: UNSOURCED,
+    key: keyOf(r?.supplier),
     sources: new Set(n.sources),
-    placeholder,
+    ...(placeholder ? { placeholder } : {}),
+    ...(field?.read !== undefined ? { read: field.read } : {}),
     ...(field && one
       ? { field, money: { ...times(one, n.remaining), quoted: one.quoted } }
-      : { missing: placeholder ? "placeholder" : "no-offer" }),
+      : { missing: placeholder ? "placeholder" : "no-price" }),
     line,
-  };
-}
-
-/** A project item's price: minor units, or a valued field; an estimate unless it says not. */
-function projectPrice(p: unknown): PriceField | undefined {
-  if (typeof p === "number" && Number.isInteger(p) && p >= 0) return { v: p, src: "est" };
-  if (typeof p !== "object" || p === null) return undefined;
-  const o = p as { v?: unknown; low?: unknown; high?: unknown; src?: unknown };
-  if (typeof o.v !== "number") return undefined;
-  return {
-    v: o.v,
-    ...(typeof o.low === "number" ? { low: o.low } : {}),
-    ...(typeof o.high === "number" ? { high: o.high } : {}),
-    src: (typeof o.src === "string" ? o.src : "est") as Src,
   };
 }

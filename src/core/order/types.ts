@@ -229,9 +229,16 @@ export interface Work {
   conv?: Money;
   /** The entities it serves: bars, the connections that cut pieces, parts. */
   sources: Set<string>;
-  /** Why it has no price. */
-  missing?: "no-offer" | "by-length" | "option" | "rate" | "placeholder";
+  /** Why it has no price: `no-price` is a project item that gives none (§4.8). */
+  missing?: "no-offer" | "by-length" | "option" | "rate" | "placeholder" | "no-price";
   placeholder?: boolean;
+  /** A project item's price (§4.8): the date it was read, when it says. An offer's is its own. */
+  read?: string;
+}
+
+/** The date a line's price was read: its offer's, or a project item's own. */
+export function readOf(w: Work): string | undefined {
+  return w.offer ? w.offer.price.read : w.read;
 }
 
 export function cmp(a: string, b: string): number {

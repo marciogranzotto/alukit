@@ -13,6 +13,9 @@ const TITLES: Record<string, string> = {
   accessory: "Accessories",
   panel: "Panels",
   generic: "Other items",
+  plate: "Plates",
+  "bent-angle": "Bent angles",
+  placeholder: "Placeholders",
 };
 
 function optText(opt: Readonly<Record<string, string>>): string {

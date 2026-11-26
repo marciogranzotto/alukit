@@ -59,7 +59,24 @@ describe("reading a document leniently (design §5.1)", () => {
         p1: { item: "test:CAR20", on: { bar: "b4", at_mm: 200, face: "+y" } },
         p2: { item: "test:SCR-M8x16", qty: "4 * 2", unplaced: true, why: "spares" },
       },
-      items: { "plate-a": { kind: "plate", thickness_mm: 4 } },
+      items: {
+        "plate-a": {
+          kind: "plate",
+          name: "Plate A",
+          material: "test:s235",
+          thickness_mm: 4,
+          outline: [
+            [0, 0],
+            [120, 0],
+            [120, 80],
+            [0, 80],
+          ],
+          holes: [
+            { at: [20, 20], d_mm: 8.5 },
+            { at: [100, 20], thread: "M8" },
+          ],
+        },
+      },
       costs: [
         {
           id: "K1",
@@ -83,6 +100,43 @@ describe("reading a document leniently (design §5.1)", () => {
       views: { iso: { pos: [1, 2, 3], target: [0, 0, 0] } },
     });
     expect(diagnostics).toEqual([]);
+  });
+
+  it("validates project items one by one, each named project:<id> (§4.8)", () => {
+    const box = {
+      kind: "placeholder",
+      name: "Motor",
+      bbox_mm: [
+        [0, 0, 0],
+        [100, 80, 60],
+      ],
+    };
+    const { doc, diagnostics } = parseProject({
+      ...base,
+      items: {
+        motor: box,
+        // No outline; a hole with neither d_mm nor thread; an id that is not one.
+        "plate-b": { kind: "plate", name: "B", material: "test:s235", thickness_mm: 4 },
+        "angle-c": {
+          kind: "bent-angle",
+          name: "C",
+          material: "test:s235",
+          thickness_mm: 3,
+          length_mm: 50,
+          legs_mm: [40, 30],
+          bend_radius_mm: 3,
+          k_factor: 0.4,
+          holes: { a: [{ at: [25, 20] }] },
+        },
+        "1": box,
+      },
+    });
+    expect(Object.keys(doc.items)).toEqual(["motor"]);
+    expect(diagnostics.map((d) => [d.entity, d.field])).toEqual([
+      ["project:1", "items"],
+      ["project:angle-c", "holes/a[0]"],
+      ["project:plate-b", "outline"],
+    ]);
   });
 
   it("validates cost lines, bands and open items one by one: a bad entry drops only itself", () => {
