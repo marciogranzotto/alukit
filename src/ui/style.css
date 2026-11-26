@@ -549,6 +549,19 @@ tr.warn {
   padding: 0 4px;
 }
 
+table.grid th.n {
+  text-align: right;
+}
+
+table.grid.totals {
+  width: auto;
+}
+
+table.grid.totals td,
+table.grid.totals th {
+  padding-right: 24px;
+}
+
 table.grid tr.total td {
   font-weight: 600;
 }

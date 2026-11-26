@@ -310,10 +310,10 @@ function OrderTab({ m }: { m: Model }) {
                   <th>name</th>
                   <th>options</th>
                   <th>quantity</th>
-                  <th>unit price</th>
-                  <th>low</th>
-                  <th>likely</th>
-                  <th>high</th>
+                  <th class="n">unit price</th>
+                  <th class="n">low</th>
+                  <th class="n">likely</th>
+                  <th class="n">high</th>
                   <th>details</th>
                   <th>for</th>
                 </tr>
@@ -382,9 +382,9 @@ function CostsTab({ m }: { m: Model }) {
               <th>label</th>
               <th>kind</th>
               <th>supplier</th>
-              <th>low</th>
-              <th>likely</th>
-              <th>high</th>
+              <th class="n">low</th>
+              <th class="n">likely</th>
+              <th class="n">high</th>
               <th>src</th>
               <th>covers</th>
             </tr>
@@ -427,9 +427,9 @@ function CostsTab({ m }: { m: Model }) {
         <thead>
           <tr>
             <th />
-            <th>low</th>
-            <th>likely</th>
-            <th>high</th>
+            <th class="n">low</th>
+            <th class="n">likely</th>
+            <th class="n">high</th>
           </tr>
         </thead>
         <tbody>
