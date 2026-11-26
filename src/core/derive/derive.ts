@@ -2,6 +2,7 @@ import type { Diagnostic } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
 import type { ItemSource } from "../items.ts";
 import { type Doc, parseProject } from "../project/parse.ts";
+import type { Expr, Face } from "../project/schema.ts";
 import type { V3 } from "../vec.ts";
 import { Ctx } from "./context.ts";
 import { resolveEnds } from "./ends.ts";
@@ -16,10 +17,24 @@ import type { BarLengths, EndFace, EndReport, PlacedBar, PlacedPivot, PlacedRun 
  * cannot resolve is left out while the rest derives (§5.1).
  */
 
+/** A hole a person adds in `ops` (§4.4), valued: along the axis from the named design point. */
+export interface ResolvedOp {
+  op: "hole";
+  face: Face;
+  from: "a" | "b";
+  at: number;
+  d?: number;
+  thread?: string;
+  depth?: number;
+  csk?: { d: number; angle: number };
+  cbore?: { d: number; depth: number };
+}
+
 export interface DerivedBar {
   placed: PlacedBar;
   lengths: BarLengths;
   ends: { a: EndReport; b: EndReport };
+  ops: ResolvedOp[];
 }
 
 export interface Derived {
@@ -77,7 +92,7 @@ export function derive(raw: unknown, items: ItemSource): Derived {
   const bars = new Map<string, DerivedBar>();
   for (const [id, pb] of placed) {
     const l = s3.lengths.get(id);
-    if (l) bars.set(id, { placed: pb, ...l });
+    if (l) bars.set(id, { placed: pb, ...l, ops: resolveOps(ctx, id) });
   }
 
   return {
@@ -90,6 +105,44 @@ export function derive(raw: unknown, items: ItemSource): Derived {
     faces: s3.faces,
     diagnostics: ctx.d.sorted(),
   };
+}
+
+function resolveOps(ctx: Ctx, id: string): ResolvedOp[] {
+  const ops = ctx.bars.get(id)?.spec.ops ?? [];
+  const out: ResolvedOp[] = [];
+  ops.forEach((op, i) => {
+    const f = `ops[${i}]`;
+    const n = (x: Expr | undefined, name: string) =>
+      x === undefined ? undefined : ctx.num(id, `${f}/${name}`, x);
+    const at = n(op.at_mm, "at_mm");
+    if (at === undefined) return;
+    const d = n(op.d_mm, "d_mm");
+    const depth = n(op.depth_mm, "depth_mm");
+    const csk = op.csk && {
+      d: n(op.csk.d_mm, "csk/d_mm"),
+      angle: n(op.csk.angle_deg, "csk/angle_deg"),
+    };
+    const cbore = op.cbore && {
+      d: n(op.cbore.d_mm, "cbore/d_mm"),
+      depth: n(op.cbore.depth_mm, "cbore/depth_mm"),
+    };
+    out.push({
+      op: "hole",
+      face: op.face,
+      from: op.from ?? "a",
+      at,
+      ...(d !== undefined ? { d } : {}),
+      ...(op.thread ? { thread: op.thread } : {}),
+      ...(depth !== undefined ? { depth } : {}),
+      ...(csk?.d !== undefined && csk.angle !== undefined
+        ? { csk: { d: csk.d, angle: csk.angle } }
+        : {}),
+      ...(cbore?.d !== undefined && cbore.depth !== undefined
+        ? { cbore: { d: cbore.d, depth: cbore.depth } }
+        : {}),
+    });
+  });
+  return out;
 }
 
 /** A face connection never changes a cut (§4.5); its layers must still exist. */
