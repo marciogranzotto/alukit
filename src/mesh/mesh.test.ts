@@ -14,9 +14,12 @@ import {
   squareEnds,
   squareMatrix,
 } from "./bars.ts";
-import { angleGeometry, holeMarks, MARK_PROUD_MM, plateGeometry } from "./items.ts";
-import type { BarJson, MeshInput, ViewSection, ViewShape } from "./model.ts";
+import type { Mat4, MeshData } from "./data.ts";
+import { angleMesh, holeMarks, MARK_PROUD_MM, partMesh, plateMesh } from "./items.ts";
+import type { BarJson, MeshInput, PartJson, ViewSection, ViewShape } from "./model.ts";
 import { simplifyRing } from "./outline.ts";
+import { holeMatrix, partShape } from "./place.ts";
+import { boxMesh, rodMesh } from "./solids.ts";
 
 /**
  * Meshes from the view model (design §8): unit extrusions per section, square bars under one
@@ -165,17 +168,73 @@ describe("bar meshes (§8)", () => {
   });
 });
 
+type P3 = [number, number, number];
+
+/** A mesh's triangles, each as its three corners and the three vertices' normals. */
+function triangles(m: MeshData): { p: [P3, P3, P3]; n: [P3, P3, P3] }[] {
+  const at = (a: Float32Array, i: number): P3 => [
+    a[i * 3] as number,
+    a[i * 3 + 1] as number,
+    a[i * 3 + 2] as number,
+  ];
+  const idx = m.indices ?? Uint32Array.from({ length: m.positions.length / 3 }, (_, i) => i);
+  const out: { p: [P3, P3, P3]; n: [P3, P3, P3] }[] = [];
+  for (let t = 0; t < idx.length; t += 3) {
+    const [a, b, c] = [idx[t], idx[t + 1], idx[t + 2]] as [number, number, number];
+    out.push({
+      p: [at(m.positions, a), at(m.positions, b), at(m.positions, c)],
+      n: [at(m.normals, a), at(m.normals, b), at(m.normals, c)],
+    });
+  }
+  return out;
+}
+
 /** A closed mesh's volume: the sum of its triangles' signed tetrahedra about the origin. */
-function volume(a: BufferAttribute): number {
-  const p = positions(a);
+function volume(m: MeshData): number {
   let v = 0;
-  for (let i = 0; i < p.length; i += 3) {
-    const [x0, y0, z0] = p[i] as [number, number, number];
-    const [x1, y1, z1] = p[i + 1] as [number, number, number];
-    const [x2, y2, z2] = p[i + 2] as [number, number, number];
+  for (const {
+    p: [[x0, y0, z0], [x1, y1, z1], [x2, y2, z2]],
+  } of triangles(m)) {
     v += x0 * (y1 * z2 - z1 * y2) - y0 * (x1 * z2 - z1 * x2) + z0 * (x1 * y2 - y1 * x2);
   }
   return v / 6;
+}
+
+/** The corners of a mesh's box, after a column-major matrix. */
+function extent(m: MeshData, M?: Mat4): { min: P3; max: P3 } {
+  const min: P3 = [Infinity, Infinity, Infinity];
+  const max: P3 = [-Infinity, -Infinity, -Infinity];
+  for (const [x, y, z] of positions({ array: m.positions })) {
+    const q = M
+      ? [0, 1, 2].map(
+          (k) =>
+            (M[k] as number) * x +
+            (M[4 + k] as number) * y +
+            (M[8 + k] as number) * z +
+            (M[12 + k] as number),
+        )
+      : [x, y, z];
+    for (let k = 0; k < 3; k++) {
+      min[k] = Math.min(min[k] as number, q[k] as number);
+      max[k] = Math.max(max[k] as number, q[k] as number);
+    }
+  }
+  return { min, max };
+}
+
+/** Every triangle is wound so that its face points the way its vertices' normals do. */
+function woundWithNormals(m: MeshData): void {
+  for (const { p, n } of triangles(m)) {
+    const [a, b, c] = p;
+    const u = [0, 1, 2].map((k) => (b[k] as number) - (a[k] as number));
+    const v = [0, 1, 2].map((k) => (c[k] as number) - (a[k] as number));
+    const f: P3 = [
+      (u[1] as number) * (v[2] as number) - (u[2] as number) * (v[1] as number),
+      (u[2] as number) * (v[0] as number) - (u[0] as number) * (v[2] as number),
+      (u[0] as number) * (v[1] as number) - (u[1] as number) * (v[0] as number),
+    ];
+    for (const nv of n) expect(f[0] * nv[0] + f[1] * nv[1] + f[2] * nv[2]).toBeGreaterThan(0);
+  }
 }
 
 describe("project items (§4.8): the cart's plate, bent angle and placeholder", () => {
@@ -207,29 +266,33 @@ describe("project items (§4.8): the cart's plate, bent angle and placeholder", 
   });
 
   it("extrude a plate's outline through its thickness", () => {
-    const g = plateGeometry(shapeOf("p6") as Extract<ViewShape, { kind: "plate" }>);
-    g.computeBoundingBox();
-    expect(g.boundingBox?.min.toArray()).toEqual([0, 0, 0]);
-    expect(g.boundingBox?.max.toArray()).toEqual([160, 100, 8]);
+    const g = plateMesh(shapeOf("p6") as Extract<ViewShape, { kind: "plate" }>);
+    expect(extent(g)).toEqual({ min: [0, 0, 0], max: [160, 100, 8] });
     // The outline is 160 × 100 less a 30 × 30 corner cut: 15 550 mm², 8 mm thick.
-    expect(volume(g.getAttribute("position") as BufferAttribute)).toBeCloseTo(15_550 * 8, 6);
+    expect(volume(g)).toBeCloseTo(15_550 * 8, 6);
+    woundWithNormals(g);
+    // The outline written clockwise draws the same solid, still wound outward.
+    const s = shapeOf("p6") as Extract<ViewShape, { kind: "plate" }>;
+    const cw = plateMesh({ ...s, outline: [...s.outline].reverse() });
+    expect(volume(cw)).toBeCloseTo(15_550 * 8, 6);
+    woundWithNormals(cw);
   });
 
   it("draw a bent angle as two legs and a bend, in its own frame", () => {
     const s = shapeOf("p7") as Extract<ViewShape, { kind: "bent-angle" }>;
-    const g = angleGeometry(s);
-    g.computeBoundingBox();
+    const g = angleMesh(s);
+    const box = extent(g);
     // Leg a along +y on the mounting face, leg b up +z, each to the outside of the other.
     for (let k = 0; k < 3; k++) {
-      expect(g.boundingBox?.min.getComponent(k)).toBeCloseTo(0, 9);
-      expect(g.boundingBox?.max.getComponent(k)).toBeCloseTo([50, 40, 30][k] as number, 9);
+      expect(box.min[k]).toBeCloseTo(0, 9);
+      expect(box.max[k]).toBeCloseTo([50, 40, 30][k] as number, 9);
     }
     // Every vertex is on a leg's flat or in the bend: between the inside and outside arcs. (The
     // positions are float32: a few parts in 10⁸.)
     const T = s.thickness;
     const c = s.radius + T;
     const eps = 1e-5;
-    for (const [, y, z] of positions(g.getAttribute("position") as BufferAttribute)) {
+    for (const [, y, z] of positions({ array: g.positions })) {
       const r = Math.hypot(y - c, z - c);
       const inBend = y <= c + eps && z <= c + eps;
       if (inBend) {
@@ -240,8 +303,27 @@ describe("project items (§4.8): the cart's plate, bent angle and placeholder", 
     // Its volume is the section's area times the length: two flats and a quarter annulus, the
     // annulus drawn in 8 chords (within 0.1 % of the true area).
     const area = (40 - c) * T + (30 - c) * T + (Math.PI / 4) * (c * c - s.radius ** 2);
-    const v = volume(g.getAttribute("position") as BufferAttribute);
+    const v = volume(g);
     expect(Math.abs(v / (area * 50) - 1)).toBeLessThan(1e-3);
+    woundWithNormals(g);
+    // With no bend radius the inside corner is sharp: two flats overlapping in a T × T square.
+    const sharp = angleMesh({ ...s, radius: 0 });
+    const sharpArea = 40 * T + 30 * T - T * T - (T * T - (Math.PI / 4) * T * T);
+    expect(Math.abs(volume(sharp) / (sharpArea * 50) - 1)).toBeLessThan(1e-3);
+    woundWithNormals(sharp);
+  });
+
+  it("draw a placeholder, and a part with no shape, as its box", () => {
+    const m = models.cart as MeshInput;
+    const placed = partShape(m.parts.p8 as PartJson, m.display.parts.p8);
+    expect(placed).toMatchObject({ translucent: true, placeholder: true });
+    expect(placed?.shape).toBeUndefined();
+    expect(partMesh(placed as NonNullable<typeof placed>)).toEqual(
+      boxMesh([-60, -45, 0], [60, 45, 110]),
+    );
+    const plate = partShape(m.parts.p6 as PartJson, m.display.parts.p6);
+    expect(plate).toMatchObject({ translucent: false, placeholder: false });
+    expect(plate?.shape?.kind).toBe("plate");
   });
 
   it("mark each hole through the material from its face, and each mouth on that face", () => {
@@ -249,16 +331,74 @@ describe("project items (§4.8): the cart's plate, bent angle and placeholder", 
     // The plate: h1 M6 (tap drill 5.00) through, h3 Ø6.6 counterbored Ø11 × 4 from the front.
     const plate = holeMarks(shapeOf("p6"));
     expect(plate).toHaveLength(4 + 2);
-    expect(plate[0]).toEqual({ centre: [20, 20, 4], axis: [0, 0, 1], len: 8 + 2 * P, d: 5 });
+    expect(plate[0]).toEqual({
+      hole: "h1",
+      type: "threaded",
+      rod: "drill",
+      centre: [20, 20, 4],
+      axis: [0, 0, 1],
+      len: 8 + 2 * P,
+      d: 5,
+    });
     const cbore = plate.filter((m) => m.centre[0] === 140 && m.centre[1] === 80);
     expect(cbore).toEqual([
-      { centre: [140, 80, 4], axis: [0, 0, 1], len: 8 + 2 * P, d: 6.6 },
-      { centre: [140, 80, (8 - 4 + 8 + P) / 2], axis: [0, 0, 1], len: 4 + P, d: 11 },
+      {
+        hole: "h3",
+        type: "counterbored",
+        rod: "drill",
+        centre: [140, 80, 4],
+        axis: [0, 0, 1],
+        len: 8 + 2 * P,
+        d: 6.6,
+      },
+      {
+        hole: "h3",
+        type: "counterbored",
+        rod: "counterbore",
+        centre: [140, 80, (8 - 4 + 8 + P) / 2],
+        axis: [0, 0, 1],
+        len: 4 + P,
+        d: 11,
+      },
     ]);
     // The bent angle: a1 through leg a (across z), b1 M4 (tap drill 3.30) through leg b (across y).
     expect(holeMarks(shapeOf("p7"))).toEqual([
-      { centre: [25, 22, 1.5], axis: [0, 0, 1], len: 3 + 2 * P, d: 5.5 },
-      { centre: [25, 1.5, 18], axis: [0, 1, 0], len: 3 + 2 * P, d: 3.3 },
+      {
+        hole: "a1",
+        type: "through",
+        rod: "drill",
+        centre: [25, 22, 1.5],
+        axis: [0, 0, 1],
+        len: 3 + 2 * P,
+        d: 5.5,
+      },
+      {
+        hole: "b1",
+        type: "threaded",
+        rod: "drill",
+        centre: [25, 1.5, 18],
+        axis: [0, 1, 0],
+        len: 3 + 2 * P,
+        d: 3.3,
+      },
     ]);
+  });
+
+  it("place each mark's rod (a unit rod along y) on its hole, in the part's frame", () => {
+    const P = MARK_PROUD_MM;
+    const near = (got: P3, want: P3) => {
+      for (let k = 0; k < 3; k++) expect(got[k]).toBeCloseTo(want[k] as number, 9);
+    };
+    const rod = rodMesh(16);
+    // h1: Ø5.00 about (20, 20), through the 8 mm plate and P proud of each face.
+    const [h1] = holeMarks(shapeOf("p6"));
+    const a = extent(rod, holeMatrix(h1 as NonNullable<typeof h1>));
+    near(a.min, [17.5, 17.5, -P]);
+    near(a.max, [22.5, 22.5, 8 + P]);
+    // b1 on leg b runs across y, through its 3 mm.
+    const b1 = holeMarks(shapeOf("p7"))[1];
+    const b = extent(rod, holeMatrix(b1 as NonNullable<typeof b1>));
+    near(b.min, [25 - 1.65, -P, 18 - 1.65]);
+    near(b.max, [25 + 1.65, 3 + P, 18 + 1.65]);
   });
 });

@@ -3,22 +3,23 @@
  * `--version` load no schemas.
  */
 export const PROJECT_USAGE = [
-  "alukit derive <dir> [--json] [--frozen]",
+  "alukit derive <dir> [--json] [--variant v] [--frozen]",
   "    the derived model: frames, end planes, cut lengths and angles, parts, rail holes,",
   "    fastenings, generated machining and hardware (alukit.derived/1)",
-  "alukit cutlist <dir> [--format md|csv|json] [--frozen]",
+  "alukit cutlist <dir> [--format md|csv|json] [--variant v] [--frozen]",
   "    the cut list: pieces grouped per item and option, ordered or nested into stock",
-  "alukit bom <dir> [--format md|csv|json] [--frozen]",
+  "alukit bom <dir> [--format md|csv|json] [--variant v] [--frozen]",
   "    the bill of materials: every item and quantity, grouped by kind, with mass",
-  "alukit order <dir> [--format md|csv|json] [--as-of YYYY-MM-DD] [--frozen]",
+  "alukit order <dir> [--format md|csv|json] [--as-of YYYY-MM-DD] [--variant v] [--frozen]",
   "    the order list per supplier, READY or BLOCKED with every reason, and the totals;",
   "    exits 1 when any supplier is blocked (prices older than 30 days before --as-of,",
   "    today by default, are stale)",
-  "alukit costs <dir> [--format md|csv|json] [--as-of YYYY-MM-DD] [--frozen]",
+  "alukit costs <dir> [--format md|csv|json] [--as-of YYYY-MM-DD] [--variant v] [--frozen]",
   "    the cost lines and the low, likely and high totals, with their provenance",
-  "alukit machining <dir> [--format md|json] [--frozen]",
+  "alukit machining <dir> [--format md|json] [--variant v] [--frozen]",
   "    the machining sheet: each custom plate's and bent angle's holes from its datum,",
   "    with its blank; the cut-list lines that carry the bars' machining",
+  "    (--variant v: derive that variant; without it, the project's default variant)",
 ].join("\n");
 
 export const PROJECT_COMMANDS = [
@@ -37,7 +38,7 @@ export const USAGE = {
     "    create a project: alukit.json, alukit.lock.json and a .gitignore line for .alukit/",
   ],
   check: [
-    "alukit check <dir> [--json] [--frozen]",
+    "alukit check <dir> [--json] [--variant v] [--frozen]",
     "    validate, derive and run the checks; exit 1 on an error",
   ],
   do: [

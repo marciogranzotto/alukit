@@ -98,11 +98,16 @@ export async function readLock(dir: string): Promise<ReadResult<Lock>> {
 }
 
 /**
- * Writes a file atomically: a temporary file beside it, fsync, rename, then the folder fsync.
+ * Writes a file atomically: a temporary file beside it, fsync, rename, then the folder fsync. Text
+ * is written as UTF-8; bytes as they are.
  * `mode` sets the new file's permissions from its creation on (a secret is never readable by
  * others, not even for a moment).
  */
-export async function writeAtomic(path: string, text: string, mode?: number): Promise<void> {
+export async function writeAtomic(
+  path: string,
+  text: string | Uint8Array,
+  mode?: number,
+): Promise<void> {
   const tmp = join(
     dirname(path),
     `.${basename(path)}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`,
@@ -112,7 +117,7 @@ export async function writeAtomic(path: string, text: string, mode?: number): Pr
     try {
       // The umask may only take bits away, but say exactly what is meant.
       if (mode !== undefined) await fh.chmod(mode);
-      await fh.writeFile(text, "utf8");
+      await fh.writeFile(text, typeof text === "string" ? "utf8" : undefined);
       await fh.sync();
     } finally {
       await fh.close();

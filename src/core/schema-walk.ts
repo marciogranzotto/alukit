@@ -210,3 +210,36 @@ export function stringsWithPattern(
     stringsWithPattern(v, propertySchema(b, k), source, visit, [...path, k]);
   }
 }
+
+/**
+ * `value` with every string `stringsWithPattern` visits as a value (not a record key) replaced
+ * by `map(s, path)`. What does not change is shared with the input, which is never modified.
+ */
+export function mapStringsWithPattern(
+  value: unknown,
+  schema: JsonSchema,
+  source: string,
+  map: (s: string, path: readonly PathKey[]) => string,
+  path: PathKey[] = [],
+): unknown {
+  const b = branchFor(schema, value);
+  if (typeof value === "string") return b.pattern === source ? map(value, path) : value;
+  if (Array.isArray(value)) {
+    let changed = false;
+    const out = value.map((v, i) => {
+      const w = mapStringsWithPattern(v, itemSchema(b, i), source, map, [...path, i]);
+      if (w !== v) changed = true;
+      return w;
+    });
+    return changed ? out : value;
+  }
+  if (!isObject(value)) return value;
+  let changed = false;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) {
+    const w = mapStringsWithPattern(v, propertySchema(b, k), source, map, [...path, k]);
+    if (w !== v) changed = true;
+    out[k] = w;
+  }
+  return changed ? out : value;
+}

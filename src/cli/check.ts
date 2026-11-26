@@ -41,7 +41,7 @@ export async function checkCommand(argv: readonly string[], io: Io): Promise<num
   const args = parseOptions(
     "check",
     argv,
-    { json: { type: "boolean" }, frozen: { type: "boolean" } },
+    { json: { type: "boolean" }, frozen: { type: "boolean" }, variant: { type: "string" } },
     CHECK_USAGE,
     io,
   );
@@ -53,7 +53,11 @@ export async function checkCommand(argv: readonly string[], io: Io): Promise<num
   const frozen = args.values.frozen === true;
   const root = resolve(dir);
 
-  const loaded = await loadAndDerive(root, io, { frozen });
+  const loaded = await loadAndDerive(root, io, {
+    frozen,
+    variant: args.values.variant,
+    cmd: "check",
+  });
   if (loaded === 1) return 1;
   const { project, derived, items } = loaded;
   const raw = project.raw;
@@ -110,6 +114,7 @@ export async function checkCommand(argv: readonly string[], io: Io): Promise<num
     io.out(
       jsonText({
         schema: CHECK_SCHEMA,
+        ...(derived.variant !== undefined ? { variant: derived.variant } : {}),
         ok: errors === 0,
         counts: { error: errors, warn: count("warn"), info: count("info") },
         checks,
@@ -125,7 +130,7 @@ export async function checkCommand(argv: readonly string[], io: Io): Promise<num
     io.out(`${c.pass ? "pass" : "FAIL"} ${c.id}${c.text ? ` ${c.text}` : ""}${margin}`);
   }
   io.out(
-    `check: ${plural(errors, "error")}, ${plural(count("warn"), "warning")}, ${count("info")} info; ` +
+    `check${derived.variant ? ` (variant ${derived.variant})` : ""}: ${plural(errors, "error")}, ${plural(count("warn"), "warning")}, ${count("info")} info; ` +
       `${plural(checks.length, "check")}: ${passed} passed, ${failed} failed${pending > 0 ? `, ${pending} pending` : ""}`,
   );
   return errors > 0 ? 1 : 0;

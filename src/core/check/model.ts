@@ -3,7 +3,6 @@ import type { Derived, DerivedBar } from "../derive/derive.ts";
 import { expandPatterns } from "../derive/patterns.ts";
 import { type Ast, ExprError, type ExprScope, type Value } from "../expr.ts";
 import type { ItemSource } from "../items.ts";
-import { parseProject } from "../project/parse.ts";
 import { addScaled, dist, dot, type V3 } from "../vec.ts";
 
 /**
@@ -69,9 +68,9 @@ export function modelBox(d: Derived): { min: V3; max: V3 } | undefined {
   return min && max ? { min: min as unknown as V3, max: max as unknown as V3 } : undefined;
 }
 
-/** Every entity after pattern expansion, with its tags, as derive sees them. */
-function expandedTags(raw: unknown, items: ItemSource): Map<string, readonly string[]> {
-  const ctx = new Ctx(parseProject(raw).doc, items);
+/** Every entity after pattern expansion, with its tags, as derive sees them (in its variant). */
+function expandedTags(d: Derived, items: ItemSource): Map<string, readonly string[]> {
+  const ctx = new Ctx(d.doc, items);
   expandPatterns(ctx);
   const out = new Map<string, readonly string[]>();
   for (const m of [ctx.nodes, ctx.bars, ctx.conns, ctx.parts]) {
@@ -111,8 +110,8 @@ export interface ModelScopeInput {
 /** The scope a project check is evaluated in: params, `sec()`, and the model accessors. */
 export function modelScope(input: ModelScopeInput): ExprScope {
   const { derived: d } = input;
-  // `sec()` and params as derive values them: the document's own scope.
-  const base = new Ctx(parseProject(input.raw).doc, input.items);
+  // `sec()` and params as derive values them: the scope of the document the variant builds.
+  const base = new Ctx(d.doc, input.items);
   let tags: Map<string, readonly string[]> | undefined;
   let box: { min: V3; max: V3 } | undefined | null = null;
 
@@ -151,7 +150,7 @@ export function modelScope(input: ModelScopeInput): ExprScope {
       if (args.length !== 1 || a?.t !== "sel" || a.key !== "tag") {
         throw new ExprError("count takes a tag selector: count(tag:leg)");
       }
-      tags ??= expandedTags(input.raw, input.items);
+      tags ??= expandedTags(d, input.items);
       let n = 0;
       for (const t of tags.values()) if (t.includes(a.value)) n++;
       return n;

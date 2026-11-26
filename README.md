@@ -10,8 +10,8 @@ through a documented file format and a CLI.
 
 **Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core), M3b
 (generation with the bill of materials; the edit path; offers, the order list and costs), M4a
-(the viewer and the server that owns the document) and M6 (project items and the machining
-sheet).**
+(the viewer and the server that owns the document), M5 (variants, diff, revisions, the GLB
+export and the agent skill; snapshots to come) and M6 (project items and the machining sheet).**
 - Catalog schemas, the three-layer merge, section generators and section properties, and
   `alukit catalog check`, which compares computed section properties against published ones.
 - Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): every
@@ -40,6 +40,15 @@ sheet).**
   in every tab; `alukit undo`, `redo` and `log` use its history. A direct edit of `alukit.json` is
   taken in as a step, or makes the project read-only while the file is not valid. The server
   answers only its own page, with a per-start token.
+- Variants that override params, swap items and scope entities (`only_in`, `not_in`), on every
+  output with `--variant`. `alukit diff` compares two sides (folders, revisions, git refs or
+  variants), each with its own lock. `alukit revision save | list | show | verify` stores the
+  document, its lock and every output, and replays them to show any drift. `alukit export glb`
+  writes the model as binary glTF (bars, parts with the project's plates, bent angles and
+  placeholders, their holes, fasteners), the same bytes for the same project.
+- The agent skill, [`skills/alukit/SKILL.md`](skills/alukit/SKILL.md), with a reference
+  generated from the code and a worked example that a test runs; `alukit skill install` links it
+  into `~/.claude/skills/alukit`.
 
 Drawing with the mouse comes next (M4b).
 
@@ -72,6 +81,7 @@ pnpm exec playwright install chromium   # once, for the end-to-end test
 | `pnpm test:e2e` | end-to-end tests (Playwright, Chromium, one worker); run `pnpm build` first |
 | `pnpm lint` / `pnpm format` | Biome check / format |
 | `pnpm typecheck` | TypeScript 7, no emit |
+| `pnpm skill` | regenerates the skill's command reference from the code (a test fails while it is behind) |
 
 The CLI runs straight from the sources, with no build step: `node src/cli/main.ts --help`. For
 example, `node src/cli/main.ts catalog check tests/fixtures/catalogs/test` checks the synthetic test

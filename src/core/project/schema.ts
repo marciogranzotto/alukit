@@ -363,6 +363,32 @@ export const Param = z.union([
 ]);
 export type Param = z.infer<typeof Param>;
 
+/** A variant's name (§4.10), as `only_in`, `not_in` and `--variant` name it. */
+export const VariantName = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/)
+  .describe("a variant: letters, digits, '.', '_' and '-'");
+
+/**
+ * A variant (§4.10): the params it overrides and the items it swaps. Entities scope themselves to
+ * variants with `only_in` and `not_in`.
+ */
+export const Variant = z.strictObject({
+  label: z.string().optional(),
+  params: z.record(ParamName, Param).optional().describe("params it overrides, or adds"),
+  swap: z
+    .record(ItemRef, ItemRef)
+    .optional()
+    .describe('items it replaces: { "<item>": "<the item it becomes>" }'),
+});
+export type Variant = z.infer<typeof Variant>;
+
+export const Variants = z.strictObject({
+  default: VariantName.optional().describe("the variant derived when none is named"),
+  list: z.record(VariantName, Variant),
+});
+export type Variants = z.infer<typeof Variants>;
+
 /** Cut-list settings (§5.3): saw kerf per cut and trim at each stock bar end. */
 export const Cutting = z.strictObject({
   kerf_mm: z.number().nonnegative().optional(),
@@ -763,7 +789,7 @@ export const PROJECT_SHAPE = {
   price_bands: z.array(PriceBand).optional(),
   order: z.record(ItemRef, OrderChoice).optional(),
   order_rules: OrderRules.optional(),
-  variants: Loose.optional(),
+  variants: Variants.optional(),
   checks: z.array(Loose).optional(),
   open: z.array(OpenItem).optional(),
   decisions: z.array(Loose).optional(),

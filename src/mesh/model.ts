@@ -1,9 +1,13 @@
+import type { HoleType } from "#core/project-items/resolve.ts";
 import type { P2 } from "./outline.ts";
 
 /**
- * What meshes are built from: the parts of the server's view model (`alukit.view/1`) that
- * drawing reads, typed here so that `src/mesh/` depends on nothing but three's geometry classes.
- * World coordinates are the design's: millimetres, right-handed, Z up (§2).
+ * What meshes are built from: the parts of the view model (`alukit.view/1`) that drawing reads,
+ * as JSON, so the browser draws from what the server sends and the GLB writer (§9) from the same
+ * shapes. `display.ts` builds them from a derived model. Of three.js, `bars.ts` uses the
+ * geometry classes (a section's extrusion and its triangulation) and `items.ts` the triangulator
+ * alone (a plate's outline); nothing here uses a renderer. World coordinates are the design's:
+ * millimetres, right-handed, Z up (§2).
  */
 
 export type V3 = readonly [number, number, number];
@@ -89,6 +93,9 @@ export interface ViewPart {
  * the part's datum (a plate's outline origin; on a leg, [x, distance from the heel]).
  */
 export interface ViewHole {
+  /** `h1` … on a plate; `a1` …, `b1` … on a bent angle's legs, as the machining sheet names it. */
+  id: string;
+  type: HoleType;
   at: P2;
   leg?: "a" | "b";
   /** The drill: a threaded hole's tap drill. */
@@ -123,6 +130,8 @@ export type ViewShape =
 export interface ViewFastener {
   connection: string;
   k: number;
+  /** The fastener item: a catalog fastener, or the bar stock it is cut from. */
+  item: string;
   head: V3;
   axis: V3;
   len: number;

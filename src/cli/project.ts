@@ -13,7 +13,9 @@ import { cutListCsv, cutListJson, cutListMarkdown } from "#core/cutlist/format.t
 import { isDate, localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
 import { derivedJson, jsonText } from "#core/derive/output.ts";
+import { selectedVariant, variantsOf } from "#core/derive/variant.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
+import { compareIds } from "#core/ids.ts";
 import type { ItemSource } from "#core/items.ts";
 import { lockHash } from "#core/lock/pin.ts";
 import { machiningJson, machiningMarkdown } from "#core/machining/format.ts";
@@ -50,14 +52,25 @@ export interface Loaded {
   items: ItemSource;
 }
 
+/** Refuses a `--variant` the document does not have; true when it may go on. */
+export function variantExists(raw: unknown, variant: string | undefined, io: Io, cmd: string) {
+  if (variant === undefined || selectedVariant(raw, variant) !== undefined) return true;
+  const names = Object.keys(variantsOf(raw)?.list ?? {}).sort(compareIds);
+  io.err(
+    `alukit ${cmd}: there is no variant ${variant}; ${names.length === 0 ? "the project has none" : `the project has ${names.join(", ")}`}`,
+  );
+  return false;
+}
+
 /**
- * Opens a project and derives it from its lock. Notices go to stderr. Returns the exit code 1
- * when the document or the lock cannot be read.
+ * Opens a project and derives it from its lock, in a variant (§4.10: the one named, else the
+ * document's default). Notices go to stderr. Returns the exit code 1 when the document or the
+ * lock cannot be read, or the variant does not exist.
  */
 export async function loadAndDerive(
   dir: string,
   io: Io,
-  opts: { frozen?: boolean } = {},
+  opts: { frozen?: boolean; variant?: string; cmd?: string } = {},
 ): Promise<Loaded | 1> {
   const project = await loadProject(resolve(dir), opts);
   for (const n of project.notices) io.err(`notice: ${n}`);
@@ -65,7 +78,8 @@ export async function loadAndDerive(
     for (const d of project.diagnostics) io.err(diagnosticLine(d));
     return 1;
   }
-  const d = derive(project.raw, project.items);
+  if (!variantExists(project.raw, opts.variant, io, opts.cmd ?? "derive")) return 1;
+  const d = derive(project.raw, project.items, { variant: opts.variant });
   const derived = {
     ...d,
     diagnostics: sortDiagnostics([...project.diagnostics, ...d.diagnostics]),
@@ -97,6 +111,7 @@ export async function projectCommand(
       json: { type: "boolean" },
       format: { type: "string" },
       frozen: { type: "boolean" },
+      variant: { type: "string" },
       // The order's date (the stale-price rule): only the commands that price take it.
       ...(priced ? { "as-of": { type: "string" as const } } : {}),
     },
@@ -120,7 +135,11 @@ export async function projectCommand(
     return usageError(cmd, "--as-of takes a date, YYYY-MM-DD", PROJECT_USAGE, io);
   }
 
-  const loaded = await loadAndDerive(dir, io, { frozen: args.values.frozen === true });
+  const loaded = await loadAndDerive(dir, io, {
+    frozen: args.values.frozen === true,
+    variant: args.values.variant,
+    cmd,
+  });
   if (loaded === 1) return 1;
   const { derived, items } = loaded;
 
@@ -133,7 +152,8 @@ export async function projectCommand(
         ([id, b]) =>
           `  ${id.padEnd(8)} ${b.placed.item.id.padEnd(24)} cut ${b.lengths.cut.toFixed(2).padStart(9)}  centre ${b.lengths.centre.toFixed(2).padStart(9)}`,
       );
-      io.out([`${derived.bars.size} bars`, ...rows].join("\n"));
+      const head = `${derived.bars.size} bars${derived.variant ? ` (variant ${derived.variant})` : ""}`;
+      io.out([head, ...rows].join("\n"));
       for (const d of derived.diagnostics) io.err(diagnosticLine(d));
     }
     return hasErrors ? 1 : 0;
