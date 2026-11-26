@@ -1,0 +1,13 @@
+{
+  "case": "G12",
+  "rule": "splice planes",
+  "design": "2500.00 + 2500.00; with gap_mm: 2, 2499.00 + 2499.00",
+  "expect": { "bars": { "b1": { "cut_mm": 2500 }, "b2": { "cut_mm": 2500 } }, "errors": [] },
+  "cases": [
+    {
+      "name": "gap_mm 2",
+      "patch": { "connections": { "c1": { "gap_mm": 2 } } },
+      "expect": { "bars": { "b1": { "cut_mm": 2499 }, "b2": { "cut_mm": 2499 } }, "errors": [] }
+    }
+  ]
+}

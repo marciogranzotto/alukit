@@ -1,0 +1,72 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-geo",
+  "name": "Geometry test catalog (synthetic)",
+  "vendor": "test-geo-vendor",
+  "currency": "BRL",
+  "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" },
+  "items": {
+    "RHS-100x50x4": {
+      "kind": "bar",
+      "name": "RHS 100x50x4",
+      "shape": "rhs",
+      "section": "RHS-100x50x4",
+      "material": "test:s235"
+    },
+    "FB-50x10": {
+      "kind": "bar",
+      "name": "Flat bar 50x10",
+      "shape": "flat",
+      "section": "FB-50x10",
+      "material": "test:s235"
+    },
+    "FB-50x20": {
+      "kind": "bar",
+      "name": "Flat bar 50x20",
+      "shape": "flat",
+      "section": "FB-50x20",
+      "material": "test:s235"
+    },
+    "TUBE-18x2": {
+      "kind": "bar",
+      "name": "Tube 18x2",
+      "shape": "tube",
+      "section": "TUBE-18x2",
+      "material": "test:s235"
+    },
+    "CUBE-40": {
+      "kind": "connector",
+      "subtype": "cube",
+      "name": "Corner cube 40",
+      "fits": ["test:s40-c8"],
+      "material": "test:al-6063-t5",
+      "mass_kg": 0.09,
+      "bbox_mm": [[-20, -20, -20], [20, 20, 20]],
+      "body": { "size_mm": [40, 40, 40] }
+    },
+    "HNG-15": {
+      "kind": "connector",
+      "subtype": "hinge",
+      "name": "Hinge 40, low",
+      "fits": ["test:s40-c8"],
+      "material": "test:al-6063-t5",
+      "mass_kg": 0.1,
+      "bbox_mm": [[-20, -20, 0], [20, 20, 30]],
+      "pivot": { "height_mm": 15, "end_mm": 25, "range_deg": [0, 180] }
+    },
+    "WSH-M10": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Washer M10",
+      "thread": "M10",
+      "mass_kg": 0.004
+    },
+    "NUT-M10": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Hex nut M10",
+      "thread": "M10",
+      "mass_kg": 0.011
+    }
+  }
+}

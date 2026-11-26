@@ -1,0 +1,15 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G19",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo"],
+  "defaults": { "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } } },
+  "bars": {
+    "b1": { "a": [0, -500, 0], "b": [0, 500, 0], "label": "c" },
+    "b2": {
+      "a": [0, 0, 100],
+      "b": [1000, 0, 100],
+      "label": "beam",
+      "ends": { "a": { "plane": { "face": { "bar": "b1", "face": "-x" } } } }
+    }
+  }
+}

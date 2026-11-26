@@ -1,0 +1,15 @@
+{
+  "case": "G14",
+  "rule": "cut square between pivots",
+  "design": "1704.27; with extend_mm: -2 at both ends, 1700.27",
+  "expect": { "bars": { "b3": { "cut_mm": 1704.27 } }, "errors": [] },
+  "cases": [
+    {
+      "name": "extend_mm -2 at both ends",
+      "patch": {
+        "bars": { "b3": { "ends": { "a": { "extend_mm": -2 }, "b": { "extend_mm": -2 } } } }
+      },
+      "expect": { "bars": { "b3": { "cut_mm": 1700.27 } }, "errors": [] }
+    }
+  ]
+}

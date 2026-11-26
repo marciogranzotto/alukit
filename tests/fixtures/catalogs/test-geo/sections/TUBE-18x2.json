@@ -1,0 +1,8 @@
+{
+  "schema": "alukit.section/1",
+  "id": "TUBE-18x2",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "generator": "tube",
+  "params": { "d_mm": 18, "t_mm": 2 }
+}

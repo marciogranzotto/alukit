@@ -1,0 +1,13 @@
+{
+  "case": "G13",
+  "rule": "a point on a span follows its bar",
+  "design": "post 880.00, then 980.00 (H = 1000)",
+  "expect": { "bars": { "b2": { "cut_mm": 880 } }, "errors": [] },
+  "cases": [
+    {
+      "name": "H = 1000",
+      "patch": { "params": { "H": "1000" } },
+      "expect": { "bars": { "b2": { "cut_mm": 980 } }, "errors": [] }
+    }
+  ]
+}

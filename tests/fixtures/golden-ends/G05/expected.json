@@ -1,0 +1,9 @@
+{
+  "case": "G5",
+  "rule": "a body as the through member",
+  "design": "each 480.00",
+  "expect": {
+    "bars": { "b1": { "cut_mm": 480 }, "b2": { "cut_mm": 480 }, "b3": { "cut_mm": 480 } },
+    "errors": []
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "case": "G19",
+  "rule": "a face the centre line misses",
+  "design": "beam 980.00. The same end as a butt through c: error (G15)",
+  "expect": { "bars": { "b2": { "cut_mm": 980 } }, "errors": [] },
+  "cases": [
+    {
+      "name": "the same end as a butt through c",
+      "patch": {
+        "bars": { "b2": { "ends": null } },
+        "connections": { "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"] } }
+      },
+      "expect": {
+        "bars": { "b2": { "cut_mm": 1000 } },
+        "errors": [{ "code": "butt-miss", "entity": "c1", "refs": ["b2.a"] }]
+      }
+    }
+  ]
+}

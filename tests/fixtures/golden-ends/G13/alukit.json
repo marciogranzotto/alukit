@@ -1,0 +1,12 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G13",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo"],
+  "defaults": { "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } } },
+  "params": { "H": "900" },
+  "bars": {
+    "b1": { "a": [0, 0, "H"], "b": [1200, 0, "H"], "label": "rail" },
+    "b2": { "a": [640, 0, 0], "b": { "on": { "bar": "b1", "at_mm": 640 } }, "label": "post" }
+  },
+  "connections": { "c1": { "type": "butt", "through": "b1", "ends": ["b2.b"] } }
+}

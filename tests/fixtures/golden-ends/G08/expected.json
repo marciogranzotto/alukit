@@ -1,0 +1,16 @@
+{
+  "case": "G8",
+  "rule": "square end touching at the nearest point",
+  "design": "658.82",
+  "expect": {
+    "bars": {
+      "b2": {
+        "cut_mm": 658.82,
+        "centre_mm": 658.82,
+        "short_mm": 658.82,
+        "ends": { "a": { "angle_deg": 0 } }
+      }
+    },
+    "errors": []
+  }
+}

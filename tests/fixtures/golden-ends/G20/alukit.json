@@ -1,0 +1,21 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G20",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo"],
+  "defaults": { "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } } },
+  "bars": {
+    "b1": {
+      "a": [0, 0, 0],
+      "b": [1000, 0, 0],
+      "ends": { "a": { "extend_mm": -30 }, "b": { "extend_mm": -30 } }
+    },
+    "b2": {
+      "a": { "on": { "bar": "b1", "at_mm": 0, "face": "+y" } },
+      "b": { "on": { "bar": "b1", "at_mm": 1000, "face": "+y" } },
+      "anchor": "-y",
+      "ends": { "a": { "plane": { "of": "b1.a" } }, "b": { "plane": { "of": "b1.b" } } }
+    },
+    "b3": { "a": [1500, 0, 40], "b": [1000, 0, 40] }
+  },
+  "connections": { "c1": { "type": "butt", "through": "b2.b", "ends": ["b3.b"] } }
+}

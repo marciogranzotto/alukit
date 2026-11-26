@@ -1,0 +1,8 @@
+{
+  "schema": "alukit.section/1",
+  "id": "RHS-100x50x4",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "generator": "rhs",
+  "params": { "b_mm": 50, "h_mm": 100, "t_mm": 4, "ro_mm": 6 }
+}

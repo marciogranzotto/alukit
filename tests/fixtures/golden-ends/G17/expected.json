@@ -1,0 +1,29 @@
+{
+  "case": "G17",
+  "rule": "an end bearing on another bar's end face, at an angle",
+  "design": "b1 1000.00; b2 long point 2015.00, centre line 2000.00, short point 1985.00; 36.87°. With b1.b extend_mm 20: b2 centre line 1975.00. With spacer_mm 8: 1990.00",
+  "expect": {
+    "bars": {
+      "b1": { "cut_mm": 1000 },
+      "b2": {
+        "cut_mm": 2015,
+        "centre_mm": 2000,
+        "short_mm": 1985,
+        "ends": { "b": { "angle_deg": 36.87, "by": "c1" } }
+      }
+    },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "b1.b extend_mm 20",
+      "patch": { "bars": { "b1": { "ends": { "b": { "extend_mm": 20 } } } } },
+      "expect": { "bars": { "b2": { "centre_mm": 1975 } }, "errors": [] }
+    },
+    {
+      "name": "spacer_mm 8",
+      "patch": { "connections": { "c1": { "spacer_mm": 8 } } },
+      "expect": { "bars": { "b2": { "centre_mm": 1990 } }, "errors": [] }
+    }
+  ]
+}

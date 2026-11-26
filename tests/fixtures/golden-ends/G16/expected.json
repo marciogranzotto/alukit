@@ -1,0 +1,12 @@
+{
+  "case": "G16",
+  "rule": "the bounding box, not the radius",
+  "design": "trims 25.00 and 50.00",
+  "expect": {
+    "bars": {
+      "b2": { "ends": { "b": { "move_mm": -25 } } },
+      "b3": { "ends": { "b": { "move_mm": -50 } } }
+    },
+    "errors": []
+  }
+}

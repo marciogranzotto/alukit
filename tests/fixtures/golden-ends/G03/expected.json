@@ -1,0 +1,6 @@
+{
+  "case": "G3",
+  "rule": "eccentric anchors: the face is 40 from the line, not 20",
+  "design": "post 900.00, rail 960.00",
+  "expect": { "bars": { "b1": { "cut_mm": 900 }, "b2": { "cut_mm": 960 } }, "errors": [] }
+}

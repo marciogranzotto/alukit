@@ -1,0 +1,9 @@
+{
+  "case": "G15",
+  "rule": "validation: the butting centre line misses the through bar",
+  "design": "error",
+  "expect": {
+    "bars": { "b2": { "cut_mm": 500, "ends": { "a": { "by": "default" } } } },
+    "errors": [{ "code": "butt-miss", "entity": "c1", "refs": ["b2.a"] }]
+  }
+}

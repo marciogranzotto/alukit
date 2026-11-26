@@ -1,0 +1,12 @@
+{
+  "case": "G9",
+  "rule": "bisector plane; long points",
+  "design": "b1 1020.00, b2 620.00; 45.00° each",
+  "expect": {
+    "bars": {
+      "b1": { "cut_mm": 1020, "ends": { "b": { "angle_deg": 45 } } },
+      "b2": { "cut_mm": 620, "ends": { "a": { "angle_deg": 45 } } }
+    },
+    "errors": []
+  }
+}

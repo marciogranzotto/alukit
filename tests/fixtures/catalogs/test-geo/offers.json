@@ -1,0 +1,53 @@
+{
+  "schema": "alukit.offers/1",
+  "offers": {
+    "RHS-100x50x4-6000": {
+      "item": "RHS-100x50x4",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 28900, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "FB-50x10-3000": {
+      "item": "FB-50x10",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 3000 },
+      "price": { "regular_minor": 4000, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "FB-50x10-6000": {
+      "item": "FB-50x10",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 7000, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "FB-50x20-6000": {
+      "item": "FB-50x20",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 13500, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "TUBE-18x2-6000": {
+      "item": "TUBE-18x2",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 5200, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "CUBE-40": {
+      "item": "CUBE-40",
+      "price": { "regular_minor": 1200, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "HNG-15": {
+      "item": "HNG-15",
+      "price": { "regular_minor": 3400, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "WSH-M10-100": {
+      "item": "WSH-M10",
+      "pack": 100,
+      "price": { "regular_minor": 1800, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "NUT-M10-100": {
+      "item": "NUT-M10",
+      "pack": 100,
+      "price": { "regular_minor": 2600, "per": "unit", "read": "2026-11-26", "src": "src" }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "case": "G4",
+  "rule": "the placed section, not the item",
+  "design": "b2 580.00, then 560.00 (b1 rolled 90)",
+  "expect": { "bars": { "b2": { "cut_mm": 580 } }, "errors": [] },
+  "cases": [
+    {
+      "name": "b1 rolled 90",
+      "patch": { "bars": { "b1": { "roll_deg": 90 } } },
+      "expect": { "bars": { "b2": { "cut_mm": 560 } }, "errors": [] }
+    }
+  ]
+}
