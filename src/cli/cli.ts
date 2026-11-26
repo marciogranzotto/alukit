@@ -11,7 +11,6 @@ export interface Io {
 const PLANNED: readonly (readonly [string, string])[] = [
   ["new <dir>", "create a project"],
   ["check <dir>", "validate, derive and run the checks"],
-  ["order | costs <dir>", "the outputs"],
   ["query <dir> <selector>", "select entities"],
   ["do <dir> -f batch.json", "apply edits"],
   ["log | undo", "the server's log; undo the latest step"],

@@ -1,0 +1,256 @@
+import type { Derived } from "../derive/derive.ts";
+import type { Diagnostic } from "../diagnostics.ts";
+import { type CostLine, ORDER_RULES, type OrderRule, type RuleAction } from "../project/schema.ts";
+import { rateFor } from "./pricing.ts";
+import { cmp, type Key, optText, type Reason, type Work } from "./types.ts";
+
+/**
+ * What blocks the order (design §5.5). Each rule has a name, can be set to `block`, `warn` or `off`
+ * in the project's `order_rules`, and concerns only some suppliers:
+ *
+ * | Rule | Default | Concerns |
+ * |---|---|---|
+ * | `check-error` | block | the suppliers of the entities an error names; all when it names none |
+ * | `open-item` | block | an open item's scope, or all; a cost line's `blocks`: its supplier |
+ * | `placeholder` | block | its own line, under "unsourced" |
+ * | `missing-price` | block | the line's supplier: no offer, no exchange rate, unpriced services |
+ * | `est-price` | block | the supplier whose price is an estimate (call 13) |
+ * | `out-of-stock` | block | the supplier, as read |
+ * | `option-not-sold` | block | the supplier that sells the item, but not in these options |
+ * | `stale-price` | warn | the supplier whose price was read more than 30 days before the order |
+ */
+
+export const RULE_DEFAULTS: Readonly<Record<OrderRule, RuleAction>> = {
+  "check-error": "block",
+  "open-item": "block",
+  placeholder: "block",
+  "missing-price": "block",
+  "est-price": "block",
+  "out-of-stock": "block",
+  "option-not-sold": "block",
+  "stale-price": "warn",
+};
+
+/** A price is stale when read more than this many days before the order's date. */
+export const STALE_DAYS = 30;
+
+export interface RuleContext {
+  derived: Derived;
+  works: readonly Work[];
+  /** The supplier groups, in output order. */
+  keys: readonly Key[];
+  costs: readonly CostLine[];
+  rules: Readonly<Record<OrderRule, RuleAction>>;
+  /** Every diagnostic: derive's, the cut list's, the BOM's, checks', the order's own. */
+  diagnostics: readonly Diagnostic[];
+  asOf: string;
+  currency: string | undefined;
+}
+
+/** Days from `a` to `b`, both YYYY-MM-DD. */
+export function daysBetween(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+}
+
+/** Every group's reasons, in rule order, then by message. */
+export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
+  const { derived, works, keys, costs, rules } = ctx;
+  const doc = derived.doc;
+  const reasons = new Map<Key, Reason[]>(keys.map((k) => [k, []]));
+  const add = (
+    rule: OrderRule,
+    to: Iterable<Key> | "all",
+    message: string,
+    entities: readonly string[] = [],
+  ) => {
+    const action = rules[rule];
+    if (action === "off") return;
+    for (const k of to === "all" ? keys : to) {
+      const list = reasons.get(k);
+      if (!list || list.some((r) => r.rule === rule && r.message === message)) continue;
+      list.push({
+        rule,
+        action,
+        message,
+        ...(entities.length > 0 ? { entities: [...entities] } : {}),
+      });
+    }
+  };
+  const reach = reacher(derived, works, costs);
+
+  for (const x of ctx.diagnostics) {
+    if (x.severity !== "error") continue;
+    const names = [...(x.entity ? [x.entity] : []), ...(x.refs ?? [])];
+    add(
+      "check-error",
+      reach(names),
+      `${x.code}${x.entity ? ` ${x.entity}` : ""}: ${x.message}`,
+      names,
+    );
+  }
+  for (const o of doc.open) {
+    if (o.blocks !== "order") continue;
+    const scope = o.scope ?? [];
+    add("open-item", reach(scope), `${o.id}: ${o.text}`, scope);
+  }
+  for (const c of costs) {
+    if (c.blocks === "order") {
+      add(
+        "open-item",
+        c.supplier === undefined ? "all" : [c.supplier],
+        `${c.id} (${c.label}) holds the order`,
+        [c.id],
+      );
+    }
+    if ("pct" in c) continue;
+    const currency = c.currency ?? ctx.currency;
+    if (rateFor(doc, currency, ctx.currency) === undefined) {
+      add(
+        "missing-price",
+        c.supplier === undefined ? "all" : [c.supplier],
+        `${c.id}: no exchange rate for ${currency}`,
+        [c.id],
+      );
+    }
+  }
+
+  // Unpriced services, one reason per offer.
+  const services = new Map<string, { key: Key; item: string; count: number }>();
+  for (const w of works) {
+    const at = [w.key];
+    const item = w.line.item;
+    const what = w.line.offer ?? item;
+    const opt = optText(w.line.opt);
+    const withOpt = `${item}${opt ? ` (${opt})` : ""}`;
+    if (w.placeholder) {
+      add("placeholder", at, `${item}: a placeholder, not a part to order`, [item]);
+      continue;
+    }
+    if (w.missing === "no-offer") add("missing-price", at, `${withOpt}: no offer`, [item]);
+    if (w.missing === "by-length")
+      add("missing-price", at, `${withOpt}: no offer sells it by length`, [item]);
+    if (w.missing === "rate")
+      add("missing-price", at, `${what}: no exchange rate for ${w.line.currency}`, [item]);
+    if (w.missing === "option") add("option-not-sold", at, `${item}: not sold with ${opt}`, [item]);
+    for (const s of w.line.services ?? []) {
+      if (s.by !== "supplier" || s.covered_by) continue;
+      const k = `${w.key}\u0000${what}`;
+      const e = services.get(k) ?? { key: w.key, item, count: 0 };
+      e.count += s.count;
+      services.set(k, e);
+    }
+    if (!w.offer || w.line.covered_by) continue;
+    if (w.field?.src === "est")
+      add("est-price", at, `${what}: the price of ${item} is an estimate`, [item]);
+    if (w.offer.in_stock === false) {
+      add("out-of-stock", at, `${what}: out of stock as read on ${w.offer.price.read}`, [item]);
+    }
+    const age = daysBetween(w.offer.price.read, ctx.asOf);
+    if (age > STALE_DAYS) {
+      add(
+        "stale-price",
+        at,
+        `${what}: price read ${w.offer.price.read}, ${age} days before ${ctx.asOf}`,
+        [item],
+      );
+    }
+  }
+  for (const [k, e] of services) {
+    const what = k.slice(k.indexOf("\u0000") + 1);
+    add(
+      "missing-price",
+      [e.key],
+      `${what}: no price for ${e.count} machining service${e.count === 1 ? "" : "s"}; cover them with a cost line`,
+      [e.item],
+    );
+  }
+
+  for (const list of reasons.values()) {
+    list.sort(
+      (a, b) =>
+        ORDER_RULES.indexOf(a.rule) - ORDER_RULES.indexOf(b.rule) || cmp(a.message, b.message),
+    );
+  }
+  return reasons;
+}
+
+/**
+ * Which supplier groups some named entities reach: the groups of the lines that serve them. A bar
+ * end names its bar; a stock piece `c23.f1` its connection; a connection reaches what it buys
+ * (connectors, fasteners, stock pieces), or, buying nothing, the bars whose cuts it decides; a run
+ * reaches its bars, a pattern its template and copies; an item id the lines that buy it; a
+ * cost line its supplier; `supplier:<id>` that supplier. Names that reach nothing reach all
+ * (§5.5: "all suppliers for a check that names none"), so a scope that misses never lets an
+ * order through.
+ */
+function reacher(
+  derived: Derived,
+  works: readonly Work[],
+  costs: readonly CostLine[],
+): (names: readonly string[]) => Iterable<Key> | "all" {
+  const doc = derived.doc;
+  const entityKeys = new Map<string, Set<Key>>();
+  const itemKeys = new Map<string, Set<Key>>();
+  const addTo = (m: Map<string, Set<Key>>, name: string, k: Key) =>
+    m.set(name, (m.get(name) ?? new Set()).add(k));
+  for (const w of works) {
+    for (const s of w.sources) addTo(entityKeys, s, w.key);
+    for (const b of [w.line.item, ...w.line.bom.map((x) => x.item)]) addTo(itemKeys, b, w.key);
+  }
+  const runBars = (r: string): string[] => {
+    const run = doc.runs[r];
+    return run ? (Array.isArray(run) ? run : run.bars) : [r];
+  };
+  const keysOf = (ids: readonly string[]): Set<Key> => {
+    const out = new Set<Key>();
+    for (const e of ids) for (const k of entityKeys.get(e) ?? []) out.add(k);
+    return out;
+  };
+  /** The entities a name stands for; a connection stands for itself first (its hardware). */
+  const related = (name: string): string[] => {
+    const id = name.replace(/^(b\d+(?:@\d+)?)\.[ab]$/, "$1").replace(/\.[fs]\d+$/, "");
+    const conn = doc.connections[id.replace(/@\d+$/, "")];
+    if (conn) {
+      if (keysOf([id]).size > 0) return [id];
+      // A connection that buys nothing of its own (a butt with no connector) stands for the bars
+      // whose cuts it decides.
+      const bar = (e: string) => e.replace(/\.[ab]$/, "");
+      const refs: string[] = [];
+      if ("ends" in conn) refs.push(...conn.ends.map(bar));
+      if (conn.type === "butt" && typeof conn.through === "string") refs.push(bar(conn.through));
+      if (conn.type === "pivot") refs.push(conn.base.bar);
+      if (conn.type === "face") refs.push(...conn.bars);
+      return refs.flatMap((r) => (/^r\d+$/.test(r) ? runBars(r) : [r]));
+    }
+    if (/^r\d+$/.test(id)) return runBars(id);
+    const pattern = doc.patterns[id];
+    if (pattern) {
+      return pattern.template.flatMap((t) => [
+        t,
+        ...[...entityKeys.keys()].filter((e) => e.startsWith(`${t}@`)),
+      ]);
+    }
+    return [id];
+  };
+  return (names) => {
+    const out = new Set<Key>();
+    for (const name of names) {
+      if (name.startsWith("supplier:")) {
+        out.add(name.slice("supplier:".length));
+        continue;
+      }
+      if (name.includes(":")) {
+        for (const k of itemKeys.get(name) ?? []) out.add(k);
+        continue;
+      }
+      const cost = costs.find((c) => c.id === name);
+      if (cost) {
+        if (cost.supplier === undefined) return "all";
+        out.add(cost.supplier);
+        continue;
+      }
+      for (const k of keysOf(related(name))) out.add(k);
+    }
+    return out.size > 0 ? out : "all";
+  };
+}

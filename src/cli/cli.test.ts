@@ -28,8 +28,9 @@ describe("cli", () => {
   });
 
   it("lists planned commands as not implemented yet, and the project commands as usable", () => {
-    expect(helpText()).toContain("order | costs <dir>");
     expect(helpText()).toContain("(not implemented yet)");
+    expect(helpText()).toMatch(/\n {2}order <dir> \[--format md\|csv\|json\] \[--as-of /);
+    expect(helpText()).toMatch(/\n {2}costs <dir> \[--format md\|csv\|json\] \[--as-of /);
     expect(helpText()).toMatch(/\n {2}derive <dir> \[--json\]\n/);
     expect(helpText()).toMatch(/\n {2}cutlist <dir> \[--format md\|csv\|json\]\n/);
     expect(helpText()).toMatch(/\n {2}bom <dir> \[--format md\|csv\|json\]\n/);

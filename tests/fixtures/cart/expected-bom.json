@@ -141,6 +141,22 @@
           "sources": ["c33"]
         },
         {
+          "item": "test:BRK-40",
+          "opt": {},
+          "qty": 12,
+          "unit_mass_kg": 0.15,
+          "mass_kg": 1.8,
+          "mass_src": "est",
+          "sources": ["p3"],
+          "unplaced": [
+            {
+              "part": "p3",
+              "qty": 12,
+              "why": "brackets for a shelf fitted later"
+            }
+          ]
+        },
+        {
           "item": "test:SPL-40",
           "opt": {},
           "qty": 1,
@@ -150,7 +166,7 @@
           "sources": ["c9"]
         }
       ],
-      "mass_kg": 0.95
+      "mass_kg": 2.75
     },
     {
       "kind": "fastener",
@@ -192,6 +208,22 @@
           "sources": ["c23"]
         },
         {
+          "item": "test:SCR-M8x16",
+          "opt": {},
+          "qty": 77,
+          "unit_mass_kg": 0.012,
+          "mass_kg": 0.924,
+          "mass_src": "est",
+          "sources": ["p4"],
+          "unplaced": [
+            {
+              "part": "p4",
+              "qty": 77,
+              "why": "screws for the shelf brackets and a tool rail"
+            }
+          ]
+        },
+        {
           "item": "test:SPL-STUD",
           "opt": {},
           "qty": 1,
@@ -217,7 +249,7 @@
           ]
         }
       ],
-      "mass_kg": 0.295
+      "mass_kg": 1.219
     },
     {
       "kind": "carriage",
@@ -233,7 +265,29 @@
         }
       ],
       "mass_kg": 1.2
+    },
+    {
+      "kind": "generic",
+      "lines": [
+        {
+          "item": "test:PSU-24V",
+          "opt": {},
+          "qty": 1,
+          "unit_mass_kg": 0.5,
+          "mass_kg": 0.5,
+          "mass_src": "est",
+          "sources": ["p5"],
+          "unplaced": [
+            {
+              "part": "p5",
+              "qty": 1,
+              "why": "power supply for a work light"
+            }
+          ]
+        }
+      ],
+      "mass_kg": 0.5
     }
   ],
-  "mass_kg": 53.627
+  "mass_kg": 56.851
 }

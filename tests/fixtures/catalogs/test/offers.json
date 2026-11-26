@@ -110,7 +110,17 @@
     },
     "CAR20-1": {
       "item": "CAR20",
-      "price": { "regular_minor": 10213, "per": "unit", "read": "2026-11-26", "src": "src" }
+      "price": {
+        "regular_minor": {
+          "v": 10213,
+          "low": 9500,
+          "high": 11000,
+          "ref": "a quoted range by email, synthetic"
+        },
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src"
+      }
     },
     "BRK-40": {
       "item": "BRK-40",

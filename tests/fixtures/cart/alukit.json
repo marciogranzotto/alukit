@@ -4,7 +4,10 @@
   "catalogs": ["../catalogs/test", "../catalogs/test-geo", "../catalogs/test-gen"],
   "currency": "BRL",
   "price_basis": "regular",
-  "ids": { "b": 34, "c": 35, "p": 2, "pt": 2, "r": 2 },
+  "fx": {
+    "USD": { "v": 5.5, "src": "src", "ref": "a bank's rate, synthetic", "read": "2026-11-26" }
+  },
+  "ids": { "b": 34, "c": 35, "p": 5, "pt": 2, "r": 2, "K": 5, "O": 1 },
   "defaults": {
     "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
     "cutting": { "kerf_mm": 3, "trim_mm": 5 }
@@ -311,6 +314,24 @@
       "qty": 10,
       "unplaced": true,
       "why": "spares for light fixings"
+    },
+    "p3": {
+      "item": "test:BRK-40",
+      "qty": 12,
+      "unplaced": true,
+      "why": "brackets for a shelf fitted later"
+    },
+    "p4": {
+      "item": "test:SCR-M8x16",
+      "qty": 77,
+      "unplaced": true,
+      "why": "screws for the shelf brackets and a tool rail"
+    },
+    "p5": {
+      "item": "test:PSU-24V",
+      "qty": 1,
+      "unplaced": true,
+      "why": "power supply for a work light"
     }
   },
   "patterns": {
@@ -329,5 +350,83 @@
       "count": 3,
       "label": "carriages at fixed stops, the third across the rail joint"
     }
-  }
+  },
+  "costs": [
+    {
+      "id": "K1",
+      "label": "assembly",
+      "kind": "labour",
+      "low_minor": 40000,
+      "likely_minor": 60000,
+      "high_minor": 90000,
+      "src": "est"
+    },
+    {
+      "id": "K2",
+      "label": "taps and angled cuts at the profile supplier",
+      "kind": "machining",
+      "supplier": "test-vendor",
+      "low_minor": 6000,
+      "likely_minor": 8000,
+      "high_minor": 12000,
+      "src": "est",
+      "covers": { "supplier": "test-vendor", "services": true }
+    },
+    {
+      "id": "K3",
+      "label": "packers cut from the fabricator's stock, and the steel stack drilled",
+      "kind": "fabrication",
+      "supplier": "test-fab",
+      "low_minor": 15000,
+      "likely_minor": 15000,
+      "high_minor": 15000,
+      "src": "src",
+      "ref": "a written quote, synthetic",
+      "covers": { "services_on": { "supplier": "test-steel" }, "items": ["test-geo:FB-50x20"] }
+    },
+    {
+      "id": "K4",
+      "label": "freight, quoted in dollars",
+      "kind": "freight",
+      "low_minor": 2000,
+      "likely_minor": 3000,
+      "high_minor": 4500,
+      "currency": "USD",
+      "src": "est"
+    },
+    { "id": "K5", "label": "contingency", "kind": "contingency", "pct": 10, "of": "subtotal" }
+  ],
+  "price_bands": [
+    {
+      "supplier": "test-vendor",
+      "kind": "bar",
+      "low_pct": -5,
+      "high_pct": 15,
+      "why": "cut lengths quoted at order time",
+      "src": "est"
+    },
+    {
+      "supplier": "test-vendor",
+      "low_pct": -8,
+      "high_pct": 12,
+      "why": "list prices move",
+      "src": "est"
+    },
+    {
+      "supplier": "test-steel",
+      "low_pct": -10,
+      "high_pct": 25,
+      "why": "steel prices move weekly",
+      "src": "est"
+    }
+  ],
+  "order": { "test:BRK-40": { "offer": "BRK-40-K10" } },
+  "open": [
+    {
+      "id": "O1",
+      "text": "confirm the rail screws' length against the rail's counterbore",
+      "blocks": "order",
+      "scope": ["c35"]
+    }
+  ]
 }

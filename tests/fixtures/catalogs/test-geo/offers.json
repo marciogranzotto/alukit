@@ -51,7 +51,7 @@
     "NUT-M10-100": {
       "item": "NUT-M10",
       "pack": 100,
-      "price": { "regular_minor": 2600, "per": "unit", "read": "2026-11-26", "src": "src" }
+      "price": { "regular_minor": 2600, "per": "unit", "read": "2026-10-01", "src": "src" }
     }
   }
 }

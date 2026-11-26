@@ -1,0 +1,1486 @@
+{
+  "schema": "alukit.order/1",
+  "currency": "BRL",
+  "price_basis": "regular",
+  "as_of": "2026-11-26",
+  "oldest_read": "2026-10-01",
+  "status": "BLOCKED",
+  "rules": {
+    "check-error": "block",
+    "open-item": "block",
+    "placeholder": "block",
+    "missing-price": "block",
+    "est-price": "block",
+    "out-of-stock": "block",
+    "option-not-sold": "block",
+    "stale-price": "warn"
+  },
+  "suppliers": [
+    {
+      "supplier": "test-fab",
+      "status": "READY",
+      "reasons": [],
+      "lines": [
+        {
+          "item": "test-geo:FB-50x20",
+          "name": "Flat bar 50x20",
+          "kind": "bar",
+          "opt": {},
+          "qty": 2,
+          "unit": "piece",
+          "covered_by": "K3",
+          "bom": [
+            {
+              "item": "test-geo:FB-50x20",
+              "opt": {},
+              "qty": 2
+            }
+          ],
+          "pieces": [
+            {
+              "count": 2,
+              "cut_mm": 200,
+              "sources": [
+                "b21",
+                "b22"
+              ]
+            }
+          ],
+          "services": [
+            {
+              "what": "hole Ø11.00",
+              "count": 8,
+              "by": "supplier",
+              "covered_by": "K3"
+            }
+          ]
+        }
+      ],
+      "costs": [
+        "K3"
+      ],
+      "totals": {
+        "low_minor": 15000,
+        "likely_minor": 15000,
+        "high_minor": 15000
+      }
+    },
+    {
+      "supplier": "test-gen-vendor",
+      "status": "BLOCKED",
+      "reasons": [
+        {
+          "rule": "open-item",
+          "action": "block",
+          "message": "O1: confirm the rail screws' length against the rail's counterbore",
+          "entities": [
+            "c35"
+          ]
+        }
+      ],
+      "lines": [
+        {
+          "item": "test-gen:SCR-M5x25",
+          "name": "Socket head cap screw M5x25",
+          "kind": "fastener",
+          "opt": {},
+          "offer": "test-gen:SCR-M5x25-100",
+          "sku": "SCR-M5x25-100",
+          "qty": 1,
+          "unit": "pack",
+          "pack": 100,
+          "per": "unit",
+          "list_minor": 1500,
+          "unit_price_minor": 1500,
+          "currency": "BRL",
+          "low_minor": 1500,
+          "likely_minor": 1500,
+          "high_minor": 1500,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test-gen:SCR-M5x25",
+              "opt": {},
+              "qty": 10
+            }
+          ],
+          "surplus": [
+            {
+              "item": "test-gen:SCR-M5x25",
+              "opt": {},
+              "qty": 90
+            }
+          ]
+        },
+        {
+          "item": "test-gen:TNUT-M5",
+          "name": "T-nut M5, groove 8",
+          "kind": "fastener",
+          "opt": {},
+          "offer": "test-gen:TNUT-M5-50",
+          "sku": "TNUT-M5-50",
+          "qty": 1,
+          "unit": "pack",
+          "pack": 50,
+          "per": "unit",
+          "list_minor": 2500,
+          "unit_price_minor": 2500,
+          "currency": "BRL",
+          "low_minor": 2500,
+          "likely_minor": 2500,
+          "high_minor": 2500,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test-gen:TNUT-M5",
+              "opt": {},
+              "qty": 10
+            }
+          ],
+          "surplus": [
+            {
+              "item": "test-gen:TNUT-M5",
+              "opt": {},
+              "qty": 40
+            }
+          ]
+        }
+      ],
+      "costs": [],
+      "totals": {
+        "low_minor": 4000,
+        "likely_minor": 4000,
+        "high_minor": 4000
+      }
+    },
+    {
+      "supplier": "test-geo-vendor",
+      "status": "READY",
+      "reasons": [
+        {
+          "rule": "stale-price",
+          "action": "warn",
+          "message": "test-geo:NUT-M10-100: price read 2026-10-01, 56 days before 2026-11-26",
+          "entities": [
+            "test-geo:NUT-M10"
+          ]
+        }
+      ],
+      "lines": [
+        {
+          "item": "test-geo:HNG-15",
+          "name": "Hinge 40, low",
+          "kind": "connector",
+          "opt": {},
+          "offer": "test-geo:HNG-15",
+          "sku": "HNG-15",
+          "qty": 8,
+          "unit": "unit",
+          "per": "unit",
+          "list_minor": 3400,
+          "unit_price_minor": 3400,
+          "currency": "BRL",
+          "low_minor": 27200,
+          "likely_minor": 27200,
+          "high_minor": 27200,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test-geo:HNG-15",
+              "opt": {},
+              "qty": 8
+            }
+          ]
+        },
+        {
+          "item": "test-geo:PLT-8",
+          "name": "End plate 8 mm",
+          "kind": "connector",
+          "opt": {},
+          "offer": "test-geo:PLT-8",
+          "sku": "PLT-8",
+          "qty": 1,
+          "unit": "unit",
+          "per": "unit",
+          "list_minor": 900,
+          "unit_price_minor": 900,
+          "currency": "BRL",
+          "low_minor": 900,
+          "likely_minor": 900,
+          "high_minor": 900,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test-geo:PLT-8",
+              "opt": {},
+              "qty": 1
+            }
+          ]
+        },
+        {
+          "item": "test-geo:NUT-M10",
+          "name": "Hex nut M10",
+          "kind": "fastener",
+          "opt": {},
+          "offer": "test-geo:NUT-M10-100",
+          "sku": "NUT-M10-100",
+          "qty": 1,
+          "unit": "pack",
+          "pack": 100,
+          "per": "unit",
+          "list_minor": 2600,
+          "unit_price_minor": 2600,
+          "currency": "BRL",
+          "low_minor": 2600,
+          "likely_minor": 2600,
+          "high_minor": 2600,
+          "price_src": "src",
+          "read": "2026-10-01",
+          "bom": [
+            {
+              "item": "test-geo:NUT-M10",
+              "opt": {},
+              "qty": 8
+            }
+          ],
+          "surplus": [
+            {
+              "item": "test-geo:NUT-M10",
+              "opt": {},
+              "qty": 92
+            }
+          ]
+        },
+        {
+          "item": "test-geo:WSH-M10",
+          "name": "Washer M10",
+          "kind": "fastener",
+          "opt": {},
+          "offer": "test-geo:WSH-M10-100",
+          "sku": "WSH-M10-100",
+          "qty": 1,
+          "unit": "pack",
+          "pack": 100,
+          "per": "unit",
+          "list_minor": 1800,
+          "unit_price_minor": 1800,
+          "currency": "BRL",
+          "low_minor": 1800,
+          "likely_minor": 1800,
+          "high_minor": 1800,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test-geo:WSH-M10",
+              "opt": {},
+              "qty": 8
+            }
+          ],
+          "surplus": [
+            {
+              "item": "test-geo:WSH-M10",
+              "opt": {},
+              "qty": 92
+            }
+          ]
+        }
+      ],
+      "costs": [],
+      "totals": {
+        "low_minor": 32500,
+        "likely_minor": 32500,
+        "high_minor": 32500
+      }
+    },
+    {
+      "supplier": "test-steel",
+      "status": "READY",
+      "reasons": [],
+      "lines": [
+        {
+          "item": "test-geo:FB-50x10",
+          "name": "Flat bar 50x10",
+          "kind": "bar",
+          "opt": {},
+          "offer": "test-geo:FB-50x10-6000",
+          "sku": "FB-50x10-6000",
+          "qty": 1,
+          "unit": "bar",
+          "length_mm": 6000,
+          "per": "bar",
+          "list_minor": 7000,
+          "unit_price_minor": 7000,
+          "currency": "BRL",
+          "low_minor": 6300,
+          "likely_minor": 7000,
+          "high_minor": 8750,
+          "range": "band",
+          "band": 2,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test-geo:FB-50x10",
+              "opt": {},
+              "qty": 5
+            }
+          ],
+          "pieces": [
+            {
+              "count": 2,
+              "cut_mm": 1120,
+              "sources": [
+                "b24",
+                "b25"
+              ]
+            },
+            {
+              "count": 1,
+              "cut_mm": 520,
+              "sources": [
+                "b19"
+              ]
+            },
+            {
+              "count": 2,
+              "cut_mm": 300,
+              "sources": [
+                "b20",
+                "b23"
+              ]
+            }
+          ],
+          "services": [
+            {
+              "what": "hole Ø11.00",
+              "count": 8,
+              "by": "buyer",
+              "covered_by": "K3"
+            }
+          ]
+        },
+        {
+          "item": "test-geo:RHS-100x50x4",
+          "name": "RHS 100x50x4",
+          "kind": "bar",
+          "opt": {},
+          "offer": "test-geo:RHS-100x50x4-6000",
+          "sku": "RHS-100x50x4-6000",
+          "qty": 1,
+          "unit": "bar",
+          "length_mm": 6000,
+          "per": "bar",
+          "list_minor": 28900,
+          "unit_price_minor": 28900,
+          "currency": "BRL",
+          "low_minor": 26010,
+          "likely_minor": 28900,
+          "high_minor": 36125,
+          "range": "band",
+          "band": 2,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test-geo:RHS-100x50x4",
+              "opt": {},
+              "qty": 1
+            }
+          ],
+          "pieces": [
+            {
+              "count": 1,
+              "cut_mm": 520,
+              "sources": [
+                "b18"
+              ]
+            }
+          ],
+          "services": [
+            {
+              "what": "hole Ø11.00, 4.00 deep",
+              "count": 8,
+              "by": "buyer",
+              "covered_by": "K3"
+            }
+          ]
+        },
+        {
+          "item": "test-geo:TUBE-18x2",
+          "name": "Tube 18x2",
+          "kind": "bar",
+          "opt": {},
+          "offer": "test-geo:TUBE-18x2-6000",
+          "sku": "TUBE-18x2-6000",
+          "qty": 1,
+          "unit": "bar",
+          "length_mm": 6000,
+          "per": "bar",
+          "list_minor": 5200,
+          "unit_price_minor": 5200,
+          "currency": "BRL",
+          "low_minor": 4680,
+          "likely_minor": 5200,
+          "high_minor": 6500,
+          "range": "band",
+          "band": 2,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test-geo:TUBE-18x2",
+              "opt": {},
+              "qty": 4
+            }
+          ],
+          "pieces": [
+            {
+              "count": 4,
+              "cut_mm": 42,
+              "sources": [
+                "c23.s1",
+                "c23.s2",
+                "c23.s3",
+                "c23.s4"
+              ]
+            }
+          ]
+        }
+      ],
+      "costs": [],
+      "totals": {
+        "low_minor": 36990,
+        "likely_minor": 41100,
+        "high_minor": 51375
+      }
+    },
+    {
+      "supplier": "test-vendor",
+      "status": "BLOCKED",
+      "reasons": [
+        {
+          "rule": "est-price",
+          "action": "block",
+          "message": "test:PSU-24V: the price of test:PSU-24V is an estimate",
+          "entities": [
+            "test:PSU-24V"
+          ]
+        }
+      ],
+      "lines": [
+        {
+          "item": "test:M10-ROD",
+          "name": "Threaded rod M10",
+          "kind": "bar",
+          "opt": {},
+          "offer": "test:M10-ROD-1000",
+          "sku": "M10-ROD-1000",
+          "qty": 1,
+          "unit": "bar",
+          "length_mm": 1000,
+          "per": "bar",
+          "list_minor": 1250,
+          "unit_price_minor": 1250,
+          "currency": "BRL",
+          "low_minor": 1188,
+          "likely_minor": 1250,
+          "high_minor": 1438,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:M10-ROD",
+              "opt": {},
+              "qty": 4
+            }
+          ],
+          "pieces": [
+            {
+              "count": 4,
+              "cut_mm": 140,
+              "sources": [
+                "c23.f1",
+                "c23.f2",
+                "c23.f3",
+                "c23.f4"
+              ]
+            }
+          ]
+        },
+        {
+          "item": "test:RAIL20",
+          "name": "Linear rail 20",
+          "kind": "bar",
+          "opt": {},
+          "offer": "test:RAIL20-1000",
+          "sku": "RAIL20-1000",
+          "qty": 1,
+          "unit": "bar",
+          "length_mm": 1000,
+          "per": "bar",
+          "list_minor": 17900,
+          "unit_price_minor": 17900,
+          "currency": "BRL",
+          "low_minor": 17005,
+          "likely_minor": 17900,
+          "high_minor": 20585,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:RAIL20",
+              "opt": {},
+              "qty": 2
+            }
+          ],
+          "pieces": [
+            {
+              "count": 2,
+              "cut_mm": 470,
+              "sources": [
+                "b33",
+                "b34"
+              ]
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 2,
+          "unit": "piece",
+          "length_mm": 1120,
+          "billed_mm": 1120,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 14168,
+          "currency": "BRL",
+          "low_minor": 26919,
+          "likely_minor": 28336,
+          "high_minor": 32586,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 2
+            }
+          ],
+          "pieces": [
+            {
+              "count": 2,
+              "cut_mm": 1120,
+              "sources": [
+                "b9",
+                "b10"
+              ]
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 4,
+          "unit": "piece",
+          "length_mm": 860,
+          "billed_mm": 860,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 10879,
+          "currency": "BRL",
+          "low_minor": 41340,
+          "likely_minor": 43516,
+          "high_minor": 50043,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 4
+            }
+          ],
+          "pieces": [
+            {
+              "count": 4,
+              "cut_mm": 860,
+              "sources": [
+                "b1",
+                "b2",
+                "b3",
+                "b4"
+              ]
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 1,
+          "unit": "piece",
+          "length_mm": 660,
+          "billed_mm": 660,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 8349,
+          "currency": "BRL",
+          "low_minor": 7932,
+          "likely_minor": 8349,
+          "high_minor": 9601,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 1
+            }
+          ],
+          "pieces": [
+            {
+              "count": 1,
+              "cut_mm": 660,
+              "sources": [
+                "b11"
+              ]
+            }
+          ],
+          "services": [
+            {
+              "what": "tap M8 in an end, 20.00 deep",
+              "count": 1,
+              "by": "supplier",
+              "covered_by": "K2"
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 4,
+          "unit": "piece",
+          "length_mm": 570,
+          "billed_mm": 570,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 7211,
+          "currency": "BRL",
+          "low_minor": 27402,
+          "likely_minor": 28844,
+          "high_minor": 33171,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 4
+            }
+          ],
+          "pieces": [
+            {
+              "count": 4,
+              "cut_mm": 569.88,
+              "sources": [
+                "b14",
+                "b15",
+                "b16",
+                "b17"
+              ]
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 6,
+          "unit": "piece",
+          "length_mm": 520,
+          "billed_mm": 520,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 6578,
+          "currency": "BRL",
+          "low_minor": 37495,
+          "likely_minor": 39468,
+          "high_minor": 45388,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 6
+            }
+          ],
+          "pieces": [
+            {
+              "count": 6,
+              "cut_mm": 520,
+              "sources": [
+                "b26",
+                "b26@1",
+                "b26@2",
+                "b26@4",
+                "b26@5",
+                "b26@6"
+              ]
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 1,
+          "unit": "piece",
+          "length_mm": 460,
+          "billed_mm": 460,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 5819,
+          "currency": "BRL",
+          "low_minor": 5528,
+          "likely_minor": 5819,
+          "high_minor": 6692,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 1
+            }
+          ],
+          "pieces": [
+            {
+              "count": 1,
+              "cut_mm": 460,
+              "sources": [
+                "b12"
+              ]
+            }
+          ],
+          "services": [
+            {
+              "what": "tap M8 in an end, 20.00 deep",
+              "count": 1,
+              "by": "supplier",
+              "covered_by": "K2"
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 2,
+          "unit": "piece",
+          "length_mm": 440,
+          "billed_mm": 440,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 5566,
+          "currency": "BRL",
+          "low_minor": 10575,
+          "likely_minor": 11132,
+          "high_minor": 12802,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 2
+            }
+          ],
+          "pieces": [
+            {
+              "count": 2,
+              "cut_mm": 440,
+              "sources": [
+                "b7",
+                "b8"
+              ]
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 1,
+          "unit": "piece",
+          "length_mm": 300,
+          "billed_mm": 300,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 3795,
+          "currency": "BRL",
+          "low_minor": 3605,
+          "likely_minor": 3795,
+          "high_minor": 4364,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 1
+            }
+          ],
+          "pieces": [
+            {
+              "count": 1,
+              "cut_mm": 300,
+              "sources": [
+                "b13"
+              ]
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 1,
+          "unit": "piece",
+          "length_mm": 292,
+          "billed_mm": 300,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 3795,
+          "currency": "BRL",
+          "low_minor": 3605,
+          "likely_minor": 3795,
+          "high_minor": 4364,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 1
+            }
+          ],
+          "pieces": [
+            {
+              "count": 1,
+              "cut_mm": 291.53,
+              "sources": [
+                "b32"
+              ]
+            }
+          ],
+          "services": [
+            {
+              "what": "angled cut",
+              "count": 1,
+              "by": "supplier",
+              "covered_by": "K2"
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 4,
+          "unit": "piece",
+          "length_mm": 153,
+          "billed_mm": 160,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 2024,
+          "currency": "BRL",
+          "low_minor": 7691,
+          "likely_minor": 8096,
+          "high_minor": 9310,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 4
+            }
+          ],
+          "pieces": [
+            {
+              "count": 4,
+              "cut_mm": 153.14,
+              "sources": [
+                "b27",
+                "b28",
+                "b29",
+                "b30"
+              ]
+            }
+          ],
+          "services": [
+            {
+              "what": "angled cut",
+              "count": 8,
+              "by": "supplier",
+              "covered_by": "K2"
+            }
+          ]
+        },
+        {
+          "item": "test:TS40",
+          "name": "Profile 40x40 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS40-c7",
+          "sku": "TS40-c7",
+          "qty": 1,
+          "unit": "piece",
+          "length_mm": 150,
+          "billed_mm": 150,
+          "per": "m",
+          "list_minor": 12650,
+          "unit_price_minor": 1898,
+          "currency": "BRL",
+          "low_minor": 1803,
+          "likely_minor": 1898,
+          "high_minor": 2183,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS40",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 1
+            }
+          ],
+          "pieces": [
+            {
+              "count": 1,
+              "cut_mm": 150,
+              "sources": [
+                "b31"
+              ]
+            }
+          ]
+        },
+        {
+          "item": "test:TS4080",
+          "name": "Profile 40x80 (parametric)",
+          "kind": "bar",
+          "opt": {
+            "finish": "anodised"
+          },
+          "offer": "test:TS4080-c7",
+          "sku": "TS4080-c7",
+          "qty": 2,
+          "unit": "piece",
+          "length_mm": 1200,
+          "billed_mm": 1200,
+          "per": "m",
+          "list_minor": 23100,
+          "unit_price_minor": 27720,
+          "currency": "BRL",
+          "low_minor": 52668,
+          "likely_minor": 55440,
+          "high_minor": 63756,
+          "range": "band",
+          "band": 0,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:TS4080",
+              "opt": {
+                "finish": "anodised"
+              },
+              "qty": 2
+            }
+          ],
+          "pieces": [
+            {
+              "count": 2,
+              "cut_mm": 1200,
+              "sources": [
+                "b5",
+                "b6"
+              ]
+            }
+          ]
+        },
+        {
+          "item": "test:BRK-40",
+          "name": "Angle bracket 40",
+          "kind": "connector",
+          "opt": {},
+          "offer": "test:BRK-40-K10",
+          "sku": "BRK-40-K10",
+          "qty": 2,
+          "unit": "kit",
+          "kit": [
+            {
+              "item": "test:BRK-40",
+              "opt": {},
+              "qty": 10
+            },
+            {
+              "item": "test:SCR-M8x16",
+              "opt": {},
+              "qty": 20
+            },
+            {
+              "item": "test:TNUT-M8",
+              "opt": {},
+              "qty": 20
+            }
+          ],
+          "per": "unit",
+          "list_minor": 12900,
+          "unit_price_minor": 12900,
+          "currency": "BRL",
+          "low_minor": 23736,
+          "likely_minor": 25800,
+          "high_minor": 28896,
+          "range": "band",
+          "band": 1,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:BRK-40",
+              "opt": {},
+              "qty": 12
+            },
+            {
+              "item": "test:SCR-M8x16",
+              "opt": {},
+              "qty": 40
+            },
+            {
+              "item": "test:TNUT-M8",
+              "opt": {},
+              "qty": 10
+            }
+          ],
+          "surplus": [
+            {
+              "item": "test:BRK-40",
+              "opt": {},
+              "qty": 8
+            },
+            {
+              "item": "test:TNUT-M8",
+              "opt": {},
+              "qty": 30
+            }
+          ]
+        },
+        {
+          "item": "test:SPL-40",
+          "name": "Splice for 40 series",
+          "kind": "connector",
+          "opt": {},
+          "offer": "test:SPL-40",
+          "sku": "SPL-40",
+          "qty": 1,
+          "unit": "unit",
+          "per": "unit",
+          "list_minor": 2400,
+          "unit_price_minor": 2400,
+          "currency": "BRL",
+          "low_minor": 2208,
+          "likely_minor": 2400,
+          "high_minor": 2688,
+          "range": "band",
+          "band": 1,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:SPL-40",
+              "opt": {},
+              "qty": 1
+            }
+          ]
+        },
+        {
+          "item": "test:SCR-M8x16",
+          "name": "Socket head cap screw M8x16",
+          "kind": "fastener",
+          "opt": {},
+          "offer": "test:SCR-M8x16-10",
+          "sku": "SCR-M8x16-10",
+          "qty": 4,
+          "unit": "pack",
+          "pack": 10,
+          "per": "unit",
+          "list_minor": 650,
+          "unit_price_minor": 650,
+          "currency": "BRL",
+          "low_minor": 2392,
+          "likely_minor": 2600,
+          "high_minor": 2912,
+          "range": "band",
+          "band": 1,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:SCR-M8x16",
+              "opt": {},
+              "qty": 37
+            }
+          ],
+          "surplus": [
+            {
+              "item": "test:SCR-M8x16",
+              "opt": {},
+              "qty": 3
+            }
+          ]
+        },
+        {
+          "item": "test:CAR20",
+          "name": "Carriage 20, flanged",
+          "kind": "carriage",
+          "opt": {},
+          "offer": "test:CAR20-1",
+          "sku": "CAR20-1",
+          "qty": 3,
+          "unit": "unit",
+          "per": "unit",
+          "list_minor": 10213,
+          "unit_price_minor": 10213,
+          "currency": "BRL",
+          "low_minor": 28500,
+          "likely_minor": 30639,
+          "high_minor": 33000,
+          "range": "quote",
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:CAR20",
+              "opt": {},
+              "qty": 3
+            }
+          ]
+        },
+        {
+          "item": "test:PSU-24V",
+          "name": "Power supply 24 V",
+          "kind": "generic",
+          "opt": {},
+          "offer": "test:PSU-24V",
+          "sku": "PSU-24V",
+          "qty": 1,
+          "unit": "unit",
+          "per": "unit",
+          "list_minor": 9900,
+          "unit_price_minor": 9900,
+          "currency": "BRL",
+          "low_minor": 9108,
+          "likely_minor": 9900,
+          "high_minor": 11088,
+          "range": "band",
+          "band": 1,
+          "price_src": "est",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "test:PSU-24V",
+              "opt": {},
+              "qty": 1
+            }
+          ]
+        }
+      ],
+      "costs": [
+        "K2"
+      ],
+      "totals": {
+        "low_minor": 316700,
+        "likely_minor": 336977,
+        "high_minor": 386867
+      }
+    },
+    {
+      "supplier": null,
+      "status": "BLOCKED",
+      "reasons": [
+        {
+          "rule": "missing-price",
+          "action": "block",
+          "message": "test:SPL-STUD: no offer",
+          "entities": [
+            "test:SPL-STUD"
+          ]
+        }
+      ],
+      "lines": [
+        {
+          "item": "test:SPL-STUD",
+          "name": "Splice stud M8x40",
+          "kind": "fastener",
+          "opt": {},
+          "qty": 1,
+          "unit": "unit",
+          "bom": [
+            {
+              "item": "test:SPL-STUD",
+              "opt": {},
+              "qty": 1
+            }
+          ]
+        }
+      ],
+      "costs": [],
+      "totals": {
+        "low_minor": 0,
+        "likely_minor": 0,
+        "high_minor": 0
+      }
+    }
+  ],
+  "costs": [
+    {
+      "id": "K1",
+      "label": "assembly",
+      "kind": "labour",
+      "currency": "BRL",
+      "low_minor": 40000,
+      "likely_minor": 60000,
+      "high_minor": 90000,
+      "src": "est"
+    },
+    {
+      "id": "K2",
+      "label": "taps and angled cuts at the profile supplier",
+      "kind": "machining",
+      "supplier": "test-vendor",
+      "currency": "BRL",
+      "low_minor": 6000,
+      "likely_minor": 8000,
+      "high_minor": 12000,
+      "src": "est",
+      "covers": {
+        "supplier": "test-vendor",
+        "services": true
+      }
+    },
+    {
+      "id": "K3",
+      "label": "packers cut from the fabricator's stock, and the steel stack drilled",
+      "kind": "fabrication",
+      "supplier": "test-fab",
+      "currency": "BRL",
+      "low_minor": 15000,
+      "likely_minor": 15000,
+      "high_minor": 15000,
+      "src": "src",
+      "ref": "a written quote, synthetic",
+      "covers": {
+        "services_on": {
+          "supplier": "test-steel"
+        },
+        "items": [
+          "test-geo:FB-50x20"
+        ]
+      }
+    },
+    {
+      "id": "K4",
+      "label": "freight, quoted in dollars",
+      "kind": "freight",
+      "currency": "USD",
+      "low_minor": 2000,
+      "likely_minor": 3000,
+      "high_minor": 4500,
+      "converted": {
+        "rate": 5.5,
+        "low_minor": 11000,
+        "likely_minor": 16500,
+        "high_minor": 24750
+      },
+      "src": "est"
+    },
+    {
+      "id": "K5",
+      "label": "contingency",
+      "kind": "contingency",
+      "pct": 10,
+      "of": "subtotal",
+      "currency": "BRL",
+      "low_minor": 45619,
+      "likely_minor": 50608,
+      "high_minor": 60449,
+      "src": "est"
+    }
+  ],
+  "totals": {
+    "currency": "BRL",
+    "lines": {
+      "low_minor": 384190,
+      "likely_minor": 406577,
+      "high_minor": 462742
+    },
+    "costs": {
+      "low_minor": 72000,
+      "likely_minor": 99500,
+      "high_minor": 141750
+    },
+    "subtotal": {
+      "low_minor": 456190,
+      "likely_minor": 506077,
+      "high_minor": 604492
+    },
+    "contingency": {
+      "low_minor": 45619,
+      "likely_minor": 50608,
+      "high_minor": 60449
+    },
+    "total": {
+      "low_minor": 501809,
+      "likely_minor": 556685,
+      "high_minor": 664941
+    },
+    "by_currency": [
+      {
+        "currency": "BRL",
+        "low_minor": 490809,
+        "likely_minor": 540185,
+        "high_minor": 640191
+      },
+      {
+        "currency": "USD",
+        "low_minor": 2000,
+        "likely_minor": 3000,
+        "high_minor": 4500
+      }
+    ],
+    "share": [
+      {
+        "src": "src",
+        "likely_minor": 411677,
+        "pct": 73.95
+      },
+      {
+        "src": "est",
+        "likely_minor": 145008,
+        "pct": 26.05
+      }
+    ],
+    "unpriced": 1
+  },
+  "diagnostics": []
+}
