@@ -44,7 +44,9 @@ in the gitignored `internal/session-notes.md`.*
 | M4b draw tool + catalog browser + `snapshot` | **done**, merged `a25d275` (19:52), pushed | Analytic snapping, work plane, draw/connect/place/pattern/measure tools, orthographic views, catalog browser, `alukit snapshot`. A Playwright mouse run draws the cart's base frame; its cut list and BOM are byte-identical to the CLI fixture's. Calls: `docs/notes/m4b-decisions.md`. |
 | Docs: README, guide, notes index, design-vs-built | **done**, merged `f242435` (20:04), pushed | Real screenshot made by `alukit snapshot` (`docs/images/cart-iso.png`). 17 design-vs-built entries. |
 | M4c: close the design-vs-built feature gaps | running (Opus, worktree), launched 20:05 | variant switcher, export button, clipping plane, Open items / Params / Decisions tabs, pivot and face in the connect tool, `catalog search` / `import` |
-| Full acceptance (§13), internal | running (Opus, worktree), launched 19:32 | outputs in `internal/acceptance/` only |
+| Full acceptance (§13), internal | **ran** (20:40): the four numeric tests pass; overall **fail** on two model gaps | Cut list: 214 pieces, largest difference 0.05 mm. Mass: within 0.09 % once the record's own errors are set aside. Cost: every vendor line to the cent on a frozen lock. Counts: pass. Every exception is an error in the record. Fails on A1 and A3, below. |
+| Gap A3: face contact on real section faces | running (Opus, worktree), launched 20:50 | golden G29 |
+| Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | running (Opus, worktree), launched 20:50 | goldens G30+ |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
 | M2b rest of Forseti | **done** (17:43), merged, pushed | All 1,196 orderable SKUs map to offers (1,208 offers, 1,034 items: 497 generic, 235 fasteners, 151 accessories, 100 connectors, 31 bars, 12 panels, 8 carriages). All 27 profile stems have sections (8 exact, 19 parametric). New connectors are marked as having no mounting model yet. Gate: 322 tests. Calls: [`docs/notes/m2b-decisions.md`](../notes/m2b-decisions.md). |
@@ -263,3 +265,27 @@ in the gitignored `internal/session-notes.md`.*
     whether the fixture means that, without touching goldens.
 - **20:05**: M4c launched to close the design-vs-built entries that are missing features rather
   than deliberate deviations.
+- **20:40**: Full acceptance done. Results are internal; this is a sanitized summary.
+  - **Tests 1–4 pass:**
+    - the cut list, every piece within 0.05 mm of the drawing;
+    - mass within 1 %;
+    - every vendor line to the cent on a lock frozen at the record's price date (drift to live
+      prices is reported separately);
+    - pack and kit counts.
+  - **Overall fails on AluKit's model:**
+    - **A1:** a connector whose mount carries a sleeve can't satisfy the fit rule on any bar.
+    - **A3:** face-connection layers meet only on a section's bounding faces, so a block on an
+      angle's inner leg can't join a stack.
+  - Smaller findings:
+    - A2: joints with no body are billed as items;
+    - A4: no hole when a bar butts onto another bar's end;
+    - A5: a cost line can't belong to a variant;
+    - A6: `covers.services_on` takes one supplier only.
+    - Also queued as A7: holes for sleeves take the sleeve's OD exactly, with no clearance.
+  - Every numeric exception is an error in the reference record, not in AluKit. They were sent to
+    that project's session as an FYI. Checked against the record's history: its bill was rebuilt
+    from its drawing since the paper model, so the paper model's three bill-against-drawing
+    differences no longer hold (internal notes corrected).
+- **20:50**: Two Opus agents launched on the gaps, in worktrees: A3 alone (geometry), and A1, A2,
+  A4–A7 together. After both merge, the acceptance converter is re-run using the new constructs;
+  the target is an overall pass.
