@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 import type { V3 } from "../mesh/model.ts";
-import { createViewer, type Viewer, type ViewerStats } from "../viewer/scene.ts";
+import { createViewer, type SectionPlane, type Viewer, type ViewerStats } from "../viewer/scene.ts";
 import { docViews } from "../viewer/views.ts";
 import { Catalog } from "./Catalog.tsx";
 import { Drawer } from "./Drawer.tsx";
@@ -45,6 +45,10 @@ export interface AlukitHook {
   };
   /** Snapshot mode: "ready" once the named view is drawn, or why it cannot be. */
   snapshot(): string | undefined;
+  /** The section plane the scene draws with, if it is on. */
+  section(): SectionPlane | undefined;
+  /** Whether the section plane hides a world point. */
+  clipped(p: V3): boolean;
 }
 
 declare global {
@@ -93,6 +97,8 @@ function Viewport({ snapshot }: { snapshot?: string | undefined }) {
         };
       },
       snapshot: () => snapshotState.value,
+      section: () => v0.current?.section(),
+      clipped: (p) => v0.current?.clipped(p) === true,
     };
     // The scene follows the signals without re-rendering the component.
     const offModel = model.subscribe((m) => {

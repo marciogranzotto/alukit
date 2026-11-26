@@ -34,6 +34,27 @@ export function compareIds(a: string, b: string): number {
   return compareCodePoints(a, b);
 }
 
+/** An id's prefix and number: `pt12` is `pt` and 12. */
+export function splitId(id: string): { prefix: string; n: number } | undefined {
+  const m = /^([A-Za-z]+)(\d+)$/.exec(id);
+  return m ? { prefix: m[1] as string, n: Number(m[2]) } : undefined;
+}
+
+/**
+ * The number the next entity of a prefix takes (design §6): one more than the highest of the
+ * document's counter for it (`ids`, which never goes back, so a removed id is not reused) and
+ * every id of that prefix it holds. Commands create ids by this rule; a client that must name
+ * an id its own batch creates (a pivot its carried ends point to) predicts it the same way.
+ */
+export function nextIdNumber(counter: unknown, existing: Iterable<string>, prefix: string): number {
+  let n = typeof counter === "number" ? counter : 0;
+  for (const id of existing) {
+    const s = splitId(id);
+    if (s && s.prefix === prefix && s.n > n) n = s.n;
+  }
+  return n + 1;
+}
+
 /**
  * True for a string a JS engine treats as an array index, which object key order puts first
  * whatever the insertion order (review M4). Ids must never look like this.

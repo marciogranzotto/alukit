@@ -15,18 +15,31 @@ import {
 import type { MoneyOut, Order, OrderLine } from "#core/order/types.ts";
 import { getAtRev } from "./api.ts";
 import type { Model } from "./model.ts";
-import { asOf, log, model, select, selection } from "./store.ts";
+import { DecisionsTab, OpenItemsTab, ParamsTab } from "./Records.tsx";
+import { asOf, log, model, outputPath, select, selection } from "./store.ts";
 
 /**
  * The bottom drawer (design §8): cut list, machining sheet, BOM, order (status per supplier),
- * costs, checks and the log. Open items, params and decisions join it when they are built (M5).
- * The cut list, BOM and checks come with the revision's model; the machining sheet, the order and
- * the costs are asked of the server when their tab is open: the sheet is a fabricator's document
- * most revisions never need, and the order and costs are judged as of a date (the stale-price
- * rule).
+ * costs, checks, open items, params, decisions and the log. The cut list, BOM and checks come
+ * with the revision's model; the machining sheet, the order and the costs are asked of the server
+ * when their tab is open: the sheet is a fabricator's document most revisions never need, and the
+ * order and costs are judged as of a date (the stale-price rule). Every output is the tab's
+ * variant's. Open items, params and decisions are the document's records, edited through their
+ * commands (`Records.tsx`).
  */
 
-const TABS = ["Cut list", "Machining", "BOM", "Order", "Costs", "Checks", "Log"] as const;
+const TABS = [
+  "Cut list",
+  "Machining",
+  "BOM",
+  "Order",
+  "Costs",
+  "Checks",
+  "Open items",
+  "Params",
+  "Decisions",
+  "Log",
+] as const;
 type Tab = (typeof TABS)[number];
 
 const mm = (x: number) => x.toFixed(2);
@@ -186,20 +199,21 @@ function entityIds(m: Model, names: readonly string[]): string[] {
   return [...new Set(names.map((n) => n.split(".")[0] as string))].filter(known);
 }
 
-type Fetched<T> = { rev: number; value: T } | { error: string };
+/** An output's answer; `stale` while it is another revision's, variant's or date's. */
+type Fetched<T> = { rev: number; value: T; stale: boolean } | { error: string };
 
 /**
  * An output the server computes on request, for the drawn revision: asked again when the
- * revision or the path changes. The last answer stays on screen, marked stale, until the
- * revision's own arrives, so the drawer settles on the revision the scene shows.
+ * revision or the path (its variant, its date) changes. The last answer stays on screen, marked
+ * stale, until the one asked for arrives, so the drawer settles on what the scene shows.
  */
 function useOutput<T>(path: string, rev: number): Fetched<T> | undefined {
-  const [got, setGot] = useState<Fetched<T>>();
+  const [got, setGot] = useState<{ rev: number; path: string; value: T } | { error: string }>();
   useEffect(() => {
     let live = true;
     getAtRev<T>(path).then(
       (r) => {
-        if (live) setGot({ rev: r.rev, value: r.body });
+        if (live) setGot({ rev: r.rev, path, value: r.body });
       },
       (e: unknown) => {
         if (live) setGot({ error: e instanceof Error ? e.message : String(e) });
@@ -209,13 +223,13 @@ function useOutput<T>(path: string, rev: number): Fetched<T> | undefined {
       live = false;
     };
   }, [path, rev]);
-  return got;
+  if (got === undefined || "error" in got) return got;
+  return { rev: got.rev, value: got.value, stale: got.rev !== rev || got.path !== path };
 }
 
-/** An output's path with the order's date, when one was picked (`?as_of=`). */
+/** An output's path in the tab's variant, with the order's date when one was picked. */
 function withAsOf(path: string): string {
-  const d = asOf.value;
-  return d === undefined ? path : `${path}?as_of=${encodeURIComponent(d)}`;
+  return outputPath(path, { asOf: asOf.value });
 }
 
 /** The order's date: the server's today until one is picked; clearing it goes back to today. */
@@ -276,7 +290,7 @@ function OrderTab({ m }: { m: Model }) {
   if (got === undefined) return <p class="panel-empty">Pricing the order…</p>;
   if ("error" in got) return <p class="panel-empty">Cannot load the order: {got.error}</p>;
   const o = got.value;
-  const stale = got.rev !== m.rev;
+  const stale = got.stale;
   return (
     <div
       data-testid="order"
@@ -391,13 +405,13 @@ function HoleTable({ p }: { p: MachiningSheet["parts"][number] }) {
  * carry the bars' machining, whose operations are on the Cut list tab.
  */
 function MachiningTab({ m }: { m: Model }) {
-  const got = useOutput<MachiningSheet>("/api/machining", m.rev);
+  const got = useOutput<MachiningSheet>(outputPath("/api/machining"), m.rev);
   if (got === undefined) return <p class="panel-empty">Reading the machining sheet…</p>;
   if ("error" in got) {
     return <p class="panel-empty">Cannot load the machining sheet: {got.error}</p>;
   }
   const s = got.value;
-  const stale = got.rev !== m.rev;
+  const stale = got.stale;
   return (
     <div
       data-testid="machining"
@@ -470,7 +484,7 @@ function CostsTab({ m }: { m: Model }) {
   if ("error" in got) return <p class="panel-empty">Cannot load the costs: {got.error}</p>;
   const c = got.value;
   const t = c.totals;
-  const stale = got.rev !== m.rev;
+  const stale = got.stale;
   const rows: [string, MoneyOut][] = [
     ["Order lines", t.lines],
     ["Cost lines", t.costs],
@@ -698,6 +712,9 @@ export function Drawer() {
           {tab === "Order" && <OrderTab m={m} />}
           {tab === "Costs" && <CostsTab m={m} />}
           {tab === "Checks" && <ChecksTab m={m} />}
+          {tab === "Open items" && <OpenItemsTab m={m} />}
+          {tab === "Params" && <ParamsTab m={m} />}
+          {tab === "Decisions" && <DecisionsTab m={m} />}
           {tab === "Log" && <LogTab />}
         </div>
       )}

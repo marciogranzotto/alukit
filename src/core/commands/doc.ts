@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { compareIds } from "../ids.ts";
+import { compareIds, nextIdNumber, splitId } from "../ids.ts";
 import { projectJsonSchema } from "../project/canonical.ts";
 import { ENTITY_MAPS, PROJECT_SHAPE } from "../project/schema.ts";
 import type { JsonSchema } from "../schema-walk.ts";
@@ -60,10 +60,7 @@ export function isObject(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
 }
 
-export function splitId(id: string): { prefix: string; n: number } | undefined {
-  const m = /^([A-Za-z]+)(\d+)$/.exec(id);
-  return m ? { prefix: m[1] as string, n: Number(m[2]) } : undefined;
-}
+export { splitId };
 
 export function kindOf(id: string): Kind | undefined {
   if (id.startsWith(PROJECT_ITEM)) return "items";
@@ -185,13 +182,8 @@ export function allIds(doc: RawDoc): string[] {
 export function nextId(doc: RawDoc, prefix: string): { id: string; doc: RawDoc } {
   const kind = PREFIX_KIND[prefix] as MapKind | ListKind;
   const ids = isObject(doc.ids) ? doc.ids : {};
-  let n = typeof ids[prefix] === "number" ? (ids[prefix] as number) : 0;
-  for (const id of entityIds(doc, kind)) {
-    const s = splitId(id);
-    if (s && s.prefix === prefix && s.n > n) n = s.n;
-  }
-  const id = `${prefix}${n + 1}`;
-  return { id, doc: withField(doc, "ids", { ...ids, [prefix]: n + 1 }) };
+  const n = nextIdNumber(ids[prefix], entityIds(doc, kind), prefix);
+  return { id: `${prefix}${n}`, doc: withField(doc, "ids", { ...ids, [prefix]: n }) };
 }
 
 // ---------------------------------------------------------------------------------------------
