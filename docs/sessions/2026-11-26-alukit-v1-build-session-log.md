@@ -54,8 +54,8 @@ in the gitignored `internal/session-notes.md`.*
   [vite@8.4.0]`. Drop the exclusion once 8.4.0 is old enough.
 - **std and ref-hiwin values from recall.** The `std` catalog's standard table and clause numbers
   (DIN/ISO) were written by an agent from recall. The values match common tables, but the
-  citations need a check; a verification task is queued. HIWIN publishes no minimum rail end
-  distance, so that one is an estimate.
+  citations needed a check; done 2026-11-26, see `docs/notes/std-hiwin-verification.md`. The
+  rail minimum end distance, first an estimate, is published by HIWIN GmbH's catalogue.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 

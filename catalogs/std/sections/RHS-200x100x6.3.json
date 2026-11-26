@@ -4,7 +4,7 @@
   "fidelity": "parametric",
   "props_ok": true,
   "from": {
-    "ref": "EN 10219-2:2006, Table C.3 (dimensions and sectional properties of rectangular hollow sections)",
+    "ref": "EN 10219-2:2006, Annex C (sectional properties of standard sizes), rectangular hollow sections (table number not confirmed)",
     "method": "table",
     "note": "b is the 100 mm face (section x), h the 200 mm face (section y). Outer radius 2.5 T and inner radius 1.5 T for 6 mm < T <= 10 mm (EN 10219-2, outside corner profile)."
   },
