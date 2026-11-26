@@ -33,12 +33,13 @@ sheet).**
   can bear on and which hold only their own order line; and the machining sheet, each custom
   part's holes from its datum: `alukit machining <dir>`.
 - The server and the viewer: `alukit serve <dir>` owns the project and opens it in the browser,
-  which draws the derived model, selects by click or box, and shows properties (with where each
-  catalog number comes from), the project tree, the cut list, the BOM, the order, the costs and
-  the checks. CLI edits go through a running server and appear live in every tab; `alukit undo`,
-  `redo` and `log` use its history. A direct edit of `alukit.json` is taken in as a step, or makes
-  the project read-only while the file is not valid. The server answers only its own page, with a
-  per-start token.
+  which draws the derived model (bars, parts, and the project's plates and bent angles with their
+  holes marked, and placeholders outlined), selects by click or box, and shows properties (with
+  where each catalog number comes from), the project tree, the cut list, the machining sheet, the
+  BOM, the order, the costs and the checks. CLI edits go through a running server and appear live
+  in every tab; `alukit undo`, `redo` and `log` use its history. A direct edit of `alukit.json` is
+  taken in as a step, or makes the project read-only while the file is not valid. The server
+  answers only its own page, with a per-start token.
 
 Drawing with the mouse comes next (M4b).
 

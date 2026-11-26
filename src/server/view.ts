@@ -1,9 +1,19 @@
 import { derivedJson } from "#core/derive/output.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
+import type { ResolvedHole, ResolvedProjectItem } from "#core/project-items/resolve.ts";
+import { projectItems } from "#core/project-items/source.ts";
 import { QUANTUM, quantize } from "#core/quantum.ts";
 import { threadDiameter } from "#core/threads.ts";
+import { TOL } from "#core/tolerances.ts";
 import { addScaled, type V3 } from "#core/vec.ts";
-import type { ViewBar, ViewFastener, ViewPart, ViewSection } from "../mesh/model.ts";
+import type {
+  ViewBar,
+  ViewFastener,
+  ViewHole,
+  ViewPart,
+  ViewSection,
+  ViewShape,
+} from "../mesh/model.ts";
 import { type P2, simplifyRing } from "../mesh/outline.ts";
 import type { Snapshot } from "./host.ts";
 
@@ -14,8 +24,9 @@ import type { Snapshot } from "./host.ts";
  *
  * - `derived`: the derived model as `alukit.derived/1` (§7.3), the contract report builders read;
  * - `display`: what drawing needs beyond it: each bar's section and where the section sits on
- *   the design line, the sections' display outlines (§3.5: simplified at 0.05 mm), parts' boxes
- *   and fasteners' positions;
+ *   the design line, the sections' display outlines (§3.5: simplified at 0.05 mm), parts' boxes,
+ *   the shapes and holes of the project's plates and bent angles (§4.8), and fasteners'
+ *   positions;
  * - `items`: the catalog entries the model uses, as the lock pins them, with their provenance
  *   (§1, principle 3), for the properties panel;
  * - `check`, `cutlist`, `bom`: the bottom drawer's tables (§8).
@@ -35,6 +46,50 @@ function isObject(x: unknown): x is Record<string, unknown> {
 
 function ring(r: readonly (readonly [number, number])[]): P2[] {
   return simplifyRing(r).map(([x, y]) => [len(x), len(y)] as P2);
+}
+
+const p2 = (p: readonly [number, number]): P2 => [len(p[0]), len(p[1])];
+
+function holeView(h: ResolvedHole): ViewHole {
+  const mouth = h.csk ?? h.cbore;
+  return {
+    at: p2(h.at),
+    ...(h.leg ? { leg: h.leg } : {}),
+    d: len(h.d),
+    ...(h.depth !== undefined ? { depth: len(h.depth) } : {}),
+    ...(mouth ? { mouth: { d: len(mouth.d), depth: len(mouth.depth) } } : {}),
+    face: h.face,
+  };
+}
+
+/**
+ * A project plate's or bent angle's shape (§4.8), when it can be drawn: an outline of three
+ * corners or more, or legs longer than the bend's outside setback. Otherwise it is drawn as its
+ * box, and the checks say why.
+ */
+function shapeOf(r: ResolvedProjectItem): ViewShape | undefined {
+  const T = r.thickness;
+  if (T === undefined) return undefined;
+  if (r.plate && r.plate.outline.length >= 3 && r.plate.area > TOL.len * TOL.len) {
+    return {
+      kind: "plate",
+      thickness: len(T),
+      outline: r.plate.outline.map(p2),
+      holes: r.holes.map(holeView),
+    };
+  }
+  const a = r.angle;
+  if (a && a.legs[0] > a.radius + T + TOL.len && a.legs[1] > a.radius + T + TOL.len) {
+    return {
+      kind: "bent-angle",
+      thickness: len(T),
+      legs: p2(a.legs),
+      length: len(a.length),
+      radius: len(a.radius),
+      holes: r.holes.map(holeView),
+    };
+  }
+  return undefined;
 }
 
 export function viewModel(snap: Snapshot) {
@@ -63,15 +118,23 @@ export function viewModel(snap: Snapshot) {
     };
   }
 
+  // Parts read items as derive does: the catalogs' and the project's own (§4.8).
+  const own = projectItems(items, derived.doc);
   const parts: Record<string, ViewPart> = {};
   for (const [id, p] of derived.parts) {
     if (!p.placed) continue;
-    const found = items.item(p.item);
+    const found = own.source.item(p.item);
     const raw = found.ok ? (found.item as { bbox_mm?: unknown }).bbox_mm : undefined;
     const box = Array.isArray(raw) && raw.length === 2 ? (raw as [V3, V3]) : undefined;
+    const r = own.resolved.get(p.item);
+    const shape = r ? shapeOf(r) : undefined;
+    const m = r?.view.mass_kg;
     parts[id] = {
       ...(box ? { box } : {}),
       translucent: !box || p.kind === "placeholder",
+      ...(p.kind === "placeholder" ? { placeholder: true } : {}),
+      ...(shape ? { shape } : {}),
+      ...(m ? { mass_kg: mass(m.v), mass_src: m.src } : {}),
     };
   }
 

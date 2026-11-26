@@ -5,11 +5,12 @@ import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { CHECK_SCHEMA } from "#core/check/check.ts";
-import { checkedOrder } from "#core/check/outputs.ts";
+import { checkedMachining, checkedOrder } from "#core/check/outputs.ts";
 import { isDate } from "#core/dates.ts";
 import { derivedJson } from "#core/derive/output.ts";
 import { sortDiagnostics } from "#core/diagnostics.ts";
 import { lockHash } from "#core/lock/pin.ts";
+import { machiningJson } from "#core/machining/format.ts";
 import { costsJson, costsOf, orderJson } from "#core/order/format.ts";
 import { DOCUMENT } from "#core/project/open.ts";
 import { acquireEditLock, SERVE } from "#core/project/store.ts";
@@ -42,6 +43,7 @@ import { viewModel } from "./view.ts";
  * | `GET /api/model` | everything a tab shows for one revision (`alukit.view/1`, `view.ts`) |
  * | `GET /api/derived`, `/api/cutlist`, `/api/bom`, `/api/check` | as the CLI's `--json` outputs |
  * | `GET /api/order`, `/api/costs` `[?as_of=YYYY-MM-DD]` | as `alukit order` and `costs --format json`, from the lock; today by default |
+ * | `GET /api/machining` | as `alukit machining --format json`: the custom parts' holes, the machined bars |
  * | `GET /api/log` | the log of steps, undos and redos |
  * | `GET /api/events` | the event stream: SSE wire format, read with `fetch` |
  * | `POST /api/commands` | `{ commands, source, id?, baseRev?, strict? }`: one step |
@@ -310,6 +312,12 @@ async function api(
       case "/api/bom": {
         const snap = p.snapshot();
         sendJson(res, 200, snap.outputs.bom(), snap.rev);
+        return;
+      }
+      case "/api/machining": {
+        // As the CLI prints it (M6), byte for byte: the sheet and the problems met on the way.
+        const snap = p.snapshot();
+        sendJson(res, 200, machiningJson(checkedMachining(snap.derived, snap.outputs)), snap.rev);
         return;
       }
       case "/api/check": {

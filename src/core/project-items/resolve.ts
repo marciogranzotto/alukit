@@ -25,6 +25,7 @@ import {
   selfCrossing,
   signedArea,
 } from "./geometry.ts";
+import { LOCAL } from "./supplier.ts";
 
 /**
  * A project item resolved (design §4.8): its holes valued, its blank and mass computed, its box in
@@ -105,9 +106,6 @@ export interface ResolvedProjectItem {
   plate?: ResolvedPlate;
   angle?: ResolvedAngle;
 }
-
-/** The supplier of a project item made in-house: a plate or a bent angle that names none. */
-export const LOCAL = "local";
 
 class Problems {
   readonly list: Diagnostic[] = [];

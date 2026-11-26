@@ -271,7 +271,14 @@ describe("the API", () => {
     expect((await api(r, "api/undo", { source: "ui" })).body).toMatchObject({ ok: true, rev: 2 });
     expect((await api(r, "api/redo", { source: "ui" })).body).toMatchObject({ ok: true, rev: 3 });
     expect((await api(r, "api/log")).body.entries).toHaveLength(3);
-    for (const path of ["api/derived", "api/cutlist", "api/bom", "api/check", "api/project"]) {
+    for (const path of [
+      "api/derived",
+      "api/cutlist",
+      "api/bom",
+      "api/machining",
+      "api/check",
+      "api/project",
+    ]) {
       expect((await api(r, path)).status, path).toBe(200);
     }
     expect((await api(r, "api/check")).body).toMatchObject({ schema: "alukit.check/1", rev: 3 });
@@ -374,6 +381,20 @@ describe("the order and the costs (§5.4, §4.11)", () => {
       const cli = await capture([cmd, cart, "--format", "json", "--as-of", AS_OF]);
       expect(served.body, cmd).toBe(`${cli.out}\n`);
     }
+  });
+
+  it("answers the machining sheet as alukit machining --format json, byte for byte", async () => {
+    const f = await fixture();
+    const cart = join(f.dir, "..", "..", "cart");
+    const r = await serve({ ...f, dir: cart });
+
+    // The cart's sheet is the golden worked by hand (M6): the plate's and the bent angle's holes.
+    const served = await text(r, "api/machining");
+    expect(served).toMatchObject({ status: 200, rev: "0" });
+    const golden = await readFile(join(FIXTURES, "cart", "expected-machining.json"), "utf8");
+    expect(served.body).toBe(golden);
+    const cli = await capture(["machining", cart, "--format", "json"]);
+    expect(served.body).toBe(`${cli.out}\n`);
   });
 
   it("follows the revision, takes today by default, and refuses a date that is not one", async () => {

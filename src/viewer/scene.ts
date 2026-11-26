@@ -11,6 +11,7 @@ import {
   CylinderGeometry,
   DirectionalLight,
   DoubleSide,
+  EdgesGeometry,
   Float32BufferAttribute,
   GridHelper,
   Group,
@@ -37,6 +38,7 @@ import {
   squareEnds,
   squareMatrix,
 } from "../mesh/bars.ts";
+import { type HoleMark, holeMarks, itemGeometry } from "../mesh/items.ts";
 import type { BarJson, MeshInput, V3, ViewSection } from "../mesh/model.ts";
 
 CameraControls.install({
@@ -49,7 +51,13 @@ export interface ViewerStats {
   bars: number;
   instancedBars: number;
   angledBars: number;
+  /** Part bodies drawn, and among them the project's plates, bent angles and placeholders. */
   parts: number;
+  plates: number;
+  bentAngles: number;
+  placeholders: number;
+  /** Holes marked on the plates and bent angles drawn. */
+  holes: number;
   fasteners: number;
   edgeSegments: number;
 }
@@ -73,10 +81,17 @@ const COLOURS = {
   black: 0x3a3f46,
   steel: 0x8d949c,
   part: 0x6fa8dc,
+  /** The project's own plates and bent angles: made for this build, not bought. */
+  custom: 0xc49a6c,
+  hole: 0x101316,
+  placeholderEdge: 0xa9cdf0,
   fastener: 0xc9a227,
   edge: 0x15181c,
   selected: 0xff9f1c,
 } as const;
+
+/** Below this angle between faces a part's edge is smooth and not drawn (degrees), as a bar's. */
+const PART_EDGE_DEG = 30;
 
 function barColour(bar: BarJson): number {
   if (bar.opt.finish === "black") return COLOURS.black;
@@ -168,8 +183,11 @@ export function createViewer(container: HTMLElement): Viewer {
   };
 
   let model: MeshInput | undefined;
-  /** Per drawable: which entity it is and how to recolour it. */
-  let instanced: { mesh: InstancedMesh; ids: string[]; colours: number[] }[] = [];
+  /**
+   * Per drawable: which entity it is and how to recolour it. A `fixed` group keeps its colours
+   * when selected (holes stay dark on a selected plate) but still picks its entity.
+   */
+  let instanced: { mesh: InstancedMesh; ids: string[]; colours: number[]; fixed?: boolean }[] = [];
   let single: { mesh: Mesh; id: string; colour: number }[] = [];
   let owned: { dispose(): void }[] = [];
   let counts: ViewerStats = {
@@ -177,6 +195,10 @@ export function createViewer(container: HTMLElement): Viewer {
     instancedBars: 0,
     angledBars: 0,
     parts: 0,
+    plates: 0,
+    bentAngles: 0,
+    placeholders: 0,
+    holes: 0,
     fasteners: 0,
     edgeSegments: 0,
   };
@@ -285,35 +307,101 @@ export function createViewer(container: HTMLElement): Viewer {
     content.add(lines);
     owned.push(edgeGeometry, edgeMaterial);
 
-    // Parts: a box from the item's bounding box in its own frame; translucent when a placeholder
-    // or when the catalog gives no box (a marker).
+    // Parts, each in its own frame (§3.2): the project's plates and bent angles from their shapes,
+    // with their holes marked (§4.8); any other part as a box from its item's bounding box,
+    // translucent and outlined when a placeholder; with no box, a translucent marker.
     let parts = 0;
+    let plates = 0;
+    let bentAngles = 0;
+    let placeholders = 0;
+    let holes = 0;
+    const marks: { id: string; frame: Matrix4; mark: HoleMark }[] = [];
+    const partEdges = new LineBasicMaterial({
+      color: COLOURS.edge,
+      transparent: true,
+      opacity: 0.6,
+    });
+    const placeholderEdges = new LineBasicMaterial({ color: COLOURS.placeholderEdge });
+    owned.push(partEdges, placeholderEdges);
     for (const [id, p] of Object.entries(m.parts)) {
       if (p.unplaced || !p.frame || !p.origin || !p.point) continue;
       const view = m.display.parts[id];
+      const shape = view?.shape;
       const box = view?.box;
-      const [lo, hi]: [V3, V3] = box ?? [
-        [-10, -10, -10],
-        [10, 10, 10],
-      ];
-      const geometry = new BoxGeometry(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
-      geometry.translate((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2);
-      const translucent = view?.translucent ?? true;
+      let geometry: BufferGeometry;
+      if (shape) geometry = itemGeometry(shape);
+      else {
+        const [lo, hi]: [V3, V3] = box ?? [
+          [-10, -10, -10],
+          [10, 10, 10],
+        ];
+        geometry = new BoxGeometry(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+        geometry.translate((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2);
+      }
+      const translucent = !shape && (view?.translucent ?? true);
+      const colour = shape ? COLOURS.custom : COLOURS.part;
       const material = new MeshLambertMaterial({
-        color: COLOURS.part,
+        color: colour,
         transparent: translucent,
         opacity: translucent ? 0.35 : 1,
         depthWrite: !translucent,
         side: translucent ? DoubleSide : THREE.FrontSide,
       });
+      const frame = basis(p.frame.x, p.frame.y, p.frame.z, shape || box ? p.origin : p.point);
       const mesh = new Mesh(geometry, material);
       mesh.name = id;
       mesh.matrixAutoUpdate = false;
-      mesh.matrix.copy(basis(p.frame.x, p.frame.y, p.frame.z, box ? p.origin : p.point));
+      mesh.matrix.copy(frame);
       content.add(mesh);
       owned.push(geometry, material);
-      single.push({ mesh, id, colour: COLOURS.part });
+      single.push({ mesh, id, colour });
       parts++;
+
+      // A shape's sharp edges, and a placeholder's box outlined (§4.8).
+      if (shape || view?.placeholder) {
+        const edges = new EdgesGeometry(geometry, PART_EDGE_DEG);
+        const lines = new LineSegments(edges, shape ? partEdges : placeholderEdges);
+        lines.name = `${id} edges`;
+        lines.matrixAutoUpdate = false;
+        lines.matrix.copy(frame);
+        lines.raycast = () => {};
+        content.add(lines);
+        owned.push(edges);
+      }
+      if (view?.placeholder) placeholders++;
+      if (shape) {
+        if (shape.kind === "plate") plates++;
+        else bentAngles++;
+        holes += shape.holes.length;
+        for (const mark of holeMarks(shape)) marks.push({ id, frame, mark });
+      }
+    }
+
+    // Hole markers: one InstancedMesh, dark whatever the selection; a pick selects the part.
+    if (marks.length > 0) {
+      const geometry = new CylinderGeometry(0.5, 0.5, 1, 16);
+      const material = new MeshLambertMaterial({ color: 0xffffff });
+      const mesh = new InstancedMesh(geometry, material, marks.length);
+      mesh.name = "holes";
+      const ids: string[] = [];
+      const colours: number[] = [];
+      marks.forEach(({ id, frame, mark }, i) => {
+        const [u, w] = across(mark.axis);
+        // The cylinder runs along its local y: y onto the hole's axis, in the part's frame.
+        const M = frame
+          .clone()
+          .multiply(basis(w, mark.axis, u, mark.centre))
+          .multiply(new Matrix4().makeScale(mark.d, mark.len, mark.d));
+        mesh.setMatrixAt(i, M);
+        mesh.setColorAt(i, new Color(COLOURS.hole));
+        ids.push(id);
+        colours.push(COLOURS.hole);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+      content.add(mesh);
+      owned.push(geometry, material, { dispose: () => mesh.dispose() });
+      instanced.push({ mesh, ids, colours, fixed: true });
     }
 
     // Fasteners of face connections: rods from the head along the axis; a pick selects the
@@ -352,6 +440,10 @@ export function createViewer(container: HTMLElement): Viewer {
       instancedBars: instancedCount,
       angledBars: angled,
       parts,
+      plates,
+      bentAngles,
+      placeholders,
+      holes,
       fasteners: fs.length,
       edgeSegments: edges.length / 6,
     };
@@ -360,6 +452,7 @@ export function createViewer(container: HTMLElement): Viewer {
   function paint(): void {
     const sel = new Color(COLOURS.selected);
     for (const g of instanced) {
+      if (g.fixed) continue;
       g.ids.forEach((id, i) => {
         g.mesh.setColorAt(i, selection.has(id) ? sel : new Color(g.colours[i]));
       });

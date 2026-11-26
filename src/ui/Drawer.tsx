@@ -1,5 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { endText, machiningText, railText } from "#core/cutlist/format.ts";
+import { holeCells, holeColumns, NUMERIC_COLUMNS, partLines } from "#core/machining/format.ts";
+import type { MachiningSheet } from "#core/machining/machining.ts";
 import {
   type CostsOutput,
   coversText,
@@ -16,13 +18,15 @@ import type { Model } from "./model.ts";
 import { asOf, log, model, select, selection } from "./store.ts";
 
 /**
- * The bottom drawer (design §8): cut list, BOM, order (status per supplier), costs, checks and
- * the log. Open items, params and decisions join it when they are built (M5). The cut list, BOM
- * and checks come with the revision's model; the order and the costs are asked of the server
- * when their tab is open, since they are judged as of a date (the stale-price rule).
+ * The bottom drawer (design §8): cut list, machining sheet, BOM, order (status per supplier),
+ * costs, checks and the log. Open items, params and decisions join it when they are built (M5).
+ * The cut list, BOM and checks come with the revision's model; the machining sheet, the order and
+ * the costs are asked of the server when their tab is open: the sheet is a fabricator's document
+ * most revisions never need, and the order and costs are judged as of a date (the stale-price
+ * rule).
  */
 
-const TABS = ["Cut list", "BOM", "Order", "Costs", "Checks", "Log"] as const;
+const TABS = ["Cut list", "Machining", "BOM", "Order", "Costs", "Checks", "Log"] as const;
 type Tab = (typeof TABS)[number];
 
 const mm = (x: number) => x.toFixed(2);
@@ -349,6 +353,117 @@ function OrderTab({ m }: { m: Model }) {
   );
 }
 
+/** A custom part's holes, in the sheet's columns: from the part's datum, by type and size. */
+function HoleTable({ p }: { p: MachiningSheet["parts"][number] }) {
+  if (p.holes.length === 0) return <p class="sub">No holes.</p>;
+  const cols = holeColumns(p);
+  const cls = (c: string | undefined) =>
+    c !== undefined && NUMERIC_COLUMNS.has(c) ? "n" : undefined;
+  return (
+    <table class="grid">
+      <thead>
+        <tr>
+          {cols.map((c) => (
+            <th key={c} class={cls(c)}>
+              {c}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {p.holes.map((h) => (
+          <tr key={h.id} data-hole={h.id}>
+            {holeCells(p, h).map((v, i) => (
+              <td key={cols[i]} class={cls(cols[i])}>
+                {v}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/**
+ * The machining sheet (M6) in the sheet's own words (`alukit machining`): each custom plate and
+ * bent angle, its stock and blank, and its holes from its datum; then the cut-list lines that
+ * carry the bars' machining, whose operations are on the Cut list tab.
+ */
+function MachiningTab({ m }: { m: Model }) {
+  const got = useOutput<MachiningSheet>("/api/machining", m.rev);
+  if (got === undefined) return <p class="panel-empty">Reading the machining sheet…</p>;
+  if ("error" in got) {
+    return <p class="panel-empty">Cannot load the machining sheet: {got.error}</p>;
+  }
+  const s = got.value;
+  const stale = got.rev !== m.rev;
+  return (
+    <div
+      data-testid="machining"
+      data-rev={got.rev}
+      class={stale ? "stale" : undefined}
+      aria-busy={stale}
+    >
+      {s.parts.length === 0 && <p class="sub">No custom parts.</p>}
+      {s.parts.map((p) => (
+        <section key={p.item} data-item={p.item}>
+          <h4>
+            {p.item} <span class="sub">{p.name}</span>{" "}
+            <span class="sub">
+              · for <Sources ids={p.sources} />
+            </span>
+          </h4>
+          {partLines(p).map((l) => (
+            <p class="sub" key={l}>
+              {l}
+            </p>
+          ))}
+          <HoleTable p={p} />
+        </section>
+      ))}
+      <section>
+        <h4>Bars</h4>
+        {s.bars.length === 0 ? (
+          <p class="sub">No bar is machined.</p>
+        ) : (
+          <>
+            <p class="sub">
+              Each bar's machining is on the Cut list tab, from a named end. These lines carry some:
+            </p>
+            <table class="grid">
+              <thead>
+                <tr>
+                  <th>item</th>
+                  <th>options</th>
+                  <th class="n">cut mm</th>
+                  <th class="n">pieces</th>
+                  <th class="n">ops each</th>
+                  <th>bars</th>
+                </tr>
+              </thead>
+              <tbody>
+                {s.bars.map((b) => (
+                  <tr key={b.sources.join(",")}>
+                    <td>{b.item}</td>
+                    <td>{optText(b.opt)}</td>
+                    <td class="n">{mm(b.cut_mm)}</td>
+                    <td class="n">{b.count}</td>
+                    <td class="n">{b.ops}</td>
+                    <td>
+                      <Sources ids={b.sources} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function CostsTab({ m }: { m: Model }) {
   const got = useOutput<CostsOutput>(withAsOf("/api/costs"), m.rev);
   if (got === undefined) return <p class="panel-empty">Pricing the costs…</p>;
@@ -578,6 +693,7 @@ export function Drawer() {
       {open && m && (
         <div class="drawer-body">
           {tab === "Cut list" && <CutListTab m={m} />}
+          {tab === "Machining" && <MachiningTab m={m} />}
           {tab === "BOM" && <BomTab m={m} />}
           {tab === "Order" && <OrderTab m={m} />}
           {tab === "Costs" && <CostsTab m={m} />}

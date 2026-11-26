@@ -71,11 +71,53 @@ export interface ViewBar {
 }
 
 export interface ViewPart {
-  /** The item's bounding box in its own frame (§3.2), when the catalog gives one. */
+  /** The item's bounding box in its own frame (§3.2), when its catalog or the project gives one. */
   box?: [V3, V3];
   /** Drawn translucent: a placeholder (§4.8), or an item with no box, drawn as a marker. */
   translucent: boolean;
+  /** A placeholder (§4.8): its box drawn translucent and outlined. */
+  placeholder?: boolean;
+  /** A plate or a bent angle of the project's own (§4.8): drawn from its shape, not its box. */
+  shape?: ViewShape;
+  /** A project item's mass, computed from its material or entered, and its source (§3.3). */
+  mass_kg?: number;
+  mass_src?: string;
 }
+
+/**
+ * A hole of a project plate or bent angle, in the terms of the machining sheet (M6): `at` from
+ * the part's datum (a plate's outline origin; on a leg, [x, distance from the heel]).
+ */
+export interface ViewHole {
+  at: P2;
+  leg?: "a" | "b";
+  /** The drill: a threaded hole's tap drill. */
+  d: number;
+  /** A blind hole's depth from its face; absent: through. */
+  depth?: number;
+  /** A countersink's or a counterbore's diameter at the face, and how deep it reaches. */
+  mouth?: { d: number; depth: number };
+  /** The face it is drilled from: a plate's face away from its mounting face, or a leg's inside. */
+  face: "front" | "back";
+}
+
+/**
+ * A project item's shape in its own frame (§3.2, +z away from the mounting face, +x along the
+ * bar). A plate: its outline in x and y, from z = 0 to its thickness. A bent angle: its heel on
+ * the x axis, leg a lying on the mounting face along +y, leg b rising along +z, each leg measured
+ * to the outside of the other, with one 90° bend of inside radius `radius`.
+ */
+export type ViewShape =
+  | { kind: "plate"; thickness: number; outline: P2[]; holes: ViewHole[] }
+  | {
+      kind: "bent-angle";
+      thickness: number;
+      /** Legs a and b. */
+      legs: P2;
+      length: number;
+      radius: number;
+      holes: ViewHole[];
+    };
 
 /** One fastener of a face connection, drawn as a rod from its head along its axis. */
 export interface ViewFastener {

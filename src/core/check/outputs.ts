@@ -4,6 +4,7 @@ import type { Derived } from "../derive/derive.ts";
 import { type Diagnostic, sortDiagnostics } from "../diagnostics.ts";
 import { type Ast, ExprError } from "../expr.ts";
 import type { ItemSource } from "../items.ts";
+import { type MachiningSheet, machiningSheet } from "../machining/machining.ts";
 import { type Order, orderOf, type PricedOrder, priceOrder } from "../order/order.ts";
 import type { Accessor } from "./model.ts";
 
@@ -18,6 +19,8 @@ export interface ModelOutputs {
   cutList(): CutList;
   bom(): Bom;
   priced(): PricedOrder;
+  /** The machining sheet (M6), from the BOM's custom parts and the cut list's machined lines. */
+  machining(): MachiningSheet;
 }
 
 function once<T>(f: () => T): () => T {
@@ -36,7 +39,24 @@ export function modelOutputs(derived: Derived, items: ItemSource): ModelOutputs 
   const cl = once(() => cutList({ derived, items }));
   const b = once(() => bom({ derived, items }));
   const priced = once(() => priceOrder({ derived, items, bom: b(), cutList: cl() }));
-  return { cutList: cl, bom: b, priced };
+  const machining = once(() => machiningSheet({ derived, items, bom: b(), cutList: cl() }));
+  return { cutList: cl, bom: b, priced, machining };
+}
+
+/**
+ * The machining sheet with every problem met on the way to it: deriving the model, and building
+ * the cut list and the BOM it reads. `alukit machining` and the server's `GET /api/machining`
+ * both build it here, so they answer the same, byte for byte.
+ */
+export function checkedMachining(derived: Derived, outputs: ModelOutputs): MachiningSheet {
+  return {
+    ...outputs.machining(),
+    diagnostics: sortDiagnostics([
+      ...derived.diagnostics,
+      ...outputs.cutList().diagnostics,
+      ...outputs.bom().diagnostics,
+    ]),
+  };
 }
 
 /**

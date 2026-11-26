@@ -2,9 +2,18 @@ import { expect, test } from "@playwright/test";
 import { cli, derivedBarCount, openTab, type Served, serve } from "./helpers.ts";
 
 /**
- * Rendering (design §8): the cart fixture draws every bar the derived model has, the canvas shows
+ * Rendering (design §8): the cart fixture draws every bar and every placed part the derived model
+ * has, the project's own plate, bent angle and placeholder among them (§4.8), the canvas shows
  * them, and selection reaches the properties panel with its provenance popovers.
  */
+
+interface DerivedParts {
+  parts: Record<string, { item: string; kind: string; unplaced?: boolean }>;
+}
+
+interface Sheet {
+  parts: { item: string; holes: unknown[] }[];
+}
 
 let served: Served;
 test.beforeEach(async () => {
@@ -28,7 +37,25 @@ test("the cart draws its bars: a non-blank canvas, one body per derived bar", as
   // Square bars are instanced; the braces' angled ends get their own geometry.
   expect(stats?.instancedBars).toBeGreaterThan(0);
   expect(stats?.angledBars).toBeGreaterThan(0);
-  expect(stats?.parts).toBe(3);
+
+  // One body per placed part: the three carriages, and M6's p6 (a plate), p7 (a bent angle) and
+  // p8 (a placeholder), each drawn as what it is, with the plate's and the angle's holes marked.
+  const d = JSON.parse((await cli(["derive", served.dir, "--json"])).out) as DerivedParts;
+  const placed = Object.entries(d.parts).filter(([, p]) => !p.unplaced);
+  expect(placed.map(([id]) => id)).toEqual(["p1", "p1@1", "p1@2", "p6", "p7", "p8"]);
+  expect(stats?.parts).toBe(placed.length);
+  const ofKind = (k: string) => placed.filter(([, p]) => p.kind === k).length;
+  expect([stats?.plates, stats?.bentAngles, stats?.placeholders]).toEqual([
+    ofKind("plate"),
+    ofKind("bent-angle"),
+    ofKind("placeholder"),
+  ]);
+  expect([ofKind("plate"), ofKind("bent-angle"), ofKind("placeholder")]).toEqual([1, 1, 1]);
+  const sheet = JSON.parse((await cli(["machining", served.dir, "--format", "json"])).out) as Sheet;
+  const holesOf = new Map(sheet.parts.map((p) => [p.item, p.holes.length]));
+  const holes = placed.reduce((n, [, p]) => n + (holesOf.get(p.item) ?? 0), 0);
+  expect(holes).toBe(6);
+  expect(stats?.holes).toBe(holes);
   expect(stats?.edgeSegments).toBeGreaterThan(stats?.bars as number);
 
   // Copy the WebGL canvas into a 2D one and count pixels that differ from the background.
@@ -78,6 +105,15 @@ test("selection: the tree and a box pick entities; properties show derived value
   // The catalog item's numbers carry theirs too.
   await expect(props).toContainText("Catalog: test:TS40");
 
+  // A part made from a project item shows the item as written and its computed mass.
+  await page.getByTestId("tree").locator('[data-id="p6"]').click();
+  await expect(props.locator("h2")).toContainText("p6");
+  const item = props.getByTestId("project-item");
+  await expect(item).toContainText("Project item: project:plate-a");
+  await expect(item).toContainText("Motor plate");
+  await item.getByRole("button", { name: /kg$/ }).click();
+  await expect(props.getByTestId("provenance")).toContainText("computed");
+
   // A box over the whole viewport (Shift-drag) picks every body inside it.
   const box = await page.getByTestId("viewport").boundingBox();
   if (!box) throw new Error("no viewport");
@@ -88,7 +124,8 @@ test("selection: the tree and a box pick entities; properties show derived value
   await page.mouse.move(box.x + box.width - 2, box.y + box.height - 2, { steps: 4 });
   await page.mouse.up();
   await page.keyboard.up("Shift");
-  await expect(props.locator("h2")).toHaveText("42 selected");
+  // 39 bars and 6 parts: the carriages, and M6's plate, bent angle and placeholder.
+  await expect(props.locator("h2")).toHaveText("45 selected");
 
   // Escape clears it; the drawer's tables are there.
   await page.keyboard.press("Escape");

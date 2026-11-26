@@ -2,7 +2,12 @@ import { resolve } from "node:path";
 import { bom } from "#core/bom/bom.ts";
 import { bomCsv, bomJson, bomMarkdown } from "#core/bom/format.ts";
 import { checkModel } from "#core/check/check.ts";
-import { checkedOrder, modelOutputs, outputAccessors } from "#core/check/outputs.ts";
+import {
+  checkedMachining,
+  checkedOrder,
+  modelOutputs,
+  outputAccessors,
+} from "#core/check/outputs.ts";
 import { cutList } from "#core/cutlist/cutlist.ts";
 import { cutListCsv, cutListJson, cutListMarkdown } from "#core/cutlist/format.ts";
 import { isDate, localDate } from "#core/dates.ts";
@@ -12,7 +17,6 @@ import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
 import type { ItemSource } from "#core/items.ts";
 import { lockHash } from "#core/lock/pin.ts";
 import { machiningJson, machiningMarkdown } from "#core/machining/format.ts";
-import { machiningSheet } from "#core/machining/machining.ts";
 import {
   costsCsv,
   costsJson,
@@ -30,11 +34,10 @@ import { PROJECT_USAGE } from "./project-usage.ts";
 
 /**
  * `alukit derive`, `cutlist`, `bom`, `order`, `costs` and `machining` (design §7.3, M6). Exit
- * codes: 0 fine, 1 the
- * project has errors (for `order`: any supplier is blocked), 2 a usage error. Without a server
- * (M4a) they run the core in-process. They derive from the lock (§4.13): a missing lock is
- * created, and a missing entry added, each with a notice on stderr; `--frozen` makes either an
- * error instead.
+ * codes: 0 fine, 1 the project has errors (for `order`: any supplier is blocked), 2 a usage error.
+ * Without a server (M4a) they run the core in-process. They derive from the lock (§4.13): a
+ * missing lock is created, and a missing entry added, each with a notice on stderr; `--frozen`
+ * makes either an error instead.
  */
 
 export function diagnosticLine(d: Diagnostic): string {
@@ -150,17 +153,13 @@ export async function projectCommand(
   }
 
   if (cmd === "machining") {
-    const outputs = modelOutputs(derived, items);
-    const b = outputs.bom();
-    const cl = outputs.cutList();
-    const all = sortDiagnostics([...derived.diagnostics, ...cl.diagnostics, ...b.diagnostics]);
-    const sheet = machiningSheet({ derived, items, bom: b, cutList: cl });
-    if (format === "json") io.out(machiningJson({ ...sheet, diagnostics: all }).trimEnd());
+    const sheet = checkedMachining(derived, modelOutputs(derived, items));
+    if (format === "json") io.out(machiningJson(sheet).trimEnd());
     else {
-      io.out(machiningMarkdown(sheet).trimEnd());
-      for (const d of all) io.err(diagnosticLine(d));
+      io.out(machiningMarkdown({ ...sheet, diagnostics: [] }).trimEnd());
+      for (const d of sheet.diagnostics) io.err(diagnosticLine(d));
     }
-    return all.some((d) => d.severity === "error") ? 1 : 0;
+    return sheet.diagnostics.some((d) => d.severity === "error") ? 1 : 0;
   }
 
   if (priced) {

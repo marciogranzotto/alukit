@@ -5,7 +5,8 @@ import { model, selection } from "./store.ts";
 /**
  * Properties of the selection (design §8, right): the entity's fields as written, its derived
  * values (read-only: cut, centre, end angles, mass), and its catalog item's numbers, each with a
- * provenance popover (§1, principle 3: every number carries its provenance).
+ * provenance popover (§1, principle 3: every number carries its provenance). A part made from
+ * one of the project's own items (§4.8) shows that item as written, and its mass.
  */
 
 type O = Record<string, unknown>;
@@ -139,6 +140,66 @@ function Item({ m, id }: { m: Model; id: string }) {
               </td>
             </tr>
           ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+/** How many holes a project item's `holes` holds: a plate's list, or a bent angle's per leg. */
+function holeCount(v: unknown): number {
+  if (Array.isArray(v)) return v.length;
+  if (!isObject(v)) return 0;
+  return Object.values(v).reduce<number>((n, l) => n + (Array.isArray(l) ? l.length : 0), 0);
+}
+
+/**
+ * A project item (§4.8) as the document writes it, with its mass: computed from its material for
+ * a plate or a bent angle, entered for a placeholder or a generic item.
+ */
+function ProjectItem({ m, id, part }: { m: Model; id: string; part: string }) {
+  const local = id.slice("project:".length);
+  const def = ((isObject(m.doc.items) ? m.doc.items : {}) as O)[local];
+  if (!isObject(def)) return null;
+  const view = m.display.parts[part];
+  return (
+    <section data-testid="project-item">
+      <h3>
+        Project item: {id}
+        {typeof def.name === "string" && <span class="sub"> {def.name}</span>}
+      </h3>
+      <table class="kv">
+        <tbody>
+          {def.mass_kg === undefined && (
+            <tr>
+              <th>mass</th>
+              <td>
+                {view?.mass_kg !== undefined ? (
+                  <Num value={view.mass_kg} unit="kg" prov={{ src: view.mass_src }} />
+                ) : (
+                  <span class="warn">not computed: see the checks</span>
+                )}
+              </td>
+            </tr>
+          )}
+          {Object.entries(def)
+            .filter(([k]) => k !== "name")
+            .map(([k, v]) => (
+              <tr key={k}>
+                <th>{k}</th>
+                <td>
+                  {k === "holes" ? (
+                    `${holeCount(v)}, on the Machining tab`
+                  ) : typeof v === "number" ? (
+                    <Num value={v} unit={unitOf(k)} />
+                  ) : isValued(v) ? (
+                    <Num value={v.v} unit={unitOf(k)} prov={v as Prov} />
+                  ) : (
+                    <Value v={v} />
+                  )}
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </section>
@@ -319,6 +380,7 @@ export function Properties() {
       )}
       {kind === "bars" ? <BarDerived m={m} id={id} /> : <OtherDerived m={m} id={id} />}
       {barItem && <Item m={m} id={barItem} />}
+      {barItem?.startsWith("project:") && <ProjectItem m={m} id={barItem} part={id} />}
     </div>
   );
 }

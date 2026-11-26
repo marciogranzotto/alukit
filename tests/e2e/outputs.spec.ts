@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { holeSize, partLines } from "../../src/core/machining/format.ts";
+import type { MachiningSheet } from "../../src/core/machining/machining.ts";
 import { money } from "../../src/core/order/format.ts";
 import { cli, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
 
 /**
- * The drawer's Order and Costs tabs (design §8), fed by the server: they show what `alukit order`
- * and `alukit costs` print for the same date, a reason's entities select in the scene, and an
- * edit from the CLI reaches them live.
+ * The drawer's Machining, Order and Costs tabs (design §8), fed by the server: they show what
+ * `alukit machining`, `alukit order` and `alukit costs` print (the last two for the same date), a
+ * reason's or a part's entities select in the scene, and an edit from the CLI reaches them live.
  */
 
 const AS_OF = "2026-11-26";
@@ -104,4 +106,49 @@ test("the costs tab shows the totals of alukit costs, and follows a CLI edit liv
   const t = (JSON.parse(after.out) as { totals: { total: MoneyOut } }).totals.total;
   expect(t.likely_minor).toBeGreaterThan(c.totals.total.likely_minor);
   await expect(total).toContainText(money(t.likely_minor));
+});
+
+test("the machining tab shows alukit machining's sheet, and follows a CLI edit live", async ({
+  page,
+}) => {
+  await openTab(page, served, 0);
+  const tabs = page.getByRole("tab");
+  await expect(tabs.nth(0)).toHaveText("Cut list");
+  await expect(tabs.nth(1)).toHaveText("Machining");
+  await page.getByRole("tab", { name: "Machining" }).click();
+  const tab = page.getByTestId("machining");
+  await expect(tab).toHaveAttribute("data-rev", "0");
+
+  // Each custom part in the sheet's words, every hole from its datum, as the CLI prints them.
+  const printed = await cli(["machining", served.dir, "--format", "json"]);
+  const sheet = JSON.parse(printed.out) as MachiningSheet;
+  expect(sheet.parts.map((p) => p.item)).toEqual(["project:angle-a", "project:plate-a"]);
+  for (const p of sheet.parts) {
+    const section = tab.locator(`section[data-item="${p.item}"]`);
+    for (const line of partLines(p)) await expect(section).toContainText(line);
+    await expect(section.locator("tbody tr")).toHaveCount(p.holes.length);
+    for (const h of p.holes) {
+      await expect(section.locator(`tr[data-hole="${h.id}"]`)).toContainText(holeSize(h));
+    }
+  }
+  // The bars' machining is cross-referenced, not repeated.
+  expect(sheet.bars.length).toBeGreaterThan(0);
+  await expect(tab.locator("section").last().locator("tbody tr")).toHaveCount(sheet.bars.length);
+
+  // A part's entity selects in the scene.
+  const plate = tab.locator('section[data-item="project:plate-a"]');
+  await plate.getByRole("button", { name: "p6" }).click();
+  await expect(page.getByTestId("properties").locator("h2")).toContainText("p6");
+
+  // The plate made 10 mm thick from the CLI: the tab shows the next revision's sheet.
+  await expect(plate).toContainText("Plate, 8.00 mm");
+  const edited = await cli([
+    "do",
+    served.dir,
+    JSON.stringify({ cmd: "setItem", args: { id: "project:plate-a", set: { thickness_mm: 10 } } }),
+  ]);
+  expect(edited.code).toBe(0);
+  await waitDrawn(page, 1);
+  await expect(tab).toHaveAttribute("data-rev", "1");
+  await expect(plate).toContainText("Plate, 10.00 mm");
 });

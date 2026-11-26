@@ -93,6 +93,9 @@ Main had gained M2b, design draft 2.2 and M3b part 3 (offers, the order list, co
   The security spec also runs the attacks as a browser makes them: a foreign page's fetch with
   the token is stopped at its preflight, and a page loaded through a rebinding name gets 403.
 - The cart draws 39 bars, 3 parts and 2 fasteners; `alukit derive --json` reports 39 bars.
+  (Measured again after the M6 merge, by the test hook: 39 bars, 6 parts, since M6 added p6, p7
+  and p8, and 14 fastener rods, the stations of the two fastened connections, c23 with 4 and c35
+  with 10. The hook's `fasteners` counts rods, not connections.)
 
 ## Not done in M4a
 
@@ -100,7 +103,8 @@ Main had gained M2b, design draft 2.2 and M3b part 3 (offers, the order list, co
   (The API in Vite's dev server came with the merge, decisions 43 and 44.)
 - Orthographic and standard views, the section plane, hole markers, placeholder hatching, and the
   drawer's open items, params and decisions tabs. (The order and costs tabs came with the merge,
-  decision 42.)
+  decision 42. Hole markers, outlined placeholders and a Machining tab came with the M6 merge:
+  [`m6-decisions.md`](m6-decisions.md), decisions 28–32. Hatching still waits for a texture.)
 
 ## For M4b (draw, connect, place, pattern, catalog browser)
 
