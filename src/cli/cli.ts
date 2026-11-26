@@ -14,7 +14,6 @@ export interface Io {
 const PLANNED: readonly (readonly [string, string])[] = [
   ["diff <a> <b>", "compare projects, revisions or variants"],
   ["revision save|verify <name>", "revisions"],
-  ["snapshot <dir>", "render a view to PNG"],
   ["export glb <dir>", "export a GLB"],
   ["catalog search | import", "find items; run a vendor importer"],
   ["skill install", "link the agent skill"],
@@ -68,6 +67,7 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
   }
   if ((SERVER_COMMANDS as readonly string[]).includes(cmd)) {
     if (cmd === "serve") return (await import("./serve.ts")).serveCommand(rest, io);
+    if (cmd === "snapshot") return (await import("./snapshot.ts")).snapshotCommand(rest, io);
     const { historyCommand } = await import("./history.ts");
     return historyCommand(cmd as "undo" | "redo" | "log", rest, io);
   }

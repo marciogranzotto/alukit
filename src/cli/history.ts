@@ -2,7 +2,7 @@ import { jsonText } from "#core/derive/output.ts";
 import { call, findServer } from "../server/client.ts";
 import { parseOptions, usageError } from "./args.ts";
 import type { Io } from "./cli.ts";
-import { SERVER_USAGE } from "./server-usage.ts";
+import { SERVER_USAGE_OF } from "./server-usage.ts";
 
 /**
  * `alukit undo | redo | log <dir>` (design §7.1, §7.3): the undo log is the server's, one line
@@ -10,7 +10,7 @@ import { SERVER_USAGE } from "./server-usage.ts";
  * running server, and say so when there is none.
  */
 
-const USAGE = SERVER_USAGE.split("\n").slice(2).join("\n");
+const USAGE = SERVER_USAGE_OF.history;
 
 interface LogEntry {
   rev: number;
