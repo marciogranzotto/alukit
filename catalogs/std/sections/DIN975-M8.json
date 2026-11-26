@@ -1,0 +1,9 @@
+{
+  "schema": "alukit.section/1",
+  "id": "DIN975-M8",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "from": { "ref": "ISO 898-1, stress area As of M8 (pitch 1.25 mm)", "method": "generator" },
+  "generator": "threaded-rod",
+  "params": { "d_mm": 8, "pitch_mm": 1.25 }
+}

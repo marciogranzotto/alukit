@@ -1,0 +1,17 @@
+{
+  "schema": "alukit.overrides/1",
+  "overrides": [
+    {
+      "item": "DIN975-M8",
+      "field": "mass_kg_per_m",
+      "accept": true,
+      "why": "DIN 975 tabulates the rod's mass on its pitch-diameter area (about 40.6 mm2); the section carries the stress area (36.6 mm2), so the computed mass is 10 % lower. The published mass is the one to use."
+    },
+    {
+      "item": "DIN975-M12",
+      "field": "mass_kg_per_m",
+      "accept": true,
+      "why": "DIN 975 tabulates the rod's mass on its pitch-diameter area (about 92.7 mm2); the section carries the stress area (84.3 mm2), so the computed mass is 9 % lower. The published mass is the one to use."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema": "alukit.section/1",
+  "id": "RHS-200x100x6.3",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "from": {
+    "ref": "EN 10219-2:2006, Table C.3 (dimensions and sectional properties of rectangular hollow sections)",
+    "method": "table",
+    "note": "b is the 100 mm face (section x), h the 200 mm face (section y). Outer radius 2.5 T and inner radius 1.5 T for 6 mm < T <= 10 mm (EN 10219-2, outside corner profile)."
+  },
+  "generator": "rhs",
+  "params": { "b_mm": 100, "h_mm": 200, "t_mm": 6.3, "ro_mm": 15.75, "ri_mm": 9.45 }
+}

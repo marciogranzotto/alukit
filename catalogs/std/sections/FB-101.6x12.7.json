@@ -1,0 +1,9 @@
+{
+  "schema": "alukit.section/1",
+  "id": "FB-101.6x12.7",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "from": { "ref": "flat bar 4 in x 1/2 in, nominal size", "method": "table" },
+  "generator": "flat",
+  "params": { "b_mm": 101.6, "t_mm": 12.7 }
+}

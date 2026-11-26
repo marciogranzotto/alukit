@@ -1,0 +1,13 @@
+{
+  "schema": "alukit.section/1",
+  "id": "RHS-200x100x4.75",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "from": {
+    "ref": "EN 10219-2:2006, outside corner profile for T <= 6 mm",
+    "method": "generator",
+    "note": "A 4.75 mm (3/16 in) wall is not an EN 10219-2 size; the 200x100 outside size is. The radii follow the standard's rule for T <= 6 mm: outer radius 2 T, inner radius T. b is the 100 mm face (section x), h the 200 mm face (section y)."
+  },
+  "generator": "rhs",
+  "params": { "b_mm": 100, "h_mm": 200, "t_mm": 4.75, "ro_mm": 9.5, "ri_mm": 4.75 }
+}

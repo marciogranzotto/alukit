@@ -1,0 +1,13 @@
+{
+  "schema": "alukit.section/1",
+  "id": "L-76.2x6.35",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "from": {
+    "ref": "AISC Steel Construction Manual, 15th ed., Table 1-7 (angles), L3x3x1/4",
+    "method": "table",
+    "note": "Legs 76.2 mm, thickness 6.35 mm. The table gives no radii. Root radius r1 is estimated as k - t = 0.625 in - 0.25 in = 9.525 mm (k is the distance from the heel to the end of the root fillet; range 6.35 to 9.525 mm). Toe radius r2 is estimated as half of r1, 4.76 mm (range 0 to 6.35 mm). Both radii are src est."
+  },
+  "generator": "angle",
+  "params": { "a_mm": 76.2, "b_mm": 76.2, "t_mm": 6.35, "r1_mm": 9.525, "r2_mm": 4.76 }
+}

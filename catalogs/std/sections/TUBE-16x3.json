@@ -1,0 +1,12 @@
+{
+  "schema": "alukit.section/1",
+  "id": "TUBE-16x3",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "from": {
+    "ref": "EN 10305-1, precision tube, outside diameter 16 mm, wall 3 mm",
+    "method": "table"
+  },
+  "generator": "tube",
+  "params": { "d_mm": 16, "t_mm": 3 }
+}

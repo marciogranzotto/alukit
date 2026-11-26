@@ -1,0 +1,13 @@
+{
+  "schema": "alukit.section/1",
+  "id": "FB-50.8x9.52",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "from": {
+    "ref": "flat bar 2 in x 3/8 in, nominal size",
+    "method": "table",
+    "note": "3/8 in is 9.525 mm; the id and the thickness use the rounded 9.52 mm"
+  },
+  "generator": "flat",
+  "params": { "b_mm": 50.8, "t_mm": 9.52 }
+}
