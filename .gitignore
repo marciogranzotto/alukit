@@ -11,3 +11,6 @@ dist/
 
 # Internal notes behind the public docs (never committed)
 internal/
+test-results/
+playwright-report/
+.alukit/
