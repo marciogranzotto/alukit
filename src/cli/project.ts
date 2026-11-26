@@ -13,6 +13,7 @@ import { cutListCsv, cutListJson, cutListMarkdown } from "#core/cutlist/format.t
 import { isDate, localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
 import { derivedJson, jsonText } from "#core/derive/output.ts";
+import { parsePaths, selectDerived } from "#core/derive/select.ts";
 import { unknownVariant } from "#core/derive/variant.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
 import type { ItemSource } from "#core/items.ts";
@@ -111,6 +112,8 @@ export async function projectCommand(
       variant: { type: "string" },
       // The order's date (the stale-price rule): only the commands that price take it.
       ...(priced ? { "as-of": { type: "string" as const } } : {}),
+      // Members of the derived model, for a report builder (§7.3).
+      ...(cmd === "derive" ? { select: { type: "string" as const } } : {}),
     },
     PROJECT_USAGE,
     io,
@@ -131,6 +134,9 @@ export async function projectCommand(
   if (asOf !== undefined && !isDate(asOf)) {
     return usageError(cmd, "--as-of takes a date, YYYY-MM-DD", PROJECT_USAGE, io);
   }
+  const selectText = (args.values as { select?: string }).select;
+  const selected = selectText === undefined ? undefined : parsePaths(selectText);
+  if (selected && "error" in selected) return usageError(cmd, selected.error, PROJECT_USAGE, io);
 
   const loaded = await loadAndDerive(dir, io, {
     frozen: args.values.frozen === true,
@@ -142,6 +148,16 @@ export async function projectCommand(
 
   if (cmd === "derive") {
     const hasErrors = derived.diagnostics.some((d) => d.severity === "error");
+    if (selected) {
+      // --select answers JSON: the members named, where they sit (§7.3).
+      const s = selectDerived(derivedJson(derived) as Record<string, unknown>, selected.paths);
+      if (!s.ok) {
+        for (const m of s.missing) io.err(`alukit derive: the derived model has no ${m}`);
+        return 1;
+      }
+      io.out(jsonText(s.value).trimEnd());
+      return hasErrors ? 1 : 0;
+    }
     if (args.values.json) {
       io.out(jsonText(derivedJson(derived)).trimEnd());
     } else {

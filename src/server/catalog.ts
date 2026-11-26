@@ -1,6 +1,7 @@
 import type { CatalogSet } from "#catalog/link.ts";
 import { isValuedObject, num } from "#catalog/schema/common.ts";
 import type { Item } from "#catalog/schema/items.ts";
+import { type CatalogEntry, localId } from "#catalog/search.ts";
 import { compareIds } from "#core/ids.ts";
 import { catalogItems, type ItemSource, type OfferInfo } from "#core/items.ts";
 import type { Lock } from "#core/lock/schema.ts";
@@ -27,96 +28,18 @@ import { type P2, simplifyRing } from "../mesh/outline.ts";
 
 export const CATALOG_SCHEMA = "alukit.catalog-index/1";
 
-export interface CatalogEntry {
-  /** Full id, `<catalog>:<code>`. */
-  id: string;
-  catalog: string;
-  vendor: string;
-  kind: string;
-  family: string;
-  name: string;
-  code?: string;
-  /** The project's lock pins it. */
-  pinned: boolean;
-  /** A live catalog holds it; false when only the lock does. A project item is always live. */
-  live: boolean;
-  /** One of the document's own items (`project:<id>`, §4.8), shown read only. */
-  project?: true;
-}
+// The index and the search are the CLI's too (`alukit catalog search`).
+export {
+  type CatalogEntry,
+  catalogIndex,
+  familyOf,
+  SEARCH_LIMIT,
+  type SearchQuery,
+  searchCatalog,
+} from "#catalog/search.ts";
 
 /** The catalog and vendor the browser lists the document's own items under. */
 const PROJECT_CATALOG = PROJECT_ITEM.slice(0, -1);
-
-function local(ref: string | undefined): string | undefined {
-  if (ref === undefined) return undefined;
-  const i = ref.indexOf(":");
-  return i < 0 ? ref : ref.slice(i + 1);
-}
-
-/** The family an item is browsed under (above). */
-export function familyOf(item: Item): string {
-  const o = item as Record<string, unknown>;
-  const str = (k: string) => (typeof o[k] === "string" ? (o[k] as string) : undefined);
-  switch (item.kind) {
-    case "bar":
-      return local(str("system")) ?? str("shape") ?? "bar";
-    case "carriage":
-      return local(str("rail_system")) ?? "carriage";
-    case "generic":
-      return str("category") ?? "other";
-    default:
-      return str("subtype") ?? item.kind;
-  }
-}
-
-/**
- * Every item the browser can show: the items of the catalogs the document names (`named`; all
- * the live ones when not given), then those the lock pins that none of them holds. Catalogs
- * linked in only because another refers to them (a reference catalog a clone points at) are not
- * browsed, though an item of theirs the lock pins is.
- */
-export function catalogIndex(
-  live: CatalogSet,
-  lock: Lock,
-  named?: readonly string[],
-): CatalogEntry[] {
-  const out: CatalogEntry[] = [];
-  const seen = new Set<string>();
-  for (const cat of live.catalogs.values()) {
-    if (named && !named.includes(cat.id)) continue;
-    for (const li of cat.items.values()) {
-      seen.add(li.id);
-      out.push({
-        id: li.id,
-        catalog: cat.id,
-        vendor: cat.vendor ?? cat.id,
-        kind: li.item.kind,
-        family: familyOf(li.item),
-        name: li.item.name,
-        ...(li.item.code !== undefined ? { code: li.item.code } : {}),
-        pinned: Object.hasOwn(lock.items, li.id),
-        live: true,
-      });
-    }
-  }
-  for (const [id, e] of Object.entries(lock.items)) {
-    if (seen.has(id)) continue;
-    const catalog = id.slice(0, id.indexOf(":"));
-    const cat = live.catalogs.get(catalog);
-    out.push({
-      id,
-      catalog,
-      vendor: cat?.vendor ?? lock.catalogs[catalog]?.vendor ?? catalog,
-      kind: e.item.kind,
-      family: familyOf(e.item),
-      name: e.item.name,
-      ...(e.item.code !== undefined ? { code: e.item.code } : {}),
-      pinned: true,
-      live: cat?.items.has(id.slice(catalog.length + 1)) === true,
-    });
-  }
-  return out.sort((a, b) => compareIds(a.id, b.id));
-}
 
 /** The document's own items as browser entries (above), in id order. */
 export function projectEntries(resolved: ReadonlyMap<string, ResolvedProjectItem>): CatalogEntry[] {
@@ -127,7 +50,7 @@ export function projectEntries(resolved: ReadonlyMap<string, ResolvedProjectItem
         catalog: PROJECT_CATALOG,
         vendor: PROJECT_CATALOG,
         kind: r.kind,
-        family: local(r.material) ?? r.kind,
+        family: localId(r.material) ?? r.kind,
         name: r.name,
         pinned: false,
         live: true,
@@ -168,63 +91,6 @@ export function catalogTree(entries: readonly CatalogEntry[]): CatalogTree[] {
         });
       return { vendor, count: ks.reduce((n, k) => n + k.count, 0), kinds: ks };
     });
-}
-
-/** Lower case without accents: "Perfil Estrutural" and "perfil estrutural" match alike. */
-function fold(s: string): string {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-}
-
-export interface SearchQuery {
-  q?: string;
-  vendor?: string;
-  kind?: string;
-  family?: string;
-  limit?: number;
-  offset?: number;
-}
-
-export const SEARCH_LIMIT = 200;
-
-/**
- * Items matching every word of `q` (in the id, code, name or family, accents and case aside) and
- * the vendor, kind and family given. An exact id or code comes first, then codes that start with
- * the query, then id order.
- */
-export function searchCatalog(
-  entries: readonly CatalogEntry[],
-  query: SearchQuery,
-): { total: number; items: CatalogEntry[] } {
-  const words = fold(query.q ?? "")
-    .split(/\s+/)
-    .filter((w) => w !== "");
-  const whole = fold((query.q ?? "").trim());
-  const rank = (e: CatalogEntry): number => {
-    if (whole === "") return 2;
-    const id = fold(e.id);
-    const code = fold(e.code ?? local(e.id) ?? "");
-    if (id === whole || code === whole) return 0;
-    if (code.startsWith(whole) || fold(local(e.id) ?? "").startsWith(whole)) return 1;
-    return 2;
-  };
-  const hits = entries
-    .filter(
-      (e) =>
-        (query.vendor === undefined || e.vendor === query.vendor) &&
-        (query.kind === undefined || e.kind === query.kind) &&
-        (query.family === undefined || e.family === query.family),
-    )
-    .filter((e) => {
-      if (words.length === 0) return true;
-      const text = fold(`${e.id} ${e.code ?? ""} ${e.name} ${e.family}`);
-      return words.every((w) => text.includes(w));
-    })
-    .map((e) => ({ e, r: rank(e) }))
-    .sort((a, b) => a.r - b.r || compareIds(a.e.id, b.e.id))
-    .map(({ e }) => e);
-  const offset = Math.max(0, query.offset ?? 0);
-  const limit = Math.min(Math.max(1, query.limit ?? 50), SEARCH_LIMIT);
-  return { total: hits.length, items: hits.slice(offset, offset + limit) };
 }
 
 /** A section drawn small: its outline and holes, coarsened to a hundredth of its size. */

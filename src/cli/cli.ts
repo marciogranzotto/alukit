@@ -11,24 +11,10 @@ export interface Io {
   stdin?: () => Promise<string>;
 }
 
-/** The planned commands (design §7.3), not implemented yet. */
-const PLANNED: readonly (readonly [string, string])[] = [
-  ["catalog search | import", "find items; run a vendor importer"],
-];
-
-/** The first word of each usage alternative: "cutlist | bom" gives cutlist and bom. */
-const PLANNED_NAMES = new Set(
-  PLANNED.flatMap(([usage]) => usage.split(" | ").map((alt) => alt.split(" ")[0] as string)),
-);
-PLANNED_NAMES.delete("catalog");
-
 export { packageVersion };
 
+/** Every command of design §7.3, by group. */
 export function helpText(): string {
-  const width = Math.max(...PLANNED.map(([cmd]) => cmd.length));
-  const rows = PLANNED.map(
-    ([cmd, what]) => `  ${cmd.padEnd(width)}  ${what} (not implemented yet)`,
-  );
   return [
     "alukit: plan aluminium-extrusion builds",
     "",
@@ -40,7 +26,6 @@ export function helpText(): string {
     ...EDIT_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
     ...CATALOG_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
     ...PUBLISH_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
-    ...rows,
     "",
     "Options:",
     "  --version  print the version",
@@ -79,10 +64,6 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
   if ((PUBLISH_COMMANDS as readonly string[]).includes(cmd)) {
     const { publishCommand } = await import("./publish.ts");
     return publishCommand(cmd as PublishCommand, rest, io);
-  }
-  if (PLANNED_NAMES.has(cmd)) {
-    io.err(`alukit ${cmd}: not implemented yet`);
-    return 2;
   }
   io.err(`alukit: unknown command "${cmd}". Try --help.`);
   return 2;
