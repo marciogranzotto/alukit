@@ -1,0 +1,266 @@
+{
+  "schema": "alukit.project/1",
+  "name": "Cart (synthetic)",
+  "catalogs": ["../catalogs/test", "../catalogs/test-geo"],
+  "currency": "BRL",
+  "price_basis": "regular",
+  "ids": { "b": 30, "c": 31, "pt": 1, "r": 1 },
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
+    "cutting": { "kerf_mm": 3, "trim_mm": 5 }
+  },
+  "params": {
+    "W": "1200",
+    "D": "600",
+    "H": { "v": 900, "src": "meas", "note": "under a bench top" },
+    "Hb": "100"
+  },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [0, 0, "H"], "anchor": "-x-y", "tags": ["post"] },
+    "b2": { "a": ["W", 0, 0], "b": ["W", 0, "H"], "anchor": "+x-y", "tags": ["post"] },
+    "b3": { "a": [0, "D", 0], "b": [0, "D", "H"], "anchor": "-x+y", "tags": ["post"] },
+    "b4": { "a": ["W", "D", 0], "b": ["W", "D", "H"], "anchor": "+x+y", "tags": ["post"] },
+    "b5": {
+      "item": "test:TS4080",
+      "a": [0, 0, "H"],
+      "b": ["W", 0, "H"],
+      "roll_deg": 90,
+      "anchor": "+x+y",
+      "label": "top rail, front: 80 flat, on the posts, flush outside and on top"
+    },
+    "b6": {
+      "item": "test:TS4080",
+      "a": [0, "D", "H"],
+      "b": ["W", "D", "H"],
+      "roll_deg": 90,
+      "anchor": "+x-y",
+      "label": "top rail, back"
+    },
+    "b7": { "a": [0, 0, "H"], "b": [0, "D", "H"], "anchor": "+x+y", "label": "top rail, left" },
+    "b8": {
+      "a": ["W", 0, "H"],
+      "b": ["W", "D", "H"],
+      "anchor": "-x+y",
+      "label": "top rail, right"
+    },
+    "b9": { "a": [0, 0, "Hb"], "b": ["W", 0, "Hb"], "anchor": "-x", "label": "base rail, front" },
+    "b10": {
+      "a": [0, "D", "Hb"],
+      "b": ["W", "D", "Hb"],
+      "anchor": "+x",
+      "label": "base rail, back"
+    },
+    "b11": {
+      "a": [0, "D / 2", "H"],
+      "b": [700, "D / 2", "H"],
+      "anchor": "+y",
+      "label": "middle rail, left piece"
+    },
+    "b12": {
+      "a": [700, "D / 2", "H"],
+      "b": ["W", "D / 2", "H"],
+      "anchor": "+y",
+      "label": "middle rail, right piece"
+    },
+    "b13": {
+      "a": { "on": { "bar": "r1", "at_mm": 900 } },
+      "b": { "len_mm": 300, "dir": "-z", "from": "a.cut" },
+      "label": "hanger, 300 below the middle rail"
+    },
+    "b14": { "a": { "pivot": "c13" }, "b": { "pivot": "c14" }, "tags": ["brace"] },
+    "b15": { "a": { "pivot": "c15" }, "b": { "pivot": "c16" }, "tags": ["brace"] },
+    "b16": { "a": { "pivot": "c17" }, "b": { "pivot": "c18" }, "tags": ["brace"] },
+    "b17": { "a": { "pivot": "c19" }, "b": { "pivot": "c20" }, "tags": ["brace"] },
+    "b18": {
+      "item": "test-geo:RHS-100x50x4",
+      "a": { "on": { "bar": "b9", "at_mm": "W / 2" } },
+      "b": { "on": { "bar": "b10", "at_mm": "W / 2" } },
+      "label": "steel beam"
+    },
+    "b19": {
+      "item": "test-geo:FB-50x10",
+      "a": { "on": { "bar": "b18", "at_mm": 0, "face": "+y" } },
+      "b": { "on": { "bar": "b18", "at_mm": "D", "face": "+y" } },
+      "anchor": "-y",
+      "ends": { "a": { "plane": { "of": "b18.a" } }, "b": { "plane": { "of": "b18.b" } } },
+      "label": "cover strip on the beam, flush with its cut ends"
+    },
+    "b20": {
+      "item": "test-geo:FB-50x10",
+      "a": ["W / 2 - 50", 150, "Hb"],
+      "b": ["W / 2 - 50", 450, "Hb"],
+      "roll_deg": 90,
+      "label": "strap, head side"
+    },
+    "b21": {
+      "item": "test-geo:FB-50x20",
+      "a": ["W / 2 - 35", 200, "Hb"],
+      "b": ["W / 2 - 35", 400, "Hb"],
+      "roll_deg": 90,
+      "label": "packer, head side"
+    },
+    "b22": {
+      "item": "test-geo:FB-50x20",
+      "a": ["W / 2 + 35", 200, "Hb"],
+      "b": ["W / 2 + 35", 400, "Hb"],
+      "roll_deg": 90,
+      "label": "packer, nut side"
+    },
+    "b23": {
+      "item": "test-geo:FB-50x10",
+      "a": ["W / 2 + 50", 150, "Hb"],
+      "b": ["W / 2 + 50", 450, "Hb"],
+      "roll_deg": 90,
+      "label": "strap, nut side"
+    },
+    "b24": {
+      "item": "test-geo:FB-50x10",
+      "a": { "on": { "bar": "b5", "at_mm": 40, "face": "+x" } },
+      "b": { "on": { "bar": "b5", "at_mm": "W - 40", "face": "+x" } },
+      "anchor": "-y",
+      "label": "kick strip on the front rail"
+    },
+    "b25": {
+      "item": "test-geo:FB-50x10",
+      "a": { "on": { "bar": "b6", "at_mm": 40, "face": "+x" } },
+      "b": { "on": { "bar": "b6", "at_mm": "W - 40", "face": "+x" } },
+      "anchor": "-y",
+      "label": "kick strip on the back rail"
+    },
+    "b26": {
+      "a": { "on": { "bar": "b9", "at_mm": 150 } },
+      "b": { "on": { "bar": "b10", "at_mm": 150 } },
+      "label": "slat"
+    },
+    "b27": {
+      "a": { "on": { "bar": "b5", "at_mm": 200 } },
+      "b": { "on": { "bar": "b7", "at_mm": 200 } },
+      "anchor": "+y",
+      "ends": { "a": { "cut": "angle" }, "b": { "cut": "angle" } },
+      "tags": ["knee"]
+    },
+    "b28": {
+      "a": { "on": { "bar": "b5", "at_mm": "W - 200" } },
+      "b": { "on": { "bar": "b8", "at_mm": 200 } },
+      "anchor": "+y",
+      "ends": { "a": { "cut": "angle" }, "b": { "cut": "angle" } },
+      "tags": ["knee"]
+    },
+    "b29": {
+      "a": { "on": { "bar": "b6", "at_mm": 200 } },
+      "b": { "on": { "bar": "b7", "at_mm": "D - 200" } },
+      "anchor": "+y",
+      "ends": { "a": { "cut": "angle" }, "b": { "cut": "angle" } },
+      "tags": ["knee"]
+    },
+    "b30": {
+      "a": { "on": { "bar": "b6", "at_mm": "W - 200" } },
+      "b": { "on": { "bar": "b8", "at_mm": "D - 200" } },
+      "anchor": "+y",
+      "ends": { "a": { "cut": "angle" }, "b": { "cut": "angle" } },
+      "tags": ["knee"]
+    }
+  },
+  "runs": { "r1": ["b11", "b12"] },
+  "connections": {
+    "c1": { "type": "butt", "through": "b5", "ends": ["b1.b", "b2.b", "b7.a", "b8.a"] },
+    "c2": { "type": "butt", "through": "b6", "ends": ["b3.b", "b4.b", "b7.b", "b8.b"] },
+    "c5": { "type": "butt", "through": "b1", "ends": ["b9.a"] },
+    "c6": { "type": "butt", "through": "b2", "ends": ["b9.b"] },
+    "c7": { "type": "butt", "through": "b3", "ends": ["b10.a"] },
+    "c8": { "type": "butt", "through": "b4", "ends": ["b10.b"] },
+    "c9": { "type": "splice", "ends": ["b11.b", "b12.a"], "connector": "test:SPL-40" },
+    "c10": { "type": "butt", "through": "b7", "ends": ["b11.a"] },
+    "c11": { "type": "butt", "through": "b8", "ends": ["b12.b"] },
+    "c12": { "type": "butt", "through": "b12", "ends": ["b13.a"] },
+    "c13": {
+      "type": "pivot",
+      "base": { "bar": "b1", "at_mm": 650, "face": "+x" },
+      "axis": "across",
+      "connector": "test-geo:HNG-15",
+      "ends": ["b14.a"]
+    },
+    "c14": {
+      "type": "pivot",
+      "base": { "bar": "b9", "at_mm": 400, "face": "+y" },
+      "axis": "across",
+      "connector": "test-geo:HNG-15",
+      "ends": ["b14.b"]
+    },
+    "c15": {
+      "type": "pivot",
+      "base": { "bar": "b2", "at_mm": 650, "face": "-x" },
+      "axis": "across",
+      "connector": "test-geo:HNG-15",
+      "ends": ["b15.a"]
+    },
+    "c16": {
+      "type": "pivot",
+      "base": { "bar": "b9", "at_mm": "W - 400", "face": "+y" },
+      "axis": "across",
+      "connector": "test-geo:HNG-15",
+      "ends": ["b15.b"]
+    },
+    "c17": {
+      "type": "pivot",
+      "base": { "bar": "b3", "at_mm": 650, "face": "+x" },
+      "axis": "across",
+      "connector": "test-geo:HNG-15",
+      "ends": ["b16.a"]
+    },
+    "c18": {
+      "type": "pivot",
+      "base": { "bar": "b10", "at_mm": 400, "face": "+y" },
+      "axis": "across",
+      "connector": "test-geo:HNG-15",
+      "ends": ["b16.b"]
+    },
+    "c19": {
+      "type": "pivot",
+      "base": { "bar": "b4", "at_mm": 650, "face": "-x" },
+      "axis": "across",
+      "connector": "test-geo:HNG-15",
+      "ends": ["b17.a"]
+    },
+    "c20": {
+      "type": "pivot",
+      "base": { "bar": "b10", "at_mm": "W - 400", "face": "+y" },
+      "axis": "across",
+      "connector": "test-geo:HNG-15",
+      "ends": ["b17.b"]
+    },
+    "c21": { "type": "butt", "through": "b9", "ends": ["b18.a"] },
+    "c22": { "type": "butt", "through": "b10", "ends": ["b18.b"] },
+    "c23": {
+      "type": "face",
+      "bars": ["b20", "b21", "b18", "b22", "b23"],
+      "fastening": "bolt",
+      "fastener": { "bar": "test:M10-ROD", "len_mm": 140 },
+      "stack": [
+        "test-geo:WSH-M10",
+        { "item": "test-geo:TUBE-18x2", "inside": "b18", "len_mm": "bore" },
+        "test-geo:WSH-M10",
+        "test-geo:NUT-M10"
+      ],
+      "stations": { "at_mm": [100, 200], "across_mm": [-15, 15] }
+    },
+    "c24": { "type": "face", "bars": ["b5", "b24"], "fastening": "none" },
+    "c25": { "type": "face", "bars": ["b6", "b25"], "fastening": "none" },
+    "c26": { "type": "butt", "through": "b9", "ends": ["b26.a"] },
+    "c27": { "type": "butt", "through": "b10", "ends": ["b26.b"] },
+    "c28": { "type": "butt", "through": "b5", "ends": ["b27.a", "b28.a"] },
+    "c29": { "type": "butt", "through": "b6", "ends": ["b29.a", "b30.a"] },
+    "c30": { "type": "butt", "through": "b7", "ends": ["b27.b", "b29.b"] },
+    "c31": { "type": "butt", "through": "b8", "ends": ["b28.b", "b30.b"] }
+  },
+  "patterns": {
+    "pt1": {
+      "template": ["b26", "c26", "c27"],
+      "along": "b9",
+      "pitch_mm": 150,
+      "count": 7,
+      "skip": [3],
+      "label": "slats every 150, leaving room for the beam at W / 2"
+    }
+  }
+}
