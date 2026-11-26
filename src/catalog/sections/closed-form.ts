@@ -55,6 +55,27 @@ export function spandrel(x: number, y: number, r: number, sx: 1 | -1, sy: 1 | -1
   return { A, cx: x + sx * c, cy: y + sy * c, Ixc: Ic, Iyc: Ic, Ixyc: sx * sy * Ixyc };
 }
 
+/**
+ * A triangle. With vertices taken relative to its centroid (x̄ᵢ, ȳᵢ), the second moments about the
+ * centroid are (A / 12) Σ ȳᵢ², (A / 12) Σ x̄ᵢ² and (A / 12) Σ x̄ᵢ ȳᵢ (the standard vertex formulas,
+ * e.g. Roark; they follow from ∫ over the triangle with the three-point quadrature at the edge
+ * midpoints, which is exact for quadratics).
+ */
+export function triangle(a: Vec2, b: Vec2, c: Vec2): Part {
+  const A = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2;
+  const cx = (a[0] + b[0] + c[0]) / 3;
+  const cy = (a[1] + b[1] + c[1]) / 3;
+  let sxx = 0;
+  let syy = 0;
+  let sxy = 0;
+  for (const [x, y] of [a, b, c]) {
+    sxx += (x - cx) ** 2;
+    syy += (y - cy) ** 2;
+    sxy += (x - cx) * (y - cy);
+  }
+  return { A, cx, cy, Ixc: (A / 12) * syy, Iyc: (A / 12) * sxx, Ixyc: (A / 12) * sxy };
+}
+
 /** Adds (+1) and removes (−1) parts; the result is about the composite centroid. */
 export function combine(parts: readonly (readonly [Part, 1 | -1])[]): ClosedForm {
   let A = 0;

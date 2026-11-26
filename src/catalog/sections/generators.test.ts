@@ -179,6 +179,71 @@ describe("generators match their closed forms within 0.1 % (design §12, M1)", (
     ).toMatch(/unknown groove type/);
   });
 
+  it("tslot: a chamber that narrows to its bottom, on 40x40, 40x80 and 80x80 envelopes", () => {
+    // The 40-series groove as measured on the 40x40 básico's vector outline (M2a): a 22 mm
+    // chamber that would cross the neighbouring grooves' at the corners if it ran square to the
+    // bottom.
+    const c840: GrooveDims = {
+      opening_mm: 8.18,
+      lip_mm: 3.79,
+      depth_mm: 9.99,
+      undercut_mm: 22.01,
+      taper_from_mm: 7.03,
+      bottom_mm: 12.24,
+    };
+    const { taper_from_mm: _t, bottom_mm: _b, ...square } = c840;
+    const types: Record<string, GrooveDims> = { c840, square };
+    const tctx: GeneratorContext = { groove: (ref) => types[ref] };
+    const cases = [
+      { w_mm: 40, h_mm: 40, groove: "c840", bores: [{ at_mm: [0, 0], d_mm: 13.7 }] },
+      {
+        w_mm: 40,
+        h_mm: 80,
+        groove: "c840",
+        grooves: [
+          { face: "-y", at_mm: 0 },
+          { face: "+x", at_mm: -20 },
+          { face: "+x", at_mm: 20 },
+          { face: "+y", at_mm: 0 },
+          { face: "-x", at_mm: -20 },
+          { face: "-x", at_mm: 20 },
+        ],
+        bores: [
+          { at_mm: [0, -20], d_mm: 13.7 },
+          { at_mm: [0, 20], d_mm: 13.7 },
+        ],
+      },
+      {
+        w_mm: 80,
+        h_mm: 80,
+        groove: "c840",
+        grooves: (["-y", "+x", "+y", "-x"] as const).flatMap((face) => [
+          { face, at_mm: -20 },
+          { face, at_mm: 20 },
+        ]),
+        bores: [-20, 20].flatMap((x) => [-20, 20].map((y) => ({ at_mm: [x, y], d_mm: 13.7 }))),
+      },
+    ];
+    for (const c of cases) {
+      const p = tslot.params.parse(c);
+      expect(tslot.problems(p, tctx), `${c.w_mm}x${c.h_mm}`).toEqual([]);
+      const g = tslot.generate(p, tctx);
+      expectMatch(g, tslot.closedForm(p, tctx));
+      // Ten outline points per tapered slot plus the four corners.
+      expect(g.outline).toHaveLength(4 + 10 * g.grooves.length);
+    }
+    // The same chamber run square to the bottom crosses its neighbour at each corner of a 40x40.
+    const p = tslot.params.parse({ ...cases[0], groove: "square" });
+    expect(tslot.problems(p, tctx).join("\n")).toMatch(/groove 0 overlaps groove 1/);
+    // A taper must lie between the lip and the bottom, and fit inside the undercut.
+    const bad: GrooveDims = { ...c840, taper_from_mm: 2, bottom_mm: 30 };
+    const problems = tslot
+      .problems(tslot.params.parse({ ...cases[0], groove: "bad" }), { groove: () => bad })
+      .join("\n");
+    expect(problems).toMatch(/taper_from_mm not between the lip and the depth/);
+    expect(problems).toMatch(/bottom_mm not within the undercut/);
+  });
+
   it("rhs: with outer and inner corner radii", () => {
     const p = rhs.params.parse({ b_mm: 50, h_mm: 100, t_mm: 3, ro_mm: 6 });
     expect(rhs.problems(p, NO_CONTEXT)).toEqual([]);

@@ -1,15 +1,15 @@
 import { z } from "zod";
 import type { Vec2 } from "#core/section-properties.ts";
 import { Face, Ref } from "../../schema/common.ts";
-import { combine, disc, type Part, rect } from "../closed-form.ts";
+import { combine, disc, type Part, rect, triangle } from "../closed-form.ts";
 import { circle } from "../geometry.ts";
 import { box2, type GeneratedGroove, type Generator, type GrooveDims } from "./types.ts";
 
 /**
- * A T-slot profile as a box less its slots (design §3.5): the overall box, one T-shaped slot per
- * groove (the opening through the lip, then the wider undercut chamber down to the slot depth),
- * and the core bores. It is an envelope, not the real section: real profiles have cavities this
- * does not model, so a `tslot` section is drawn and cut from, and its `props_ok` is false.
+ * A T-slot profile as a box less its slots (design §3.5): the overall box, one slot per groove (the
+ * opening through the lip, then the wider chamber, which may narrow toward the bottom), and the
+ * core bores. It is an envelope, not the real section: real profiles have cavities this does not
+ * model, so a `tslot` section is drawn and cut from, and its `props_ok` is false.
  *
  * The groove's dimensions come from its groove type in the catalog (§3.3), so a correction to a
  * groove is made once.
@@ -73,18 +73,89 @@ function grooveList(p: TslotParams): GeneratedGroove[] {
   }));
 }
 
-/** The two rectangles of one slot, as [centre x, centre y, width, height]. */
-function slotRects(g: GeneratedGroove, d: GrooveDims, w: number, h: number) {
+/** The depth where the full-width chamber ends: where it starts to narrow, or the bottom. */
+function chamberEnd(d: GrooveDims): number {
+  return d.taper_from_mm ?? d.depth_mm;
+}
+
+/** A groove's half-widths along its centre line, as [depth, half-width] corners from the face. */
+function profile(d: GrooveDims): [number, number][] {
+  const o = d.opening_mm / 2;
+  const u = d.undercut_mm / 2;
+  const bottom = (d.bottom_mm ?? d.undercut_mm) / 2;
+  const pts: [number, number][] = [
+    [0, o],
+    [d.lip_mm, o],
+    [d.lip_mm, u],
+    [chamberEnd(d), u],
+  ];
+  if (d.taper_from_mm !== undefined) pts.push([d.depth_mm, bottom]);
+  return pts;
+}
+
+/**
+ * The convex pieces of one slot in section coordinates: the mouth, the full-width chamber, and
+ * the narrowing bottom when there is one.
+ */
+function slotPieces(g: GeneratedGroove, d: GrooveDims, w: number, h: number): Vec2[][] {
   const f = faceFrame(g.face, w, h);
-  const along = f.t[0] !== 0 ? "x" : "y";
-  const place = (depth0: number, depth1: number, width: number) => {
-    const mid = (depth0 + depth1) / 2;
-    const cx = f.c[0] + f.n[0] * mid + (along === "x" ? g.at_mm : 0);
-    const cy = f.c[1] + f.n[1] * mid + (along === "y" ? g.at_mm : 0);
-    const thick = depth1 - depth0;
-    return along === "x" ? ([cx, cy, width, thick] as const) : ([cx, cy, thick, width] as const);
-  };
-  return [place(0, d.lip_mm, d.opening_mm), place(d.lip_mm, d.depth_mm, d.undercut_mm)] as const;
+  // `along` in section coordinates: the face's tangent axis, signed by the walk.
+  const s = f.sign * g.at_mm;
+  const pt = (along: number, depth: number): Vec2 => [
+    f.c[0] + f.t[0] * (s + along) + f.n[0] * depth,
+    f.c[1] + f.t[1] * (s + along) + f.n[1] * depth,
+  ];
+  const quad = (d0: number, w0: number, d1: number, w1: number): Vec2[] => [
+    pt(-w0, d0),
+    pt(w0, d0),
+    pt(w1, d1),
+    pt(-w1, d1),
+  ];
+  const o = d.opening_mm / 2;
+  const u = d.undercut_mm / 2;
+  const pieces = [quad(0, o, d.lip_mm, o), quad(d.lip_mm, u, chamberEnd(d), u)];
+  if (d.taper_from_mm !== undefined) {
+    pieces.push(quad(d.taper_from_mm, u, d.depth_mm, (d.bottom_mm as number) / 2));
+  }
+  return pieces;
+}
+
+/** Projects a polygon onto an axis: [min, max]. */
+function project(poly: readonly Vec2[], ax: Vec2): [number, number] {
+  let lo = Number.POSITIVE_INFINITY;
+  let hi = Number.NEGATIVE_INFINITY;
+  for (const [x, y] of poly) {
+    const v = x * ax[0] + y * ax[1];
+    lo = Math.min(lo, v);
+    hi = Math.max(hi, v);
+  }
+  return [lo, hi];
+}
+
+/**
+ * Whether two convex polygons overlap with positive area (the separating axis theorem; pieces
+ * that only touch do not overlap).
+ */
+export function convexOverlap(a: readonly Vec2[], b: readonly Vec2[]): boolean {
+  for (const poly of [a, b]) {
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i] as Vec2;
+      const q = poly[(i + 1) % poly.length] as Vec2;
+      const ax: Vec2 = [q[1] - p[1], p[0] - q[0]];
+      if (ax[0] === 0 && ax[1] === 0) continue;
+      const [a0, a1] = project(a, ax);
+      const [b0, b1] = project(b, ax);
+      const eps = 1e-9 * Math.max(1, Math.abs(a0), Math.abs(a1), Math.abs(b0), Math.abs(b1));
+      if (a1 <= b0 + eps || b1 <= a0 + eps) return false;
+    }
+  }
+  return true;
+}
+
+/** A polygon's closed-form parts: a quad as a rectangle plus its two side triangles. */
+function quadParts(q: readonly Vec2[]): Part[] {
+  const [p0, p1, p2, p3] = q as [Vec2, Vec2, Vec2, Vec2];
+  return [triangle(p0, p1, p2), triangle(p0, p2, p3)];
 }
 
 export const tslot: Generator<TslotParams> = {
@@ -94,7 +165,7 @@ export const tslot: Generator<TslotParams> = {
   problems(p, ctx) {
     const out: string[] = [];
     const grooves = grooveList(p);
-    const rects: { what: string; r: readonly [number, number, number, number] }[] = [];
+    const pieces: { what: string; poly: Vec2[] }[] = [];
     grooves.forEach((g, i) => {
       const d = ctx.groove(g.type as string);
       if (!d) {
@@ -104,31 +175,45 @@ export const tslot: Generator<TslotParams> = {
       if (d.undercut_mm < d.opening_mm)
         out.push(`groove type "${g.type}": undercut narrower than the opening`);
       if (d.depth_mm <= d.lip_mm) out.push(`groove type "${g.type}": depth not beyond the lip`);
+      if ((d.taper_from_mm === undefined) !== (d.bottom_mm === undefined))
+        out.push(`groove type "${g.type}": taper_from_mm and bottom_mm go together`);
+      if (d.taper_from_mm !== undefined && d.bottom_mm !== undefined) {
+        if (!(d.taper_from_mm > d.lip_mm && d.taper_from_mm < d.depth_mm))
+          out.push(`groove type "${g.type}": taper_from_mm not between the lip and the depth`);
+        if (!(d.bottom_mm > 0 && d.bottom_mm <= d.undercut_mm))
+          out.push(`groove type "${g.type}": bottom_mm not within the undercut`);
+      }
       const f = faceFrame(g.face, p.w_mm, p.h_mm);
       if (Math.abs(g.at_mm) + d.undercut_mm / 2 >= f.half) {
         out.push(`groove ${i} on ${g.face} at ${g.at_mm} mm runs off the face`);
       }
-      for (const r of slotRects(g, d, p.w_mm, p.h_mm)) rects.push({ what: `groove ${i}`, r });
+      for (const poly of slotPieces(g, d, p.w_mm, p.h_mm))
+        pieces.push({ what: `groove ${i}`, poly });
     });
     (p.bores ?? []).forEach((b, i) => {
       const [x, y] = b.at_mm;
-      if (Math.abs(x) + b.d_mm / 2 >= p.w_mm / 2 || Math.abs(y) + b.d_mm / 2 >= p.h_mm / 2) {
+      const r = b.d_mm / 2;
+      if (Math.abs(x) + r >= p.w_mm / 2 || Math.abs(y) + r >= p.h_mm / 2) {
         out.push(`bore ${i} runs outside the profile`);
       }
-      rects.push({ what: `bore ${i}`, r: [x, y, b.d_mm, b.d_mm] });
+      // The bore's square: conservative, as the closed form removes the disc independently.
+      pieces.push({
+        what: `bore ${i}`,
+        poly: [
+          [x - r, y - r],
+          [x + r, y - r],
+          [x + r, y + r],
+          [x - r, y + r],
+        ],
+      });
     });
     // Slots and bores must not overlap: the closed form removes their areas independently.
-    for (let i = 0; i < rects.length; i++) {
-      for (let j = i + 1; j < rects.length; j++) {
-        const a = rects[i]?.r as readonly number[];
-        const b = rects[j]?.r as readonly number[];
-        const ox =
-          Math.abs((a[0] as number) - (b[0] as number)) < ((a[2] as number) + (b[2] as number)) / 2;
-        const oy =
-          Math.abs((a[1] as number) - (b[1] as number)) < ((a[3] as number) + (b[3] as number)) / 2;
-        if (ox && oy && rects[i]?.what !== rects[j]?.what) {
-          out.push(`${rects[i]?.what} overlaps ${rects[j]?.what}`);
-        }
+    for (let i = 0; i < pieces.length; i++) {
+      for (let j = i + 1; j < pieces.length; j++) {
+        const a = pieces[i] as { what: string; poly: Vec2[] };
+        const b = pieces[j] as { what: string; poly: Vec2[] };
+        if (a.what !== b.what && convexOverlap(a.poly, b.poly))
+          out.push(`${a.what} overlaps ${b.what}`);
       }
     }
     return [...new Set(out)];
@@ -157,18 +242,10 @@ export const tslot: Generator<TslotParams> = {
           f.c[0] + f.t[0] * along + f.n[0] * depth,
           f.c[1] + f.t[1] * along + f.n[1] * depth,
         ];
-        const o = d.opening_mm / 2;
-        const u = d.undercut_mm / 2;
-        outline.push(
-          pt(s - o, 0),
-          pt(s - o, d.lip_mm),
-          pt(s - u, d.lip_mm),
-          pt(s - u, d.depth_mm),
-          pt(s + u, d.depth_mm),
-          pt(s + u, d.lip_mm),
-          pt(s + o, d.lip_mm),
-          pt(s + o, 0),
-        );
+        const prof = profile(d);
+        // Down the near side of the slot, then back up the far side.
+        for (const [depth, half] of prof) outline.push(pt(s - half, depth));
+        for (const [depth, half] of [...prof].reverse()) outline.push(pt(s + half, depth));
       }
     }
     return {
@@ -184,8 +261,8 @@ export const tslot: Generator<TslotParams> = {
     const parts: [Part, 1 | -1][] = [[rect(0, 0, p.w_mm, p.h_mm), 1]];
     for (const g of grooveList(p)) {
       const d = ctx.groove(g.type as string) as GrooveDims;
-      for (const [cx, cy, sw, sh] of slotRects(g, d, p.w_mm, p.h_mm))
-        parts.push([rect(cx, cy, sw, sh), -1]);
+      for (const piece of slotPieces(g, d, p.w_mm, p.h_mm))
+        for (const part of quadParts(piece)) parts.push([part, -1]);
     }
     for (const b of p.bores ?? []) parts.push([disc(b.at_mm[0], b.at_mm[1], b.d_mm), -1]);
     return combine(parts);

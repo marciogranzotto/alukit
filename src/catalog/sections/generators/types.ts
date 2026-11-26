@@ -9,6 +9,9 @@ export interface GrooveDims {
   lip_mm: number;
   depth_mm: number;
   undercut_mm: number;
+  /** A chamber that narrows: from this depth, to `bottom_mm` wide at `depth_mm`. */
+  taper_from_mm?: number;
+  bottom_mm?: number;
 }
 
 /** What a generator may look up: groove types by the reference its params use. */
