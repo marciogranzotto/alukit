@@ -1,0 +1,426 @@
+import { z } from "zod";
+
+/**
+ * The project document, `alukit.json` (design §4.2–§4.12), as Zod schemas. M3a reads params,
+ * nodes, bars, runs, connections and patterns, and the cut-list settings; the fields later
+ * milestones fill in (parts, project items, costs, price bands, variants, checks, open items,
+ * decisions, views) are accepted with their outline, so a document written for them parses now.
+ *
+ * No transforms: the JSON Schema export (`io: "input"`, §7.4) throws on them. Rules that span
+ * entities (a reference resolves, one provider per end) live in derive's diagnostics.
+ */
+
+export const PROJECT_SCHEMA = "alukit.project/1";
+
+// ---------------------------------------------------------------------------------------------
+// Ids (design §2): a letter prefix and a number. Pattern copies (`b30@2`) are derived and never
+// written in a document.
+
+export const NodeId = z
+  .string()
+  .regex(/^n\d+$/)
+  .describe("a node: n<number>");
+export const BarId = z
+  .string()
+  .regex(/^b\d+$/)
+  .describe("a bar: b<number>");
+export const RunId = z
+  .string()
+  .regex(/^r\d+$/)
+  .describe("a run: r<number>");
+export const ConnId = z
+  .string()
+  .regex(/^c\d+$/)
+  .describe("a connection: c<number>");
+export const PartId = z
+  .string()
+  .regex(/^p\d+$/)
+  .describe("a part: p<number>");
+export const PatternId = z
+  .string()
+  .regex(/^pt\d+$/)
+  .describe("a pattern: pt<number>");
+export const EndRef = z
+  .string()
+  .regex(/^b\d+\.[ab]$/)
+  .describe('a bar end: "b7.a" or "b7.b"');
+
+/** A catalog item, always with its catalog: `<catalog>:<code>`, or `project:<id>` (§4.8). */
+export const ItemRef = z
+  .string()
+  .regex(/^[a-z][a-z0-9-]*:(?!(?:0|[1-9][0-9]*)$)[A-Za-z0-9][A-Za-z0-9._+-]*$/)
+  .describe('a catalog item: "<catalog>:<code>"');
+
+/** A param name: an identifier that is not a word of the expression language. */
+export const ParamName = z
+  .string()
+  .regex(/^(?!(?:and|or|not|if|pi)$)[A-Za-z_][A-Za-z0-9_]*$/)
+  .describe("a param name: an identifier");
+
+/** A number, or an expression over params (§4.9). */
+export const Expr = z.union([z.number(), z.string().min(1)]);
+export type Expr = z.infer<typeof Expr>;
+
+export const Vec2Expr = z.tuple([Expr, Expr]);
+export const Vec3Expr = z.tuple([Expr, Expr, Expr]);
+
+export const Face = z.enum(["+x", "-x", "+y", "-y"]).describe("a face of the placed section");
+export type Face = z.infer<typeof Face>;
+
+/** A groove: its face and its number on that face, by increasing section coordinate. */
+export const GrooveName = z
+  .string()
+  .regex(/^[+-][xy]\.[1-9]\d*$/)
+  .describe('a groove: "+y.1", numbered by increasing section coordinate');
+
+export const AxisName = z.enum(["+x", "-x", "+y", "-y", "+z", "-z"]);
+
+/** An anchor (§4.4): `c`, a face midpoint, a corner, or a section datum. */
+export const Anchor = z
+  .string()
+  .regex(/^(?:c|[+-][xy]|[+-]x[+-]y|[+-]y[+-]x|[a-z][a-z0-9_-]*)$/)
+  .describe('"c", a face "+x", a corner "-x-y", or a section datum "mount"');
+
+const Common = {
+  label: z.string().optional(),
+  tags: z.array(z.string().min(1)).optional(),
+  only_in: z.array(z.string().min(1)).optional().describe("variants that include it (§4.10)"),
+  not_in: z.array(z.string().min(1)).optional().describe("variants that exclude it (§4.10)"),
+};
+
+/** Where `at_mm` counts from: a design point, or (parts only) a cut end's long point. */
+export const From = z.enum(["a", "b", "a.cut", "b.cut"]);
+
+/** A station (§4.3): a position along a bar or a run, on a face or groove, offset. */
+export const Station = z
+  .strictObject({
+    bar: z.union([BarId, RunId]).describe("a bar or a run"),
+    at_mm: Expr,
+    from: From.optional(),
+    face: Face.optional(),
+    groove: GrooveName.optional(),
+    off_mm: Vec2Expr.optional().describe("[u, v]: across the face, along its outward normal"),
+  })
+  .refine((s) => s.face === undefined || s.groove === undefined, {
+    message: "a station is on a face or in a groove, not both",
+  });
+export type Station = z.infer<typeof Station>;
+
+/** A point (§4.3): a node, an inline point, a point on a bar, or a pivot's point. */
+export const Point = z.union([
+  NodeId,
+  Vec3Expr,
+  z.strictObject({ on: Station }),
+  z.strictObject({ pivot: ConnId }),
+]);
+export type Point = z.infer<typeof Point>;
+
+/** End `b` only: a free end at a length along an axis or a vector (§4.3). */
+export const FreeEnd = z.strictObject({
+  len_mm: Expr,
+  dir: z.union([AxisName, Vec3Expr]),
+  from: z.literal("a.cut").optional().describe("count the length from end a's cut (G21)"),
+});
+export type FreeEnd = z.infer<typeof FreeEnd>;
+
+/** A world pose (§4.7): rotations about world X, then Y, then Z. */
+export const Pose = z.strictObject({ pos: Vec3Expr, rot_deg: Vec3Expr.optional() });
+export type Pose = z.infer<typeof Pose>;
+
+/** An explicit end plane (§4.5). */
+export const Plane = z.union([
+  z.strictObject({ point: Point, normal: Vec3Expr }),
+  z.strictObject({ face: z.strictObject({ bar: BarId, face: Face }) }),
+  z.strictObject({ of: EndRef }),
+]);
+export type Plane = z.infer<typeof Plane>;
+
+export const EndSpec = z.strictObject({
+  plane: Plane.optional(),
+  cut: z.enum(["angle", "square"]).optional(),
+  extend_mm: Expr.optional().describe("along the axis; positive is outward (longer)"),
+});
+export type EndSpec = z.infer<typeof EndSpec>;
+
+/** Hole fields (§4.8). */
+const HoleFields = {
+  d_mm: Expr.optional(),
+  thread: z.string().min(1).optional(),
+  depth_mm: Expr.optional().describe("absent: through the whole section"),
+  csk: z.strictObject({ d_mm: Expr, angle_deg: Expr }).optional(),
+  cbore: z.strictObject({ d_mm: Expr, depth_mm: Expr }).optional(),
+};
+
+/** Machining a person adds (§4.4). */
+export const Op = z
+  .strictObject({
+    op: z.literal("hole"),
+    face: Face,
+    at_mm: Expr,
+    from: z.enum(["a", "b"]).optional(),
+    ...HoleFields,
+  })
+  .refine((o) => (o.d_mm === undefined) !== (o.thread === undefined), {
+    message: "a hole has d_mm or thread",
+  });
+export type Op = z.infer<typeof Op>;
+
+/** A rail's hole layout (§4.7). */
+export const RailHoles = z.union([
+  z.strictObject({ factory: z.enum(["a", "b"]), stock_mm: z.number().positive().optional() }),
+  z.strictObject({ drilled: z.literal(true) }),
+  z.strictObject({ E_a_mm: Expr }),
+  z.strictObject({ E_b_mm: Expr }),
+]);
+
+export const Bar = z.strictObject({
+  item: ItemRef.optional().describe("a bar item; defaults.bar.item when absent"),
+  opt: z.record(z.string(), z.string()).optional().describe("option values: { finish: black }"),
+  a: Point,
+  b: z.union([Point, FreeEnd]),
+  anchor: Anchor.optional(),
+  off_mm: Vec2Expr.optional().describe("[dx, dy] along the section's own x and y"),
+  roll_deg: Expr.optional(),
+  up: z.union([AxisName, Vec3Expr]).optional(),
+  ends: z.strictObject({ a: EndSpec.optional(), b: EndSpec.optional() }).optional(),
+  ops: z.array(Op).optional(),
+  holes: RailHoles.optional().describe("rails: the hole layout"),
+  ...Common,
+});
+export type Bar = z.infer<typeof Bar>;
+
+export const Node = z.union([
+  Vec3Expr,
+  z.strictObject({ at: Vec3Expr, ...Common }),
+  z.strictObject({ on: Station, ...Common }),
+  z.strictObject({ pivot: ConnId, ...Common }),
+]);
+export type Node = z.infer<typeof Node>;
+
+export const Run = z.union([
+  z.array(BarId).min(2),
+  z.strictObject({ bars: z.array(BarId).min(2), ...Common }),
+]);
+export type Run = z.infer<typeof Run>;
+
+const ConnCommon = {
+  connector: ItemRef.optional(),
+  qty: z.int().min(1).optional(),
+  ...Common,
+};
+
+export const ThroughEnd = z.union([
+  z.enum(["cover", "node", "none"]),
+  z.strictObject({ end: z.enum(["a", "b"]), mode: z.enum(["cover", "node"]) }),
+]);
+
+export const Butt = z.strictObject({
+  type: z.literal("butt"),
+  through: z
+    .union([BarId, EndRef, z.strictObject({ body: ItemRef, at: z.union([Point, Pose]) })])
+    .describe("a bar, a bar's end, or a body at a point or pose"),
+  ends: z.array(EndRef).min(1),
+  spacer_mm: Expr.optional().describe("along the through face's outward normal"),
+  through_end: ThroughEnd.optional(),
+  ...ConnCommon,
+});
+
+export const Miter = z.strictObject({
+  type: z.literal("miter"),
+  ends: z.tuple([EndRef, EndRef]),
+  ...ConnCommon,
+});
+
+export const Splice = z.strictObject({
+  type: z.literal("splice"),
+  ends: z.tuple([EndRef, EndRef]),
+  gap_mm: Expr.optional(),
+  ...ConnCommon,
+});
+
+export const Pivot = z.strictObject({
+  type: z.literal("pivot"),
+  base: Station,
+  axis: z.enum(["along", "across"]).describe("the hinge axis, along or across the base bar"),
+  ends: z.array(EndRef).min(1),
+  connector: ItemRef.describe("a connector with pivot geometry"),
+  qty: z.int().min(1).optional(),
+  ...Common,
+});
+
+/** A rail-hole selection (§4.7). */
+export const RailHolesSel = z.strictObject({
+  along: z.union([BarId, RunId]),
+  every: z.int().min(1).optional(),
+  plus: z.array(z.enum(["first", "last", "joint"])).optional(),
+});
+
+/** A stack entry (§4.5): hardware from head to nut, or a sleeve cut from bar stock. */
+export const StackEntry = z.union([
+  ItemRef,
+  z.strictObject({ item: ItemRef, qty: z.int().min(1).optional() }),
+  z.strictObject({ item: ItemRef, inside: z.union([BarId, RunId]), len_mm: Expr }),
+]);
+
+export const FaceConn = z.strictObject({
+  type: z.literal("face"),
+  bars: z
+    .array(z.union([BarId, RunId, PartId]))
+    .min(2)
+    .describe("layers, head to nut"),
+  gaps_mm: z.array(Expr).optional(),
+  faces: z.array(z.tuple([Face, Face])).optional(),
+  fastening: z.enum(["none", "bolt", "tnut", "screw"]),
+  fastener: z
+    .union([ItemRef, z.strictObject({ bar: ItemRef, len_mm: Expr })])
+    .optional()
+    .describe("a catalog fastener, or a piece cut from bar stock"),
+  stack: z.array(StackEntry).optional(),
+  stations: z
+    .strictObject({
+      at_mm: z.array(Expr).optional(),
+      across_mm: z.array(Expr).optional(),
+      rail_holes: z.union([z.literal(true), RailHolesSel]).optional(),
+      pattern: PatternId.optional(),
+    })
+    .optional(),
+  tap_depth_mm: Expr.optional(),
+  ...ConnCommon,
+});
+
+export const Connection = z.discriminatedUnion("type", [Butt, Miter, Splice, Pivot, FaceConn]);
+export type Connection = z.infer<typeof Connection>;
+export type ButtConn = z.infer<typeof Butt>;
+export type MiterConn = z.infer<typeof Miter>;
+export type SpliceConn = z.infer<typeof Splice>;
+export type PivotConn = z.infer<typeof Pivot>;
+export type FaceConnT = z.infer<typeof FaceConn>;
+
+export const Part = z.union([
+  z.strictObject({
+    item: ItemRef,
+    opt: z.record(z.string(), z.string()).optional(),
+    on: Station,
+    roll_deg: Expr.optional(),
+    ...Common,
+  }),
+  z.strictObject({
+    item: ItemRef,
+    opt: z.record(z.string(), z.string()).optional(),
+    at: Pose,
+    ...Common,
+  }),
+  z.strictObject({
+    item: ItemRef,
+    opt: z.record(z.string(), z.string()).optional(),
+    qty: Expr,
+    unplaced: z.literal(true),
+    why: z.string().min(1),
+    ...Common,
+  }),
+]);
+export type Part = z.infer<typeof Part>;
+
+export const Pattern = z.strictObject({
+  template: z.array(z.union([NodeId, BarId, ConnId, PartId])).min(1),
+  along: z.union([BarId, RunId, z.strictObject({ dir: Vec3Expr })]),
+  pitch_mm: Expr.optional(),
+  count: z.int().min(1).optional(),
+  offsets_mm: z.array(Expr).min(1).optional().describe("instead of pitch_mm and count"),
+  skip: z.array(z.int().min(1)).optional().describe("copy numbers k to leave out"),
+  rail_holes: z.union([z.literal(true), RailHolesSel]).optional(),
+  ...Common,
+});
+export type Pattern = z.infer<typeof Pattern>;
+
+/** A param: an expression, a number, or a valued field whose `v` may be an expression. */
+export const Param = z.union([
+  z.number(),
+  z.string().min(1),
+  z.strictObject({
+    v: Expr,
+    src: z.enum(["src", "meas", "est", "calc"]).optional(),
+    ref: z.string().optional(),
+    read: z.iso.date().optional(),
+    note: z.string().optional(),
+    low: z.number().optional(),
+    high: z.number().optional(),
+  }),
+]);
+export type Param = z.infer<typeof Param>;
+
+/** Cut-list settings (§5.3): saw kerf per cut and trim at each stock bar end. */
+export const Cutting = z.strictObject({
+  kerf_mm: z.number().nonnegative().optional(),
+  trim_mm: z.number().nonnegative().optional(),
+});
+
+export const Defaults = z.strictObject({
+  bar: z
+    .strictObject({
+      item: ItemRef.optional(),
+      opt: z.record(z.string(), z.string()).optional(),
+    })
+    .optional(),
+  butt: z
+    .strictObject({ connector: ItemRef.optional(), qty: z.int().min(1).optional() })
+    .optional(),
+  cutting: Cutting.optional(),
+});
+export type Defaults = z.infer<typeof Defaults>;
+
+/** An order choice per item (§5.4), and the cut-list mode override (§5.3). */
+export const OrderChoice = z.strictObject({
+  offer: z.string().min(1).optional().describe("a SKU"),
+  sale: z.enum(["cut", "stock"]).optional().describe("override the cut-list mode"),
+  kerf_mm: z.number().nonnegative().optional(),
+  trim_mm: z.number().nonnegative().optional(),
+});
+export type OrderChoice = z.infer<typeof OrderChoice>;
+
+const Loose = z.record(z.string(), z.unknown());
+
+/** Top-level keys in schema order (design §4.2, with draft 2.1's `runs` and `price_bands`). */
+export const PROJECT_SHAPE = {
+  schema: z.literal(PROJECT_SCHEMA),
+  name: z.string().optional(),
+  catalogs: z.array(z.string().min(1)).optional().describe("built-in ids or folder paths"),
+  currency: z
+    .string()
+    .regex(/^[A-Z]{3}$/)
+    .optional(),
+  price_basis: z.enum(["regular", "sale", "lowest"]).optional(),
+  fx: Loose.optional(),
+  ids: z.record(z.string(), z.int().nonnegative()).optional(),
+  defaults: Defaults.optional(),
+  params: z.record(ParamName, Param).optional(),
+  nodes: z.record(NodeId, Node).optional(),
+  bars: z.record(BarId, Bar).optional(),
+  runs: z.record(RunId, Run).optional(),
+  connections: z.record(ConnId, Connection).optional(),
+  parts: z.record(PartId, Part).optional(),
+  patterns: z.record(PatternId, Pattern).optional(),
+  items: z.record(z.string(), Loose).optional().describe("project items (§4.8)"),
+  costs: z.array(Loose).optional(),
+  price_bands: z.array(Loose).optional(),
+  order: z.record(ItemRef, OrderChoice).optional(),
+  order_rules: z.record(z.string(), z.enum(["block", "warn", "off"])).optional(),
+  variants: Loose.optional(),
+  checks: z.array(Loose).optional(),
+  open: z.array(Loose).optional(),
+  decisions: z.array(Loose).optional(),
+  views: Loose.optional(),
+} as const;
+
+export const ProjectDoc = z.strictObject(PROJECT_SHAPE);
+export type ProjectDoc = z.infer<typeof ProjectDoc>;
+
+/** The entity maps, each validated entity by entity so one bad entity drops only itself. */
+export const ENTITY_MAPS = {
+  nodes: { id: NodeId, schema: Node },
+  bars: { id: BarId, schema: Bar },
+  runs: { id: RunId, schema: Run },
+  connections: { id: ConnId, schema: Connection },
+  parts: { id: PartId, schema: Part },
+  patterns: { id: PatternId, schema: Pattern },
+} as const;
