@@ -162,7 +162,11 @@ describe("the cart", () => {
     expect(once()).toEqual(once());
   });
 
-  it("gives byte-identical derive --json from two processes, with generated ops and hardware", () => {
+  // Four Node processes, each loading the catalogs and deriving the cart: more than the default
+  // 5 s when the suite's other files run alongside.
+  it("gives byte-identical derive --json from two processes, with generated ops and hardware", {
+    timeout: 30_000,
+  }, () => {
     const run = (args: string[]) =>
       execFileSync(process.execPath, [MAIN, ...args], {
         encoding: "utf8",
@@ -189,9 +193,13 @@ describe("the cart", () => {
       "c23.s3",
       "c23.s4",
     ]);
+    // The cut list and the BOM from another process equal this process's, byte for byte.
+    const d = derive(project.raw, project.items);
     expect(run(["cutlist", CART, "--format", "json"])).toBe(
-      run(["cutlist", CART, "--format", "json"]),
+      cutListJson(cutList({ derived: d, items: project.items })),
     );
-    expect(run(["bom", CART, "--format", "json"])).toBe(run(["bom", CART, "--format", "json"]));
+    expect(run(["bom", CART, "--format", "json"])).toBe(
+      bomJson(bom({ derived: d, items: project.items })),
+    );
   });
 });

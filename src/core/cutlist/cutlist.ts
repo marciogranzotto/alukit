@@ -8,8 +8,8 @@ import { add, dot, scale, sub, type V3 } from "../vec.ts";
 import { type NestStock, nest } from "./nesting.ts";
 
 /**
- * The cut list (design §5.3). Pieces come from bars (and, from M3b, from fasteners and sleeves
- * cut from bar stock, through `extraPieces`). They are listed per bar item and option, in the
+ * The cut list (design §5.3). Pieces come from the derived model: its bars, and the fasteners and
+ * sleeves its face connections cut from bar stock. They are listed per bar item and option, in the
  * mode of the chosen offer's sale, overridable per project in `order`:
  *
  * - `cut`: the supplier cuts each piece, ordered at its cut length rounded to `res_mm` and
@@ -458,8 +458,6 @@ function barPrice(o: OfferInfo, len: number, basis: string): number {
 export interface CutListInput {
   derived: Derived;
   items: ItemSource;
-  /** Pieces from later stages: fasteners and sleeves cut from bar stock (M3b). */
-  extraPieces?: readonly Piece[];
 }
 
 export function cutList(input: CutListInput): CutList {
@@ -467,7 +465,7 @@ export function cutList(input: CutListInput): CutList {
   const doc = derived.doc;
   const basis = doc.price_basis;
   const d = new Diagnostics();
-  const pieces = [...derivedPieces(derived), ...(input.extraPieces ?? [])].map(canonical);
+  const pieces = derivedPieces(derived).map(canonical);
 
   const byGroup = new Map<string, Piece[]>();
   for (const p of pieces) {
