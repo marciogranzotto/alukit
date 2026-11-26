@@ -2,28 +2,12 @@
   "schema": "alukit.project/1",
   "name": "G23",
   "catalogs": ["../../catalogs/test", "../../catalogs/test-geo", "../../catalogs/test-gen"],
-  "defaults": { "cutting": { "kerf_mm": 3, "trim_mm": 0 } },
+  "defaults": {
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
   "bars": {
-    "b1": {
-      "item": "test-gen:RAIL-G",
-      "a": [0, 0, 0],
-      "b": [470, 0, 0],
-      "anchor": "mount",
-      "holes": { "factory": "a" }
-    },
-    "b2": {
-      "item": "test-gen:RAIL-G",
-      "a": [0, 100, 0],
-      "b": [470, 100, 0],
-      "anchor": "mount",
-      "holes": { "factory": "a" }
-    },
-    "b3": {
-      "item": "test-gen:RAIL-G",
-      "a": [0, 200, 0],
-      "b": [470, 200, 0],
-      "anchor": "mount",
-      "holes": { "factory": "a" }
-    }
+    "b1": { "item": "test-gen:RAIL-G", "a": [0, 0, 0], "b": [470, 0, 0], "anchor": "mount", "holes": { "factory": "a" } },
+    "b2": { "item": "test-gen:RAIL-G", "a": [0, 100, 0], "b": [470, 100, 0], "anchor": "mount", "holes": { "factory": "a" } },
+    "b3": { "item": "test-gen:RAIL-G", "a": [0, 200, 0], "b": [470, 200, 0], "anchor": "mount", "holes": { "factory": "a" } }
   }
 }

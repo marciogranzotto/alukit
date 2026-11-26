@@ -88,7 +88,7 @@ export function barFrame(
 }
 
 /** The anchor's point in section coordinates (§4.4). */
-function anchorPoint(
+export function anchorPoint(
   name: string,
   bbox: readonly [readonly [number, number], readonly [number, number]],
   datums: Readonly<Record<string, readonly [number, number]>>,

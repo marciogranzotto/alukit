@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseJson } from "#catalog/json.ts";
-import { linkCatalogs } from "#catalog/link.ts";
+import { type CatalogSet, linkCatalogs } from "#catalog/link.ts";
 import { BUILTIN_DIR, openCatalog } from "#catalog/open.ts";
 import type { Diagnostic } from "../diagnostics.ts";
 import { catalogItems, type ItemSource } from "../items.ts";
@@ -23,7 +23,8 @@ export interface OpenedProject {
   diagnostics: Diagnostic[];
 }
 
-function isPath(name: string): boolean {
+/** A catalog entry is a folder path (relative to the project) rather than a built-in id. */
+export function isPath(name: string): boolean {
   return name.startsWith(".") || name.includes("/") || name.includes("\\");
 }
 
@@ -54,6 +55,21 @@ export async function openProject(
     });
   }
 
+  const live = await openLiveCatalogs(dir, raw, builtinDir);
+  diagnostics.push(...live.diagnostics);
+  return { dir, raw, items: catalogItems(live.set), diagnostics };
+}
+
+/**
+ * The live catalogs a document names (§3.1), linked, with their errors as `catalog`
+ * diagnostics. The lock pins from these (§4.13); derive reads the lock.
+ */
+export async function openLiveCatalogs(
+  dir: string,
+  raw: unknown,
+  builtinDir: string = BUILTIN_DIR,
+): Promise<{ set: CatalogSet; diagnostics: Diagnostic[] }> {
+  const diagnostics: Diagnostic[] = [];
   const names =
     typeof raw === "object" &&
     raw !== null &&
@@ -61,20 +77,17 @@ export async function openProject(
       ? ((raw as { catalogs: unknown[] }).catalogs.filter((c) => typeof c === "string") as string[])
       : [];
   const dirs = names.map((n) => (isPath(n) ? resolve(dir, n) : join(builtinDir, n)));
-  let items: ItemSource = catalogItems(linkCatalogs([]).set);
-  if (dirs.length > 0) {
-    const [first, ...rest] = dirs as [string, ...string[]];
-    const opened = await openCatalog(first, { extra: rest, cwd: dir, builtinDir });
-    items = catalogItems(opened.set);
-    for (const d of opened.diagnostics) {
-      if (d.severity !== "error") continue;
-      diagnostics.push({
-        severity: "error",
-        code: "catalog",
-        ...(d.entity ? { entity: d.entity } : {}),
-        message: `${d.code}: ${d.message}`,
-      });
-    }
+  if (dirs.length === 0) return { set: linkCatalogs([]).set, diagnostics };
+  const [first, ...rest] = dirs as [string, ...string[]];
+  const opened = await openCatalog(first, { extra: rest, cwd: dir, builtinDir });
+  for (const d of opened.diagnostics) {
+    if (d.severity !== "error") continue;
+    diagnostics.push({
+      severity: "error",
+      code: "catalog",
+      ...(d.entity ? { entity: d.entity } : {}),
+      message: `${d.code}: ${d.message}`,
+    });
   }
-  return { dir, raw, items, diagnostics };
+  return { set: opened.set, diagnostics };
 }

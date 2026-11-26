@@ -30,9 +30,14 @@ describe("cli", () => {
   it("lists planned commands as not implemented yet, and the project commands as usable", () => {
     expect(helpText()).toContain("order | costs <dir>");
     expect(helpText()).toContain("(not implemented yet)");
-    expect(helpText()).toMatch(/\n {2}derive <dir> \[--json\]\n/);
-    expect(helpText()).toMatch(/\n {2}cutlist <dir> \[--format md\|csv\|json\]\n/);
-    expect(helpText()).toMatch(/\n {2}bom <dir> \[--format md\|csv\|json\]\n/);
+    expect(helpText()).toMatch(/\n {2}derive <dir> \[--json\] \[--frozen\]\n/);
+    expect(helpText()).toMatch(/\n {2}cutlist <dir> \[--format md\|csv\|json\] \[--frozen\]\n/);
+    expect(helpText()).toMatch(/\n {2}bom <dir> \[--format md\|csv\|json\] \[--frozen\]\n/);
+    expect(helpText()).toMatch(/\n {2}fmt <dir>\.\.\. \[--check\]\n/);
+    for (const cmd of ["bom", "new", "check", "do", "add", "query", "lock update", "fmt"]) {
+      expect(helpText()).toMatch(new RegExp(`\\n {2}${cmd} `));
+      expect(helpText()).not.toMatch(new RegExp(`\\n {2}${cmd} .*not implemented`));
+    }
   });
 
   it("refuses planned and unknown commands, and a project command with no folder", async () => {

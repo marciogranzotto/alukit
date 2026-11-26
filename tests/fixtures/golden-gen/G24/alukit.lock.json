@@ -1,0 +1,32 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test": { "hash": "sha256:c6d7c475d4baca3dbbb15d6b2a08d99c75084a2562cc1881d7a0eea1bbb5659a", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-gen": { "hash": "sha256:379a646e4de9603625be96a54b20ca12cc0712e2491952abd35de19b48882b79", "name": "Generation test catalog (synthetic)", "vendor": "test-gen-vendor", "currency": "BRL" },
+    "test-geo": { "hash": "sha256:769a73b8847e08e76b593726b24f27dfb2f4a7844f679f382b9edebf58374b2e", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-gen:CAR-G": { "hash": "sha256:6441c7aed46ea44fb5a4fa59f366641ed578c0d5fd1e01a02460ecc2289c64ee", "item": { "kind": "carriage", "name": "Carriage G (synthetic)", "prov": { "src": "est", "note": "synthetic test data for generation (M3b), not a vendor's" }, "rail_system": "rail-g", "mass_kg": 0.35, "bbox_mm": [[-35, -22, -5], [35, 22, 20]], "datums": { "run": [0, 0, 0] } } },
+    "test-gen:RAIL-G": { "hash": "sha256:e5dfa6876d3ee3d3952762cf685a0e97191d5be38f8ef2c0fead3a3694950948", "item": { "kind": "bar", "name": "Linear rail G (synthetic)", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for generation (M3b), not a vendor's" }, "shape": "rail", "section": "RAIL-G", "system": "rail-g", "mass_kg_per_m": 2.2, "rail": { "pitch_mm": 60, "E_min_mm": 20, "E_max_mm": 50, "hole": { "thread": "M5", "d_mm": 6, "cbore_d_mm": 9.5, "cbore_depth_mm": 8.5 } } } },
+    "test-gen:SCR-M5x25": { "hash": "sha256:5dbc921ec935cf42177a45c0d2857977039f181f0a22f780552a64000e9e0f02", "item": { "kind": "fastener", "name": "Socket head cap screw M5x25", "prov": { "src": "est", "note": "synthetic test data for generation (M3b), not a vendor's" }, "subtype": "screw", "thread": "M5", "length_mm": 25, "head": "ISO 4762", "class": "8.8", "mass_kg": 0.006 } },
+    "test-geo:FB-50x10": { "hash": "sha256:940ba09dee00f3db3afa2356302471a9c006e588437214b4a945bd195aecdadc", "item": { "kind": "bar", "name": "Flat bar 50x10", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "shape": "flat", "section": "FB-50x10" } }
+  },
+  "offers": {
+    "test-gen:CAR-G": { "hash": "sha256:1a7b4cc1d057d8efa34e7d2eb02a8e0160a42e8f2703cacd9ae707514ce53cb6", "offer": { "item": "CAR-G", "price": { "regular_minor": 9000, "sale_minor": null, "per": "unit", "read": "2026-11-26", "src": "src" } } },
+    "test-gen:RAIL-G-1500": { "hash": "sha256:53ec24cc7616cf7f2fc9789c799fd1482aabc534f5622c676096da8f2875aee8", "offer": { "item": "RAIL-G", "sale": { "mode": "stock", "length_mm": 1500, "factory_E_mm": 30 }, "price": { "regular_minor": 21000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test-gen:SCR-M5x25-100": { "hash": "sha256:7ca87dca793924eac9e05a4d5de16a8362feb5c91fddc74d67195c3504f6ee66", "offer": { "item": "SCR-M5x25", "pack": 100, "price": { "regular_minor": 1500, "sale_minor": null, "per": "unit", "read": "2026-11-26", "src": "src" } } },
+    "test-geo:FB-50x10-3000": { "hash": "sha256:9d37b4cb7995c7bdcd49e6ff6dbbee7e54110fdedfd2640e38041fc21a317785", "offer": { "item": "FB-50x10", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 3000 }, "price": { "regular_minor": 4000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test-geo:FB-50x10-6000": { "hash": "sha256:b32d104b7f16875582c4311172c7670747eb29ab0a17dd8915ca348b76a3b571", "offer": { "item": "FB-50x10", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 7000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } }
+  },
+  "sections": {
+    "test-gen:RAIL-G": { "hash": "sha256:ec129710875fd896c88bc5dbc23deec3799896e3501b1cff6de7eff2ba398c10", "section": { "schema": "alukit.section/1", "id": "RAIL-G", "fidelity": "parametric", "props_ok": false, "generator": "rail", "params": { "w_mm": 20, "h_mm": 18 } } },
+    "test-geo:FB-50x10": { "hash": "sha256:b797bebb37ad05884e8d076afb3dab529ca274ffeca4c45cb71eb4e1f3ea34e9", "section": { "schema": "alukit.section/1", "id": "FB-50x10", "fidelity": "parametric", "props_ok": true, "generator": "flat", "params": { "b_mm": 50, "t_mm": 10 } } }
+  },
+  "materials": {
+    "test:s235": { "hash": "sha256:642f592f18278ab312b5939c9a0525dcc6ec0aa40a5c52253e599e27cf2ea6ab", "material": { "name": "Steel S235", "E_MPa": 210000, "G_MPa": 81000, "nu": 0.3, "density_kg_per_m3": 7850, "Rp02_MPa": 235, "Rm_MPa": 360, "alpha_per_K": 0.000012 } }
+  },
+  "grooves": {},
+  "systems": {
+    "test-gen:rail-g": { "hash": "sha256:2555c04c5692102732f4b825416270493f63c0e341f424459aae9362ae73ca31", "system": { "type": "rail", "family": "G", "size": 20 } }
+  }
+}

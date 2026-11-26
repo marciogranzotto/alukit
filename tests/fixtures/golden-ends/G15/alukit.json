@@ -2,10 +2,14 @@
   "schema": "alukit.project/1",
   "name": "G15",
   "catalogs": ["../../catalogs/test", "../../catalogs/test-geo"],
-  "defaults": { "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } } },
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } }
+  },
   "bars": {
     "b1": { "a": [0, 0, 0], "b": [1000, 0, 0] },
     "b2": { "a": [500, 100, 100], "b": [500, 600, 100] }
   },
-  "connections": { "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"] } }
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"] }
+  }
 }

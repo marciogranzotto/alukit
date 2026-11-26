@@ -2,15 +2,10 @@
   "schema": "alukit.project/1",
   "name": "G22",
   "catalogs": ["../../catalogs/test", "../../catalogs/test-geo", "../../catalogs/test-gen"],
-  "defaults": { "cutting": { "kerf_mm": 3, "trim_mm": 0 } },
+  "defaults": {
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
   "bars": {
-    "b1": {
-      "item": "test-gen:RAIL-G",
-      "a": [0, 0, 0],
-      "b": [1210, 0, 0],
-      "anchor": "mount",
-      "holes": { "factory": "a" },
-      "label": "the rail cut to 1210 from the 1500 stock"
-    }
+    "b1": { "item": "test-gen:RAIL-G", "a": [0, 0, 0], "b": [1210, 0, 0], "anchor": "mount", "holes": { "factory": "a" }, "label": "the rail cut to 1210 from the 1500 stock" }
   }
 }

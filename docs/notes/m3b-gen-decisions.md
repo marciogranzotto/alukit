@@ -82,7 +82,7 @@ G1–G21 still pass unchanged.
 | 35 | Bar mass is each piece's centre-line length times the mass per metre: the published `mass_kg_per_m`, else area × density (the published area, else the section's closed form when `props_ok`). Units take `mass_kg`. A line's `mass_src` is the catalog's provenance or `calc`. A threaded rod whose catalog publishes its stress area (the cart's M10, 58 mm²) weighs a little light by that area | §3.5's authority rule, applied as written |
 | 36 | Each line's mass is rounded once to 0.001 kg; groups and the total add the rounded lines. An item with no mass is a `mass` warning, listed in `mass_unknown` and left out of the totals | Totals that add up on paper; a missing mass is a catalog gap, not a broken project |
 | 37 | Unplaced lines merge into their item's line, with their `why` | One line per item |
-| 38 | `alukit bom <dir> [--format md\|csv\|json]` (`alukit.bom/1`); exit 1 on any derive error. `derive --json` adds `parts`, `fastenings`, `pieces`, `hardware` and the generated ops with `by` | §5.4; deterministic like M3a's outputs |
+| 38 | `alukit bom <dir> [--format md\|csv\|json] [--frozen]` (`alukit.bom/1`), derived from the lock like `derive` and `cutlist`; exit 1 on any derive error. `derive --json` adds `parts`, `fastenings`, `pieces`, `hardware` and the generated ops with `by` | §5.4; deterministic like M3a's outputs |
 
 ## For part 3 (offers, order list, costs)
 

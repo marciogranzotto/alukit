@@ -8,8 +8,8 @@ a priced bill of materials from real suppliers, the machining on each bar and an
 list. Catalogs can be your own, imported or created. Agents can drive the whole thing
 through a documented file format and a CLI.
 
-**Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core) and the first
-part of M3b (generation and the bill of materials).**
+**Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core) and two parts
+of M3b: generation with the bill of materials, and the edit path.**
 - Catalog schemas, the three-layer merge, section generators and section properties, and
   `alukit catalog check`, which compares computed section properties against published ones.
 - Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): the
@@ -20,6 +20,9 @@ part of M3b (generation and the bill of materials).**
 - Generation: rail holes from factory ends or drilled, parts on stations, bolted, screwed and
   T-nut face connections with their clearance holes, taps, rods and sleeves, connectors' hardware
   and machining; and the bill of materials with masses: `alukit bom <dir>`.
+- Editing through commands, the one edit path: `alukit new`, `alukit do` (a batch of commands,
+  applied atomically) and `alukit add`, `alukit query`, `alukit check`; the canonical form
+  (`alukit fmt`) and the lock file that pins catalog data (`alukit lock update`).
 
 The app still draws an empty scene.
 

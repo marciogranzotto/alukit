@@ -1,22 +1,18 @@
 import { readFileSync } from "node:fs";
 import { CATALOG_USAGE } from "./catalog-usage.ts";
-import { PROJECT_COMMANDS, PROJECT_USAGE } from "./project-usage.ts";
+import { EDIT_COMMANDS, EDIT_USAGE, PROJECT_COMMANDS, PROJECT_USAGE } from "./project-usage.ts";
 
 export interface Io {
   out: (text: string) => void;
   err: (text: string) => void;
+  /** Reads all of standard input (`alukit do <dir> -`). */
+  stdin?: () => Promise<string>;
 }
 
 /** The planned commands (design §7.3), not implemented yet. */
 const PLANNED: readonly (readonly [string, string])[] = [
-  ["new <dir>", "create a project"],
-  ["check <dir>", "validate, derive and run the checks"],
   ["order | costs <dir>", "the outputs"],
-  ["query <dir> <selector>", "select entities"],
-  ["do <dir> -f batch.json", "apply edits"],
   ["log | undo", "the server's log; undo the latest step"],
-  ["lock update <dir>", "refresh the catalog lock"],
-  ["fmt <dir>", "rewrite a project into canonical form"],
   ["diff <a> <b>", "compare projects, revisions or variants"],
   ["revision save|verify <name>", "revisions"],
   ["snapshot <dir>", "render a view to PNG"],
@@ -50,6 +46,7 @@ export function helpText(): string {
     "Commands:",
     `  ${"serve [--port N]".padEnd(width)}  serve the app on 127.0.0.1`,
     ...PROJECT_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
+    ...EDIT_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
     ...CATALOG_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
     ...rows,
     "",
@@ -99,6 +96,10 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
   if ((PROJECT_COMMANDS as readonly string[]).includes(cmd)) {
     const { projectCommand } = await import("./project.ts");
     return projectCommand(cmd, rest, io);
+  }
+  if ((EDIT_COMMANDS as readonly string[]).includes(cmd)) {
+    const { editCommand } = await import("./edit.ts");
+    return editCommand(cmd as (typeof EDIT_COMMANDS)[number], rest, io);
   }
   if (PLANNED_NAMES.has(cmd)) {
     io.err(`alukit ${cmd}: not implemented yet`);

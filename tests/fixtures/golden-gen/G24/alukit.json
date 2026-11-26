@@ -2,44 +2,22 @@
   "schema": "alukit.project/1",
   "name": "G24",
   "catalogs": ["../../catalogs/test", "../../catalogs/test-geo", "../../catalogs/test-gen"],
-  "defaults": { "cutting": { "kerf_mm": 3, "trim_mm": 0 } },
-  "bars": {
-    "b1": {
-      "item": "test-gen:RAIL-G",
-      "a": [0, 0, 0],
-      "b": [470, 0, 0],
-      "anchor": "mount",
-      "holes": { "factory": "b" },
-      "label": "rail1"
-    },
-    "b2": {
-      "item": "test-gen:RAIL-G",
-      "a": [470, 0, 0],
-      "b": [940, 0, 0],
-      "anchor": "mount",
-      "holes": { "factory": "a" },
-      "label": "rail2"
-    },
-    "b3": {
-      "item": "test-geo:FB-50x10",
-      "a": [0, 0, 0],
-      "b": [940, 0, 0],
-      "anchor": "+y",
-      "label": "a base the run is screwed to, at the selected holes"
-    }
+  "defaults": {
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
   },
-  "runs": { "r1": ["b1", "b2"] },
+  "bars": {
+    "b1": { "item": "test-gen:RAIL-G", "a": [0, 0, 0], "b": [470, 0, 0], "anchor": "mount", "holes": { "factory": "b" }, "label": "rail1" },
+    "b2": { "item": "test-gen:RAIL-G", "a": [470, 0, 0], "b": [940, 0, 0], "anchor": "mount", "holes": { "factory": "a" }, "label": "rail2" },
+    "b3": { "item": "test-geo:FB-50x10", "a": [0, 0, 0], "b": [940, 0, 0], "anchor": "+y", "label": "a base the run is screwed to, at the selected holes" }
+  },
+  "runs": {
+    "r1": ["b1", "b2"]
+  },
   "connections": {
     "c1": { "type": "splice", "ends": ["b1.b", "b2.a"] },
-    "c2": {
-      "type": "face",
-      "bars": ["r1", "b3"],
-      "fastening": "screw",
-      "fastener": "test-gen:SCR-M5x25",
-      "stations": {
-        "rail_holes": { "along": "r1", "every": 2, "plus": ["first", "last", "joint"] }
-      }
-    }
+    "c2": { "type": "face", "bars": ["r1", "b3"], "fastening": "screw", "fastener": "test-gen:SCR-M5x25", "stations": { "rail_holes": { "along": "r1", "every": 2, "plus": ["first", "last", "joint"] } } }
   },
-  "parts": { "p1": { "item": "test-gen:CAR-G", "on": { "bar": "r1", "at_mm": 480 } } }
+  "parts": {
+    "p1": { "item": "test-gen:CAR-G", "on": { "bar": "r1", "at_mm": 480 } }
+  }
 }
