@@ -132,9 +132,15 @@ export function isPose(x: Point | Pose): x is Pose {
   return typeof x === "object" && !Array.isArray(x) && "pos" in x;
 }
 
-/** An explicit end plane (§4.5). */
+/**
+ * An explicit end plane (§4.5). The normal is a vector, or a bar whose axis it takes: a plane
+ * square to that bar, such as a shoe mitred square to a strut (G27).
+ */
 export const Plane = z.union([
-  z.strictObject({ point: Point, normal: Vec3Expr }),
+  z.strictObject({
+    point: Point,
+    normal: z.union([Vec3Expr, BarId]).describe("a vector, or a bar: square to its axis"),
+  }),
   z.strictObject({ face: z.strictObject({ bar: BarId, face: Face }) }),
   z.strictObject({ of: EndRef }),
 ]);

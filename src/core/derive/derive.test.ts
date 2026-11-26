@@ -299,6 +299,36 @@ describe("explicit planes and bodies (§4.5)", () => {
     expect(cut(d, "b2")).toBe(1000);
   });
 
+  it("takes a plane's normal from a bar's axis; a missing bar is a ref error", () => {
+    const d = run({
+      bars: {
+        b1: {
+          a: [0, 0, 0],
+          b: [1000, 0, 0],
+          ends: { b: { plane: { point: [900, 50, 0], normal: "b1" } } },
+        },
+        b2: {
+          a: [0, 100, 0],
+          b: [1000, 100, 0],
+          ends: { b: { plane: { point: [900, 100, 0], normal: "b3" }, cut: "angle" } },
+        },
+        b3: { a: [0, 0, 0], b: [300, 300, 0] },
+        b4: {
+          a: [0, 200, 0],
+          b: [1000, 200, 0],
+          ends: { b: { plane: { point: [900, 200, 0], normal: "b9" } } },
+        },
+      },
+    });
+    expect(codes(d)).toEqual([["ref", "b4.b"]]);
+    // Square to its own axis: a plain square cut through the point's station.
+    expect(cut(d, "b1")).toBe(900);
+    // Square to b3, at 45° to b2: the long point is 20 past the centre line.
+    expect(Math.round((d.bars.get("b2")?.ends.b.angle ?? 0) * 100) / 100).toBe(45);
+    expect(cut(d, "b2")).toBe(920);
+    expect(cut(d, "b4")).toBe(1000);
+  });
+
   it("refuses a plane parallel to the axis", () => {
     const d = run({
       bars: {
