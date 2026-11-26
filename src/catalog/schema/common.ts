@@ -91,7 +91,8 @@ export const LocalId = z
  * the referring catalog (design §3.1).
  */
 export const REF = new RegExp(
-  `^(?:${CATALOG_ID.source.slice(1, -1)}:)?${LOCAL_ID.source.slice(1, -1)}$`,
+  // Its own lookahead: CATALOG_ID's `(?!project$)` would not refuse "project:" mid-string.
+  `^(?:(?!project:)[a-z][a-z0-9-]*:)?${LOCAL_ID.source.slice(1, -1)}$`,
 );
 export const Ref = z
   .string()
