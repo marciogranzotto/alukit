@@ -1,0 +1,19 @@
+{
+  "case": "G25",
+  "rule": "a multi-layer joint; a fastener and a sleeve cut from bar stock; stations across a face (§4.5)",
+  "design": "4 fasteners; grip 110.50; cut list 4 × 140.00 rod and 4 × 42.00 sleeve; 8 washers and 8 nuts; 24 holes of Ø11 (4 in each of the four solid layers, 8 in the RHS's two walls)",
+  "expect": {
+    "fastenings": { "c1": { "count": 4, "grip_mm": [110.5] } },
+    "lines": {
+      "test:M10-ROD": [{ "count": 4, "cut_mm": 140 }],
+      "test-geo:TUBE-18x2": [{ "count": 4, "cut_mm": 42 }]
+    },
+    "hardware": { "test-geo:WSH-M10": 8, "test-geo:NUT-M10": 8 },
+    "holes": {
+      "total": 24,
+      "d_mm": [11],
+      "per_bar": { "b1": 4, "b2": 4, "b3": 8, "b4": 4, "b5": 4 }
+    },
+    "errors": []
+  }
+}

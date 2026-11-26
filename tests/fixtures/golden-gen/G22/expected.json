@@ -1,0 +1,27 @@
+{
+  "case": "G22",
+  "rule": "holes from a factory end (§4.7)",
+  "design": "factory a: 20 holes, E_a 30.00, E_b 40.00. factory b: 20 holes, E_a 40.00, E_b 30.00. drilled: 20 holes, E 35.00 at both ends",
+  "expect": {
+    "rails": { "b1": { "holes": 20, "E_a_mm": 30, "E_b_mm": 40 } },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "factory b",
+      "patch": { "bars": { "b1": { "holes": { "factory": "b" } } } },
+      "expect": {
+        "rails": { "b1": { "holes": 20, "E_a_mm": 40, "E_b_mm": 30 } },
+        "errors": []
+      }
+    },
+    {
+      "name": "drilled to order",
+      "patch": { "bars": { "b1": { "holes": { "factory": null, "drilled": true } } } },
+      "expect": {
+        "rails": { "b1": { "holes": 20, "E_a_mm": 35, "E_b_mm": 35 } },
+        "errors": []
+      }
+    }
+  ]
+}
