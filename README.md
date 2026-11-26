@@ -9,8 +9,8 @@ list. Catalogs can be your own, imported or created. Agents can drive the whole 
 through a documented file format and a CLI.
 
 **Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core), M3b
-(generation with the bill of materials; the edit path; offers, the order list and costs) and M4a
-(the viewer and the server that owns the document).**
+(generation with the bill of materials; the edit path; offers, the order list and costs), M4a
+(the viewer and the server that owns the document) and M4b (drawing with the mouse).**
 - Catalog schemas, the three-layer merge, section generators and section properties, and
   `alukit catalog check`, which compares computed section properties against published ones.
 - Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): every
@@ -34,8 +34,13 @@ through a documented file format and a CLI.
   `redo` and `log` use its history. A direct edit of `alukit.json` is taken in as a step, or makes
   the project read-only while the file is not valid. The server answers only its own page, with a
   per-start token.
-
-Drawing with the mouse comes next (M4b).
+- Drawing with the mouse: draw a bar from the palette (snapping to nodes, bar ends, face and
+  groove centre lines, face centres and the grid; the line follows X, Y or Z, Shift frees it in
+  the work plane; type a length, R rolls, A cycles the anchor; ends butt where they meet others),
+  connect ends and bars, place a part on a face or groove, pattern the selection along a bar,
+  measure; a catalog browser (vendor, kind, family, search, item cards with sections and offers)
+  sets the palette; standard views, orthographic or perspective, and fit to selection.
+- `alukit snapshot <dir> -o shot.png --view iso` renders a named view to PNG in headless Chromium.
 
 | Document                                                                   | What                                                                                                 |
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
