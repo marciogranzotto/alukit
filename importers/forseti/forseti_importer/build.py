@@ -12,7 +12,7 @@ import re
 from collections import defaultdict
 from decimal import Decimal
 
-from . import emit, pdfcat, store, tables
+from . import emit, pdfcat, rest, store, tables
 
 API = "https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products"
 WALK = ("-y", "+x", "+y", "-x")
@@ -50,6 +50,10 @@ class Build:
     def price(self, x: dict, per: str, times: int = 1) -> dict:
         regular, sale = store.price(x)
         ref = f"url:{API}/{x['id']}"
+        if times == 1 and regular == 0:
+            # The shop lists some variants at 0 (placeholders). The price says so, in its own field.
+            return {"regular_minor": {"v": 0, "src": "src", "note": "listed at a price of 0 by the shop; no real price"},
+                    "sale_minor": sale, "per": per, "read": self.snap.read, "src": "src", "ref": ref}
         if times == 1:
             return {"regular_minor": regular, "sale_minor": sale, "per": per,
                     "read": self.snap.read, "src": "src", "ref": ref}
@@ -87,10 +91,16 @@ class Build:
         prev = self.items.get(iid)
         if prev is None:
             self.items[iid] = fields
-        elif {k: v for k, v in prev.items() if k not in ("url", "prov", "options")} != {
+            return
+        for name, values in (fields.get("options") or {}).items():
+            have = prev.setdefault("options", {}).setdefault(name, [])
+            have.extend(v for v in values if v not in have)
+        if {k: v for k, v in prev.items() if k not in ("url", "prov", "options")} != {
             k: v for k, v in fields.items() if k not in ("url", "prov", "options")
         }:
-            raise ValueError(f"item {iid}: two products describe it differently")
+            diff = {k: (prev.get(k), fields.get(k)) for k in set(prev) | set(fields)
+                    if k not in ("url", "prov", "options") and prev.get(k) != fields.get(k)}
+            raise ValueError(f"item {iid}: two products describe it differently: {diff}")
 
     # --- material, grooves, systems -------------------------------------------------------------
 
@@ -153,18 +163,21 @@ class Build:
             stems[m.group(1)].append((finish, p))
         for stem in emit.sorted_ids(stems):
             if stem not in tables.PROFILES:
-                self.notes["profile stems left for M2b"].append(stem)
-                continue
+                raise ValueError(f"{stem}: a profile stem the tables do not name")
+            key = tables.PROFILES[stem].get("printed", stem)
+            if key is not None and key not in printed:
+                raise ValueError(f"{stem}: no table for {key} in the catalogue")
             self.profile(stem, sorted(stems[stem], key=lambda fp: (fp[0] != "anodised", fp[1]["id"])),
-                         printed[stem])
+                         printed[key] if key else None)
         missing = sorted(set(tables.PROFILES) - set(stems))
         if missing:
             raise ValueError(f"profile stems in the tables but not in the shop: {missing}")
 
-    def profile(self, stem: str, products: list[tuple[str, dict]], pr: pdfcat.Printed) -> None:
+    def profile(self, stem: str, products: list[tuple[str, dict]], pr: pdfcat.Printed | None) -> None:
         spec = tables.PROFILES[stem]
         w, h, page = spec["w"], spec["h"], spec["page"]
         main = products[0][1]
+        prov = self.pdf_prov(page) if page else self.shop_prov(main)
         name = re.sub(r"\s*[–-]\s*(Anodizado Fosco|Pintura Preta)\s*$", "", store.name(main), flags=re.I)
         desc = store.text(main.get("description"))
         m = re.search(r"Canal (\d+)", store.name(main))
@@ -175,9 +188,16 @@ class Build:
             raise ValueError(f"{stem}: no system for series {series}, slot {slot}")
         sys_id, gid, sys_name = tables.SYSTEMS[(series, slot)]
         self.systems[sys_id] = {"type": "tslot", "series_mm": series, "groove": gid, "name": sys_name}
-        if pr.A_cm2 is None or pr.IX_cm4 is None or pr.IY_cm4 is None or pr.kg_per_m is None:
-            raise ValueError(f"{stem}: incomplete table on p. {page}")
-        ix, iy = (pr.IX_cm4, pr.IY_cm4) if w == h else (pr.IY_cm4, pr.IX_cm4)
+        if pr is not None:
+            if pr.A_cm2 is None or pr.IX_cm4 is None or pr.IY_cm4 is None or pr.kg_per_m is None:
+                raise ValueError(f"{stem}: incomplete table on p. {pr.page}")
+            ix, iy = (pr.IX_cm4, pr.IY_cm4) if w == h else (pr.IY_cm4, pr.IX_cm4)
+            # Every other printed mass is its area times the alloy's density (survey §7): a table
+            # that is not gets reported, and the printed values stay the authority.
+            expect = float(pr.A_cm2) * 0.27
+            if abs(float(pr.kg_per_m) - expect) > 0.015 * expect:
+                self.notes["printed mass differs from area x density by more than 1.5 %"].append(
+                    f"{stem}: p. {pr.page} prints {pr.kg_per_m} kg/m for {pr.A_cm2} cm2 ({expect:.3f})")
         grooves = []
         for face in WALK:
             length = w if face in ("-y", "+y") else h
@@ -187,8 +207,8 @@ class Build:
         if "outline" in spec:
             self.exact_section(stem, spec, grooves, gid)
         else:
-            self.parametric_section(stem, spec, grooves, gid)
-        core: dict = {"bore_mm": spec["bore"]}
+            self.parametric_section(stem, spec, grooves, gid, main["permalink"])
+        core: dict = {"bore_mm": spec["bore"]} if spec["bore"] is not None else {}
         if tap:
             core["tap"] = tap.group(1)
         finishes = [f for f, _ in products]
@@ -197,31 +217,52 @@ class Build:
         it = {"kind": "bar", "name": name, "code": stem}
         if self.brand(main):
             it["brand"] = self.brand(main)
-        it |= {
-            "url": main["permalink"],
-            "docs": [{"ref": pdf_ref(page)}],
-            "material": next(iter(self.materials)),
-            "shape": "tslot",
-            "section": stem,
-            "system": sys_id,
-            "mass_kg_per_m": num(pr.kg_per_m),
-            "area_mm2": num(pr.A_cm2 * 100),
-            "Ix_mm4": num(ix * 10000),
-            "Iy_mm4": num(iy * 10000),
-            "core": core,
-            "options": {"finish": finishes},
-            "prov": self.pdf_prov(page),
-        }
+        it |= {"url": main["permalink"]}
+        docs = [{"ref": pdf_ref(n)} for n in dict.fromkeys(n for n in (page, pr.page if pr else None) if n)]
+        if docs:
+            it["docs"] = docs
+        it |= {"material": next(iter(self.materials)), "shape": "tslot", "section": stem, "system": sys_id}
+        if pr is not None:
+            it |= {
+                "mass_kg_per_m": num(pr.kg_per_m),
+                "area_mm2": num(pr.A_cm2 * 100),
+                "Ix_mm4": num(ix * 10000),
+                "Iy_mm4": num(iy * 10000),
+            }
+        else:
+            # No usable table: the mass is the one the shop's description states, if it does.
+            m = re.search(r"Peso[^0-9]{0,25}(\d+,\d+)\s*kg\s*/\s*m", desc)
+            if m:
+                it["mass_kg_per_m"] = {
+                    "v": num(Decimal(m.group(1).replace(",", "."))), "src": "src",
+                    "ref": f"url:{main['permalink']}", "read": self.snap.read,
+                    "note": "the shop's description; the catalogue has no table for this profile",
+                }
+            else:
+                self.notes["profiles with no published mass"].append(stem)
+        if core:
+            it["core"] = core
+        it |= {"options": {"finish": finishes}, "prov": prov}
         self.item(stem, it)
         for finish, p in products:
             page_html = self.snap.page(p["id"])
-            rule = store.cut_rule(page_html) if page_html else None
+            fix = tables.CUT_STEP_FIX.get(p["sku"])
+            rule = store.cut_rule(page_html, fix[0] if fix else None) if page_html else None
+            if fix and isinstance(rule, store.CutRule):
+                self.notes["price steps taken from the table"].append(f"{p['sku']}: {fix[1]}")
             if rule is None:
                 raise ValueError(f"{p['sku']}: no cut rule on its product page")
             if isinstance(rule, store.CutRule):
                 sale = {"mode": "cut", "min_mm": rule.min_mm, "max_mm": rule.max_mm, "tol_mm": rule.tol_mm,
                         "res_mm": rule.res_mm, "step_mm": rule.step_mm}
                 self.offer(p["sku"], stem, p, "m", options={"finish": finish}, sale=sale)
+                # A simple product the shop gives variations (its black twin, say) sells by the
+                # same rule, under the variation's SKU.
+                for c in self.snap.children.get(p["id"], []):
+                    cf = "black" if "-PP" in c["sku"].upper() else None
+                    if cf is None:
+                        raise ValueError(f"{c['sku']}: a variation of a profile the tables do not handle")
+                    self.offer(c["sku"], stem, c, "m", options={"finish": cf}, sale=sale)
             else:
                 for length in rule.lengths_mm:
                     self.offer(f"{p['sku']}.{length}", stem, p, "bar", sku=p["sku"],
@@ -253,22 +294,29 @@ class Build:
             "holes": [[list(pt) for pt in hole] for hole in o.holes],
         }
 
-    def parametric_section(self, stem: str, spec: dict, grooves: list[dict], gid: str) -> None:
+    def parametric_section(self, stem: str, spec: dict, grooves: list[dict], gid: str, url: str) -> None:
         w, h = spec["w"], spec["h"]
         default = [{"face": f, "at_mm": 0} for f in WALK]
         params: dict = {"w_mm": w, "h_mm": h, "groove": gid}
         if grooves != default:
             params["grooves"] = grooves
-        params["bores"] = [{"at_mm": [x, y], "d_mm": spec["bore"]} for x, y in spec["bores"]]
+        bores = spec.get("bores") or ([(0, 0)] if spec["bore"] is not None else [])
+        if bores:
+            params["bores"] = [{"at_mm": [x, y], "d_mm": spec["bore"]} for x, y in bores]
+        note = ("a T-slot envelope from the printed overall size and core bore, with the groove type "
+                "measured on the series' vector outline")
+        note += ("; the page draws this profile as a raster image" if spec["page"]
+                 else "; the catalogue does not draw this profile")
+        if spec.get("approx"):
+            note += ". " + spec["approx"][0].upper() + spec["approx"][1:]
         self.sections[stem] = {
             "schema": "alukit.section/1",
             "id": stem,
             "fidelity": "parametric",
             "props_ok": False,
-            "from": {"ref": pdf_ref(spec["page"]), "method": "generator", "read": tables.PDF_READ,
-                     "note": "a T-slot envelope from the printed overall size and core bore, with the "
-                             "groove type measured on the series' vector outline; the page draws "
-                             "this profile as a raster image"},
+            "from": {"ref": pdf_ref(spec["page"]) if spec["page"] else f"url:{url}",
+                     "method": "generator", "read": tables.PDF_READ if spec["page"] else self.snap.read,
+                     "note": note},
             "generator": "tslot",
             "params": params,
         }
@@ -283,9 +331,8 @@ class Build:
             family, kind, subtype = entry
             sources = ([p] if p["type"] == "simple" else []) + self.snap.children.get(p["id"], [])
             for x in sources:
-                if x["sku"] in tables.SKIP_SKU:
-                    self.notes["SKUs not emitted"].append(f"{x['sku']}: {tables.SKIP_SKU[x['sku']]}")
-                    continue
+                if x["sku"] in tables.NOTE_SKU:
+                    self.notes["offers with no contents modelled"].append(f"{x['sku']}: {tables.NOTE_SKU[x['sku']]}")
                 self.hardware_offer(p, x, family, kind, subtype)
 
     def hardware_offer(self, parent: dict, x: dict, family: str, kind: str, subtype: str | None) -> None:
@@ -311,7 +358,7 @@ class Build:
         if sku in tables.FINISH_BY_SKU:
             iid, finish, describes = tables.FINISH_BY_SKU[sku]
             options = {"finish": finish}
-        if a.get("Opção de Fixação") not in (None, "Sem Fixadores"):
+        if a.get("Opção de Fixação") not in (None, "Sem Fixadores") and sku not in tables.NOTE_SKU:
             raise ValueError(f"{sku}: a fixings option the tables do not handle")
         sizes = [(k, v) for k, v in a.items() if tables.ATTRIBUTE_CLASS[k] == "size"]
         name = store.name(parent) + (f" ({', '.join(f'{k}: {v}' for k, v in sizes)})" if sizes else "")
@@ -346,7 +393,8 @@ class Build:
         it["prov"] = self.shop_prov(parent)
         if options:
             # Every finish in the table's order; check_options confirms each has an offer.
-            it["options"] = {"finish": [f for _, (i, f, _) in tables.FINISH_BY_SKU.items() if i == iid]}
+            it["options"] = {"finish": list(dict.fromkeys(
+                f for i, f, _ in tables.FINISH_BY_SKU.values() if i == iid))}
         if describes:
             self.item(iid, it)
         if length is not None:
@@ -420,6 +468,30 @@ class Build:
             kit.sort(key=lambda line: line["item"] != main)
             self.offer(p["sku"], main, p, "unit", kit=kit)
 
+    # --- coverage -------------------------------------------------------------------------------
+
+    def check_coverage(self) -> None:
+        """Every orderable SKU has exactly one offer, and no offer orders a SKU the shop does not
+        list (design §12, M2b). An offer orders its `sku`, or its key when it names none."""
+        ordered: dict[str, list[str]] = defaultdict(list)
+        for key, o in self.offers.items():
+            ordered[o.get("sku", key)].append(key)
+        orderable = store.orderable(self.snap)
+        missing = [s for s in orderable if s not in ordered]
+        listed = {p["sku"] for p in self.snap.products} | {v["sku"] for v in self.snap.variations}
+        unknown = sorted(set(ordered) - listed)
+        twice = sorted(s for s in orderable if len(ordered.get(s, [])) > 1)
+        if missing or unknown or len(set(orderable)) != len(orderable):
+            raise SystemExit(f"coverage: SKUs with no offer {missing[:10]} ({len(missing)}), offers for SKUs "
+                             f"the shop does not list {unknown[:10]}")
+        # A SKU sold in several stock lengths has several offers (the 80x80 profiles, §3.2).
+        for s in twice:
+            if any(self.offers[k].get("sale", {}).get("mode") != "stock" for k in ordered[s]):
+                raise SystemExit(f"coverage: {s} has {len(ordered[s])} offers that are not stock lengths")
+        self.notes["orderable SKUs with several offers (one per stock length)"] = twice
+        extra = sorted(s for s in ordered if s not in set(orderable))
+        self.notes["offers for products the shop gives variations (not orderable themselves)"] = extra
+
     # --- output ---------------------------------------------------------------------------------
 
     def catalog(self) -> dict:
@@ -450,6 +522,8 @@ def build(raw: str, pdf: str, out: str) -> int:
     b.groove_types()
     b.hardware()
     b.kits()
+    rest.run(b)
+    b.check_coverage()
 
     emit.write(os.path.join(out, "catalog.json"), b.catalog())
     emit.write(os.path.join(out, "offers.json"), {"schema": "alukit.offers/1", "offers": emit.sorted_map(b.offers)})

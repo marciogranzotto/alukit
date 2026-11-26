@@ -3,11 +3,14 @@ PyMuPDF (see README.md):
 
     python3 -I importers/forseti/import_forseti.py fetch <raw folder>
     python3 -I importers/forseti/import_forseti.py build <raw folder> <catalogue PDF> [<out>]
+    python3 -I importers/forseti/import_forseti.py skus <raw folder>
 
 `fetch` takes a fresh snapshot of the shop (GET only, at most one request per second) into a new
-folder. `build` reads a snapshot and the PDF catalogue and writes catalogs/forseti/catalog.json,
-offers.json and sections/ (default <out>: catalogs/forseti beside this repository's importers/).
-The same inputs give byte-identical output.
+folder. `skus` prints the orderable SKUs of a snapshot (the variations, and the products without
+any), as one JSON array: the list the catalog's coverage test holds. `build` reads a snapshot and
+the PDF catalogue and writes catalogs/forseti/catalog.json, offers.json and sections/ (default
+<out>: catalogs/forseti beside this repository's importers/). The same inputs give byte-identical
+output.
 """
 
 from __future__ import annotations
@@ -32,6 +35,13 @@ def main(argv: list[str]) -> int:
 
         out = argv[3] if len(argv) == 4 else os.path.join(HERE, "..", "..", "catalogs", "forseti")
         return build(argv[1], argv[2], os.path.normpath(out))
+    if len(argv) == 2 and argv[0] == "skus":
+        import json
+
+        from forseti_importer import store
+
+        print(json.dumps(store.orderable(store.load(argv[1])), indent=2, ensure_ascii=False))
+        return 0
     print(f"usage:\n{USAGE}", file=sys.stderr)
     return 2
 

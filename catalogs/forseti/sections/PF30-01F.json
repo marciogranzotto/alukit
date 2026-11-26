@@ -1,0 +1,19 @@
+{
+  "schema": "alukit.section/1",
+  "id": "PF30-01F",
+  "fidelity": "parametric",
+  "props_ok": false,
+  "from": {
+    "ref": "pdf:catalogo_forsetiA4.pdf#p13",
+    "method": "generator",
+    "read": "2026-11-26",
+    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the page draws this profile as a raster image. The closed face of the face (de face) variant is not modelled"
+  },
+  "generator": "tslot",
+  "params": {
+    "w_mm": 30,
+    "h_mm": 30,
+    "groove": "c8-30",
+    "bores": [{ "at_mm": [0, 0], "d_mm": 12.1 }]
+  }
+}

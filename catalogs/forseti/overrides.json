@@ -82,6 +82,12 @@
       "field": "mass_kg_per_m",
       "accept": true,
       "why": "with the area: the printed mass is the printed area's"
+    },
+    {
+      "item": "PF20-11",
+      "field": "mass_kg_per_m",
+      "accept": true,
+      "why": "p. 10 prints 0,425 kg/m for an area of 1,64 cm², which at 2700 kg/m³ is 0.443, and the shop's description says 0,409. The section is an envelope (no outline to settle the area), so none of the three can be preferred; the printed value stands as the authority"
     }
   ]
 }

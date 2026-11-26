@@ -1,0 +1,27 @@
+{
+  "schema": "alukit.section/1",
+  "id": "PF20-12",
+  "fidelity": "parametric",
+  "props_ok": false,
+  "from": {
+    "ref": "pdf:catalogo_forsetiA4.pdf#p11",
+    "method": "generator",
+    "read": "2026-11-26",
+    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the page draws this profile as a raster image"
+  },
+  "generator": "tslot",
+  "params": {
+    "w_mm": 20,
+    "h_mm": 40,
+    "groove": "c6-20",
+    "grooves": [
+      { "face": "-y", "at_mm": 0 },
+      { "face": "+x", "at_mm": -10 },
+      { "face": "+x", "at_mm": 10 },
+      { "face": "+y", "at_mm": 0 },
+      { "face": "-x", "at_mm": -10 },
+      { "face": "-x", "at_mm": 10 }
+    ],
+    "bores": [{ "at_mm": [0, -10], "d_mm": 4.6 }, { "at_mm": [0, 10], "d_mm": 4.6 }]
+  }
+}

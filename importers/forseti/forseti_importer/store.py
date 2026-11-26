@@ -65,6 +65,15 @@ def load(raw: str) -> Snapshot:
     return snap
 
 
+def orderable(snap: Snapshot) -> list[str]:
+    """Every SKU a customer can order: the variations, and the products that have none. (A
+    product with variations is not orderable itself, though the shop types eight of them `simple`
+    and prices them; those still get an offer, which is an extra, not a required one.)"""
+    skus = [v["sku"] for v in snap.variations]
+    skus += [p["sku"] for p in snap.products if p["id"] not in snap.children]
+    return sorted(skus)
+
+
 def name(x: dict) -> str:
     """The product's name as published, HTML entities decoded."""
     return html.unescape(x["name"]).strip()
@@ -165,7 +174,7 @@ def _length_input(page: str) -> dict[str, str] | None:
     return None
 
 
-def cut_rule(page: str) -> CutRule | MetreRule | None:
+def cut_rule(page: str, default_step_mm: int | None = None) -> CutRule | MetreRule | None:
     """A profile's sale rule from its product page. Two forms are in use:
 
     - lengths in mm (`min="40" max="3000" step="1"`), "Tolerância de +/- 1mm", and "Cada 10mm de
@@ -183,6 +192,7 @@ def cut_rule(page: str) -> CutRule | MetreRule | None:
     if hi <= 10 and 'data-key="lista-de-cortes"' in page:
         return MetreRule(lengths_mm=[m * 1000 for m in range(lo, hi + 1, step_in)], tol_mm=int(tol.group(1)))
     step = re.search(r"Cada (\d+) ?mm de corte consome 1 unidade", page)
-    if not step:
+    if not step and default_step_mm is None:
         return None
-    return CutRule(min_mm=lo, max_mm=hi, res_mm=step_in, tol_mm=int(tol.group(1)), step_mm=int(step.group(1)))
+    return CutRule(min_mm=lo, max_mm=hi, res_mm=step_in, tol_mm=int(tol.group(1)),
+                   step_mm=int(step.group(1)) if step else default_step_mm)

@@ -75,17 +75,21 @@ ATTRIBUTE_CLASS = {
     "Variação": "label",
 }
 
-#: Variants the shop lists that are not emitted, with the reason.
-SKIP_SKU = {
+#: Variants the shop lists that name nothing the build can model, with the reason. Each still gets
+#: an offer on the item it varies (every orderable SKU maps to an offer), with no contents, and the
+#: build reports it.
+NOTE_SKU = {
     "PLU40-01-K": "the 'with fixings' variant; the shop does not state what the fixings are",
-    "PLU40-01-PP-K": "listed at a price of 0; not a real offer",
+    "PLU40-01-PP-K": "the 'with fixings' variant, listed at a price of 0; the shop does not state what the fixings are",
 }
 
 #: Products that sell one item in different finishes, by SKU: (item, finish, describes the item).
 #: The item's fields come from the product marked True; the others add their finish and offer.
 FINISH_BY_SKU = {
     "PLU40-01": ("PLU40-01", "galvanised", True),
+    "PLU40-01-K": ("PLU40-01", "galvanised", False),
     "PLU40-01-PP": ("PLU40-01", "black", False),
+    "PLU40-01-PP-K": ("PLU40-01", "black", False),
 }
 
 #: Kit lines that name no code: the item they mean, and why. (A line's code is a pack SKU,
@@ -99,6 +103,12 @@ KIT_LINE_FIXES = {
 
 # --- Profiles ----------------------------------------------------------------------------------
 
+#: Profile pages that give the length range and tolerance but not the price step ("Cada 10mm de
+#: corte consome 1 unidade"): the step, and why.
+CUT_STEP_FIX = {
+    "PF45-11-C6": (10, "the page states no price step; every other cut-to-length profile page says 10 mm"),
+}
+
 #: Series and slot class (from the name's "Canal <n>") → the system and groove type ids, and the
 #: system's name.
 SYSTEMS = {
@@ -107,11 +117,15 @@ SYSTEMS = {
     (40, 8): ("s40-c8", "c8-40", "Base 40, canal 8"),
     (45, 10): ("s45-c10", "c10-45", "Base 45, canal 10"),
     (45, 8): ("s45-c8", "c8-45", "Base 45, canal sextavado M8"),
+    # The 50x50 (p. 20) draws no section the build can read. The shop says it uses canal 8 fixings
+    # and mixes with bases 40 and 45, so it takes base 40's measured canal-8 groove: an assumption,
+    # said in the system's name and in the section's note.
+    (50, 8): ("s50-c8", "c8-40", "Base 50, canal 8 (groove of base 40 assumed)"),
 }
 
 #: Slot classes the name does not give as "Canal <n>": the 45x90 econômico is "Canal Sextavado
 #: M8", a slot for M8 hex heads and nuts, printed 8.3 mm wide (p. 19).
-SLOT_BY_STEM = {"PF45-12": 8}
+SLOT_BY_STEM = {"PF45-12": 8, "PF30-01C": 8, "PF30-01F": 8}
 
 #: Where each groove type is measured: on the exact outline of one profile, at one groove.
 #: (face, centre along the face). The opening is cross-checked against the printed value.
@@ -157,6 +171,59 @@ PROFILES: dict[str, dict] = {
     "PF40-04": {"page": 17, "w": 40, "h": 40, "drawn": (40, 40), "bore": 13.7, "bores": [(0, 0)]},
     "PF45-02": {"page": 18, "w": 45, "h": 90, "drawn": (90, 45), "outline": "bottom", "bore": 13.7},
     "PF45-12": {"page": 19, "w": 45, "h": 90, "drawn": (90, 45), "outline": "bottom", "bore": 6.5},
+    # M2b: the other stems. Their pages draw raster images (or none), so the sections are T-slot
+    # envelopes from the printed size and core bore. Extra keys:
+    # - `printed`: the catalogue code whose table gives A, IX, IY and mass (default the stem);
+    #   None when no table is usable.
+    # - `page`: the catalogue page that draws the profile, or None.
+    # - `bore`: None when the core is not known. `bores` defaults to one bore at the centre.
+    # - `approx`: what the envelope leaves out; it goes into the section's note.
+    "PF20-11": {"page": 10, "w": 20, "h": 20, "bore": 5},
+    "PF20-11C": {
+        "page": None, "w": 20, "h": 20, "bore": 4.6, "printed": None,
+        "approx": "the catalogue has no drawing or table of the corner (de canto) variant; modelled as the plain 20x20 V-slot",
+    },
+    "PF20-11F": {
+        "page": None, "w": 20, "h": 20, "bore": 4.6, "printed": None,
+        "approx": "the catalogue has no drawing or table of the face (de face) variant; modelled as the plain 20x20 V-slot",
+    },
+    "PF20-12": {"page": 11, "w": 20, "h": 40, "bore": 4.6, "bores": [(0, -10), (0, 10)]},
+    "PF20-13": {
+        "page": 12, "w": 40, "h": 80, "bore": 4.6,
+        # Drawn lying 80 x 40, with four bores along the bottom and one in each ear; turned 90°
+        # counter-clockwise into the section frame, as the 20x60's outline is.
+        "bores": [(10, -30), (10, -10), (10, 10), (10, 30), (-10, -30), (-10, 30)],
+        "approx": "one V-slot groove per 20 mm cell on every face; the open channel between the ears is not modelled",
+    },
+    "PF20-15": {
+        "page": None, "w": 40, "h": 40, "bore": 4.6, "printed": None,
+        "approx": "the catalogue does not list this 40x40 V-slot; the shop gives the 4.6 mm centre bore, and the hollow centre is not modelled",
+    },
+    "PF20-21": {"page": 10, "w": 20, "h": 20, "bore": 6, "printed": "PF20-01"},
+    "PF30-01": {"page": 13, "w": 30, "h": 30, "bore": 12.1},
+    "PF30-01C": {
+        "page": 14, "w": 30, "h": 30, "bore": 12.1,
+        "approx": "the closed faces of the corner (de canto) variant are not modelled",
+    },
+    "PF30-01F": {
+        "page": 13, "w": 30, "h": 30, "bore": 12.1,
+        "approx": "the closed face of the face (de face) variant is not modelled",
+    },
+    "PF30-01R": {
+        "page": 15, "w": 30, "h": 30, "bore": 12.1,
+        "approx": "the rounded (abaulado) corners are not modelled",
+    },
+    "PF30-11": {"page": 12, "w": 30, "h": 30, "bore": 6.8},
+    "PF40-11": {
+        "page": None, "w": 40, "h": 40, "bore": 6.8, "printed": None,
+        "approx": "the catalogue does not list this profile; the 6.8 mm bore is the M8 centre of the 30x30 economy profile (p. 12)",
+    },
+    "PF45-01": {"page": 18, "w": 45, "h": 45, "bore": 13.7},
+    "PF45-11": {"page": 19, "w": 45, "h": 45, "bore": 6.5},
+    "PF50-01": {
+        "page": 20, "w": 50, "h": 50, "bore": None, "printed": None,
+        "approx": "p. 20 prints this profile's table with the 45x90 economy's values, so none is taken; the core is not drawn, so no bore is modelled",
+    },
 }
 
 #: Grooves: one centred on each series cell along each face (a 40x80 has two on each long face
@@ -202,3 +269,122 @@ ITEM_PAGES = {
 
 #: Catalogue p. 6: "LIGA: 6063 (DIN AlMgSi 0,5)", "TRATAMENTO TÉRMICO: T5", density, modulus.
 MATERIAL_PAGE = 6
+
+# --- The rest of the catalogue (M2b) -------------------------------------------------------------
+
+#: Every product the tables above do not name (profiles, the M2a hardware families and kits) is
+#: classified by the first rule that matches it: (field, pattern, kind, subtype). `field` is the
+#: parent's `name`, `sku` or a shop `category`, matched from the start, case-insensitively. A kind
+#: the data cannot support falls back to `generic` (a connector with no system it fits, a panel
+#: with no thickness). Everything no rule names is `generic`: electronics, tools, ball screws,
+#: bearings, pulleys, belts, cable chains and so on (design §3.4).
+KIND_RULES: list[tuple[str, str, str, str | None]] = [
+    # Kits of several parts: the contents the shop lists are not all items of this catalog, so a
+    # kit not in FAMILY_BY_SKU is one generic item with its price and no contents.
+    ("name", r"kit\b", "generic", None),
+    ("name", r"tela\b", "generic", None),
+    ("sku", r"TDN35", "generic", None),
+    # Panels: sheets, their sizes are offers.
+    ("category", r"Chapas e Telas", "panel", None),
+    # Fasteners.
+    ("name", r"parafuso martelo", "fastener", "hammer-screw"),
+    ("name", r"parafuso (franc[eê]s|.*sextavada)", "fastener", "bolt"),
+    ("name", r"parafuso", "fastener", "screw"),
+    ("name", r"porca (martelo|de encaixe|t |corredi[cç]a|retangular|meia cana)", "fastener", "t-nut"),
+    ("name", r"porca", "fastener", "nut"),
+    ("name", r"arruela", "fastener", "washer"),
+    ("name", r"rebite roscado", "fastener", "rivet-nut"),
+    ("name", r"chumbador", "fastener", "anchor"),
+    ("name", r"bucha de redu[cç][aã]o", "fastener", "insert"),
+    # Connectors.
+    ("name", r"(cantoneira|conector cantoneira)", "connector", "bracket"),
+    ("name", r"conex[aã]o interna", "connector", "end-connector"),
+    ("name", r"(conex[aã]o de topo|cubo de conex)", "connector", "cube"),
+    ("name", r"conector", "connector", "end-connector"),
+    ("sku", r"(PL|PLT|PLQ|CA40|SFX|CFF20)[-0-9A-Z]*", "connector", "plate"),
+    ("sku", r"PMV0\d-0\d-XX", "connector", "plate"),
+    ("sku", r"JAXX-XX-XX", "connector", "hinge"),
+    # Accessories.
+    ("name", r"rod[ií]zio", "accessory", "caster"),
+    ("name", r"p[eé] (nivelador|articulado)", "accessory", "foot"),
+    ("name", r"sapata", "accessory", "shoe"),
+    ("name", r"dobradi[cç]a", "accessory", "hinge"),
+    ("name", r"(man[ií]pulo|perfil man[ií]pulo)", "accessory", "handle"),
+    ("name", r"capa de fechamento", "accessory", "cap"),
+    ("name", r"tira pl[aá]stica", "accessory", "strip"),
+    ("name", r"borracha", "accessory", "gasket"),
+    ("name", r"bucha pl[aá]stica", "accessory", "bush"),
+    ("name", r"placa (roscada|retangular|para fixa)", "accessory", "threaded-plate"),
+    ("name", r"bloco pl[aá]stico", "accessory", "block"),
+    ("name", r"fecho", "accessory", "latch"),
+    ("name", r"batente de borracha", "accessory", "bumper"),
+]
+
+#: A `generic` item's `category`, by the first rule that matches: (field, pattern, category).
+#: The Tecmaf line is split by what each part is; promotions and finish tags are not categories of
+#: a part.
+CATEGORY_RULES: list[tuple[str, str, str]] = [
+    ("name", r"(kit|trilho guia linear)\b", "kit"),
+    ("name", r".*(inversor|m[oó]dulo|driver|shield|arduino|fonte|cabo wire|cartucho|mesa aquecida|rfid|"
+             r"chave fim|motor de passo|damper|placa de desenvolvimento)", "electronics"),
+    ("category", r"Eletrônicos", "electronics"),
+    ("category", r"Ferramentas", "tools"),
+    ("category", r"Esteiras Porta Cabos", "cable-chain"),
+    ("category", r"Roldanas", "roller"),
+    ("category", r"Polias", "pulley"),
+    ("category", r"Atuadores", "actuator"),
+    ("category", r"Deslizantes", "slider"),
+    ("category", r"Trilhos Flow Rack", "flow-rack"),
+    ("category", r"Projetos Especiais", "special-project"),
+    ("name", r".*(fuso|castanha)", "screw-drive"),
+    ("name", r".*(correia|polia|grampo para correia|fixador emenda)", "belt-drive"),
+    ("name", r".*(engrenagem|pinh[aã]o|cremalheira|redutor|acoplamento)", "drivetrain"),
+    ("name", r".*(rolamento|mancal|bucha deslizante|bucha de bronze|pillow|suporte s|eixo linear|"
+             r"guia linear|trilho guia|patins|bloco deslizante|espa[cç]ador)", "linear-bearing"),
+    ("name", r".*(painel solar|vigamento)", "solar-and-fixings"),
+    ("name", r"tela\b", "mesh"),
+    ("name", r"(perfil t-track|perfil trilho)", "profile-stock"),
+    ("name", r"chapa\b", "plate"),
+    ("category", r"Movimentação Linear", "linear-motion"),
+    ("category", r"Tecmaf", "linear-motion"),
+    ("category", r"Cantoneiras|Conectores|Chapas de fixação", "connector"),
+]
+
+#: A pack the shop writes in words: "Par" is two units; "<n>un" is n.
+PACK_WORDS = {"Par": 2, "1 Kit": 1}
+
+#: Attributes that give a numeric published dimension, in mm, of the item: the attribute → the
+#: dims key. Only values that start with a number of mm are taken.
+DIM_ATTRIBUTES = {
+    "Diâmetro": "d_mm",
+    "Comprimento": "length_mm",
+    "Comprimento do Fuso": "length_mm",
+    "Passo": "pitch_mm",
+    "Furo Central": "bore_mm",
+    "Para Eixos": "shaft_d_mm",
+    "Perímetro Total": "perimeter_mm",
+    "Largura da Cantoneira": "width_mm",
+    "Tamanho Guia Linear": "rail_width_mm",
+}
+
+#: Systems a part fits when its name does not say but a sibling product does, by parent SKU.
+FITS_BY_PARENT = {
+    "CBF40-01": (["s40-c8"], "the name says 'Fixação 40' and the sibling kit CBF40-XX-K40 says base 40"),
+}
+
+#: Profile bases in a name or attribute → the T-slot systems they fit; a "Canal <n>" alone names
+#: every system of that slot class. 45 is the básico (canal 10) unless the text says parafuso or
+#: econômico; 80x80 profiles are base 40.
+BASE_SYSTEMS = {
+    20: ["s20-c6"],
+    30: ["s30-c8"],
+    40: ["s40-c8"],
+    45: ["s45-c10"],
+    50: ["s50-c8"],
+    80: ["s40-c8"],
+}
+CHANNEL_SYSTEMS = {
+    6: ["s20-c6"],
+    8: ["s30-c8", "s40-c8", "s45-c8", "s50-c8"],
+    10: ["s45-c10"],
+}
