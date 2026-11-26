@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { CHECK_SCHEMA, checkModel } from "#core/check/check.ts";
+import { modelOutputs, outputAccessors } from "#core/check/outputs.ts";
 import { jsonText } from "#core/derive/output.ts";
 import { type Diagnostic, Diagnostics } from "#core/diagnostics.ts";
 import { diffLocks, isEmptyDiff } from "#core/lock/diff.ts";
@@ -58,7 +59,12 @@ export async function checkCommand(argv: readonly string[], io: Io): Promise<num
   const raw = project.raw;
   const lock = project.lock;
   if (lock === undefined) return 1;
-  const result = checkModel({ raw, derived, items });
+  const result = checkModel({
+    raw,
+    derived,
+    items,
+    accessors: outputAccessors(modelOutputs(derived, items)),
+  });
   const d = new Diagnostics();
   for (const x of result.diagnostics) d.add(x);
 

@@ -10,8 +10,9 @@ import { addScaled, dist, dot, type V3 } from "../vec.ts";
  * The accessors that read the derived model (design §4.9), for project checks only: document
  * values may not read the model they define. `len(b3)`, `cut(b3)`, `pos(n3)`, `dist(n1, n2)`,
  * `bbox()` and `count(tag:leg)` read the geometry. `mass()` and `cost()` read the bill of
- * materials and the prices; the caller supplies them, and until it does a check that uses them
- * is pending, not failed.
+ * materials and the prices: the caller supplies them (`outputAccessors` in `outputs.ts`, as
+ * `alukit check`, `do`, `order` and `costs` do), and a caller that does not reports a check that
+ * uses them as pending, not failed.
  */
 
 /** An accessor: its arguments arrive unevaluated (entity ids and selectors). */

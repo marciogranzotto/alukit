@@ -8,6 +8,8 @@ import { cutListJson } from "../cutlist/format.ts";
 import { derive } from "../derive/derive.ts";
 import { derivedJson, jsonText } from "../derive/output.ts";
 import { catalogItems, type ItemSource } from "../items.ts";
+import { orderJson } from "../order/format.ts";
+import { order } from "../order/order.ts";
 import { openLiveCatalogs } from "../project/open.ts";
 import { editJson, FIXTURES, fixtureProjects, readJson, scratchFixtures } from "../testing.ts";
 import { diffLocks, fieldChanges } from "./diff.ts";
@@ -87,13 +89,19 @@ describe("pinning (§4.13)", () => {
 
   it("derives from the lock what it derives from the live catalogs", async () => {
     // Everything derive and its outputs read must reach the lock: the derived model with its
-    // generated parts, fastenings and machining, the cut list and the bill of materials.
+    // generated parts, fastenings and machining, the cut list, the bill of materials, and the
+    // order list with its offers, packs, kits and prices.
     const outputs = (raw: unknown, items: ItemSource) => {
       const derived = derive(raw, items);
+      const cl = cutList({ derived, items });
+      const b = bom({ derived, items });
       return {
         derived: jsonText(derivedJson(derived)),
-        cutList: cutListJson(cutList({ derived, items })),
-        bom: bomJson(bom({ derived, items })),
+        cutList: cutListJson(cl),
+        bom: bomJson(b),
+        order: orderJson(
+          order({ derived, items, bom: b, cutList: cl, diagnostics: [], asOf: "2026-11-26" }),
+        ),
       };
     };
     for (const dir of fixtureProjects()) {

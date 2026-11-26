@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseJson } from "#catalog/json.ts";
 import { checkModel } from "#core/check/check.ts";
+import { modelOutputs, outputAccessors } from "#core/check/outputs.ts";
 import { applyBatch, batchOf, type CommandResult } from "#core/commands/apply.ts";
 import type { State } from "#core/commands/types.ts";
 import { derive } from "#core/derive/derive.ts";
@@ -53,7 +54,9 @@ export function localDate(d = new Date()): string {
 /** What `alukit check` reports on the model of a state (§5.5), without the file-level checks. */
 function modelDiagnostics(s: State): Diagnostic[] {
   const items = lockItems(s.lock);
-  return checkModel({ raw: s.doc, derived: derive(s.doc, items), items }).diagnostics;
+  const derived = derive(s.doc, items);
+  const accessors = outputAccessors(modelOutputs(derived, items));
+  return checkModel({ raw: s.doc, derived, items, accessors }).diagnostics;
 }
 
 function key(d: Diagnostic): string {

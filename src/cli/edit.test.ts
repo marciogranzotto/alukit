@@ -330,7 +330,10 @@ describe("alukit check", () => {
           },
         },
         { cmd: "addCheck", args: { check: { expr: "count(tag:leg) == 0" } } },
-        { cmd: "addCheck", args: { check: { value: "cost()", op: "<=", limit: "100" } } },
+        {
+          cmd: "addCheck",
+          args: { check: { value: "cost()", op: "<=", limit: "250", text: "within budget" } },
+        },
       ]),
     ]);
     const r = await capture(["check", dir, "--json"]);
@@ -360,18 +363,25 @@ describe("alukit check", () => {
         pass: false,
       },
       { id: "C3", severity: "error", pass: true },
-      expect.objectContaining({ id: "C4", pending: true }),
+      // cost() reads the priced order: G01's two bars cost R$ 202.40.
+      {
+        id: "C4",
+        text: "within budget",
+        severity: "error",
+        value: 202.4,
+        op: "<=",
+        limit: 250,
+        margin: 47.6,
+        pass: true,
+      },
     ]);
-    expect(report.diagnostics.map((d: { code: string }) => d.code)).toEqual([
-      "check",
-      "check-pending",
-    ]);
+    expect(report.diagnostics.map((d: { code: string }) => d.code)).toEqual(["check"]);
     const text = await capture(["check", dir]);
     expect(text.out).toContain(
       "warn check C2: C2 (long enough): cut(b2) = 580, not >= 600 (margin -20)",
     );
     expect(text.out).toContain("pass C1 fits the bay, margin 30");
-    expect(text.out).toMatch(/4 checks: 2 passed, 1 failed, 1 pending$/);
+    expect(text.out).toMatch(/4 checks: 3 passed, 1 failed$/);
 
     await capture([
       "do",

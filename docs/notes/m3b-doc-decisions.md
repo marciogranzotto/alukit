@@ -65,7 +65,7 @@ parts and are not here.*
 | 33 | Unconnected ends: two or more bar ends meeting within `tol.len`, where an end has no provider and is not the through member of a butt at that point (a through bar, or a bar end a butt bears on, `through: "b31.b"`) | §5.5's warning, without flagging a deliberate end plate or `through_end: "none"` |
 | 34 | `bbox()` is the extent of the bar bodies along each world axis, each body swept between its end planes (exact for every planar cut). Parts are not in it yet: derive places them since M3b's generation part, and adding them is open | Derive placed bars only when this was built |
 | 35 | `count(tag:t)` counts nodes, bars, connections, parts and runs carrying the tag after pattern expansion, through derive's own expansion | A copy is as real as its template |
-| 36 | `mass()` and `cost()` read the bill of materials and prices; until a caller supplies them (an accessor table), a check that uses them is `check-pending` info, not an error | Prices are M3b's other part; a pending check is not a failed one |
+| 36 | `mass()` and `cost()` read the bill of materials and prices; until a caller supplies them (an accessor table), a check that uses them is `check-pending` info, not an error. *Supplied since the merge with part 3 (decision 39); a caller that passes no table still gets pending* | Prices are M3b's other part; a pending check is not a failed one |
 | 37 | Margin: limit − value for `<` and `<=`, value − limit for `>` and `>=`, −\|value − limit\| for `==`, none for `!=` and for a plain `expr`. Pass or fail is the expression language's own comparison, within `tol.snap`. A check that cannot be evaluated is an error; a failing check reports at its own severity | §4.9; one comparison rule everywhere |
 
 ## For the merge with M3b's other parts
@@ -78,7 +78,8 @@ parts and are not here.*
 - Done in the merge with generation (2026-11-26): `fixtureProjects()` takes in `golden-gen/`
   too, every fixture project has a current lock and a canonical document, and a test derives each
   one from its lock and from the live catalogs and compares the derived model, cut list and BOM.
-  Still open: `mass()` from the BOM's total, and parts in `bbox()`.
+  Still open: `mass()` from the BOM's total, and parts in `bbox()`. *`mass()` is done (decision
+  39); parts in `bbox()` are still open.*
 - Done in the merge with part 3 (2026-11-26): `order` and `costs` parse options like the other
   project commands and derive from the lock (`--frozen` too). `fixtureProjects()` takes in
   `tests/fixtures/order`; every fixture lock was refreshed (part 3 changed the synthetic catalogs'
@@ -92,3 +93,5 @@ parts and are not here.*
 | # | Decision | Why |
 |---|---|---|
 | 38 | An open item's scope is read by one grammar (`src/core/project/scope.ts`) in the order rules, the command references and the rewriter: `supplier:<id>` a supplier, `<catalog>:<id>` an item, else an entity by itself, its end (`b3.a`), a stock piece (`c23.f1`) or a pattern copy (`b26@2`). Only an entity of the document, or a project item, is a reference: a cascade prunes it, a missing one refuses the command. A bar end follows `reverseBar` and `splitBar` | Part 2 read every member as an entity id, so `addOpen` refused §4.12's `supplier:<id>` and the forms part 3's rules read (its decision 31) |
+| 39 | `mass()` is the BOM's total in kg; `cost()` the order's likely total, and `cost(low)`, `cost(likely)`, `cost(high)` its bounds, in the project's currency's major unit (minor units / 100, as the outputs print it). The design writes `cost("high")`, but the language has no strings, so the bound is a bare name like an accessor's id. A total that leaves something out (an item with no mass, an order line with no price, a cost line with no rate) makes the check one that cannot be evaluated, an error naming what is missing, rather than one that passes on a partial sum. `alukit check`, `do`, `order` and `costs` supply both, each output computed once and only when a check reads it | §4.9; a budget check that passes because a price is missing would hide the gap |
+| 41 | `order` and `costs` run the model checks of `alukit check` (derive's, the cut list's, unconnected ends, project checks) before the order rules, so a failing check holds the order through `check-error`. The order is priced first (`priceOrder`), the checks read its totals, then `orderOf` applies the rules: §5.1's collect, check, order rules. A check's diagnostic names only the check, so a failing one holds every supplier (§5.5's "a check that names none"); scoping it to the entities its expressions read is open | Part 3's decision 30; an agent cannot hand over an order a project check forbids by skipping `alukit check` (§5.5) |

@@ -5,12 +5,12 @@ import type { Derived } from "../derive/derive.ts";
 import { type Diagnostic, Diagnostics, sortDiagnostics } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
 import type { ItemSource } from "../items.ts";
-import { ORDER_RULES, type OrderRule, type RuleAction } from "../project/schema.ts";
+import { type CostLine, ORDER_RULES, type OrderRule, type RuleAction } from "../project/schema.ts";
 import { orderLines } from "./lines.ts";
 import { addMoney, convert, type Money, ZERO } from "./price.ts";
 import { priceLines, projectCurrency, rateFor } from "./pricing.ts";
 import { orderReasons, RULE_DEFAULTS } from "./rules.ts";
-import { costsAndTotals } from "./totals.ts";
+import { type CostsResult, costsAndTotals } from "./totals.ts";
 import {
   cmp,
   type Key,
@@ -55,24 +55,48 @@ export {
   type Totals,
 } from "./types.ts";
 
-export interface OrderInput {
+export interface PriceInput {
   derived: Derived;
   items: ItemSource;
   bom: Bom;
   cutList: CutList;
+}
+
+/**
+ * The order priced, before any rule: what is bought and at what price (stages 1 and 2), the cost
+ * lines and the totals (stage 4). The totals answer `cost()` in the project's checks (§4.9),
+ * whose results the order rules then read (§5.1: collect, then check, then the order rules).
+ */
+export interface PricedOrder {
+  derived: Derived;
+  works: Work[];
+  /** The project's cost lines, in id order. */
+  costs: CostLine[];
+  /** The project's currency, or the one its prices share. */
+  currency: string | undefined;
+  totals: CostsResult;
+  /** The pricing's own problems: offers, choices, covers, bands, currency. */
+  diagnostics: Diagnostic[];
+}
+
+export interface RulesInput {
   /** Every problem found so far (derive, cut list, BOM, checks): errors feed `check-error`. */
   diagnostics: readonly Diagnostic[];
   /** The order's date, YYYY-MM-DD: prices read more than 30 days before it are stale. */
   asOf: string;
 }
 
+export interface OrderInput extends PriceInput, RulesInput {}
+
 export function order(input: OrderInput): Order {
-  const { derived, asOf } = input;
+  return orderOf(priceOrder(input), input);
+}
+
+/** Stages 1, 2 and 4: lines, prices, cost lines and totals. */
+export function priceOrder(input: PriceInput): PricedOrder {
+  const { derived } = input;
   const doc = derived.doc;
   const d = new Diagnostics();
-  const rules = Object.fromEntries(
-    ORDER_RULES.map((r) => [r, doc.order_rules[r] ?? RULE_DEFAULTS[r]]),
-  ) as Record<OrderRule, RuleAction>;
   const costs = [...doc.costs].sort((a, b) => compareIds(a.id, b.id));
 
   const works = orderLines({
@@ -91,6 +115,18 @@ export function order(input: OrderInput): Order {
   });
   const pc = projectCurrency(doc, works, costs, d);
   priceLines(works, doc, pc, d);
+  const totals = costsAndTotals(doc, works, costs, pc);
+  return { derived, works, costs, currency: pc, totals, diagnostics: d.list };
+}
+
+/** Stages 3 and 6: one group per supplier, each READY or BLOCKED by the order rules (§5.5). */
+export function orderOf(priced: PricedOrder, input: RulesInput): Order {
+  const { derived, works, costs, currency: pc, totals: result } = priced;
+  const { asOf } = input;
+  const doc = derived.doc;
+  const rules = Object.fromEntries(
+    ORDER_RULES.map((r) => [r, doc.order_rules[r] ?? RULE_DEFAULTS[r]]),
+  ) as Record<OrderRule, RuleAction>;
 
   const groups = new Map<Key, Work[]>();
   for (const w of works) groups.set(w.key, [...(groups.get(w.key) ?? []), w]);
@@ -102,7 +138,7 @@ export function order(input: OrderInput): Order {
     .sort(compareIds)
     .concat(groups.has(UNSOURCED) ? [UNSOURCED] : []);
 
-  const diagnostics = sortDiagnostics([...input.diagnostics, ...d.list]);
+  const diagnostics = sortDiagnostics([...input.diagnostics, ...priced.diagnostics]);
   const reasons = orderReasons({
     derived,
     works,
@@ -113,7 +149,6 @@ export function order(input: OrderInput): Order {
     asOf,
     currency: pc,
   });
-  const result = costsAndTotals(doc, works, costs, pc);
 
   const suppliers: SupplierOrder[] = keys.map((k) => {
     const ws = [...(groups.get(k) ?? [])].sort(lineOrder);

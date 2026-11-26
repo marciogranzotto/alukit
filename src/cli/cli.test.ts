@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { at, FIXTURES, fixtureCopy, patchJson } from "#catalog/testing.ts";
+import { editJson, scratchFixtures } from "#core/testing.ts";
 import { helpText, run } from "./cli.ts";
 
 const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {
@@ -274,6 +275,33 @@ describe("alukit derive, cutlist and bom", () => {
       'cost,,K4,"freight, quoted in dollars",freight,USD,20.00,30.00,45.00,est,"at 5.5: 110.00, 165.00, 247.50"',
     );
     expect(rows).toContain("total,,,total,,BRL,5018.09,5566.85,6649.41,,");
+  });
+
+  it("runs the project's checks before the order rules: a failing one holds the order", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "order");
+    const budget = (limit: string) =>
+      editJson(join(dir, "alukit.json"), (d) => {
+        d.checks = [{ id: "C1", value: "cost()", op: "<=", limit, text: "budget" }];
+      });
+    // The fixture's order comes to R$ 234.80 (cost() reads the priced order, §4.9).
+    await budget("100");
+    const over = await capture(["order", dir, "--as-of", "2026-11-26"]);
+    expect(over.code).toBe(1);
+    expect(over.err).toContain(
+      "error check C1: C1 (budget): cost() = 234.8, not <= 100 (margin -134.8)",
+    );
+    // A check that names no entity holds every supplier (§5.5).
+    for (const shop of ["shop-a", "shop-eu"]) {
+      expect(over.err.join("\n")).toMatch(
+        new RegExp(`^BLOCKED ${shop}: check-error: check C1: `, "m"),
+      );
+    }
+    expect((await capture(["costs", dir, "--as-of", "2026-11-26"])).code).toBe(1);
+    await budget("250");
+    const within = await capture(["order", dir, "--as-of", "2026-11-26"]);
+    expect(within.code).toBe(0);
+    expect(within.err).toEqual([]);
   });
 
   it("refuses a date that is not one", async () => {

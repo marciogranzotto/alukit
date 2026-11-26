@@ -1,6 +1,8 @@
 import { resolve } from "node:path";
 import { bom } from "#core/bom/bom.ts";
 import { bomCsv, bomJson, bomMarkdown } from "#core/bom/format.ts";
+import { checkModel } from "#core/check/check.ts";
+import { modelOutputs, outputAccessors } from "#core/check/outputs.ts";
 import { cutList } from "#core/cutlist/cutlist.ts";
 import { cutListCsv, cutListJson, cutListMarkdown } from "#core/cutlist/format.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
@@ -16,7 +18,7 @@ import {
   orderJson,
   orderMarkdown,
 } from "#core/order/format.ts";
-import { type Order, order } from "#core/order/order.ts";
+import { type Order, orderOf } from "#core/order/order.ts";
 import { type LoadedProject, loadProject } from "#core/project/store.ts";
 import { parseOptions, usageError } from "./args.ts";
 import type { Io } from "./cli.ts";
@@ -152,16 +154,18 @@ export async function projectCommand(
     return all.some((d) => d.severity === "error") ? 1 : 0;
   }
 
-  const cl = cutList({ derived, items });
-
   if (priced) {
-    const b = bom({ derived, items });
-    const o = order({
+    // §5.1: the outputs, then the built-in and project checks (whose cost() and mass() read
+    // them), then the order rules, which take every error so far (check-error, §5.5).
+    const outputs = modelOutputs(derived, items);
+    const checked = checkModel({
+      raw: loaded.project.raw,
       derived,
       items,
-      bom: b,
-      cutList: cl,
-      diagnostics: sortDiagnostics([...derived.diagnostics, ...cl.diagnostics, ...b.diagnostics]),
+      accessors: outputAccessors(outputs),
+    });
+    const o = orderOf(outputs.priced(), {
+      diagnostics: sortDiagnostics([...checked.diagnostics, ...outputs.bom().diagnostics]),
       asOf: asOf ?? today(),
     });
     if (cmd === "order") {
@@ -185,6 +189,7 @@ export async function projectCommand(
     return c.diagnostics.some((d) => d.severity === "error") ? 1 : 0;
   }
 
+  const cl = cutList({ derived, items });
   const all = sortDiagnostics([...derived.diagnostics, ...cl.diagnostics]);
   if (format === "json") {
     io.out(cutListJson({ ...cl, diagnostics: all }).trimEnd());

@@ -3,7 +3,9 @@
 *2026-11-26. Calls made while building M3b part 3 (offer selection, the order list per supplier,
 the order rules, cost lines and totals, `alukit order` and `alukit costs`) where
 [`design.md`](../design.md) is silent or ambiguous. For the coordinator to fold into the design or
-veto. Part 2 (commands, canonical form, lock file) is built elsewhere; nothing here depends on it.*
+veto. Part 2 (commands, canonical form, lock file) is built elsewhere; nothing here depends on it.
+Both are merged since; the tie-ins made then close
+[`m3b-doc-decisions.md`](m3b-doc-decisions.md).*
 
 **No golden value was found wrong.** G26 passes to the minor unit with the design's numbers as
 written, and was re-derived by hand: 1,234 mm billed in 10 mm steps is 1,240 mm, × R$ 126.50/m =
@@ -72,7 +74,7 @@ supplier-less cost lines into the unsourced group).
 | # | Decision | Why |
 |---|---|---|
 | 29 | Rule names and defaults are the design's table: `check-error`, `open-item`, `placeholder`, `missing-price`, `est-price`, `out-of-stock`, `option-not-sold` (block) and `stale-price` (warn, more than 30 days before `as_of`; exactly 30 is fine) | §5.5 |
-| 30 | `check-error` takes every error diagnostic: derive's, the cut list's, the BOM's, the order's own, and project checks once part 2 evaluates them (the order takes diagnostics as input) | Project checks are part 2's |
+| 30 | `check-error` takes every error diagnostic: derive's, the cut list's, the BOM's, the order's own, and project checks once part 2 evaluates them (the order takes diagnostics as input). *Done in the merge: `order` and `costs` run `alukit check`'s model checks before the rules (part 2's decision 41)* | Project checks are part 2's |
 | 31 | What a name reaches: a bar end its bar; a stock piece `c23.f1` its connection; a connection what it buys, else (a butt with no hardware) the bars it decides; a run its bars; a pattern its template and copies; an item id the lines that buy it; a cost line its supplier; `supplier:<id>` that supplier. Names that reach no supplier reach all | §5.5 "all suppliers for a check that names none"; a scope that misses must not let an order through |
 | 32 | A cost line with `blocks: "order"` is reported under `open-item`, on its supplier or all | §4.11 lists `blocks` among a cost line's fields; it is an open question priced as a cost |
 | 33 | A placeholder blocks its own line under "unsourced"; a project item is priced from its `price_minor` (a valued field with an optional range). Derive places project items in M6, so the test adds the BOM line by hand | §4.8 |
