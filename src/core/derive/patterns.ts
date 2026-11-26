@@ -279,7 +279,10 @@ class Remap {
   private endSpec(e: EndSpec | undefined): EndSpec | undefined {
     if (!e?.plane) return e;
     const pl = e.plane;
-    if ("point" in pl) return { ...e, plane: { ...pl, point: this.point(pl.point) } };
+    if ("point" in pl) {
+      const normal = typeof pl.normal === "string" ? this.id(pl.normal) : pl.normal;
+      return { ...e, plane: { point: this.point(pl.point), normal } };
+    }
     if ("face" in pl) return { ...e, plane: { face: { ...pl.face, bar: this.id(pl.face.bar) } } };
     return { ...e, plane: { of: this.end(pl.of) } };
   }

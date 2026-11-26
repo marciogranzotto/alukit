@@ -5,9 +5,10 @@ import { type OpenedProject, openProject } from "./project/open.ts";
 import { FIXTURES, mergePatch, readJson, shown, subdirs } from "./testing.ts";
 
 /**
- * The golden end cases of design §4.6 (G1–G21), M3a's oracle: each folder holds a small
- * document and the values the design's table gives for it, to 0.01 mm and 0.01°. A row's
- * variations ("then H = 1000") are merge patches of the same document.
+ * The golden end cases of design §4.6 (G1–G21, and G27, a strut bearing on a shoe mitred square
+ * to it), M3a's oracle: each folder holds a small document and the values the design's table
+ * gives for it, to 0.01 mm and 0.01°. A row's variations ("then H = 1000") are merge patches of
+ * the same document. G22–G26 are generation and cost cases, in `golden-gen/`.
  */
 
 interface EndExpect {
@@ -79,10 +80,11 @@ function check(d: Derived, want: Expect, label: string): void {
 const dirs = subdirs(join(FIXTURES, "golden-ends"));
 
 describe("golden end cases (design §4.6)", () => {
-  it("has one fixture per case G1–G21", () => {
-    expect(dirs.map((d) => basename(d))).toEqual(
-      Array.from({ length: 21 }, (_, i) => `G${String(i + 1).padStart(2, "0")}`),
-    );
+  it("has one fixture per case G1–G21 and G27", () => {
+    expect(dirs.map((d) => basename(d))).toEqual([
+      ...Array.from({ length: 21 }, (_, i) => `G${String(i + 1).padStart(2, "0")}`),
+      "G27",
+    ]);
   });
 
   for (const dir of dirs) {

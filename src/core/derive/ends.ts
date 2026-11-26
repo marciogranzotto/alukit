@@ -321,14 +321,20 @@ class Ends {
       case "through":
         return this.throughPlane(bar, end, c);
       case "plane-point": {
-        const pl = this.endSpec(bar, end)?.plane as { point: never; normal: [never, never, never] };
+        const pl = this.endSpec(bar, end)?.plane as {
+          point: never;
+          normal: [never, never, never] | string;
+        };
         const copy = ctx.bars.get(bar.id)?.copy;
         const p = resolvePoint(ctx, pl.point, {
           id: bar.id,
           field: `ends/${end}/plane/point`,
           copy,
         });
-        const nv = ctx.vec(bar.id, `ends/${end}/plane/normal`, pl.normal);
+        const nv =
+          typeof pl.normal === "string"
+            ? this.axisOf(k, pl.normal)
+            : ctx.vec(bar.id, `ends/${end}/plane/normal`, pl.normal);
         if (!p || !nv) return undefined;
         const n = unit(nv);
         if (!n) {
@@ -355,6 +361,23 @@ class Ends {
 
   private endSpec(bar: PlacedBar, end: End): EndSpec | undefined {
     return this.ctx.bars.get(bar.id)?.spec.ends?.[end];
+  }
+
+  /**
+   * A plane's normal taken from another bar (§4.5, G27): that bar's axis. An axis follows from
+   * the design points alone, which never read a cut (§4.3), so the plane stays a placement
+   * provider and stage 3 gains no dependency.
+   */
+  private axisOf(k: string, other: string): V3 | undefined {
+    const { ctx } = this;
+    const placed = placeBar(ctx, other);
+    if (!placed) {
+      if (!ctx.bars.has(other)) {
+        ctx.d.error("ref", k, `plane: normal: no bar ${other}`, { refs: [other] });
+      } else ctx.depFailed(k, "plane", other);
+      return undefined;
+    }
+    return placed.frame.t;
   }
 
   /** Planes a connection sets, by end key; undefined when the connection is invalid. */
