@@ -147,8 +147,9 @@ def angled(normal, outward, x, y):
 
 def canonical(ends):
     """§5.3: of the piece and its end-for-end flip (t and x reverse, y stays, so a mitre changes
-    sign and a bevel does not), the one whose ends compare first: square before angled, then
-    by mitre, bevel and angle."""
+    sign and a bevel does not), the one whose sorted machining compares first. The cart's bars
+    have no machining, so the tie-break decides: the ends, square before angled, then by mitre,
+    bevel and angle."""
 
     def key(e):
         return (0,) if e == "square" else (1, e["mitre_deg"], e["bevel_deg"], e["angle_deg"])
