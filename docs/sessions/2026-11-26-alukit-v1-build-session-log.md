@@ -73,6 +73,10 @@ in the gitignored `internal/session-notes.md`.*
   (DIN/ISO) were written by an agent from recall. The values match common tables, but the
   citations needed a check; done 2026-11-26, see `docs/notes/std-hiwin-verification.md`. The
   rail minimum end distance, first an estimate, is published by HIWIN GmbH's catalogue.
+- **Bend K-factor is required (M6, `docs/notes/m6-decisions.md`).** A bent angle must state its
+  K-factor (0 < K ≤ 0.5); there is no default, because published values run 0.3–0.5 and DIN 6935
+  couldn't be checked against its text. A per-material default could be added if you have a shop's
+  value.
 - **M4b UX calls (decisions #6, #13, #29 in `docs/notes/m4b-decisions.md`).**
   - **#6:** §4.5's default connection makes posts butt *into* top rails, so drawing top rails uses
     auto-connect off plus the connect tool.
