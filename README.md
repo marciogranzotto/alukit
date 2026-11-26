@@ -42,11 +42,12 @@ machining sheet).**
   taken in as a step, or makes the project read-only while the file is not valid. The server
   answers only its own page, with a per-start token.
 - Drawing with the mouse: draw a bar from the palette (snapping to nodes, bar ends, face and
-  groove centre lines, face centres and the grid; the line follows X, Y or Z, Shift frees it in
-  the work plane; type a length, R rolls, A cycles the anchor; ends butt where they meet others),
-  connect ends and bars, place a part on a face or groove, pattern the selection along a bar,
-  measure; a catalog browser (vendor, kind, family, search, item cards with sections and offers)
-  sets the palette; standard views, orthographic or perspective, and fit to selection.
+  groove centre lines, face centres, parts' datums and face centres, and the grid; the line
+  follows X, Y or Z, Shift frees it in the work plane; type a length, R rolls, A cycles the
+  anchor; ends butt where they meet others), connect ends and bars, place a part on a face or
+  groove, pattern the selection along a bar, measure; a catalog browser (vendor, kind, family,
+  search, item cards with sections and offers, and the project's own items, read only) sets the
+  palette; standard views, orthographic or perspective, and fit to selection.
 - Variants that override params, swap items and scope entities (`only_in`, `not_in`), on every
   output with `--variant`. `alukit diff` compares two sides (folders, revisions, git refs or
   variants), each with its own lock. `alukit revision save | list | show | verify` stores the

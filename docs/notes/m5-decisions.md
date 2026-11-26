@@ -65,7 +65,7 @@ or veto. Labels: **verified** (run, with how), **read**, **inferred**.*
 |---|---|---|
 | 30 | The worked example builds a synthetic work table from the built-in `forseti` catalog | It ships in the repository and has offers, so the order and costs show prices; `std` has no offers |
 | 31 | The reference section is generated between markers from the usage text `--help` prints and every command's Zod schema (`io: "input"`); `pnpm skill` rewrites it and a test fails while it is behind | §7.5: "generated from the command schemas" |
-| 32 | The example's test splits the fenced block into words (quotes, comments) and refuses pipes, redirects and variables, then runs each command as its own process in an empty folder and checks the numbers the prose states | "runs through the CLI as written" |
+| 32 | The example's test splits the fenced block into words (quotes, comments) and refuses pipes, redirects and variables, then runs each command as its own process in an empty folder and checks the numbers the prose states. Since the M4b merge the example ends with a snapshot, which the end-to-end suite runs ([`m4b-decisions.md`](m4b-decisions.md), decision 41) | "runs through the CLI as written" |
 | 33 | `alukit skill install [--dir]` makes an absolute symlink to this checkout's `skills/alukit`. A link already pointing there is fine; another link, a folder or a file at that path is refused, never replaced. There is no uninstall | Idempotent and never destructive; removing a link is one `rm` the person chooses |
 
 ## The merge into main, and what it folded in

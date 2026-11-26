@@ -65,7 +65,7 @@ or veto. Labels: **verified** (run, with how), **read**, **inferred**.*
 |---|---|---|
 | 29 | It always renders in a **fresh headless page**, on the running server if there is one, else on an ephemeral one that holds the edit lock while it renders; never in a person's open tab | The brief reads "renders in the open tab if a server runs"; §7.3 says one code path from a fresh page that never depends on the user's camera, selection or a hidden tab (a hidden tab's animation frames are throttled). The design was followed; flagged for the design |
 | 30 | The page is `?snapshot=<view>`: the viewport alone, the view set without animation, two renders, then `__alukit.snapshot()` says `ready` (or why not). SwiftShader, device scale 1. The CLI writes the PNG where `-o` says | §7.2: the server writes only inside the project. (**verified**: `tests/e2e/snapshot.spec.ts`, the same state twice, and on a running and an ephemeral server, gives identical images, 0 pixels differing; other views differ; an unknown view exits 1) |
-| 31 | Playwright comes from the dev dependencies; without it the command says how to install it | AluKit runs from a checkout (§10); moving `@playwright/test` to dependencies is a packaging call for M5's skill install |
+| 31 | Playwright comes from the dev dependencies; without it the command says how to install it | AluKit runs from a checkout (§10); moving `@playwright/test` to dependencies is a packaging call for M5's skill install. Since the merge: `alukit skill install` links the checkout's skill, and a checkout has its dev dependencies, so it stays one |
 
 ## Fixes found on the way
 
@@ -80,5 +80,32 @@ or veto. Labels: **verified** (run, with how), **read**, **inferred**.*
 - Dragging an existing node or bar end (a drag committed as one batch on release, §7.1): the
   gestures built are clicks; `moveNode` by drag comes with editing in place.
 - Pivots and fastened face joints in the connect tool; parts at a world pose; patterns by a
-  direction or offsets; the section clipping plane, hole markers and placeholder hatching
-  (left from M4a).
+  direction or offsets; the section clipping plane and placeholder hatching (left from M4a;
+  M6 marks holes).
+- A part's face as the work plane (decision 39).
+
+## The merge into main, and what it folded in
+
+Main had gained M6 (project items, the machining sheet, the viewer drawing plates, bent angles
+and placeholders, G28) and M5 (variants, diff, revisions, the GLB writer, the skill, and
+`src/mesh/`'s consolidation, which M6's drawing joined). Git met six conflicts (the README,
+`biome.json`, the CLI's planned commands, the server's routes, its view model, the viewer's
+scene); both sides were kept in each. Decisions 35–42 join M4b to them.
+
+| # | Decision | Why |
+|---|---|---|
+| 35 | **One layout fix.** M4b (decision 32) and M6 (its note, "Found while checking by eye") fixed the same collapse the same way, `.main` in row 4 and the drawer in row 5. The rule stays on `.main` and `.drawer` themselves, with M6's explanation; M6's separate `.app > .main` and `.app > .drawer` rules are gone | One rule per element. The separate rules, more specific and earlier in the file, drew two Biome `noDescendingSpecificity` warnings (**verified**: `pnpm lint` clean; the draw script draws on an empty project at full height) |
+| 36 | A section is built once, by `viewSection` in `src/mesh/display.ts` (`meshDisplay`, M5 decision 29), which now carries M4b's grooves and datums; the catalog card uses the same function. The GLB writer reads only a section's outline, so its bytes do not move | **Verified**: `glb.test.ts`, two exports byte for byte; `catalog.test.ts` |
+| 37 | The interaction layer needed no change for M5's meshes: `pickAt` maps a hit on any instanced mesh to its entity, so a hole rod picks its plate; fitting to a selection boxes a part by its mesh, a plate or an angle as drawn. The tools' highlight colour joined the palette in `style.ts`, beside `selected` | **Verified**: the Playwright suite |
+| 38 | **Snapping to parts.** Every placed part offers its datums (and its origin, unless a datum is there) and its face centres: a box's six; a plate's front and back at its outline's centroid, when that lies on the plate; a bent angle's four flats at the middle of each leg's flat (from R + T to the leg). They are written as coordinates (`{ kind: "part" }`), since a document point cannot name a part (§4.3). The view model's parts carry their item's datums (`display.parts[id].datums`) | Cheap: the frames, boxes and shapes were in the view model already. The place tool still takes face and groove stations only (decision 16). **Verified**: `interaction.test.ts`; `canvas.spec.ts` measures the cart's p8 from its top face centre to its origin, 110.00 mm |
+| 39 | The work plane (W) still takes a bar's face only | A part's faces need a ray test per shape (a plate's outline, an angle's legs), not the box test a bar's uses; left for later |
+| 40 | **The catalog browser lists the document's own items** under the vendor `project` (family: the material's id, else the kind), read only. The card gives what the BOM and the machining sheet read (material, thickness, legs, length, bend radius and blank, box, hole count, the mass with its source, the supplier, the price) and the item as the document writes it; no options, no offers. "Set as palette" places one like any part. The tree, the list and a project item's open card follow each revision | They are items the project places (§4.8); editing them is the commands' job. **Verified**: `catalog.test.ts`, the cart's three through the API; `canvas.spec.ts`, the plate's card in the app |
+| 41 | `snapshot` sits with `diff`, `revision` and `export` (the publish group, in §7.3's order: diff, revision, snapshot, export), no longer with the server's commands; `pnpm skill` regenerated the reference. The skill's workflow names it, and its worked example ends with one. The unit suite runs the example without it, since it draws the built app and the gate runs the unit suite before the build; the end-to-end suite runs the example whole and checks the PNG (1600 × 1000, not blank). `src/cli/skill-example.ts` holds the example's parser for both | §7.5: the example runs as written, every command of it |
+| 42 | Fixtures: `alukit lock update` and `fmt` leave `base-frame/cli`, `base-frame/empty`, the cart and G28 as they are | M5 and M6 changed no canonical form or lock entry the base frame uses |
+
+**Test expectations changed by the merge.** None of M4b's or main's: M6 added no catalog to the
+cart (`test-fab` is a supplier), so the browser's index and tree tests count as before, and the
+project's items are a vendor of their own. Added: `skill.test.ts` checks that the example's one
+command left for the end-to-end suite is its snapshot. **No golden value changed**: G1–G28, the cart's cut
+list, BOM, order and machining sheet, G26's checks, the base frame's fixture and the draw script
+against it, `/api/order` and the GLB's byte identity all pass as they were.
