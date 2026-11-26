@@ -11,6 +11,8 @@ import { cutListCsv, cutListJson, cutListMarkdown } from "./cutlist/format.ts";
 import { derive } from "./derive/derive.ts";
 import { derivedJson, jsonText } from "./derive/output.ts";
 import { sortDiagnostics } from "./diagnostics.ts";
+import { machiningJson, machiningMarkdown } from "./machining/format.ts";
+import { type MachiningSheet, machiningSheet } from "./machining/machining.ts";
 import {
   costsCsv,
   costsJson,
@@ -21,7 +23,8 @@ import {
 } from "./order/format.ts";
 import { type Order, order } from "./order/order.ts";
 import { type OpenedProject, openProject } from "./project/open.ts";
-import { FIXTURES, readJson } from "./testing.ts";
+import { projectItems } from "./project-items/source.ts";
+import { FIXTURES, mergePatch, readJson } from "./testing.ts";
 
 /**
  * The cart (design §12): a small synthetic cart with eccentric anchors, rolled 40x80 rails, a
@@ -29,10 +32,11 @@ import { FIXTURES, readJson } from "./testing.ts";
  * and threaded rods cut from stock in sleeves inside the beam, a flush cover strip, a free end
  * counted from a cut, angled knee braces, a pattern of slats, a grip bearing on another bar's end
  * through an end plate, a linear rail run from stock lengths with its factory ends at the joint,
- * a pattern of carriages crossing the joint, rail screws at a selection of the rail's holes, and
- * an unplaced line.
- * Its cut list and BOM must equal the tables worked by hand in tests/fixtures/cart/hand/, which
- * imports nothing from AluKit.
+ * a pattern of carriages crossing the joint, rail screws at a selection of the rail's holes, an
+ * unplaced line, and (M6) a custom plate with threaded, countersunk and counterbored holes, a bent
+ * angle, and a placeholder.
+ * Its cut list, BOM, order list and machining sheet must equal the tables worked by hand in
+ * tests/fixtures/cart/hand/, which imports nothing from AluKit.
  */
 
 const CART = join(FIXTURES, "cart");
@@ -40,8 +44,8 @@ const MAIN = fileURLToPath(new URL("../cli/main.ts", import.meta.url));
 /** The order's date in the hand script: no price is stale but the nuts', read 56 days before. */
 const AS_OF = "2026-11-26";
 
-function cartOrder(project: OpenedProject): Order {
-  const derived = derive(project.raw, project.items);
+function cartOrder(project: OpenedProject, raw: unknown = project.raw): Order {
+  const derived = derive(raw, project.items);
   const cl = cutList({ derived, items: project.items });
   const b = bom({ derived, items: project.items });
   return order({
@@ -51,6 +55,16 @@ function cartOrder(project: OpenedProject): Order {
     cutList: cl,
     diagnostics: sortDiagnostics([...derived.diagnostics, ...cl.diagnostics, ...b.diagnostics]),
     asOf: AS_OF,
+  });
+}
+
+function cartSheet(project: OpenedProject): MachiningSheet {
+  const derived = derive(project.raw, project.items);
+  return machiningSheet({
+    derived,
+    items: project.items,
+    bom: bom({ derived, items: project.items }),
+    cutList: cutList({ derived, items: project.items }),
   });
 }
 
@@ -181,12 +195,14 @@ describe("the cart", () => {
   it("orders per supplier: READY or BLOCKED, each for its own reasons", () => {
     const o = cartOrder(project);
     expect(o.suppliers.map((s) => [s.supplier, s.status, s.reasons.map((r) => r.rule)])).toEqual([
+      // The sensor bracket is made locally and has no price yet: O2 holds it.
+      ["local", "BLOCKED", ["open-item", "missing-price"]],
       ["test-fab", "READY", []],
       ["test-gen-vendor", "BLOCKED", ["open-item"]],
       ["test-geo-vendor", "READY", ["stale-price"]],
       ["test-steel", "READY", []],
       ["test-vendor", "BLOCKED", ["est-price"]],
-      [null, "BLOCKED", ["missing-price"]],
+      [null, "BLOCKED", ["placeholder", "missing-price"]],
     ]);
     // 77 screws: the chosen bracket kits bring 40, and §5.4's example covers the 37 left with
     // 4 packs of 10, not one of 50.
@@ -199,6 +215,69 @@ describe("the cart", () => {
       ["BRK-40-K10", 2, 40],
       ["SCR-M8x16-10", 4, 37],
     ]);
+  });
+
+  it("has the machining sheet worked by hand, byte for byte, with the plate's three hole types", () => {
+    const expected = readFileSync(join(CART, "expected-machining.json"), "utf8");
+    const sheet = cartSheet(project);
+    expect(machiningJson(sheet)).toBe(expected);
+    const plate = sheet.parts.find((p) => p.item === "project:plate-a");
+    const shown = plate?.holes
+      .filter((h) => h.type !== "through")
+      .map((h) => [h.id, h.at_mm, h.type, h.thread ?? h.csk ?? h.cbore]);
+    expect(shown).toEqual([
+      ["h1", [20, 20], "threaded", "M6"],
+      ["h2", [140, 20], "countersunk", { d_mm: 12.4, angle_deg: 90, depth_mm: 2.9 }],
+      ["h3", [140, 80], "counterbored", { d_mm: 11, depth_mm: 4 }],
+    ]);
+    expect(plate?.datum).toMatch(/^the outline's origin/);
+  });
+
+  it("holds only the placeholder's own line: the group it is in, and no other", () => {
+    const golden = JSON.parse(readFileSync(join(CART, "expected-order.json"), "utf8")) as Order;
+    const held = golden.suppliers.filter((s) => s.reasons.some((r) => r.rule === "placeholder"));
+    expect(held.map((s) => s.supplier)).toEqual([null]);
+    expect(held[0]?.lines.map((l) => l.item)).toContain("project:motor");
+    expect(held[0]?.reasons.filter((r) => r.rule === "placeholder")).toEqual([
+      {
+        rule: "placeholder",
+        action: "block",
+        message: "project:motor: a placeholder, not a part to order",
+        entities: ["project:motor"],
+      },
+    ]);
+    // With the rule off, every group's status and other reasons are as the golden has them: the
+    // placeholder held nothing else.
+    const off = cartOrder(
+      project,
+      mergePatch(project.raw, { order_rules: { placeholder: "off" } }),
+    );
+    const others = (o: Order) =>
+      o.suppliers.map((s) => [
+        s.supplier,
+        s.status,
+        s.reasons.filter((r) => r.rule !== "placeholder"),
+      ]);
+    expect(others(off)).toEqual(others(golden));
+  });
+
+  it("weighs the bent angle as its hand calculation does", () => {
+    const hand = (
+      readJson(join(CART, "expected-bom.json")) as {
+        unrounded: Record<string, { developed_mm?: number; mass_kg: number }>;
+      }
+    ).unrounded;
+    const own = projectItems(project.items, derive(project.raw, project.items).doc).resolved;
+    const angle = own.get("project:angle-a");
+    expect(angle?.angle?.developed).toBeCloseTo(hand["project:angle-a"]?.developed_mm as number, 9);
+    expect(angle?.view.mass_kg).toEqual({
+      v: expect.closeTo(hand["project:angle-a"]?.mass_kg as number, 12),
+      src: "calc",
+    });
+    expect(own.get("project:plate-a")?.view.mass_kg?.v).toBeCloseTo(
+      hand["project:plate-a"]?.mass_kg as number,
+      12,
+    );
   });
 
   it("gives byte-identical output for the same input, run twice", () => {
@@ -220,6 +299,8 @@ describe("the cart", () => {
         orderMarkdown(o),
         costsJson(costsOf(o)),
         costsCsv(costsOf(o)),
+        machiningJson(cartSheet(project)),
+        machiningMarkdown(cartSheet(project)),
       ];
     };
     expect(once()).toEqual(once());
@@ -263,6 +344,10 @@ describe("the cart", () => {
     );
     expect(run(["bom", CART, "--format", "json"])).toBe(
       bomJson(bom({ derived: d, items: project.items })),
+    );
+    // The machining sheet from another process is the golden worked by hand.
+    expect(run(["machining", CART, "--format", "json"])).toBe(
+      readFileSync(join(CART, "expected-machining.json"), "utf8"),
     );
     // `alukit order` exits 1, since suppliers are blocked, and prints why. Its JSON is the golden
     // plus one line, the stamp (§4.13, §9): the lock's hash, which any sha256 tool gives from the

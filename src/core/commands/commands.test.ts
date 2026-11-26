@@ -368,9 +368,10 @@ describe("parts and patterns", () => {
           cmd: "addPart",
           args: { item: "test:FOOT-M8", on: { bar: "b7", at_mm: 100, groove: "+y.1" } },
         },
-        // The cart's parts run to p5 (its unplaced lines), so the new part is p6.
-        { cmd: "setPart", args: { id: "p6", set: { on: { at_mm: 120 } } } },
-        { cmd: "addPattern", args: { template: ["p6"], along: "b7", pitch_mm: 100, count: 3 } },
+        // The cart's parts run to p8 (its custom plate, bent angle and placeholder), so the new
+        // part is p9.
+        { cmd: "setPart", args: { id: "p9", set: { on: { at_mm: 120 } } } },
+        { cmd: "addPattern", args: { template: ["p9"], along: "b7", pitch_mm: 100, count: 3 } },
         { cmd: "setPattern", args: { id: "pt3", set: { count: 4 } } },
       ],
       env,
@@ -379,7 +380,7 @@ describe("parts and patterns", () => {
     for (const c of ["addPart", "setPart", "addPattern", "setPattern"]) exercised.add(c);
     expect(r.state.lock.items["test:FOOT-M8"]).toBeDefined();
     expect(cart().lock.items["test:FOOT-M8"]).toBeUndefined();
-    expect((r.state.doc.parts as Record<string, unknown>).p6).toEqual({
+    expect((r.state.doc.parts as Record<string, unknown>).p9).toEqual({
       item: "test:FOOT-M8",
       on: { bar: "b7", at_mm: 120, groove: "+y.1" },
     });
@@ -705,12 +706,13 @@ describe("items, params, costs and records", () => {
           check: { value: "bbox().z", op: "<=", limit: "950", text: "fits under the bench" },
         },
       },
-      // The cart holds open item O1 (its order is held on c35), so this one is O2.
+      // The cart holds open items O1 (its order is held on c35) and O2 (the bracket's price), so
+      // this one is O3.
       { cmd: "addOpen", args: { open: { text: "which feet?", blocks: "order", scope: ["b1"] } } },
       { cmd: "addDecision", args: { text: "40-series", why: "stiff enough" } },
       {
         cmd: "resolveOpen",
-        args: { id: "O2", text: "levelling feet M8", why: "the floor is uneven" },
+        args: { id: "O3", text: "levelling feet M8", why: "the floor is uneven" },
       },
     );
     expect(r.state.doc.variants).toEqual({
@@ -728,7 +730,7 @@ describe("items, params, costs and records", () => {
         date: "2026-11-26",
         text: "levelling feet M8",
         why: "the floor is uneven",
-        resolves: "O2",
+        resolves: "O3",
       },
     ]);
     expect(
@@ -745,15 +747,16 @@ describe("items, params, costs and records", () => {
     }).state;
     expect(
       ok(o, { cmd: "removeEntity", args: { id: "b32", cascade: true } }).state.doc.open,
-    ).toEqual([...(cart().doc.open as unknown[]), { id: "O2", text: "x", scope: ["b31"] }]);
+    ).toEqual([...(cart().doc.open as unknown[]), { id: "O3", text: "x", scope: ["b31"] }]);
   });
 
   it("open items: a scope names suppliers, items, and entities by their ends, pieces and copies", () => {
     // §4.12 and the order rules (§5.5): only an entity of the document is a reference.
     const scope = ["supplier:test-vendor", "test:SCR-M8x16", "b5.a", "c23.f1", "b26@2", "K2"];
     const r = ok(cart(), { cmd: "addOpen", args: { open: { text: "x", blocks: "order", scope } } });
-    const o2 = (doc: RawDoc) => (doc.open as { id: string }[]).find((x) => x.id === "O2");
-    expect(o2(r.state.doc)).toEqual({ id: "O2", text: "x", blocks: "order", scope });
+    // The cart holds O1 and O2, so this one is O3.
+    const o2 = (doc: RawDoc) => (doc.open as { id: string }[]).find((x) => x.id === "O3");
+    expect(o2(r.state.doc)).toEqual({ id: "O3", text: "x", blocks: "order", scope });
     for (const bad of ["b99.a", "c99.f1", "b99@2"]) {
       const e = no(cart(), { cmd: "addOpen", args: { open: { text: "x", scope: [bad] } } });
       expect(e[0]).toMatchObject({ code: "ref", refs: [bad.replace(/[.@].*$/, "")] });

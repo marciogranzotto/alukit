@@ -238,16 +238,36 @@ describe("alukit derive, cutlist and bom", () => {
     expect(r.code).toBe(1);
     expect(r.out.join("\n")).toMatch(/^## test-vendor: BLOCKED$/m);
     expect(r.err).toEqual([
+      "BLOCKED local: open-item: O2: price the sensor bracket with the local shop",
+      "BLOCKED local: missing-price: project:angle-a: no price",
       "BLOCKED test-gen-vendor: open-item: O1: confirm the rail screws' length against the rail's counterbore",
       "BLOCKED test-vendor: est-price: test:PSU-24V: the price of test:PSU-24V is an estimate",
+      "BLOCKED (unsourced): placeholder: project:motor: a placeholder, not a part to order",
       "BLOCKED (unsourced): missing-price: test:SPL-STUD: no offer",
     ]);
+  });
+
+  it("prints the machining sheet as Markdown or JSON (M6)", async () => {
+    const md = await capture(["machining", project("cart")]);
+    expect(md.code).toBe(0);
+    expect(md.out.join("\n")).toMatch(
+      /^\| h2 \| 140\.00 \| 20\.00 \| countersunk \| Ø6\.60, countersink Ø12\.40 at 90\.00°, 2\.90 deep, through \| front \|$/m,
+    );
+    expect(md.out.join("\n")).toMatch(/^Blank 50\.00 × 64\.60; bend allowance 6\.60/m);
+    const json = await capture(["machining", project("cart"), "--format", "json"]);
+    const sheet = JSON.parse(json.out.join("\n"));
+    expect([sheet.schema, sheet.parts.map((p: { item: string }) => p.item)]).toEqual([
+      "alukit.machining/1",
+      ["project:angle-a", "project:plate-a"],
+    ]);
+    const csv = await capture(["machining", project("cart"), "--format", "csv"]);
+    expect(csv.code).toBe(2);
   });
 
   it("prints the costs and totals in each format", async () => {
     const md = await capture(["costs", project("cart"), "--as-of", "2026-11-26"]);
     expect(md.code).toBe(0);
-    expect(md.out.join("\n")).toMatch(/^\| \*\*Total\*\* \| 5018\.09 \| 5566\.85 \| 6649\.41 \|$/m);
+    expect(md.out.join("\n")).toMatch(/^\| \*\*Total\*\* \| 5441\.59 \| 6155\.35 \| 7512\.91 \|$/m);
     const json = await capture([
       "costs",
       project("cart"),
@@ -260,7 +280,7 @@ describe("alukit derive, cutlist and bom", () => {
     expect([c.schema, c.costs.length, c.totals.total.likely_minor]).toEqual([
       "alukit.costs/1",
       5,
-      556685,
+      615535,
     ]);
     const csv = await capture([
       "costs",
@@ -275,7 +295,7 @@ describe("alukit derive, cutlist and bom", () => {
     expect(rows).toContain(
       'cost,,K4,"freight, quoted in dollars",freight,USD,20.00,30.00,45.00,est,"at 5.5: 110.00, 165.00, 247.50"',
     );
-    expect(rows).toContain("total,,,total,,BRL,5018.09,5566.85,6649.41,,");
+    expect(rows).toContain("total,,,total,,BRL,5441.59,6155.35,7512.91,,");
   });
 
   it("states the lock it was derived from in every format (the stamp, §4.13, §9)", async () => {

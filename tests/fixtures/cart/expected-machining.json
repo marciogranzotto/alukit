@@ -1,0 +1,215 @@
+{
+  "schema": "alukit.machining/1",
+  "parts": [
+    {
+      "item": "project:angle-a",
+      "name": "Sensor bracket",
+      "kind": "bent-angle",
+      "qty": 1,
+      "sources": [
+        "p7"
+      ],
+      "supplier": "local",
+      "material": "test:al-6063-t5",
+      "thickness_mm": 3,
+      "datum": "the heel at end 0; x along the length, y from the heel's outside face up the leg",
+      "legs_mm": [
+        40,
+        30
+      ],
+      "length_mm": 50,
+      "blank_mm": [
+        50,
+        64.6
+      ],
+      "blank_datum": "leg a's free edge at end 0; x along the length, y across the blank",
+      "bend": {
+        "angle_deg": 90,
+        "radius_mm": 3,
+        "k_factor": 0.4,
+        "allowance_mm": 6.6,
+        "from_mm": 34,
+        "to_mm": 40.6
+      },
+      "holes": [
+        {
+          "id": "a1",
+          "leg": "a",
+          "at_mm": [
+            25,
+            22
+          ],
+          "flat_mm": [
+            25,
+            18
+          ],
+          "type": "through",
+          "d_mm": 5.5,
+          "face": "front"
+        },
+        {
+          "id": "b1",
+          "leg": "b",
+          "at_mm": [
+            25,
+            18
+          ],
+          "flat_mm": [
+            25,
+            52.6
+          ],
+          "type": "threaded",
+          "d_mm": 3.3,
+          "thread": "M4",
+          "face": "front"
+        }
+      ]
+    },
+    {
+      "item": "project:plate-a",
+      "name": "Motor plate",
+      "kind": "plate",
+      "qty": 1,
+      "sources": [
+        "p6"
+      ],
+      "supplier": "test-fab",
+      "material": "test:s235",
+      "thickness_mm": 8,
+      "datum": "the outline's origin (0, 0); x and y as the outline is drawn",
+      "outline_mm": [
+        [
+          0,
+          0
+        ],
+        [
+          160,
+          0
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          30,
+          100
+        ],
+        [
+          0,
+          70
+        ]
+      ],
+      "holes": [
+        {
+          "id": "h1",
+          "at_mm": [
+            20,
+            20
+          ],
+          "type": "threaded",
+          "d_mm": 5,
+          "thread": "M6",
+          "face": "front"
+        },
+        {
+          "id": "h2",
+          "at_mm": [
+            140,
+            20
+          ],
+          "type": "countersunk",
+          "d_mm": 6.6,
+          "csk": {
+            "d_mm": 12.4,
+            "angle_deg": 90,
+            "depth_mm": 2.9
+          },
+          "face": "front"
+        },
+        {
+          "id": "h3",
+          "at_mm": [
+            140,
+            80
+          ],
+          "type": "counterbored",
+          "d_mm": 6.6,
+          "cbore": {
+            "d_mm": 11,
+            "depth_mm": 4
+          },
+          "face": "front"
+        },
+        {
+          "id": "h4",
+          "at_mm": [
+            80,
+            50
+          ],
+          "type": "through",
+          "d_mm": 8.5,
+          "face": "front"
+        }
+      ]
+    }
+  ],
+  "bars": [
+    {
+      "item": "test-geo:FB-50x10",
+      "opt": {},
+      "cut_mm": 300,
+      "count": 2,
+      "ops": 4,
+      "sources": [
+        "b20",
+        "b23"
+      ]
+    },
+    {
+      "item": "test-geo:FB-50x20",
+      "opt": {},
+      "cut_mm": 200,
+      "count": 2,
+      "ops": 4,
+      "sources": [
+        "b21",
+        "b22"
+      ]
+    },
+    {
+      "item": "test-geo:RHS-100x50x4",
+      "opt": {},
+      "cut_mm": 520,
+      "count": 1,
+      "ops": 8,
+      "sources": [
+        "b18"
+      ]
+    },
+    {
+      "item": "test:TS40",
+      "opt": {
+        "finish": "anodised"
+      },
+      "cut_mm": 660,
+      "count": 1,
+      "ops": 1,
+      "sources": [
+        "b11"
+      ]
+    },
+    {
+      "item": "test:TS40",
+      "opt": {
+        "finish": "anodised"
+      },
+      "cut_mm": 460,
+      "count": 1,
+      "ops": 1,
+      "sources": [
+        "b12"
+      ]
+    }
+  ],
+  "diagnostics": []
+}

@@ -17,6 +17,51 @@
   },
   "suppliers": [
     {
+      "supplier": "local",
+      "status": "BLOCKED",
+      "reasons": [
+        {
+          "rule": "open-item",
+          "action": "block",
+          "message": "O2: price the sensor bracket with the local shop",
+          "entities": [
+            "project:angle-a"
+          ]
+        },
+        {
+          "rule": "missing-price",
+          "action": "block",
+          "message": "project:angle-a: no price",
+          "entities": [
+            "project:angle-a"
+          ]
+        }
+      ],
+      "lines": [
+        {
+          "item": "project:angle-a",
+          "name": "Sensor bracket",
+          "kind": "bent-angle",
+          "opt": {},
+          "qty": 1,
+          "unit": "unit",
+          "bom": [
+            {
+              "item": "project:angle-a",
+              "opt": {},
+              "qty": 1
+            }
+          ]
+        }
+      ],
+      "costs": [],
+      "totals": {
+        "low_minor": 0,
+        "likely_minor": 0,
+        "high_minor": 0
+      }
+    },
+    {
       "supplier": "test-fab",
       "status": "READY",
       "reasons": [],
@@ -54,15 +99,37 @@
               "covered_by": "K3"
             }
           ]
+        },
+        {
+          "item": "project:plate-a",
+          "name": "Motor plate",
+          "kind": "plate",
+          "opt": {},
+          "qty": 1,
+          "unit": "unit",
+          "unit_price_minor": 8500,
+          "currency": "BRL",
+          "low_minor": 8500,
+          "likely_minor": 8500,
+          "high_minor": 8500,
+          "price_src": "src",
+          "read": "2026-11-26",
+          "bom": [
+            {
+              "item": "project:plate-a",
+              "opt": {},
+              "qty": 1
+            }
+          ]
         }
       ],
       "costs": [
         "K3"
       ],
       "totals": {
-        "low_minor": 15000,
-        "likely_minor": 15000,
-        "high_minor": 15000
+        "low_minor": 23500,
+        "likely_minor": 23500,
+        "high_minor": 23500
       }
     },
     {
@@ -1319,6 +1386,14 @@
       "status": "BLOCKED",
       "reasons": [
         {
+          "rule": "placeholder",
+          "action": "block",
+          "message": "project:motor: a placeholder, not a part to order",
+          "entities": [
+            "project:motor"
+          ]
+        },
+        {
           "rule": "missing-price",
           "action": "block",
           "message": "test:SPL-STUD: no offer",
@@ -1342,13 +1417,35 @@
               "qty": 1
             }
           ]
+        },
+        {
+          "item": "project:motor",
+          "name": "Gear motor, model to be chosen",
+          "kind": "placeholder",
+          "opt": {},
+          "qty": 1,
+          "unit": "unit",
+          "unit_price_minor": 45000,
+          "currency": "BRL",
+          "low_minor": 30000,
+          "likely_minor": 45000,
+          "high_minor": 70000,
+          "range": "quote",
+          "price_src": "est",
+          "bom": [
+            {
+              "item": "project:motor",
+              "opt": {},
+              "qty": 1
+            }
+          ]
         }
       ],
       "costs": [],
       "totals": {
-        "low_minor": 0,
-        "likely_minor": 0,
-        "high_minor": 0
+        "low_minor": 30000,
+        "likely_minor": 45000,
+        "high_minor": 70000
       }
     }
   ],
@@ -1421,18 +1518,18 @@
       "pct": 10,
       "of": "subtotal",
       "currency": "BRL",
-      "low_minor": 45619,
-      "likely_minor": 50608,
-      "high_minor": 60449,
+      "low_minor": 49469,
+      "likely_minor": 55958,
+      "high_minor": 68299,
       "src": "est"
     }
   ],
   "totals": {
     "currency": "BRL",
     "lines": {
-      "low_minor": 384190,
-      "likely_minor": 406577,
-      "high_minor": 462742
+      "low_minor": 422690,
+      "likely_minor": 460077,
+      "high_minor": 541242
     },
     "costs": {
       "low_minor": 72000,
@@ -1440,26 +1537,26 @@
       "high_minor": 141750
     },
     "subtotal": {
-      "low_minor": 456190,
-      "likely_minor": 506077,
-      "high_minor": 604492
+      "low_minor": 494690,
+      "likely_minor": 559577,
+      "high_minor": 682992
     },
     "contingency": {
-      "low_minor": 45619,
-      "likely_minor": 50608,
-      "high_minor": 60449
+      "low_minor": 49469,
+      "likely_minor": 55958,
+      "high_minor": 68299
     },
     "total": {
-      "low_minor": 501809,
-      "likely_minor": 556685,
-      "high_minor": 664941
+      "low_minor": 544159,
+      "likely_minor": 615535,
+      "high_minor": 751291
     },
     "by_currency": [
       {
         "currency": "BRL",
-        "low_minor": 490809,
-        "likely_minor": 540185,
-        "high_minor": 640191
+        "low_minor": 533159,
+        "likely_minor": 599035,
+        "high_minor": 726541
       },
       {
         "currency": "USD",
@@ -1471,16 +1568,16 @@
     "share": [
       {
         "src": "src",
-        "likely_minor": 411677,
-        "pct": 73.95
+        "likely_minor": 420177,
+        "pct": 68.26
       },
       {
         "src": "est",
-        "likely_minor": 145008,
-        "pct": 26.05
+        "likely_minor": 195358,
+        "pct": 31.74
       }
     ],
-    "unpriced": 1
+    "unpriced": 2
   },
   "diagnostics": []
 }

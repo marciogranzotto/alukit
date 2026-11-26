@@ -287,7 +287,61 @@
         }
       ],
       "mass_kg": 0.5
+    },
+    {
+      "kind": "plate",
+      "lines": [
+        {
+          "item": "project:plate-a",
+          "opt": {},
+          "qty": 1,
+          "unit_mass_kg": 0.965,
+          "mass_kg": 0.965,
+          "mass_src": "calc",
+          "sources": ["p6"]
+        }
+      ],
+      "mass_kg": 0.965
+    },
+    {
+      "kind": "bent-angle",
+      "lines": [
+        {
+          "item": "project:angle-a",
+          "opt": {},
+          "qty": 1,
+          "unit_mass_kg": 0.026,
+          "mass_kg": 0.026,
+          "mass_src": "calc",
+          "sources": ["p7"]
+        }
+      ],
+      "mass_kg": 0.026
+    },
+    {
+      "kind": "placeholder",
+      "lines": [
+        {
+          "item": "project:motor",
+          "opt": {},
+          "qty": 1,
+          "unit_mass_kg": 2.8,
+          "mass_kg": 2.8,
+          "mass_src": "est",
+          "sources": ["p8"]
+        }
+      ],
+      "mass_kg": 2.8
     }
   ],
-  "mass_kg": 56.851
+  "mass_kg": 60.642,
+  "unrounded": {
+    "project:plate-a": {
+      "mass_kg": 0.9646516104224663
+    },
+    "project:angle-a": {
+      "developed_mm": 64.59734457253856,
+      "mass_kg": 0.02590020318029653
+    }
+  }
 }

@@ -7,7 +7,7 @@
   "fx": {
     "USD": { "v": 5.5, "src": "src", "ref": "a bank's rate, synthetic", "read": "2026-11-26" }
   },
-  "ids": { "K": 5, "O": 1, "b": 34, "c": 35, "p": 5, "pt": 2, "r": 2 },
+  "ids": { "K": 5, "O": 2, "b": 34, "c": 35, "p": 8, "pt": 2, "r": 2 },
   "defaults": {
     "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
     "cutting": { "kerf_mm": 3, "trim_mm": 5 }
@@ -98,11 +98,19 @@
     "p2": { "item": "test:TNUT-M8", "qty": 10, "unplaced": true, "why": "spares for light fixings" },
     "p3": { "item": "test:BRK-40", "qty": 12, "unplaced": true, "why": "brackets for a shelf fitted later" },
     "p4": { "item": "test:SCR-M8x16", "qty": 77, "unplaced": true, "why": "screws for the shelf brackets and a tool rail" },
-    "p5": { "item": "test:PSU-24V", "qty": 1, "unplaced": true, "why": "power supply for a work light" }
+    "p5": { "item": "test:PSU-24V", "qty": 1, "unplaced": true, "why": "power supply for a work light" },
+    "p6": { "item": "project:plate-a", "on": { "bar": "b10", "at_mm": 900, "face": "+y" }, "label": "motor plate on the back base rail" },
+    "p7": { "item": "project:angle-a", "on": { "bar": "b7", "at_mm": 300, "face": "+y" }, "label": "sensor bracket on the left top rail" },
+    "p8": { "item": "project:motor", "at": { "pos": [900, 580, 128] }, "label": "the gear motor, on the motor plate" }
   },
   "patterns": {
     "pt1": { "template": ["b26", "c26", "c27"], "along": "b9", "pitch_mm": 150, "count": 7, "skip": [3], "label": "slats every 150, leaving room for the beam at W / 2" },
     "pt2": { "template": ["p1"], "along": "r2", "pitch_mm": 300, "count": 3, "label": "carriages at fixed stops, the third across the rail joint" }
+  },
+  "items": {
+    "angle-a": { "kind": "bent-angle", "name": "Sensor bracket", "material": "test:al-6063-t5", "thickness_mm": 3, "length_mm": 50, "legs_mm": [40, 30], "bend_radius_mm": 3, "k_factor": 0.4, "holes": { "a": [{ "at": [25, 22], "d_mm": 5.5 }], "b": [{ "at": [25, 18], "thread": "M4" }] }, "note": "bent from 3 mm sheet by the local shop; leg a screws to the rail, the sensor screws into leg b" },
+    "motor": { "kind": "placeholder", "name": "Gear motor, model to be chosen", "bbox_mm": [[-60, -45, 0], [60, 45, 110]], "mass_kg": { "v": 2.8, "src": "est", "note": "a typical 24 V gear motor of this size" }, "price_minor": { "v": 45000, "src": "est", "low": 30000, "high": 70000 } },
+    "plate-a": { "kind": "plate", "name": "Motor plate", "material": "test:s235", "thickness_mm": 8, "outline": [[0, 0], [160, 0], [160, 100], [30, 100], [0, 70]], "holes": [{ "at": [20, 20], "thread": "M6" }, { "at": [140, 20], "d_mm": 6.6, "csk": { "d_mm": 12.4, "angle_deg": 90 } }, { "at": [140, 80], "d_mm": 6.6, "cbore": { "d_mm": 11, "depth_mm": 4 } }, { "at": [80, 50], "d_mm": 8.5 }], "datums": { "mount": [80, 50, 0] }, "supplier": "test-fab", "price_minor": { "v": 8500, "src": "src", "ref": "a written quote, synthetic", "read": "2026-11-26" } }
   },
   "costs": [
     { "id": "K1", "label": "assembly", "kind": "labour", "low_minor": 40000, "likely_minor": 60000, "high_minor": 90000, "src": "est" },
@@ -120,6 +128,7 @@
     "test:BRK-40": { "offer": "BRK-40-K10" }
   },
   "open": [
-    { "id": "O1", "text": "confirm the rail screws' length against the rail's counterbore", "blocks": "order", "scope": ["c35"] }
+    { "id": "O1", "text": "confirm the rail screws' length against the rail's counterbore", "blocks": "order", "scope": ["c35"] },
+    { "id": "O2", "text": "price the sensor bracket with the local shop", "blocks": "order", "scope": ["project:angle-a"] }
   ]
 }

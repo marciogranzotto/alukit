@@ -1,10 +1,10 @@
-"""The cart's cut list and bill of materials, worked by hand.
+"""The cart's cut list, bill of materials, order list and machining sheet, worked by hand.
 
-This script is the hand calculation of tests/fixtures/cart/alukit.json's cut list and BOM,
-written independently of AluKit: it imports nothing from it and works each number from the
-cart's geometry and the synthetic catalogs with plain arithmetic, the way a person would on
-paper. It writes tests/fixtures/cart/expected-cutlist.json and expected-bom.json, which the cart
-test compares AluKit's outputs with.
+This script is the hand calculation of tests/fixtures/cart/alukit.json's outputs, written
+independently of AluKit: it imports nothing from it and works each number from the cart's
+geometry and the synthetic catalogs with plain arithmetic, the way a person would on paper. It
+writes tests/fixtures/cart/expected-cutlist.json, expected-bom.json, expected-order.json and
+expected-machining.json, which the cart test compares AluKit's outputs with.
 
 Run: python3 -I tests/fixtures/cart/hand/cart_by_hand.py, then
 pnpm exec biome format --write tests/fixtures/cart (the repository's JSON style).
@@ -31,12 +31,21 @@ Rules used, from docs/design.md:
   whose contents count against the other needs) or else the cheapest cover of packs; a line takes
   its offer's quoted range, else the most specific price band, rounded once half away from zero;
   cost lines cover machining and items; an open item, an estimated price and a missing offer
-  block their suppliers, a price read more than 30 days before the order warns (§4.11, §5.4, §5.5).
-
-Not in the cart: M6's plate and placeholder.
+  block their suppliers, a price read more than 30 days before the order warns (§4.11, §5.4, §5.5);
+- the project's own items (§4.8, M6): a plate's or a bent angle's mass is its net volume (the
+  outline's area, or the developed length times the length, times the thickness, less what each
+  hole removes) times its material's density; a bent angle's developed length is its two legs
+  less the outside setback R + T each, plus the bend allowance (π / 2)(R + K T); a threaded hole
+  is drilled at its tap drill, the major diameter less the pitch; each project item is one order
+  line under its own supplier (a plate or an angle that names none is made locally), priced as
+  entered; a placeholder blocks only its own line's group;
+- the machining sheet lists each custom part's holes from its datum: a plate's outline origin, an
+  angle's heel (and, on its flat blank, leg a's free edge); bars' machining stays on the cut list,
+  which the sheet only points to.
 
 Run with python3 -I; then Biome formats expected-cutlist.json and expected-bom.json, while
-expected-order.json is left exactly as written (it is compared byte for byte).
+expected-order.json and expected-machining.json are left exactly as written (they are compared
+byte for byte).
 """
 
 import datetime
@@ -589,12 +598,72 @@ for kind in ("connector", "fastener", "carriage", "generic"):
         lines.append(line)
     lines.sort(key=lambda l: id_key(l["item"]))
     bom_groups.append({"kind": kind, "lines": lines})
+
+# --- The project's own items (§4.8) ---------------------------------------------------------------
+# Densities from tests/fixtures/catalogs/test: steel S235 7850 kg/m³, aluminium 6063-T5 2700.
+# A volume in mm³ times a density in kg/m³ is 1e-9 kg.
+
+
+def disc(d):
+    return math.pi * d * d / 4
+
+
+# The motor plate (p6): 8 mm steel, a 160 x 100 rectangle with a 30 x 30 corner cut off at
+# (0, 100), so 160 × 100 − 30 × 30 / 2 = 15 550 mm². Its holes, each through the 8:
+# - h1, M6: tapped, drilled at 6 − 1 = 5 (the coarse pitch of M6 is 1);
+# - h2, Ø6.6 with a 90° countersink to Ø12.4 on its front: the cone is (12.4 − 6.6) / 2 / tan 45°
+#   = 2.9 deep, and removes its frustum less the drill's cylinder over that depth;
+# - h3, Ø6.6 with a counterbore Ø11 × 4: the ring (Ø11 less Ø6.6) over 4;
+# - h4, Ø8.5.
+PLATE_T = 8
+PLATE_OUTLINE = [(0, 0), (160, 0), (160, 100), (30, 100), (0, 70)]
+PLATE_AREA = 160 * 100 - 30 * 30 / 2
+CSK_DEPTH = (12.4 - 6.6) / 2 / math.tan(math.radians(45))
+plate_removed = (
+    disc(6 - 1) * PLATE_T
+    + disc(6.6) * PLATE_T
+    + math.pi * CSK_DEPTH * (12.4**2 + 12.4 * 6.6 + 6.6**2) / 12
+    - disc(6.6) * CSK_DEPTH
+    + disc(6.6) * PLATE_T
+    + (disc(11) - disc(6.6)) * 4
+    + disc(8.5) * PLATE_T
+)
+PLATE_MASS = (PLATE_AREA * PLATE_T - plate_removed) * 7850 / 1e9
+
+# The sensor bracket (p7): 3 mm aluminium bent once through 90°, legs 40 (a) and 30 (b) each to
+# the outside of the other, 50 long, inside radius 3, K-factor 0.4. Each flat is its leg less the
+# outside setback R + T = 6; the bend's neutral fibre runs R + K T = 4.2 from its centre, a quarter
+# circle of (π / 2) × 4.2. Leg a has a Ø5.5 hole, leg b an M4 tapped one (drilled 4 − 0.7 = 3.3).
+ANGLE_T, ANGLE_L, ANGLE_R, ANGLE_K = 3, 50, 3, 0.4
+LEG_A, LEG_B = 40, 30
+BEND_ALLOWANCE = math.pi / 2 * (ANGLE_R + ANGLE_K * ANGLE_T)
+DEVELOPED = (LEG_A - (ANGLE_R + ANGLE_T)) + (LEG_B - (ANGLE_R + ANGLE_T)) + BEND_ALLOWANCE
+ANGLE_MASS = (DEVELOPED * ANGLE_L * ANGLE_T - disc(5.5) * ANGLE_T - disc(4 - 0.7) * ANGLE_T) * 2700 / 1e9
+
+# The gear motor (p8): a placeholder with an estimated mass, as entered.
+MOTOR_MASS = 2.8
+
+PROJECT_ITEMS = [
+    # kind, item, name, mass, its provenance, the part that uses it
+    ("plate", "project:plate-a", "Motor plate", PLATE_MASS, "calc", "p6"),
+    ("bent-angle", "project:angle-a", "Sensor bracket", ANGLE_MASS, "calc", "p7"),
+    ("placeholder", "project:motor", "Gear motor, model to be chosen", MOTOR_MASS, "est", "p8"),
+]
+for kind, item, _, mass, src, part in PROJECT_ITEMS:
+    line = {"item": item, "opt": {}, "qty": 1, "unit_mass_kg": qkg(mass), "mass_kg": qkg(mass), "mass_src": src, "sources": [part]}
+    bom_groups.append({"kind": kind, "lines": [line]})
+
 for g in bom_groups:
     g["mass_kg"] = qkg(sum(l["mass_kg"] for l in g["lines"]))
 bom = {
     "about": "The cart's bill of materials worked by hand: see hand/cart_by_hand.py, which wrote this.",
     "groups": bom_groups,
     "mass_kg": qkg(sum(g["mass_kg"] for g in bom_groups)),
+    # The custom parts' masses before the output quantum, and the angle's developed length.
+    "unrounded": {
+        "project:plate-a": {"mass_kg": PLATE_MASS},
+        "project:angle-a": {"developed_mm": DEVELOPED, "mass_kg": ANGLE_MASS},
+    },
 }
 
 # --- The order list (§5.4, §5.5) and the costs (§4.11) ------------------------------------------
@@ -889,6 +958,8 @@ for g in bom_groups:
     if g["kind"] == "bar":
         continue
     for l in g["lines"]:
+        if l["item"].startswith("project:"):
+            continue  # the project's own items: below
         need[l["item"]] = l["qty"]
         sources_of[l["item"]] = l["sources"]
 
@@ -964,6 +1035,41 @@ for item, n in need.items():
         if units > take:
             order_lines[-1]["line"]["surplus"] = [{"item": item, "opt": {}, "qty": units - take}]
 
+# The project's own items: one line each, a unit, under its supplier, at the price entered in the
+# project's currency. No price band applies: they are not catalog-priced. The plate is the
+# fabricator's, quoted in writing; the bracket names no maker, so it is made locally, and has no
+# price yet (O2 holds it); the motor is a placeholder with an estimated range and no supplier.
+PROJECT_LINES = [
+    # item, name, kind, supplier, (low, likely, high) or None, a range?, src, read, source
+    ("project:plate-a", "Motor plate", "plate", "test-fab", (8500, 8500, 8500), False, "src", "2026-11-26", "p6"),
+    ("project:angle-a", "Sensor bracket", "bent-angle", "local", None, False, None, None, "p7"),
+    ("project:motor", "Gear motor, model to be chosen", "placeholder", None, (30000, 45000, 70000), True, "est", None, "p8"),
+]
+for item, name, kind, supplier, money, ranged, src, read, part in PROJECT_LINES:
+    line = {"item": item, "name": name, "kind": kind, "opt": {}, "qty": 1, "unit": "unit"}
+    if money is not None:
+        line["unit_price_minor"] = money[1]
+        line["currency"] = "BRL"
+        line["low_minor"], line["likely_minor"], line["high_minor"] = money
+        if ranged:
+            line["range"] = "quote"
+        line["price_src"] = src
+        if read is not None:
+            line["read"] = read
+    line["bom"] = [{"item": item, "opt": {}, "qty": 1}]
+    order_lines.append(
+        {
+            "supplier": supplier,
+            "line": line,
+            "offer": None,
+            "sources": {part},
+            "missing": money is None and kind != "placeholder",
+            "project": True,
+            "placeholder": kind == "placeholder",
+        }
+    )
+O2 = "O2: price the sensor bracket with the local shop"
+
 # Reasons, per supplier: the open item on c35 reaches the rail screws and T-nuts it buys; the
 # phone quote is an estimate; the stud has no offer; the nuts' price is older than 30 days.
 offers_by_key = {o[0]: o for offers in UNIT_OFFERS.values() for o in offers}
@@ -978,10 +1084,25 @@ def reason(supplier, rule, action, message, entities):
 
 for e in order_lines:
     line = e["line"]
+    if e.get("placeholder"):
+        # A placeholder holds its own line's group, and nothing else.
+        reason(e["supplier"], "placeholder", "block", f"{line['item']}: a placeholder, not a part to order", [line["item"]])
+        continue
     if e.get("missing"):
-        reason(e["supplier"], "missing-price", "block", f"{line['item']}: no offer", [line["item"]])
+        why = "no price" if e.get("project") else "no offer"
+        reason(e["supplier"], "missing-price", "block", f"{line['item']}: {why}", [line["item"]])
     if "c35" in e["sources"]:
         reason(e["supplier"], "open-item", "block", O1, ["c35"])
+    if line["item"] == "project:angle-a":
+        reason(e["supplier"], "open-item", "block", O2, ["project:angle-a"])
+    if e.get("project") and "likely_minor" in line:
+        # A project item's own price: an estimate blocks, an old one warns.
+        if line["price_src"] == "est":
+            reason(e["supplier"], "est-price", "block", f"{line['item']}: its price is an estimate", [line["item"]])
+        if "read" in line:
+            age = (datetime.date.fromisoformat(AS_OF) - datetime.date.fromisoformat(line["read"])).days
+            if age > 30:
+                reason(e["supplier"], "stale-price", "warn", f"{line['item']}: price read {line['read']}, {age} days before {AS_OF}", [line["item"]])
     offer = offers_by_key.get(e["offer"])
     if offer is None:
         continue
@@ -992,8 +1113,9 @@ for e in order_lines:
         reason(e["supplier"], "stale-price", "warn", f"{offer[0]}: price read {offer[6]}, {age} days before {AS_OF}", [line["item"]])
 RULES = ["check-error", "open-item", "placeholder", "missing-price", "est-price", "out-of-stock", "option-not-sold", "stale-price"]
 
-# Lines in a group: bars, connectors, fasteners, carriages, …, generic; by item, offer, longest.
-KIND_ORDER = ["bar", "connector", "fastener", "carriage", "accessory", "panel", "generic"]
+# Lines in a group: bars, connectors, fasteners, carriages, …, generic, then the project's own
+# plates, bent angles and placeholders; by item, offer, longest.
+KIND_ORDER = ["bar", "connector", "fastener", "carriage", "accessory", "panel", "generic", "plate", "bent-angle", "placeholder"]
 LINE_KEYS = [
     "item", "name", "kind", "opt", "offer", "sku", "qty", "unit", "pack", "kit", "length_mm", "billed_mm",
     "line_billed_mm", "per", "list_minor", "unit_price_minor", "currency", "low_minor", "likely_minor",
@@ -1104,6 +1226,88 @@ def as_js(x):
     return x
 
 
+# --- The machining sheet ------------------------------------------------------------------------
+# Each custom part's holes from its datum, to 0.01 mm. The plate's datum is its outline's origin;
+# the angle's is its heel at end 0 (y up each leg from the outside of the other), and on its flat
+# blank, leg a's free edge: a hole on leg a at y from the heel is 40 − y from that edge, one on
+# leg b at y is the developed length less (30 − y). The bend zone on the blank runs from leg a's
+# flat, 40 − 6 = 34, for the bend allowance. Every hole is drilled from its front (the plate's
+# face away from the rail, the angle's inside). The bars' machining is the cut list's: the sheet
+# names the cut-list lines that carry some, and how many operations each piece has.
+DATUMS = {
+    "plate": "the outline's origin (0, 0); x and y as the outline is drawn",
+    "bent-angle": "the heel at end 0; x along the length, y from the heel's outside face up the leg",
+    "blank": "leg a's free edge at end 0; x along the length, y across the blank",
+}
+
+
+def sheet_hole(hid, at, kind, d, leg=None, flat=None, **extra):
+    h = {"id": hid}
+    if leg is not None:
+        h["leg"] = leg
+    h["at_mm"] = [q(at[0]), q(at[1])]
+    if flat is not None:
+        h["flat_mm"] = [q(flat[0]), q(flat[1])]
+    h["type"] = kind
+    h["d_mm"] = q(d)
+    h.update(extra)
+    h["face"] = "front"
+    return h
+
+
+angle_part = {
+    "item": "project:angle-a",
+    "name": "Sensor bracket",
+    "kind": "bent-angle",
+    "qty": 1,
+    "sources": ["p7"],
+    "supplier": "local",
+    "material": "test:al-6063-t5",
+    "thickness_mm": ANGLE_T,
+    "datum": DATUMS["bent-angle"],
+    "legs_mm": [LEG_A, LEG_B],
+    "length_mm": ANGLE_L,
+    "blank_mm": [ANGLE_L, q(DEVELOPED)],
+    "blank_datum": DATUMS["blank"],
+    "bend": {
+        "angle_deg": 90,
+        "radius_mm": ANGLE_R,
+        "k_factor": ANGLE_K,
+        "allowance_mm": q(BEND_ALLOWANCE),
+        "from_mm": q(LEG_A - (ANGLE_R + ANGLE_T)),
+        "to_mm": q(LEG_A - (ANGLE_R + ANGLE_T) + BEND_ALLOWANCE),
+    },
+    "holes": [
+        sheet_hole("a1", (25, 22), "through", 5.5, leg="a", flat=(25, LEG_A - 22)),
+        sheet_hole("b1", (25, 18), "threaded", 4 - 0.7, leg="b", flat=(25, DEVELOPED - (LEG_B - 18)), thread="M4"),
+    ],
+}
+plate_part = {
+    "item": "project:plate-a",
+    "name": "Motor plate",
+    "kind": "plate",
+    "qty": 1,
+    "sources": ["p6"],
+    "supplier": "test-fab",
+    "material": "test:s235",
+    "thickness_mm": PLATE_T,
+    "datum": DATUMS["plate"],
+    "outline_mm": [list(p) for p in PLATE_OUTLINE],
+    "holes": [
+        sheet_hole("h1", (20, 20), "threaded", 6 - 1, thread="M6"),
+        sheet_hole("h2", (140, 20), "countersunk", 6.6, csk={"d_mm": 12.4, "angle_deg": 90, "depth_mm": q(CSK_DEPTH)}),
+        sheet_hole("h3", (140, 80), "counterbored", 6.6, cbore={"d_mm": 11, "depth_mm": 4}),
+        sheet_hole("h4", (80, 50), "through", 8.5),
+    ],
+}
+bar_refs = [
+    {"item": g["item"], "opt": g["opt"], "cut_mm": l["cut_mm"], "count": l["count"], "ops": len(l["machining"]), "sources": l["sources"]}
+    for g in groups
+    for l in g["lines"]
+    if l.get("machining")
+]
+machining = {"schema": "alukit.machining/1", "parts": [angle_part, plate_part], "bars": bar_refs, "diagnostics": []}
+
 expected = {
     "about": "The cart's cut list worked by hand: see hand/cart_by_hand.py, which wrote this.",
     "kerf_mm": KERF,
@@ -1120,4 +1324,7 @@ with open(os.path.join(here, "..", "expected-bom.json"), "w") as f:
 # exactly as JavaScript's JSON.stringify(x, null, 2) prints it, and Biome leaves it alone.
 with open(os.path.join(here, "..", "expected-order.json"), "w") as f:
     f.write(json.dumps(as_js(order_out), indent=2, ensure_ascii=False) + "\n")
-print(json.dumps({"cutlist": expected, "bom": bom, "order": as_js(order_out)}, indent=1))
+# The machining sheet too: compared byte for byte with `alukit machining --format json`.
+with open(os.path.join(here, "..", "expected-machining.json"), "w") as f:
+    f.write(json.dumps(as_js(machining), indent=2, ensure_ascii=False) + "\n")
+print(json.dumps({"cutlist": expected, "bom": bom, "order": as_js(order_out), "machining": as_js(machining)}, indent=1))
