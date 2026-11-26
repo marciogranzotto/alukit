@@ -95,6 +95,35 @@ describe("canonical form (design §2)", () => {
     expect(text).toContain('"k": 0.30000000000000004');
   });
 
+  it("snaps a project item's outline, hole positions and datums to 0.01 mm (M6)", () => {
+    const noise = 0.1 + 0.2;
+    const text = projectText({
+      schema: "alukit.project/1",
+      items: {
+        p: {
+          kind: "plate",
+          name: "P",
+          material: "x:steel",
+          thickness_mm: 5.000000000000001,
+          outline: [
+            [0, 0],
+            [100.00000000000001, noise],
+            [100, 60],
+          ],
+          holes: [{ at: [20.000000000000004, noise], d_mm: 6.6000000000000005 }],
+          datums: { mount: [noise, 0, 0] },
+          k_factor: noise,
+        },
+      },
+    });
+    expect(text).toContain('"thickness_mm": 5');
+    expect(text).toContain('"outline": [[0, 0], [100, 0.3], [100, 60]]');
+    expect(text).toContain('"holes": [{ "at": [20, 0.3], "d_mm": 6.6 }]');
+    expect(text).toContain('"datums": { "mount": [0.3, 0, 0] }');
+    // A K-factor is dimensionless: written as it is.
+    expect(text).toContain(`"k_factor": ${noise}`);
+  });
+
   it("keeps id lists in id order and unknown keys after known ones", () => {
     const text = projectText({
       schema: "alukit.project/1",

@@ -57,7 +57,7 @@ export interface CommandEnv {
 export interface CommandContext {
   readonly state: State;
   readonly env: CommandEnv;
-  /** Catalog items from the state's lock. */
+  /** Catalog items from the state's lock, and the document's project items (§4.8). */
   items(): ItemSource;
   /** The current document derived from its lock (§5), computed once per command. */
   derived(): Derived;

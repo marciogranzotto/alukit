@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Bbox3, DatumName, LOCAL_ID, Minor, Valued, Vec3 } from "#catalog/schema/common.ts";
 
 /**
  * The project document, `alukit.json` (design §4.2–§4.12), as Zod schemas. M3a reads params,
@@ -393,6 +394,176 @@ export type OrderChoice = z.infer<typeof OrderChoice>;
 
 const Loose = z.record(z.string(), z.unknown());
 
+/** A supplier id, as offers name it (§3.2). */
+export const SupplierId = z.string().min(1);
+
+// ---------------------------------------------------------------------------------------------
+// Project items (§4.8): plates, bent angles, generic items and placeholders that exist only in
+// this project, referred to as `project:<id>`. They are item data like a catalog's, so their
+// numbers are numbers, not expressions (M6). Bars and connectors of a project's own go in a
+// project-local catalog (§4.8, P18).
+
+/** A project item's id, a catalog local id: the document names it `project:<id>`. */
+export const ProjectItemId = z
+  .string()
+  .regex(LOCAL_ID)
+  .describe("a project item's id: letters, digits and . _ + -; named as project:<id>");
+
+/** A catalog material, always with its catalog: `<catalog>:<id>` (§3.3). */
+export const MaterialRef = z
+  .string()
+  .regex(/^(?!project:)[a-z][a-z0-9-]*:[A-Za-z0-9][A-Za-z0-9._+-]*$/)
+  .describe('a catalog material: "<catalog>:<id>"');
+
+const Positive = z.number().positive();
+
+/**
+ * A hole feature (§4.8, review B2): through, blind, threaded, countersunk or counterbored. `at`
+ * is its centre on the part's face: on a plate, [x, y] in the outline's coordinates; on a bent
+ * angle's leg, [x along the angle's length, distance from the heel's outside face].
+ */
+export const HoleFeature = z
+  .strictObject({
+    at: z.tuple([z.number(), z.number()]),
+    d_mm: Positive.optional().describe(
+      "the drill; on a threaded hole its tap drill (absent: major diameter minus pitch)",
+    ),
+    thread: z.string().min(1).optional().describe('a tapped hole: "M6", "M10x1.25"'),
+    depth_mm: Positive.optional().describe("a blind hole's or a thread's depth; absent: through"),
+    csk: z
+      .strictObject({ d_mm: Positive, angle_deg: z.number().gt(0).lt(180) })
+      .optional()
+      .describe("a countersink: its diameter at the face and its included angle"),
+    cbore: z
+      .strictObject({ d_mm: Positive, depth_mm: Positive })
+      .optional()
+      .describe("a counterbore: its diameter and depth"),
+    face: z
+      .enum(["front", "back"])
+      .optional()
+      .describe(
+        "the face it is drilled from (a countersink's, a counterbore's, a blind hole's): front, a plate's face away from the face it mounts on, or a leg's inside face (the default); back, the other",
+      ),
+  })
+  .refine((h) => h.d_mm !== undefined || h.thread !== undefined, {
+    message: "a hole has d_mm or thread",
+  })
+  .refine((h) => h.csk === undefined || h.cbore === undefined, {
+    message: "a hole is countersunk or counterbored, not both",
+  })
+  .refine((h) => h.thread === undefined || (h.csk === undefined && h.cbore === undefined), {
+    message: "a countersink or a counterbore goes on a clearance hole, not a threaded one",
+  });
+export type HoleFeature = z.infer<typeof HoleFeature>;
+
+const ItemDatums = z
+  .record(DatumName, Vec3)
+  .optional()
+  .describe("named points in the item's own frame; `mount` lands on a station (§4.7)");
+
+/** Who makes or sells it, and its price per unit in the project's currency. */
+function supply(who: string) {
+  return {
+    supplier: SupplierId.optional().describe(who),
+    price_minor: Minor.optional().describe(
+      "per unit, in the project's currency: a number is an estimate; a valued field may give src, ref, read and a range",
+    ),
+  };
+}
+
+/** A custom plate (§4.8): an outline cut from sheet, with holes. +z is away from its mount face. */
+export const PlateItem = z.strictObject({
+  kind: z.literal("plate"),
+  name: z.string().min(1),
+  material: MaterialRef,
+  thickness_mm: Positive,
+  outline: z
+    .array(z.tuple([z.number(), z.number()]))
+    .min(3)
+    .describe(
+      "[x, y] corners in mm, in order around the plate; the plate lies from z = 0 to its thickness",
+    ),
+  holes: z.array(HoleFeature).optional(),
+  datums: ItemDatums,
+  ...supply("a fabricator; absent: local (made in-house)"),
+  note: z.string().optional(),
+});
+
+/**
+ * A bent angle (§4.8): sheet bent once through 90°. Leg a lies on its mount face (z = 0 to the
+ * thickness, along +y), leg b stands up from the heel (y = 0 to the thickness, along +z); x runs
+ * along its length. Each leg is measured to the outside of the other.
+ */
+export const BentAngleItem = z.strictObject({
+  kind: z.literal("bent-angle"),
+  name: z.string().min(1),
+  material: MaterialRef,
+  thickness_mm: Positive,
+  length_mm: Positive.describe("along the bend"),
+  legs_mm: z
+    .tuple([Positive, Positive])
+    .describe("leg a and leg b, each measured to the outside of the other"),
+  bend_radius_mm: z.number().nonnegative().describe("the inside radius"),
+  k_factor: z
+    .number()
+    .gt(0)
+    .max(0.5)
+    .describe(
+      "where the neutral fibre lies, as a share of the thickness from the inside: the shop's",
+    ),
+  holes: z
+    .strictObject({ a: z.array(HoleFeature).optional(), b: z.array(HoleFeature).optional() })
+    .optional()
+    .describe("holes in each leg"),
+  datums: ItemDatums,
+  ...supply("a fabricator; absent: local (made in-house)"),
+  note: z.string().optional(),
+});
+
+/** An item no catalog holds, bought as a unit (§3.4's `generic`, §4.8). */
+export const ProjectGenericItem = z.strictObject({
+  kind: z.literal("generic"),
+  name: z.string().min(1),
+  code: z.string().min(1).optional(),
+  brand: z.string().min(1).optional(),
+  url: z.string().min(1).optional(),
+  material: MaterialRef.optional(),
+  bbox_mm: Bbox3.optional(),
+  datums: ItemDatums,
+  mass_kg: Valued.optional().describe("a number is an estimate"),
+  ...supply("who sells it; absent: unsourced"),
+  note: z.string().optional(),
+});
+
+/**
+ * A placeholder (§4.8): a body not chosen yet, drawn as its box. Other bars may bear on it as a
+ * butt's body (§4.5, gap G-B). It blocks its own order line (§5.5).
+ */
+export const PlaceholderItem = z.strictObject({
+  kind: z.literal("placeholder"),
+  name: z.string().min(1),
+  bbox_mm: Bbox3.describe("its box in its own frame"),
+  datums: ItemDatums,
+  mass_kg: Valued.optional().describe("a number is an estimate"),
+  ...supply("who will sell it; absent: unsourced"),
+  note: z.string().optional(),
+});
+
+export const ProjectItem = z.discriminatedUnion("kind", [
+  PlateItem,
+  BentAngleItem,
+  ProjectGenericItem,
+  PlaceholderItem,
+]);
+export type ProjectItem = z.infer<typeof ProjectItem>;
+export type PlateItem = z.infer<typeof PlateItem>;
+export type BentAngleItem = z.infer<typeof BentAngleItem>;
+export type PlaceholderItem = z.infer<typeof PlaceholderItem>;
+export type ProjectGenericItem = z.infer<typeof ProjectGenericItem>;
+
+/** Project item kinds (§4.8), in the order outputs list them after §3.4's kinds. */
+export const PROJECT_KINDS = ["plate", "bent-angle", "placeholder"] as const;
+
 // ---------------------------------------------------------------------------------------------
 // Costs, price bands, exchange rates, open items and the order rules (§4.11, §4.12, §5.5).
 
@@ -414,9 +585,6 @@ export const OpenId = z
   .string()
   .regex(/^O\d+$/)
   .describe("an open item: O<number>");
-
-/** A supplier id, as offers name it (§3.2). */
-export const SupplierId = z.string().min(1);
 
 export const CostKind = z.enum([
   "machining",
@@ -590,7 +758,7 @@ export const PROJECT_SHAPE = {
   connections: z.record(ConnId, Connection).optional(),
   parts: z.record(PartId, Part).optional(),
   patterns: z.record(PatternId, Pattern).optional(),
-  items: z.record(z.string(), Loose).optional().describe("project items (§4.8)"),
+  items: z.record(ProjectItemId, ProjectItem).optional().describe("project items (§4.8)"),
   costs: z.array(CostLine).optional(),
   price_bands: z.array(PriceBand).optional(),
   order: z.record(ItemRef, OrderChoice).optional(),

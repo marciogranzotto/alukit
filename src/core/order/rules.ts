@@ -3,7 +3,7 @@ import type { Diagnostic } from "../diagnostics.ts";
 import { type CostLine, ORDER_RULES, type OrderRule, type RuleAction } from "../project/schema.ts";
 import { scopeName } from "../project/scope.ts";
 import { rateFor } from "./pricing.ts";
-import { cmp, type Key, optText, type Reason, type Work } from "./types.ts";
+import { cmp, type Key, optText, type Reason, readOf, type Work } from "./types.ts";
 
 /**
  * What blocks the order (design §5.5). Each rule has a name, can be set to `block`, `warn` or `off`
@@ -13,9 +13,9 @@ import { cmp, type Key, optText, type Reason, type Work } from "./types.ts";
  * |---|---|---|
  * | `check-error` | block | the suppliers of the entities an error names; all when it names none |
  * | `open-item` | block | an open item's scope, or all; a cost line's `blocks`: its supplier |
- * | `placeholder` | block | its own line, under "unsourced" |
+ * | `placeholder` | block | its own line's group: its supplier, else "unsourced"; no other |
  * | `missing-price` | block | the line's supplier: no offer, no exchange rate, unpriced services |
- * | `est-price` | block | the supplier whose price is an estimate (call 13) |
+ * | `est-price` | block | the supplier whose price is an estimate (call 13), a project item's too |
  * | `out-of-stock` | block | the supplier, as read |
  * | `option-not-sold` | block | the supplier that sells the item, but not in these options |
  * | `stale-price` | warn | the supplier whose price was read more than 30 days before the order |
@@ -128,6 +128,7 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
       continue;
     }
     if (w.missing === "no-offer") add("missing-price", at, `${withOpt}: no offer`, [item]);
+    if (w.missing === "no-price") add("missing-price", at, `${item}: no price`, [item]);
     if (w.missing === "by-length")
       add("missing-price", at, `${withOpt}: no offer sells it by length`, [item]);
     if (w.missing === "rate")
@@ -140,20 +141,21 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
       e.count += s.count;
       services.set(k, e);
     }
-    if (!w.offer || w.line.covered_by) continue;
-    if (w.field?.src === "est")
-      add("est-price", at, `${what}: the price of ${item} is an estimate`, [item]);
-    if (w.offer.in_stock === false) {
+    // A priced line: an offer's, or a project item's own price (§4.8).
+    if (!w.field || w.line.covered_by) continue;
+    if (w.field.src === "est") {
+      const message = w.offer
+        ? `${what}: the price of ${item} is an estimate`
+        : `${item}: its price is an estimate`;
+      add("est-price", at, message, [item]);
+    }
+    if (w.offer?.in_stock === false) {
       add("out-of-stock", at, `${what}: out of stock as read on ${w.offer.price.read}`, [item]);
     }
-    const age = daysBetween(w.offer.price.read, ctx.asOf);
+    const read = readOf(w);
+    const age = read === undefined ? 0 : daysBetween(read, ctx.asOf);
     if (age > STALE_DAYS) {
-      add(
-        "stale-price",
-        at,
-        `${what}: price read ${w.offer.price.read}, ${age} days before ${ctx.asOf}`,
-        [item],
-      );
+      add("stale-price", at, `${what}: price read ${read}, ${age} days before ${ctx.asOf}`, [item]);
     }
   }
   for (const [k, e] of services) {

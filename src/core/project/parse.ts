@@ -19,9 +19,14 @@ import {
   PROJECT_SCHEMA,
   PROJECT_SHAPE,
   type PriceBand,
+  ProjectItem,
+  ProjectItemId,
   type RuleAction,
   type Run,
 } from "./schema.ts";
+
+/** How the document names a project item (§4.8). */
+export const PROJECT_ITEM = "project:";
 
 /**
  * Reading a project document leniently (design §5.1: a half-edited document still draws). Every
@@ -44,6 +49,8 @@ export interface Doc {
   connections: Record<string, Connection>;
   parts: Record<string, Part>;
   patterns: Record<string, Pattern>;
+  /** Project items by their own id (`plate-a` for `project:plate-a`), each validated alone (§4.8). */
+  items: Record<string, ProjectItem>;
   order: Record<string, OrderChoice>;
   /** Exchange rates by currency (§4.11). */
   fx: z.infer<typeof Fx>;
@@ -107,6 +114,7 @@ export function parseProject(raw: unknown): ParseResult {
     connections: {},
     parts: {},
     patterns: {},
+    items: {},
     order: {},
     fx: {},
     costs: [],
@@ -154,6 +162,26 @@ export function parseProject(raw: unknown): ParseResult {
         else report(d, r.error, id, []);
       }
       (doc as unknown as Record<string, unknown>)[key] = out;
+      continue;
+    }
+    if (key === "items") {
+      // Project items, each on its own, named as the document refers to them: project:<id>.
+      if (!isPlainObject(value)) {
+        d.error("schema", undefined, "items must be an object of project items by id", {
+          field: key,
+        });
+        continue;
+      }
+      for (const id of Object.keys(value).sort(compareIds)) {
+        const entity = `${PROJECT_ITEM}${id}`;
+        if (!ProjectItemId.safeParse(id).success) {
+          d.error("schema", entity, `"${id}" is not a valid project item id`, { field: key });
+          continue;
+        }
+        const r = ProjectItem.safeParse(value[id]);
+        if (r.success) doc.items[id] = r.data;
+        else report(d, r.error, entity, []);
+      }
       continue;
     }
     const entityList = ENTITY_LISTS[key as keyof typeof ENTITY_LISTS];

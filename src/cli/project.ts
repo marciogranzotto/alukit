@@ -11,6 +11,8 @@ import { derivedJson, jsonText } from "#core/derive/output.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
 import type { ItemSource } from "#core/items.ts";
 import { lockHash } from "#core/lock/pin.ts";
+import { machiningJson, machiningMarkdown } from "#core/machining/format.ts";
+import { machiningSheet } from "#core/machining/machining.ts";
 import {
   costsCsv,
   costsJson,
@@ -27,7 +29,8 @@ import type { Io } from "./cli.ts";
 import { PROJECT_USAGE } from "./project-usage.ts";
 
 /**
- * `alukit derive`, `cutlist`, `bom`, `order` and `costs` (design §7.3). Exit codes: 0 fine, 1 the
+ * `alukit derive`, `cutlist`, `bom`, `order`, `costs` and `machining` (design §7.3, M6). Exit
+ * codes: 0 fine, 1 the
  * project has errors (for `order`: any supplier is blocked), 2 a usage error. Without a server
  * (M4a) they run the core in-process. They derive from the lock (§4.13): a missing lock is
  * created, and a missing entry added, each with a notice on stderr; `--frozen` makes either an
@@ -106,6 +109,9 @@ export async function projectCommand(
   if (format !== "md" && format !== "csv" && format !== "json") {
     return usageError(cmd, "--format takes md, csv or json", PROJECT_USAGE, io);
   }
+  if (cmd === "machining" && format === "csv") {
+    return usageError(cmd, "--format takes md or json", PROJECT_USAGE, io);
+  }
   const asOf = (args.values as { "as-of"?: string })["as-of"];
   if (asOf !== undefined && !isDate(asOf)) {
     return usageError(cmd, "--as-of takes a date, YYYY-MM-DD", PROJECT_USAGE, io);
@@ -138,6 +144,20 @@ export async function projectCommand(
     } else {
       const shown = { ...b, diagnostics: [] };
       io.out((format === "csv" ? bomCsv(shown) : bomMarkdown(shown)).trimEnd());
+      for (const d of all) io.err(diagnosticLine(d));
+    }
+    return all.some((d) => d.severity === "error") ? 1 : 0;
+  }
+
+  if (cmd === "machining") {
+    const outputs = modelOutputs(derived, items);
+    const b = outputs.bom();
+    const cl = outputs.cutList();
+    const all = sortDiagnostics([...derived.diagnostics, ...cl.diagnostics, ...b.diagnostics]);
+    const sheet = machiningSheet({ derived, items, bom: b, cutList: cl });
+    if (format === "json") io.out(machiningJson({ ...sheet, diagnostics: all }).trimEnd());
+    else {
+      io.out(machiningMarkdown(sheet).trimEnd());
       for (const d of all) io.err(diagnosticLine(d));
     }
     return all.some((d) => d.severity === "error") ? 1 : 0;

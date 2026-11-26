@@ -3,6 +3,7 @@ import { compareIds } from "../ids.ts";
 import type { ItemSource } from "../items.ts";
 import { type Doc, parseProject } from "../project/parse.ts";
 import type { Expr, Face } from "../project/schema.ts";
+import { projectItems } from "../project-items/source.ts";
 import type { V3 } from "../vec.ts";
 import { attach } from "./attach.ts";
 import { Ctx } from "./context.ts";
@@ -97,8 +98,11 @@ function sortedKeys<T>(m: ReadonlyMap<string, T>): string[] {
 
 export function derive(raw: unknown, items: ItemSource): Derived {
   const parsed = parseProject(raw);
-  const ctx = new Ctx(parsed.doc, items);
+  // Stage 1 resolves items: the catalogs' and the document's own (§4.8).
+  const own = projectItems(items, parsed.doc);
+  const ctx = new Ctx(parsed.doc, own.source);
   for (const d of parsed.diagnostics) ctx.d.add(d);
+  for (const d of own.diagnostics) ctx.d.add(d);
 
   // Stage 1: params, in dependency order.
   const params = ctx.allParams();

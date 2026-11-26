@@ -1,0 +1,19 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G28",
+  "catalogs": ["../../catalogs/test"],
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } }
+  },
+  "bars": {
+    "b1": { "a": [0, 30, 40], "b": [600, 30, 40], "label": "rail, along x" },
+    "b2": { "a": [540, 400, 40], "b": [540, 0, 40], "label": "rail, along -y" },
+    "b3": { "a": [560, 30, 300], "b": [560, 30, 0], "label": "post, down" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": { "body": "project:motor", "at": { "pos": [600, 0, 0], "rot_deg": [0, 0, 90] } }, "ends": ["b1.b", "b2.b", "b3.b"] }
+  },
+  "items": {
+    "motor": { "kind": "placeholder", "name": "Gear motor, model to be chosen", "bbox_mm": [[-100, 0, 0], [100, 120, 80]], "mass_kg": { "v": 2.8, "src": "est" } }
+  }
+}

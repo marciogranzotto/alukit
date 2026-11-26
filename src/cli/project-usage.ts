@@ -16,9 +16,19 @@ export const PROJECT_USAGE = [
   "    today by default, are stale)",
   "alukit costs <dir> [--format md|csv|json] [--as-of YYYY-MM-DD] [--frozen]",
   "    the cost lines and the low, likely and high totals, with their provenance",
+  "alukit machining <dir> [--format md|json] [--frozen]",
+  "    the machining sheet: each custom plate's and bent angle's holes from its datum,",
+  "    with its blank; the cut-list lines that carry the bars' machining",
 ].join("\n");
 
-export const PROJECT_COMMANDS = ["derive", "cutlist", "bom", "order", "costs"] as const;
+export const PROJECT_COMMANDS = [
+  "derive",
+  "cutlist",
+  "bom",
+  "order",
+  "costs",
+  "machining",
+] as const;
 
 /** The editing and housekeeping commands (design §6, §7.3, §4.13), each in its own module. */
 export const USAGE = {

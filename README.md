@@ -9,8 +9,9 @@ list. Catalogs can be your own, imported or created. Agents can drive the whole 
 through a documented file format and a CLI.
 
 **Status: milestones M1 (catalog core), M2a (first catalogs), M3a (geometry core), M3b
-(generation with the bill of materials; the edit path; offers, the order list and costs) and M4a
-(the viewer and the server that owns the document).**
+(generation with the bill of materials; the edit path; offers, the order list and costs), M4a
+(the viewer and the server that owns the document) and M6 (project items and the machining
+sheet).**
 - Catalog schemas, the three-layer merge, section generators and section properties, and
   `alukit catalog check`, which compares computed section properties against published ones.
 - Built-in catalogs: `forseti` (from [`importers/forseti`](importers/forseti/README.md): every
@@ -27,6 +28,10 @@ through a documented file format and a CLI.
 - The order list per supplier (cheapest pack cover, kits, price bands, cost lines covering
   machining, READY or BLOCKED by named rules) and the costs and totals: `alukit order <dir>` and
   `alukit costs <dir>`.
+- Project items (M6): custom plates and bent angles with through, threaded, countersunk and
+  counterbored holes, weighed from their material; generic items and placeholders, which bars
+  can bear on and which hold only their own order line; and the machining sheet, each custom
+  part's holes from its datum: `alukit machining <dir>`.
 - The server and the viewer: `alukit serve <dir>` owns the project and opens it in the browser,
   which draws the derived model, selects by click or box, and shows properties (with where each
   catalog number comes from), the project tree, the cut list, the BOM, the order, the costs and

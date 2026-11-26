@@ -369,9 +369,10 @@ describe("parts and patterns", () => {
           cmd: "addPart",
           args: { item: "test:FOOT-M8", on: { bar: "b7", at_mm: 100, groove: "+y.1" } },
         },
-        // The cart's parts run to p5 (its unplaced lines), so the new part is p6.
-        { cmd: "setPart", args: { id: "p6", set: { on: { at_mm: 120 } } } },
-        { cmd: "addPattern", args: { template: ["p6"], along: "b7", pitch_mm: 100, count: 3 } },
+        // The cart's parts run to p8 (its custom plate, bent angle and placeholder), so the new
+        // part is p9.
+        { cmd: "setPart", args: { id: "p9", set: { on: { at_mm: 120 } } } },
+        { cmd: "addPattern", args: { template: ["p9"], along: "b7", pitch_mm: 100, count: 3 } },
         { cmd: "setPattern", args: { id: "pt3", set: { count: 4 } } },
       ],
       env,
@@ -380,7 +381,7 @@ describe("parts and patterns", () => {
     for (const c of ["addPart", "setPart", "addPattern", "setPattern"]) exercised.add(c);
     expect(r.state.lock.items["test:FOOT-M8"]).toBeDefined();
     expect(cart().lock.items["test:FOOT-M8"]).toBeUndefined();
-    expect((r.state.doc.parts as Record<string, unknown>).p6).toEqual({
+    expect((r.state.doc.parts as Record<string, unknown>).p9).toEqual({
       item: "test:FOOT-M8",
       on: { bar: "b7", at_mm: 120, groove: "+y.1" },
     });
@@ -540,23 +541,64 @@ describe("mirror", () => {
 });
 
 describe("items, params, costs and records", () => {
-  it("addItem and setItem", () => {
+  it("addItem and setItem: a project item, checked against its kind's schema and its material", () => {
+    // Design §4.2's example plate.
+    const plate = {
+      kind: "plate",
+      name: "Plate X",
+      material: "test:s235",
+      thickness_mm: 4,
+      outline: [
+        [0, 0],
+        [120, 0],
+        [120, 80],
+        [0, 80],
+      ],
+      holes: [
+        { at: [20, 20], d_mm: 8.5 },
+        { at: [100, 20], thread: "M8" },
+      ],
+    };
     const r = ok(
       cart(),
-      { cmd: "addItem", args: { id: "plate-a", item: { kind: "plate", thickness_mm: 4 } } },
+      { cmd: "addItem", args: { id: "plate-x", item: plate } },
+      { cmd: "setItem", args: { id: "project:plate-x", set: { thickness_mm: 5 } } },
       {
-        cmd: "setItem",
-        args: { id: "project:plate-a", set: { thickness_mm: 5 } },
+        cmd: "addPart",
+        args: { item: "project:plate-x", on: { bar: "b9", at_mm: 300, face: "+y" } },
       },
     );
-    expect(r.results[0]?.created).toEqual(["project:plate-a"]);
-    expect((r.state.doc.items as Record<string, unknown>)["plate-a"]).toEqual({
-      kind: "plate",
+    expect(r.results[0]?.created).toEqual(["project:plate-x"]);
+    expect((r.state.doc.items as Record<string, unknown>)["plate-x"]).toEqual({
+      ...plate,
       thickness_mm: 5,
     });
-    expect(no(r.state, { cmd: "addItem", args: { id: "plate-a", item: {} } })[0]?.code).toBe(
+    // The part derives, placed like a catalog part, and the plate has no problem.
+    const d = derived(r.state);
+    const id = r.results[2]?.created[0] as string;
+    expect(d.parts.get(id)?.item).toBe("project:plate-x");
+    expect(d.diagnostics.filter((x) => x.entity === "project:plate-x")).toEqual([]);
+    expect(no(r.state, { cmd: "addItem", args: { id: "plate-x", item: plate } })[0]?.code).toBe(
       "exists",
     );
+    // A plate needs its outline; its material must be a catalog's.
+    const { outline: _, ...noOutline } = plate;
+    expect(no(cart(), { cmd: "addItem", args: { id: "plate-y", item: noOutline } })[0]?.code).toBe(
+      "schema",
+    );
+    expect(
+      no(cart(), {
+        cmd: "addItem",
+        args: { id: "plate-y", item: { ...plate, material: "test:unobtainium" } },
+      })[0],
+    ).toMatchObject({ code: "item", field: "material", refs: ["test:unobtainium"] });
+    // A part naming a project item that does not exist is refused.
+    expect(
+      no(cart(), {
+        cmd: "addPart",
+        args: { item: "project:nothing", on: { bar: "b9", at_mm: 300 } },
+      })[0]?.code,
+    ).toBe("ref");
   });
 
   it("setParam changes what derives from it, and refuses to remove a param in use", () => {
@@ -665,12 +707,13 @@ describe("items, params, costs and records", () => {
           check: { value: "bbox().z", op: "<=", limit: "950", text: "fits under the bench" },
         },
       },
-      // The cart holds open item O1 (its order is held on c35), so this one is O2.
+      // The cart holds open items O1 (its order is held on c35) and O2 (the bracket's price), so
+      // this one is O3.
       { cmd: "addOpen", args: { open: { text: "which feet?", blocks: "order", scope: ["b1"] } } },
       { cmd: "addDecision", args: { text: "40-series", why: "stiff enough" } },
       {
         cmd: "resolveOpen",
-        args: { id: "O2", text: "levelling feet M8", why: "the floor is uneven" },
+        args: { id: "O3", text: "levelling feet M8", why: "the floor is uneven" },
       },
     );
     expect(r.state.doc.variants).toEqual({
@@ -688,7 +731,7 @@ describe("items, params, costs and records", () => {
         date: "2026-11-26",
         text: "levelling feet M8",
         why: "the floor is uneven",
-        resolves: "O2",
+        resolves: "O3",
       },
     ]);
     expect(
@@ -705,15 +748,16 @@ describe("items, params, costs and records", () => {
     }).state;
     expect(
       ok(o, { cmd: "removeEntity", args: { id: "b32", cascade: true } }).state.doc.open,
-    ).toEqual([...(cart().doc.open as unknown[]), { id: "O2", text: "x", scope: ["b31"] }]);
+    ).toEqual([...(cart().doc.open as unknown[]), { id: "O3", text: "x", scope: ["b31"] }]);
   });
 
   it("open items: a scope names suppliers, items, and entities by their ends, pieces and copies", () => {
     // §4.12 and the order rules (§5.5): only an entity of the document is a reference.
     const scope = ["supplier:test-vendor", "test:SCR-M8x16", "b5.a", "c23.f1", "b26@2", "K2"];
     const r = ok(cart(), { cmd: "addOpen", args: { open: { text: "x", blocks: "order", scope } } });
-    const o2 = (doc: RawDoc) => (doc.open as { id: string }[]).find((x) => x.id === "O2");
-    expect(o2(r.state.doc)).toEqual({ id: "O2", text: "x", blocks: "order", scope });
+    // The cart holds O1 and O2, so this one is O3.
+    const o2 = (doc: RawDoc) => (doc.open as { id: string }[]).find((x) => x.id === "O3");
+    expect(o2(r.state.doc)).toEqual({ id: "O3", text: "x", blocks: "order", scope });
     for (const bad of ["b99.a", "c99.f1", "b99@2"]) {
       const e = no(cart(), { cmd: "addOpen", args: { open: { text: "x", scope: [bad] } } });
       expect(e[0]).toMatchObject({ code: "ref", refs: [bad.replace(/[.@].*$/, "")] });

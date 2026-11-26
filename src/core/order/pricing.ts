@@ -2,7 +2,7 @@ import type { Diagnostics } from "../diagnostics.ts";
 import type { Doc } from "../project/parse.ts";
 import type { CostLine, PriceBand } from "../project/schema.ts";
 import { banded, convertMoney, type Money } from "./price.ts";
-import { cmp, moneyOut, type Work } from "./types.ts";
+import { cmp, moneyOut, readOf, type Work } from "./types.ts";
 
 /**
  * Low and high, and the project's currency (design §4.11). A line's low and high come from its
@@ -92,7 +92,8 @@ export function priceLines(
     }
     w.line.price_src = w.field.src;
     if (w.field.field === "sale") w.line.on_sale = true;
-    if (w.offer) w.line.read = w.offer.price.read;
+    const read = readOf(w);
+    if (read !== undefined) w.line.read = read;
   }
   // A band that selects nothing is likely a misspelt supplier or item.
   bands.forEach((b, i) => {

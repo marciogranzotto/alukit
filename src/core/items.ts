@@ -10,6 +10,7 @@ import type { BarItem, Item } from "#catalog/schema/items.ts";
 import type { Offer } from "#catalog/schema/offers.ts";
 import { GENERATORS } from "#catalog/sections/generators/index.ts";
 import { sectionProperties } from "./section-properties.ts";
+import type { V3 } from "./vec.ts";
 
 /**
  * What derive needs from catalogs: items by full id, bar sections built, and offers. Derive
@@ -122,15 +123,47 @@ export interface OfferInfo {
   in_stock?: boolean;
 }
 
+/**
+ * A project item (design §4.8) as derive and the outputs read it: the fields of the catalog
+ * envelope that apply to it, and its box and datums in its own frame (§3.2), so it is placed,
+ * borne on and counted like a catalog item. Its mass is computed (a plate, a bent angle) or
+ * entered (a placeholder, a generic item). The full resolution, holes and blank included, is
+ * `ResolvedProjectItem` (project-items/resolve.ts).
+ */
+export interface ProjectItemView {
+  kind: "plate" | "bent-angle" | "generic" | "placeholder";
+  name: string;
+  /** Project items have no options. */
+  options?: undefined;
+  material?: string;
+  prov: { src: Src };
+  mass_kg?: MassInfo;
+  bbox_mm?: readonly [V3, V3];
+  datums?: Readonly<Record<string, V3>>;
+}
+
+/** An item from a catalog, or one of the project's own. */
+export type AnyItem = Item | ProjectItemView;
+
 export type ItemLookup =
-  | { ok: true; id: string; item: Item; bar?: BarItemInfo }
+  | { ok: true; id: string; item: AnyItem; bar?: BarItemInfo }
   | { ok: false; message: string };
+
+/** A catalog material as project items read it (§3.3): its density, for a computed mass. */
+export interface MaterialInfo {
+  /** Full id. */
+  id: string;
+  name?: string;
+  density_kg_per_m3?: number;
+}
 
 export interface ItemSource {
   /** An item by full id (`<catalog>:<code>`). */
   item(ref: string): ItemLookup;
   /** Every offer of an item, by SKU order. */
   offers(itemId: string): readonly OfferInfo[];
+  /** A material by full id (`<catalog>:<id>`). */
+  material(ref: string): MaterialInfo | undefined;
 }
 
 function cmp(a: string, b: string): number {
@@ -158,6 +191,19 @@ export function catalogItems(set: CatalogSet): ItemSource {
         .sort((a, b) => cmp(a.sku, b.sku));
       offerCache.set(itemId, out);
       return out;
+    },
+    material(ref: string): MaterialInfo | undefined {
+      if (!ref.includes(":")) return undefined;
+      const found = set.get("material", ref, "");
+      if (!found) return undefined;
+      const m = found.value;
+      return {
+        id: found.id,
+        ...(m.name !== undefined ? { name: m.name } : {}),
+        ...(m.density_kg_per_m3 !== undefined
+          ? { density_kg_per_m3: num(m.density_kg_per_m3) }
+          : {}),
+      };
     },
   };
 }

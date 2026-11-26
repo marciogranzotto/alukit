@@ -1,6 +1,5 @@
-import type { Item } from "#catalog/schema/items.ts";
 import { compareIds } from "../ids.ts";
-import { fullRef } from "../items.ts";
+import { type AnyItem, fullRef } from "../items.ts";
 import type { Part, Station } from "../project/schema.ts";
 import { snapInt } from "../quantum.ts";
 import { cosDeg, sinDeg } from "../trig.ts";
@@ -62,7 +61,7 @@ function partOptions(
   ctx: Ctx,
   id: string,
   ref: string,
-  item: Item,
+  item: AnyItem,
   own: Readonly<Record<string, string>> | undefined,
   report: boolean,
 ): Record<string, string> {
@@ -121,7 +120,7 @@ function placePart(
     return out;
   }
 
-  const withDatums = item as Item & { datums?: Record<string, V3> };
+  const withDatums = item as AnyItem & { datums?: Readonly<Record<string, V3>> };
   const datumName =
     item.kind === "carriage" ? "run" : withDatums.datums?.mount !== undefined ? "mount" : "origin";
   const datum: V3 = withDatums.datums?.[datumName] ?? [0, 0, 0];
@@ -208,7 +207,7 @@ function stationFromCut(
 function fitCarriage(
   ctx: Ctx,
   id: string,
-  item: Item,
+  item: AnyItem,
   itemId: string,
   bar: DerivedBar | undefined,
   report: boolean,

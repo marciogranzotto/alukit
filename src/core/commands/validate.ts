@@ -79,6 +79,12 @@ export function itemResolves(ctx: CommandContext, doc: RawDoc, ref: string): boo
   return ctx.env.live?.get("item", ref, "") !== undefined;
 }
 
+/** Whether a catalog material resolves, in the lock or in the live catalogs. */
+function materialResolves(ctx: CommandContext, ref: string): boolean {
+  if (Object.hasOwn(ctx.state.lock.materials, ref)) return true;
+  return ctx.env.live?.get("material", ref, "") !== undefined;
+}
+
 /** Every problem of one entity, as the document now stands. */
 export function checkEntity(ctx: CommandContext, doc: RawDoc, id: string): CommandError[] {
   const kind = kindOf(id) as Kind;
@@ -110,7 +116,20 @@ export function checkEntity(ctx: CommandContext, doc: RawDoc, id: string): Comma
     }
   } else visitExprs(value, entityJsonSchema(kind), visit);
 
-  if (kind !== "items") {
+  if (kind === "items") {
+    // A project item's material is a catalog's (§4.8): pinned in the lock, or in the live
+    // catalogs, from which the next save pins it.
+    const material = isObject(value) ? value.material : undefined;
+    if (typeof material === "string" && !materialResolves(ctx, material)) {
+      errors.push({
+        code: "item",
+        entity: id,
+        field: "material",
+        refs: [material],
+        message: `material: no catalog material ${material} (in the lock, or the project's catalogs)`,
+      });
+    }
+  } else {
     stringsWithPattern(value, entityJsonSchema(kind), itemRefSource(), (ref, path) => {
       if (ref.startsWith(PROJECT_ITEM) || itemResolves(ctx, doc, ref)) return;
       errors.push({

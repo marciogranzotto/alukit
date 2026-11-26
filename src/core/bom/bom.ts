@@ -5,6 +5,8 @@ import type { Derived } from "../derive/derive.ts";
 import { type Diagnostic, Diagnostics } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
 import type { ItemSource } from "../items.ts";
+import { PROJECT_KINDS } from "../project/schema.ts";
+import { projectItems } from "../project-items/source.ts";
 import { QUANTUM, quantize } from "../quantum.ts";
 
 /**
@@ -13,14 +15,15 @@ import { QUANTUM, quantize } from "../quantum.ts";
  * mass is each piece's centre-line length times the bar's mass per metre (exact for an angled end
  * on a section symmetric about its box centre). Unplaced lines (§4.7) count with the item's other
  * uses and show their `why`. Prices, offers and covering cost lines are the order list's (§5.4,
- * M3b part 3).
+ * M3b part 3). Project items (§4.8) group by their own kinds after §3.4's: a plate's and a bent
+ * angle's mass is computed from its net volume (`calc`), a placeholder's is as entered.
  *
  * Each line's mass is rounded once to the 0.001 kg quantum; the total adds the rounded lines.
  */
 
 export const BOM_SCHEMA = "alukit.bom/1";
 
-/** Kinds in the order of design §3.4. */
+/** Kinds in the order of design §3.4, then the project's own kinds of §4.8. */
 export const KINDS = [
   "bar",
   "connector",
@@ -29,6 +32,7 @@ export const KINDS = [
   "accessory",
   "panel",
   "generic",
+  ...PROJECT_KINDS,
 ] as const;
 
 export interface BomLine {
@@ -93,7 +97,8 @@ export interface BomInput {
   items: ItemSource;
 }
 
-export function bom({ derived, items }: BomInput): Bom {
+export function bom({ derived, items: catalogs }: BomInput): Bom {
+  const items = projectItems(catalogs, derived.doc).source;
   const d = new Diagnostics();
   const acc = new Map<string, Acc>();
   const add = (item: string, opt: Readonly<Record<string, string>>): Acc => {
