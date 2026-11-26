@@ -1,0 +1,2563 @@
+{
+  "schema": "alukit.offers/1",
+  "offers": {
+    "ALM-3-10": {
+      "item": "ALM-3",
+      "pack": 10,
+      "price": {
+        "regular_minor": 380,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5672"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/?attribute_para-parafuso=M3&attribute_unidades=10un",
+      "ship_mass_kg": 0.02
+    },
+    "ALM-4-10": {
+      "item": "ALM-4",
+      "pack": 10,
+      "price": {
+        "regular_minor": 285,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5674"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/?attribute_para-parafuso=M4&attribute_unidades=10un",
+      "ship_mass_kg": 0.02
+    },
+    "ALM-5-10": {
+      "item": "ALM-5",
+      "pack": 10,
+      "price": {
+        "regular_minor": 285,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5669"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/?attribute_para-parafuso=M5&attribute_unidades=10un",
+      "ship_mass_kg": 0.02
+    },
+    "ALM-6-10": {
+      "item": "ALM-6",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5667"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/?attribute_para-parafuso=M6&attribute_unidades=10un",
+      "ship_mass_kg": 0.02
+    },
+    "ALM-8-10": {
+      "item": "ALM-8",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5665"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/?attribute_para-parafuso=M8&attribute_unidades=10un",
+      "ship_mass_kg": 0.03
+    },
+    "ALM-10-10": {
+      "item": "ALM-10",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": 456,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5676"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/?attribute_para-parafuso=M10&attribute_unidades=10un",
+      "ship_mass_kg": 0.03
+    },
+    "ALM-12-10": {
+      "item": "ALM-12",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": 461,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5678"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/?attribute_para-parafuso=M12&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "APM-4-10": {
+      "item": "APM-4",
+      "pack": 10,
+      "price": {
+        "regular_minor": 285,
+        "sale_minor": 228,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5248"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/?attribute_para-parafuso=M4&attribute_unidades=10un",
+      "ship_mass_kg": 0.02
+    },
+    "APM-5-10": {
+      "item": "APM-5",
+      "pack": 10,
+      "price": {
+        "regular_minor": 285,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5247"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/?attribute_para-parafuso=M5&attribute_unidades=10un",
+      "ship_mass_kg": 0.02
+    },
+    "APM-6-10": {
+      "item": "APM-6",
+      "pack": 10,
+      "price": {
+        "regular_minor": 285,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5245"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/?attribute_para-parafuso=M6&attribute_unidades=10un",
+      "ship_mass_kg": 0.02
+    },
+    "APM-8-10": {
+      "item": "APM-8",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5243"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/?attribute_para-parafuso=M8&attribute_unidades=10un",
+      "ship_mass_kg": 0.03
+    },
+    "BR16-06-2": {
+      "item": "BR16-06",
+      "pack": 2,
+      "price": {
+        "regular_minor": 1618,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5205"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=M6&attribute_unidades=2un",
+      "ship_mass_kg": 0.2
+    },
+    "BR16-06-8": {
+      "item": "BR16-06",
+      "pack": 8,
+      "price": {
+        "regular_minor": 5608,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5204"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=M6&attribute_unidades=8un",
+      "ship_mass_kg": 0.5
+    },
+    "BR16-08-2": {
+      "item": "BR16-08",
+      "pack": 2,
+      "price": {
+        "regular_minor": 1618,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5202"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=M8&attribute_unidades=2un",
+      "ship_mass_kg": 0.1
+    },
+    "BR16-08-8": {
+      "item": "BR16-08",
+      "pack": 8,
+      "price": {
+        "regular_minor": 6029,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5203"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=M8&attribute_unidades=8un",
+      "ship_mass_kg": 0.5
+    },
+    "BR16-10-2": {
+      "item": "BR16-10",
+      "pack": 2,
+      "price": {
+        "regular_minor": 1618,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5201"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=M10&attribute_unidades=2un",
+      "ship_mass_kg": 0.1
+    },
+    "BR16-10-8": {
+      "item": "BR16-10",
+      "pack": 8,
+      "price": {
+        "regular_minor": 5608,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5200"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=M10&attribute_unidades=8un",
+      "ship_mass_kg": 0.5
+    },
+    "BR16-12-2": {
+      "item": "BR16-12",
+      "pack": 2,
+      "price": {
+        "regular_minor": 1904,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5199"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=M12&attribute_unidades=2un",
+      "ship_mass_kg": 0.08
+    },
+    "BR16-12-8": {
+      "item": "BR16-12",
+      "pack": 8,
+      "price": {
+        "regular_minor": 7300,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5198"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=M12&attribute_unidades=8un",
+      "ship_mass_kg": 0.45
+    },
+    "BRP16-12-2": {
+      "item": "BRP16-12",
+      "pack": 2,
+      "price": {
+        "regular_minor": 1904,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5197"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=W1%2F2pol&attribute_unidades=2un",
+      "ship_mass_kg": 0.1
+    },
+    "BRP16-12-8": {
+      "item": "BRP16-12",
+      "pack": 8,
+      "price": {
+        "regular_minor": 6789,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5196"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=W1%2F2pol&attribute_unidades=8un",
+      "ship_mass_kg": 0.5
+    },
+    "BRP16-38-2": {
+      "item": "BRP16-38",
+      "pack": 2,
+      "price": {
+        "regular_minor": 2526,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6119"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=W3%2F8pol&attribute_unidades=2un",
+      "ship_mass_kg": 0.03
+    },
+    "BRP16-38-8": {
+      "item": "BRP16-38",
+      "pack": 8,
+      "price": {
+        "regular_minor": 6601,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6253"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/?attribute_rosca-interna=W3%2F8pol&attribute_unidades=8un",
+      "ship_mass_kg": 0.03
+    },
+    "CT100-286": {
+      "item": "CT100-286",
+      "price": {
+        "regular_minor": 2950,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5062"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-simples-p-perfil-base-30-40-45-e-50/?attribute_largura-da-cantoneira=28mm",
+      "ship_mass_kg": 0.172
+    },
+    "CT100-286-K30": {
+      "item": "CT100-286",
+      "kit": [
+        { "item": "CT100-286", "qty": 1 },
+        { "item": "PSM-6", "qty": 10 },
+        { "item": "PAM306-20", "qty": 10 },
+        { "item": "ALM-6", "qty": 10 },
+        { "item": "APM-6", "qty": 10 }
+      ],
+      "price": {
+        "regular_minor": 6500,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9633"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/kit-cantoneiras-90-m6-2-furos-base-30-2/",
+      "ship_mass_kg": 0.668
+    },
+    "CT100-388": {
+      "item": "CT100-388",
+      "price": {
+        "regular_minor": 3754,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5063"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-simples-p-perfil-base-30-40-45-e-50/?attribute_largura-da-cantoneira=38mm",
+      "ship_mass_kg": 0.233
+    },
+    "CT100-388-K45B": {
+      "item": "CT100-388",
+      "kit": [
+        { "item": "CT100-388", "qty": 1 },
+        { "item": "PSM-8", "qty": 10 },
+        { "item": "PAM458-20", "qty": 10 },
+        { "item": "ALM-8", "qty": 10 },
+        { "item": "APM-8", "qty": 10 }
+      ],
+      "price": {
+        "regular_minor": 8025,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9599"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/kit-cantoneiras-90-m8-2-furos-base-45-basico/",
+      "ship_mass_kg": 0.3
+    },
+    "CT100-388-K4050": {
+      "item": "CT100-388",
+      "kit": [
+        { "item": "CT100-388", "qty": 1 },
+        { "item": "PSM-8", "qty": 10 },
+        { "item": "PAM408-20", "qty": 10 },
+        { "item": "ALM-8", "qty": 10 },
+        { "item": "APM-8", "qty": 10 }
+      ],
+      "price": {
+        "regular_minor": 7750,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9621"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/kit-cantoneiras-90-m8-2-furos-base-40-50/",
+      "ship_mass_kg": 0.3
+    },
+    "CT100-788": {
+      "item": "CT100-788",
+      "price": {
+        "regular_minor": 7331,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5066"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-dupla-p-perfil-base-80-e-90/?attribute_largura-da-cantoneira=78mm",
+      "ship_mass_kg": 0.478
+    },
+    "CT100-788-K4080": {
+      "item": "CT100-788",
+      "kit": [
+        { "item": "CT100-788", "qty": 1 },
+        { "item": "PSM-8", "qty": 10 },
+        { "item": "PAM408-20", "qty": 10 },
+        { "item": "ALM-8", "qty": 10 },
+        { "item": "APM-8", "qty": 10 }
+      ],
+      "price": {
+        "regular_minor": 11075,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9587"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/kit-cantoneiras-90-m8-4-furos-base-40x80/",
+      "ship_mass_kg": 0.5
+    },
+    "CT100-888": {
+      "item": "CT100-888",
+      "price": {
+        "regular_minor": 8195,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5065"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-dupla-p-perfil-base-80-e-90/?attribute_largura-da-cantoneira=88mm",
+      "ship_mass_kg": 0.6
+    },
+    "CT100-888-K4590": {
+      "item": "CT100-888",
+      "kit": [
+        { "item": "CT100-888", "qty": 1 },
+        { "item": "PSM-8", "qty": 10 },
+        { "item": "PAM458-20", "qty": 10 },
+        { "item": "ALM-8", "qty": 10 },
+        { "item": "APM-8", "qty": 10 }
+      ],
+      "price": {
+        "regular_minor": 12150,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9559"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/kit-cantoneiras-90-m8-4-furos-base-45x90/",
+      "ship_mass_kg": 1.2
+    },
+    "HG15-01R": {
+      "item": "HG15-01R",
+      "sale": { "mode": "stock", "length_mm": 1000 },
+      "price": {
+        "regular_minor": 16125,
+        "sale_minor": 12094,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9511"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=1000mm&attribute_tamanho-guia-linear=15mm",
+      "ship_mass_kg": 2
+    },
+    "HG15-01R-500": {
+      "item": "HG15-01R",
+      "sale": { "mode": "stock", "length_mm": 500 },
+      "price": {
+        "regular_minor": 8063,
+        "sale_minor": 6048,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/8023"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=500mm&attribute_tamanho-guia-linear=15mm",
+      "ship_mass_kg": 0.9
+    },
+    "HG15-01R-1500": {
+      "item": "HG15-01R",
+      "sale": { "mode": "stock", "length_mm": 1500 },
+      "price": {
+        "regular_minor": 25263,
+        "sale_minor": 18948,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9376"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=1500mm&attribute_tamanho-guia-linear=15mm",
+      "ship_mass_kg": 3
+    },
+    "HG15-01R-2000": {
+      "item": "HG15-01R",
+      "sale": { "mode": "stock", "length_mm": 2000 },
+      "price": {
+        "regular_minor": 31713,
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9379"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=2000mm&attribute_tamanho-guia-linear=15mm",
+      "ship_mass_kg": 3
+    },
+    "HG15-01R-3000": {
+      "item": "HG15-01R",
+      "sale": { "mode": "stock", "length_mm": 3000 },
+      "price": {
+        "regular_minor": 48375,
+        "sale_minor": 36282,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9382"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=3000mm&attribute_tamanho-guia-linear=15mm",
+      "ship_mass_kg": 3
+    },
+    "HG20-01R": {
+      "item": "HG20-01R",
+      "sale": { "mode": "stock", "length_mm": 1000 },
+      "price": {
+        "regular_minor": 17738,
+        "sale_minor": 13304,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/8024"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=1000mm&attribute_tamanho-guia-linear=20mm",
+      "ship_mass_kg": 0.95
+    },
+    "HG20-01R-500": {
+      "item": "HG20-01R",
+      "sale": { "mode": "stock", "length_mm": 500 },
+      "price": {
+        "regular_minor": 8869,
+        "sale_minor": 6652,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9373"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=500mm&attribute_tamanho-guia-linear=20mm",
+      "ship_mass_kg": 1.7
+    },
+    "HG20-01R-1500": {
+      "item": "HG20-01R",
+      "sale": { "mode": "stock", "length_mm": 1500 },
+      "price": {
+        "regular_minor": 26607,
+        "sale_minor": 19956,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9150"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=1500mm&attribute_tamanho-guia-linear=20mm",
+      "ship_mass_kg": 0.95
+    },
+    "HG20-01R-2000": {
+      "item": "HG20-01R",
+      "sale": { "mode": "stock", "length_mm": 2000 },
+      "price": {
+        "regular_minor": 33000,
+        "sale_minor": 24750,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9151"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=2000mm&attribute_tamanho-guia-linear=20mm",
+      "ship_mass_kg": 0.95
+    },
+    "HG20-01R-3000": {
+      "item": "HG20-01R",
+      "sale": { "mode": "stock", "length_mm": 3000 },
+      "price": {
+        "regular_minor": 53643,
+        "sale_minor": 40233,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9152"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=3000mm&attribute_tamanho-guia-linear=20mm",
+      "ship_mass_kg": 0.95
+    },
+    "HG25-01R": {
+      "item": "HG25-01R",
+      "sale": { "mode": "stock", "length_mm": 1000 },
+      "price": {
+        "regular_minor": 21500,
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/8025"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=1000mm&attribute_tamanho-guia-linear=25mm",
+      "ship_mass_kg": 1.1
+    },
+    "HG25-01R-500": {
+      "item": "HG25-01R",
+      "sale": { "mode": "stock", "length_mm": 500 },
+      "price": {
+        "regular_minor": 10000,
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9374"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=500mm&attribute_tamanho-guia-linear=25mm",
+      "ship_mass_kg": 1.1
+    },
+    "HG25-01R-1500": {
+      "item": "HG25-01R",
+      "sale": { "mode": "stock", "length_mm": 1500 },
+      "price": {
+        "regular_minor": 32250,
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9377"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=1500mm&attribute_tamanho-guia-linear=25mm",
+      "ship_mass_kg": 1.7
+    },
+    "HG25-01R-2000": {
+      "item": "HG25-01R",
+      "sale": { "mode": "stock", "length_mm": 2000 },
+      "price": {
+        "regular_minor": 40000,
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9380"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=2000mm&attribute_tamanho-guia-linear=25mm",
+      "ship_mass_kg": 1.7
+    },
+    "HG25-01R-3000": {
+      "item": "HG25-01R",
+      "sale": { "mode": "stock", "length_mm": 3000 },
+      "price": {
+        "regular_minor": 60000,
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9383"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=3000mm&attribute_tamanho-guia-linear=25mm",
+      "ship_mass_kg": 1.7
+    },
+    "HG30-01R": {
+      "item": "HG30-01R",
+      "sale": { "mode": "stock", "length_mm": 1000 },
+      "price": {
+        "regular_minor": 32250,
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/8026"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=1000mm&attribute_tamanho-guia-linear=30mm",
+      "ship_mass_kg": 1.16
+    },
+    "HG30-01R-500": {
+      "item": "HG30-01R",
+      "sale": { "mode": "stock", "length_mm": 500 },
+      "price": {
+        "regular_minor": 16125,
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9375"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=500mm&attribute_tamanho-guia-linear=30mm",
+      "ship_mass_kg": 1.7
+    },
+    "HG30-01R-1500": {
+      "item": "HG30-01R",
+      "sale": { "mode": "stock", "length_mm": 1500 },
+      "price": {
+        "regular_minor": 45000,
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9378"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=1500mm&attribute_tamanho-guia-linear=30mm",
+      "ship_mass_kg": 1.16
+    },
+    "HG30-01R-2000": {
+      "item": "HG30-01R",
+      "sale": { "mode": "stock", "length_mm": 2000 },
+      "price": {
+        "regular_minor": 64500,
+        "sale_minor": 48375,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9381"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=2000mm&attribute_tamanho-guia-linear=30mm",
+      "ship_mass_kg": 1.16
+    },
+    "HG30-01R-3000": {
+      "item": "HG30-01R",
+      "sale": { "mode": "stock", "length_mm": 3000 },
+      "price": {
+        "regular_minor": 96750,
+        "sale_minor": 72563,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9387"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/?attribute_comprimento=3000mm&attribute_tamanho-guia-linear=30mm",
+      "ship_mass_kg": 1.16
+    },
+    "HGH15-01CA-1": {
+      "item": "HGH15-01CA",
+      "price": {
+        "regular_minor": 8063,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/7989"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/?attribute_tamanho-guia-linear=15mm&attribute_unidades=1un",
+      "ship_mass_kg": 0.3
+    },
+    "HGH20-01CA-1": {
+      "item": "HGH20-01CA",
+      "price": {
+        "regular_minor": 8600,
+        "sale_minor": 6450,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/7990"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/?attribute_tamanho-guia-linear=20mm&attribute_unidades=1un",
+      "ship_mass_kg": 0.45
+    },
+    "HGH25-01CA-1": {
+      "item": "HGH25-01CA",
+      "price": {
+        "regular_minor": 10213,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/7991"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/?attribute_tamanho-guia-linear=25mm&attribute_unidades=1un",
+      "ship_mass_kg": 0.55
+    },
+    "HGH30-01CA-1": {
+      "item": "HGH30-01CA",
+      "price": {
+        "regular_minor": 16125,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/7944"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/?attribute_tamanho-guia-linear=30mm&attribute_unidades=1un",
+      "ship_mass_kg": 0.7
+    },
+    "HGW15-01CC-1": {
+      "item": "HGW15-01CC",
+      "price": {
+        "regular_minor": 8600,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9056"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/?attribute_tamanho-guia-linear=15mm&attribute_unidades=1un"
+    },
+    "HGW20-01CC-1": {
+      "item": "HGW20-01CC",
+      "price": {
+        "regular_minor": 9138,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/7992"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/?attribute_tamanho-guia-linear=20mm&attribute_unidades=1un",
+      "ship_mass_kg": 0.45
+    },
+    "HGW25-01CC-1": {
+      "item": "HGW25-01CC",
+      "price": {
+        "regular_minor": 10643,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/7993"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/?attribute_tamanho-guia-linear=25mm&attribute_unidades=1un",
+      "ship_mass_kg": 0.55
+    },
+    "HGW30-01CC-1": {
+      "item": "HGW30-01CC",
+      "price": {
+        "regular_minor": 17738,
+        "sale_minor": 13304,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/7994"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/?attribute_tamanho-guia-linear=30mm&attribute_unidades=1un",
+      "ship_mass_kg": 0.7
+    },
+    "PAM306-16-10": {
+      "item": "PAM306-16",
+      "pack": 10,
+      "price": {
+        "regular_minor": 2920,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6318"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/?attribute_comprimento-do-parafuso=16mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.001
+    },
+    "PAM306-16-50": {
+      "item": "PAM306-16",
+      "pack": 50,
+      "price": {
+        "regular_minor": 12695,
+        "sale_minor": 10156,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6319"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/?attribute_comprimento-do-parafuso=16mm&attribute_unidades=50un",
+      "ship_mass_kg": 0.15
+    },
+    "PAM306-20-10": {
+      "item": "PAM306-20",
+      "pack": 10,
+      "price": {
+        "regular_minor": 2856,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4789"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/?attribute_comprimento-do-parafuso=20mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.05
+    },
+    "PAM306-20-50": {
+      "item": "PAM306-20",
+      "pack": 50,
+      "price": {
+        "regular_minor": 12695,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4790"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/?attribute_comprimento-do-parafuso=20mm&attribute_unidades=50un",
+      "ship_mass_kg": 0.15
+    },
+    "PAM306-25-10": {
+      "item": "PAM306-25",
+      "pack": 10,
+      "price": {
+        "regular_minor": 2856,
+        "sale_minor": 2284,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4788"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/?attribute_comprimento-do-parafuso=25mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.05
+    },
+    "PAM306-25-50": {
+      "item": "PAM306-25",
+      "pack": 50,
+      "price": {
+        "regular_minor": 12695,
+        "sale_minor": 10156,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4791"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/?attribute_comprimento-do-parafuso=25mm&attribute_unidades=50un",
+      "ship_mass_kg": 0.15
+    },
+    "PAM408-20-50": {
+      "item": "PAM408-20",
+      "pack": 50,
+      "price": {
+        "regular_minor": 12695,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4794"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-40-e-50/?attribute_comprimento-do-parafuso=20mm&attribute_unidades=50un",
+      "ship_mass_kg": 0.15
+    },
+    "PAM408-20I-10": {
+      "item": "PAM408-20I",
+      "pack": 10,
+      "price": {
+        "regular_minor": 3808,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6147"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-inox-canal-8-p-perfil-base-40-e-50/?attribute_comprimento-do-parafuso=20mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.001
+    },
+    "PAM408-20I-50": {
+      "item": "PAM408-20I",
+      "pack": 50,
+      "price": {
+        "regular_minor": 20692,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6752"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-inox-canal-8-p-perfil-base-40-e-50/?attribute_comprimento-do-parafuso=20mm&attribute_unidades=50un",
+      "ship_mass_kg": 0.001
+    },
+    "PAM408-25-10": {
+      "item": "PAM408-25",
+      "pack": 10,
+      "price": {
+        "regular_minor": 3174,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4796"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-40-e-50/?attribute_comprimento-do-parafuso=25mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.05
+    },
+    "PAM408-25-50": {
+      "item": "PAM408-25",
+      "pack": 50,
+      "price": {
+        "regular_minor": 14282,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4793"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-40-e-50/?attribute_comprimento-do-parafuso=25mm&attribute_unidades=50un",
+      "ship_mass_kg": 0.15
+    },
+    "PAM458-20-10": {
+      "item": "PAM458-20",
+      "pack": 10,
+      "price": {
+        "regular_minor": 3174,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4806"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-10-p-perfil-base-45/?attribute_comprimento-do-parafuso=20mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.12
+    },
+    "PAM458-20-50": {
+      "item": "PAM458-20",
+      "pack": 50,
+      "price": {
+        "regular_minor": 14282,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4807"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-10-p-perfil-base-45/?attribute_comprimento-do-parafuso=20mm&attribute_unidades=50un",
+      "ship_mass_kg": 0.6
+    },
+    "PAM458-25-10": {
+      "item": "PAM458-25",
+      "pack": 10,
+      "price": {
+        "regular_minor": 3682,
+        "sale_minor": 2945,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4805"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-10-p-perfil-base-45/?attribute_comprimento-do-parafuso=25mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.05
+    },
+    "PAM458-25-50": {
+      "item": "PAM458-25",
+      "pack": 50,
+      "price": {
+        "regular_minor": 14282,
+        "sale_minor": 11425,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4808"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-10-p-perfil-base-45/?attribute_comprimento-do-parafuso=25mm&attribute_unidades=50un",
+      "ship_mass_kg": 0.6
+    },
+    "PCI3-6-10": {
+      "item": "PCI3-6",
+      "pack": 10,
+      "price": {
+        "regular_minor": 952,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5456"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/?attribute_comprimento-do-parafuso=6mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI3-8-10": {
+      "item": "PCI3-8",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5455"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/?attribute_comprimento-do-parafuso=8mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.12
+    },
+    "PCI3-10-10": {
+      "item": "PCI3-10",
+      "pack": 10,
+      "price": {
+        "regular_minor": 914,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5457"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/?attribute_comprimento-do-parafuso=10mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI4-6-10": {
+      "item": "PCI4-6",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5469"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/?attribute_comprimento-do-parafuso=6mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.12
+    },
+    "PCI4-8-10": {
+      "item": "PCI4-8",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5468"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/?attribute_comprimento-do-parafuso=8mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI4-10-10": {
+      "item": "PCI4-10",
+      "pack": 10,
+      "price": {
+        "regular_minor": 797,
+        "sale_minor": 637,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5467"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/?attribute_comprimento-do-parafuso=10mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI4-12-10": {
+      "item": "PCI4-12",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5466"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/?attribute_comprimento-do-parafuso=12mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI4-16-10": {
+      "item": "PCI4-16",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5465"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/?attribute_comprimento-do-parafuso=16mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI5-8-10": {
+      "item": "PCI5-8",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5483"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/?attribute_comprimento-do-parafuso=8mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.12
+    },
+    "PCI5-10-10": {
+      "item": "PCI5-10",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5485"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/?attribute_comprimento-do-parafuso=10mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI5-12-10": {
+      "item": "PCI5-12",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5486"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/?attribute_comprimento-do-parafuso=12mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI5-16-10": {
+      "item": "PCI5-16",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": 686,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5487"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/?attribute_comprimento-do-parafuso=16mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI5-20-10": {
+      "item": "PCI5-20",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5484"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/?attribute_comprimento-do-parafuso=20mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI5-25-10": {
+      "item": "PCI5-25",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1142,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5489"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/?attribute_comprimento-do-parafuso=25mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI6-8-10": {
+      "item": "PCI6-8",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1428,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5501"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/?attribute_comprimento-do-parafuso=8mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.12
+    },
+    "PCI6-10-10": {
+      "item": "PCI6-10",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5499"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/?attribute_comprimento-do-parafuso=10mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI6-12-10": {
+      "item": "PCI6-12",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5498"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/?attribute_comprimento-do-parafuso=12mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI6-16-10": {
+      "item": "PCI6-16",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5497"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/?attribute_comprimento-do-parafuso=16mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI6-16-ZP-10": {
+      "item": "PCI6-16-ZP",
+      "pack": 10,
+      "price": {
+        "regular_minor": 903,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/8243"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-zincado-preto/?attribute_comprimento-do-parafuso=16mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI6-20-10": {
+      "item": "PCI6-20",
+      "pack": 10,
+      "price": {
+        "regular_minor": 857,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5500"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/?attribute_comprimento-do-parafuso=20mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI6-25-10": {
+      "item": "PCI6-25",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1428,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5495"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/?attribute_comprimento-do-parafuso=25mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI6-30-10": {
+      "item": "PCI6-30",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1142,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5506"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/?attribute_comprimento-do-parafuso=30mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI6-35-10": {
+      "item": "PCI6-35",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1142,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5508"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/?attribute_comprimento-do-parafuso=35mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI6-40-10": {
+      "item": "PCI6-40",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1714,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5510"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/?attribute_comprimento-do-parafuso=40mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI8-10-10": {
+      "item": "PCI8-10",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1714,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5527"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/?attribute_comprimento-do-parafuso=10mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI8-12-10": {
+      "item": "PCI8-12",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1428,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5528"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/?attribute_comprimento-do-parafuso=12mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI8-16-10": {
+      "item": "PCI8-16",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1840,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5529"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/?attribute_comprimento-do-parafuso=16mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI8-20-10": {
+      "item": "PCI8-20",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1651,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5526"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/?attribute_comprimento-do-parafuso=20mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI8-25-10": {
+      "item": "PCI8-25",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1999,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5531"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/?attribute_comprimento-do-parafuso=25mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI8-30-10": {
+      "item": "PCI8-30",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1999,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5522"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/?attribute_comprimento-do-parafuso=30mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI8-35-10": {
+      "item": "PCI8-35",
+      "pack": 10,
+      "price": {
+        "regular_minor": 2571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5520"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/?attribute_comprimento-do-parafuso=35mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PCI8-40-10": {
+      "item": "PCI8-40",
+      "pack": 10,
+      "price": {
+        "regular_minor": 2666,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5516"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/?attribute_comprimento-do-parafuso=40mm&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PF20-14-C9P1": {
+      "item": "PF20-14",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 11250,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5699"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-20x60-v-slot-canal-6/",
+      "ship_mass_kg": 1.09
+    },
+    "PF20-14-PP-C9P1": {
+      "item": "PF20-14",
+      "options": { "finish": "black" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 12550,
+        "sale_minor": 9500,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9497"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-20x60-v-slot-preto-canal-6-2/",
+      "ship_mass_kg": 1.098
+    },
+    "PF30-02-PP-c10": {
+      "item": "PF30-02",
+      "options": { "finish": "black" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 14550,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/8123"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-30x60-basico-preto-canal-8/",
+      "ship_mass_kg": 1.36
+    },
+    "PF30-02-c10": {
+      "item": "PF30-02",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 12550,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4751"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-30x60-basico-canal-8/",
+      "ship_mass_kg": 1.36
+    },
+    "PF30-04-C7": {
+      "item": "PF30-04",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 10000,
+        "sale_minor": 5000,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4770"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-30x30-basico-fechado-canal-8mm-destacavel/",
+      "ship_mass_kg": 1.2
+    },
+    "PF40-00-c7": {
+      "item": "PF40-00",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 11250,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4755"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x40-leve-canal-8/",
+      "ship_mass_kg": 1.12
+    },
+    "PF40-01-c7": {
+      "item": "PF40-01",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 12650,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4753"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x40-basico-canal-8/",
+      "ship_mass_kg": 1.482
+    },
+    "PF40-01-pp-c7": {
+      "item": "PF40-01",
+      "options": { "finish": "black" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 14550,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4772"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x40-basico-preto-canal-8/",
+      "ship_mass_kg": 1.482
+    },
+    "PF40-02-C8": {
+      "item": "PF40-02",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 27200,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4756"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x80-basico-canal-8/",
+      "ship_mass_kg": 2.743
+    },
+    "PF40-02-pp-c8": {
+      "item": "PF40-02",
+      "options": { "finish": "black" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 29900,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4773"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x80-preto-basico-canal-8/",
+      "ship_mass_kg": 2.743
+    },
+    "PF40-03-c7.1000": {
+      "item": "PF40-03",
+      "sku": "PF40-03-c7",
+      "options": { "finish": "anodised" },
+      "sale": { "mode": "stock", "length_mm": 1000 },
+      "price": {
+        "regular_minor": 56900,
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4759"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-80x80-reforcado-canal-8/",
+      "ship_mass_kg": 5.753
+    },
+    "PF40-03-c7.2000": {
+      "item": "PF40-03",
+      "sku": "PF40-03-c7",
+      "options": { "finish": "anodised" },
+      "sale": { "mode": "stock", "length_mm": 2000 },
+      "price": {
+        "regular_minor": {
+          "v": 113800,
+          "src": "calc",
+          "note": "2 × the shop's price per metre, 56900"
+        },
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "calc",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4759"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-80x80-reforcado-canal-8/",
+      "ship_mass_kg": 5.753
+    },
+    "PF40-03-c7.3000": {
+      "item": "PF40-03",
+      "sku": "PF40-03-c7",
+      "options": { "finish": "anodised" },
+      "sale": { "mode": "stock", "length_mm": 3000 },
+      "price": {
+        "regular_minor": {
+          "v": 170700,
+          "src": "calc",
+          "note": "3 × the shop's price per metre, 56900"
+        },
+        "sale_minor": null,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "calc",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4759"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-80x80-reforcado-canal-8/",
+      "ship_mass_kg": 5.753
+    },
+    "PF40-03B-c7.1000": {
+      "item": "PF40-03B",
+      "sku": "PF40-03B-c7",
+      "options": { "finish": "anodised" },
+      "sale": { "mode": "stock", "length_mm": 1000 },
+      "price": {
+        "regular_minor": 41100,
+        "sale_minor": 33500,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5074"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-80x80-basico-canal-8/",
+      "ship_mass_kg": 4.547
+    },
+    "PF40-03B-c7.2000": {
+      "item": "PF40-03B",
+      "sku": "PF40-03B-c7",
+      "options": { "finish": "anodised" },
+      "sale": { "mode": "stock", "length_mm": 2000 },
+      "price": {
+        "regular_minor": {
+          "v": 82200,
+          "src": "calc",
+          "note": "2 × the shop's price per metre, 41100"
+        },
+        "sale_minor": {
+          "v": 67000,
+          "src": "calc",
+          "note": "2 × the shop's price per metre, 33500"
+        },
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "calc",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5074"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-80x80-basico-canal-8/",
+      "ship_mass_kg": 4.547
+    },
+    "PF40-03B-c7.3000": {
+      "item": "PF40-03B",
+      "sku": "PF40-03B-c7",
+      "options": { "finish": "anodised" },
+      "sale": { "mode": "stock", "length_mm": 3000 },
+      "price": {
+        "regular_minor": {
+          "v": 123300,
+          "src": "calc",
+          "note": "3 × the shop's price per metre, 41100"
+        },
+        "sale_minor": {
+          "v": 100500,
+          "src": "calc",
+          "note": "3 × the shop's price per metre, 33500"
+        },
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "calc",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5074"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-80x80-basico-canal-8/",
+      "ship_mass_kg": 4.547
+    },
+    "PF40-04-c7": {
+      "item": "PF40-04",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 20250,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4754"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x40-basico-fechado-canal-8mm-destacavel/",
+      "ship_mass_kg": 1.6
+    },
+    "PF45-02-PP-c8": {
+      "item": "PF45-02",
+      "options": { "finish": "black" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 28450,
+        "sale_minor": 25500,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9484"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-45x90-basico-pintura-preta-canal-10/",
+      "ship_mass_kg": 2.88
+    },
+    "PF45-02-c8": {
+      "item": "PF45-02",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 27700,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4761"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-45x90-basico-canal-10-forseti/",
+      "ship_mass_kg": 2.88
+    },
+    "PF45-12-C9": {
+      "item": "PF45-12",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 27700,
+        "sale_minor": 19000,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4758"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-45x90-parafuso-canal-sextavado-m8-forseti/",
+      "ship_mass_kg": 2.38
+    },
+    "PF45-12-PP-C9": {
+      "item": "PF45-12",
+      "options": { "finish": "black" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 28450,
+        "sale_minor": 22500,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9489"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-45x90-parafuso-pintura-preta-canal-sextavado-m8/",
+      "ship_mass_kg": 2.743
+    },
+    "PLU40-01": {
+      "item": "PLU40-01",
+      "options": { "finish": "galvanised" },
+      "price": {
+        "regular_minor": 688,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/50043"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/placa-de-uniao-simples-p-perfil-base-40/?attribute_opcao-de-fixacao=Sem+Fixadores&attribute_para-perfil=Base+40",
+      "ship_mass_kg": 0.04
+    },
+    "PLU40-01-PP": {
+      "item": "PLU40-01",
+      "options": { "finish": "black" },
+      "price": {
+        "regular_minor": 1002,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/9870"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/placa-de-uniao-simples-preta-p-perfil-base-40/",
+      "ship_mass_kg": 0.04
+    },
+    "PRT20-03-10": {
+      "item": "PRT20-03",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1269,
+        "sale_minor": 1015,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6123"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/?attribute_rosca=M3&attribute_unidades=10un",
+      "ship_mass_kg": 0.001
+    },
+    "PRT20-03-50": {
+      "item": "PRT20-03",
+      "pack": 50,
+      "price": {
+        "regular_minor": 5078,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6124"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/?attribute_rosca=M3&attribute_unidades=50un",
+      "ship_mass_kg": 0.001
+    },
+    "PRT20-04-10": {
+      "item": "PRT20-04",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1269,
+        "sale_minor": 1015,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4828"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/?attribute_rosca=M4&attribute_unidades=10un",
+      "ship_mass_kg": 0.01
+    },
+    "PRT20-04-50": {
+      "item": "PRT20-04",
+      "pack": 50,
+      "price": {
+        "regular_minor": 5078,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4826"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/?attribute_rosca=M4&attribute_unidades=50un",
+      "ship_mass_kg": 0.05
+    },
+    "PRT20-05-10": {
+      "item": "PRT20-05",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1269,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4827"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/?attribute_rosca=M5&attribute_unidades=10un",
+      "ship_mass_kg": 0.01
+    },
+    "PRT20-05-50": {
+      "item": "PRT20-05",
+      "pack": 50,
+      "price": {
+        "regular_minor": 5078,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4825"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/?attribute_rosca=M5&attribute_unidades=50un",
+      "ship_mass_kg": 0.05
+    },
+    "PRT20-06-10": {
+      "item": "PRT20-06",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1269,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4832"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/?attribute_rosca=M6&attribute_unidades=10un",
+      "ship_mass_kg": 0.025
+    },
+    "PRT20-06-50": {
+      "item": "PRT20-06",
+      "pack": 50,
+      "price": {
+        "regular_minor": 5078,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4838"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/?attribute_rosca=M6&attribute_unidades=50un",
+      "ship_mass_kg": 0.05
+    },
+    "PRT30-06-10": {
+      "item": "PRT30-06",
+      "pack": 10,
+      "price": {
+        "regular_minor": 2222,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4841"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-30-e-40/?attribute_rosca=M6&attribute_unidades=10un",
+      "ship_mass_kg": 0.025
+    },
+    "PRT30-06-50": {
+      "item": "PRT30-06",
+      "pack": 50,
+      "price": {
+        "regular_minor": 9521,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4840"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-30-e-40/?attribute_rosca=M6&attribute_unidades=50un",
+      "ship_mass_kg": 0.05
+    },
+    "PRT30-08-10": {
+      "item": "PRT30-08",
+      "pack": 10,
+      "price": {
+        "regular_minor": 2222,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4844"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-30-e-40/?attribute_rosca=M8&attribute_unidades=10un",
+      "ship_mass_kg": 0.01
+    },
+    "PRT30-08-50": {
+      "item": "PRT30-08",
+      "pack": 50,
+      "price": {
+        "regular_minor": 9521,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4845"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-30-e-40/?attribute_rosca=M8&attribute_unidades=50un",
+      "ship_mass_kg": 0.05
+    },
+    "PRT45-10-10": {
+      "item": "PRT45-10",
+      "pack": 10,
+      "price": {
+        "regular_minor": 3174,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4959"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/?attribute_rosca=M10&attribute_unidades=10un",
+      "ship_mass_kg": 0.05
+    },
+    "PRT45-10-50": {
+      "item": "PRT45-10",
+      "pack": 50,
+      "price": {
+        "regular_minor": 14282,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4960"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/?attribute_rosca=M10&attribute_unidades=50un",
+      "ship_mass_kg": 0.2
+    },
+    "PRT45-16-10": {
+      "item": "PRT45-16",
+      "pack": 10,
+      "price": {
+        "regular_minor": 3808,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4956"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/?attribute_rosca=M6&attribute_unidades=10un",
+      "ship_mass_kg": 0.025
+    },
+    "PRT45-16-50": {
+      "item": "PRT45-16",
+      "pack": 50,
+      "price": {
+        "regular_minor": 15869,
+        "sale_minor": 12695,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4957"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/?attribute_rosca=M6&attribute_unidades=50un",
+      "ship_mass_kg": 0.05
+    },
+    "PRT45-18-10": {
+      "item": "PRT45-18",
+      "pack": 10,
+      "price": {
+        "regular_minor": 3174,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4953"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/?attribute_rosca=M8&attribute_unidades=10un",
+      "ship_mass_kg": 0.01
+    },
+    "PRT45-18-50": {
+      "item": "PRT45-18",
+      "pack": 50,
+      "price": {
+        "regular_minor": 12695,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/4952"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/?attribute_rosca=M8&attribute_unidades=50un",
+      "ship_mass_kg": 0.05
+    },
+    "PRT50-06-10": {
+      "item": "PRT50-06",
+      "pack": 10,
+      "price": {
+        "regular_minor": 2539,
+        "sale_minor": 2031,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6303"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-50/?attribute_rosca=M6&attribute_unidades=10un",
+      "ship_mass_kg": 0.09
+    },
+    "PRT50-06-50": {
+      "item": "PRT50-06",
+      "pack": 50,
+      "price": {
+        "regular_minor": 11108,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6305"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-50/?attribute_rosca=M6&attribute_unidades=50un",
+      "ship_mass_kg": 0.45
+    },
+    "PRT50-08-10": {
+      "item": "PRT50-08",
+      "pack": 10,
+      "price": {
+        "regular_minor": 2128,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6304"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-50/?attribute_rosca=M8&attribute_unidades=10un",
+      "ship_mass_kg": 0.09
+    },
+    "PRT50-08-50": {
+      "item": "PRT50-08",
+      "pack": 50,
+      "price": {
+        "regular_minor": 11108,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/6306"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-50/?attribute_rosca=M8&attribute_unidades=50un",
+      "ship_mass_kg": 0.45
+    },
+    "PSM-3-10": {
+      "item": "PSM-3",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5639"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/?attribute_rosca=M3&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PSM-4-10": {
+      "item": "PSM-4",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5641"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/?attribute_rosca=M4&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PSM-5-10": {
+      "item": "PSM-5",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5643"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/?attribute_rosca=M5&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PSM-6-10": {
+      "item": "PSM-6",
+      "pack": 10,
+      "price": {
+        "regular_minor": 571,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5645"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/?attribute_rosca=M6&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PSM-8-10": {
+      "item": "PSM-8",
+      "pack": 10,
+      "price": {
+        "regular_minor": 797,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5647"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/?attribute_rosca=M8&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PSM-10-10": {
+      "item": "PSM-10",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1523,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5637"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/?attribute_rosca=M10&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    },
+    "PSM-12-10": {
+      "item": "PSM-12",
+      "pack": 10,
+      "price": {
+        "regular_minor": 1142,
+        "sale_minor": null,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products/5649"
+      },
+      "in_stock": true,
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/?attribute_rosca=M12&attribute_unidades=10un",
+      "ship_mass_kg": 0.1
+    }
+  }
+}

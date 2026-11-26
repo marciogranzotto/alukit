@@ -1,0 +1,1749 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "forseti",
+  "name": "Forseti",
+  "vendor": "forseti",
+  "currency": "BRL",
+  "url": "https://loja.forsetisolucoes.com.br",
+  "prov": {
+    "src": "src",
+    "ref": "url:https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products",
+    "read": "2026-11-26"
+  },
+  "materials": {
+    "al-6063-t5": {
+      "name": "Alumínio 6063 T5",
+      "alloy": "6063",
+      "temper": "T5",
+      "E_MPa": 69000,
+      "density_kg_per_m3": 2700,
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p6", "read": "2026-11-26" }
+    }
+  },
+  "grooves": {
+    "c6-20": {
+      "opening_mm": 6.01,
+      "lip_mm": 1.81,
+      "depth_mm": 6.31,
+      "undercut_mm": 11.01,
+      "taper_from_mm": 3.69,
+      "bottom_mm": 0.01,
+      "class": "standard",
+      "prov": {
+        "src": "calc",
+        "ref": "pdf:catalogo_forsetiA4.pdf#p11",
+        "read": "2026-11-26",
+        "note": "measured along the centre line of the groove on face +y at 0 mm of the vector outline of PF20-14; printed opening 6 mm"
+      }
+    },
+    "c8-30": {
+      "opening_mm": 8.09,
+      "lip_mm": 2.01,
+      "depth_mm": 7.11,
+      "undercut_mm": 18.01,
+      "taper_from_mm": 4.69,
+      "bottom_mm": 12.52,
+      "class": "standard",
+      "prov": {
+        "src": "calc",
+        "ref": "pdf:catalogo_forsetiA4.pdf#p15",
+        "read": "2026-11-26",
+        "note": "measured along the centre line of the groove on face +x at 15 mm of the vector outline of PF30-02; printed opening 8.2 mm"
+      }
+    },
+    "c8-40": {
+      "opening_mm": 8.18,
+      "lip_mm": 3.79,
+      "depth_mm": 9.99,
+      "undercut_mm": 22.01,
+      "taper_from_mm": 7.03,
+      "bottom_mm": 12.24,
+      "class": "standard",
+      "prov": {
+        "src": "calc",
+        "ref": "pdf:catalogo_forsetiA4.pdf#p16",
+        "read": "2026-11-26",
+        "note": "measured along the centre line of the groove on face +y at 0 mm of the vector outline of PF40-01; printed opening 8.19 mm"
+      }
+    },
+    "c8-45": {
+      "opening_mm": 8.29,
+      "lip_mm": 4.51,
+      "depth_mm": 16.51,
+      "undercut_mm": 13.51,
+      "taper_from_mm": 14.39,
+      "bottom_mm": 8.76,
+      "class": "standard",
+      "prov": {
+        "src": "calc",
+        "ref": "pdf:catalogo_forsetiA4.pdf#p19",
+        "read": "2026-11-26",
+        "note": "measured along the centre line of the groove on face +x at 22.5 mm of the vector outline of PF45-12; printed opening 8.3 mm"
+      }
+    },
+    "c10-45": {
+      "opening_mm": 10.19,
+      "lip_mm": 5.81,
+      "depth_mm": 13.31,
+      "undercut_mm": 22.01,
+      "taper_from_mm": 9.97,
+      "bottom_mm": 14.63,
+      "class": "standard",
+      "prov": {
+        "src": "calc",
+        "ref": "pdf:catalogo_forsetiA4.pdf#p18",
+        "read": "2026-11-26",
+        "note": "measured along the centre line of the groove on face +x at 22.5 mm of the vector outline of PF45-02; printed opening 10.2 mm"
+      }
+    }
+  },
+  "systems": {
+    "s20-c6": { "type": "tslot", "series_mm": 20, "groove": "c6-20", "name": "Base 20, canal 6" },
+    "s30-c8": { "type": "tslot", "series_mm": 30, "groove": "c8-30", "name": "Base 30, canal 8" },
+    "s40-c8": { "type": "tslot", "series_mm": 40, "groove": "c8-40", "name": "Base 40, canal 8" },
+    "s45-c8": {
+      "type": "tslot",
+      "series_mm": 45,
+      "groove": "c8-45",
+      "name": "Base 45, canal sextavado M8"
+    },
+    "s45-c10": {
+      "type": "tslot",
+      "series_mm": 45,
+      "groove": "c10-45",
+      "name": "Base 45, canal 10"
+    }
+  },
+  "items": {
+    "ALM-3": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela Lisa Zincada Branco – M3, M4, M5, M6, M8, M10 e M12 (Para Parafuso: M3)",
+      "code": "ALM-3",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M3",
+      "dims": { "d1_mm": 8.4, "d2_mm": 7, "h_mm": 0.5 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+        "read": "2026-11-26"
+      }
+    },
+    "ALM-4": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela Lisa Zincada Branco – M3, M4, M5, M6, M8, M10 e M12 (Para Parafuso: M4)",
+      "code": "ALM-4",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M4",
+      "dims": { "d1_mm": 4.3, "d2_mm": 9, "h_mm": 1 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+        "read": "2026-11-26"
+      }
+    },
+    "ALM-5": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela Lisa Zincada Branco – M3, M4, M5, M6, M8, M10 e M12 (Para Parafuso: M5)",
+      "code": "ALM-5",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M5",
+      "dims": { "d1_mm": 5.3, "d2_mm": 10, "h_mm": 1 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+        "read": "2026-11-26"
+      }
+    },
+    "ALM-6": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela Lisa Zincada Branco – M3, M4, M5, M6, M8, M10 e M12 (Para Parafuso: M6)",
+      "code": "ALM-6",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M6",
+      "dims": { "d1_mm": 6.4, "d2_mm": 12.5, "h_mm": 1.6 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+        "read": "2026-11-26"
+      }
+    },
+    "ALM-8": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela Lisa Zincada Branco – M3, M4, M5, M6, M8, M10 e M12 (Para Parafuso: M8)",
+      "code": "ALM-8",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M8",
+      "dims": { "d1_mm": 8.4, "d2_mm": 17, "h_mm": 1.6 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+        "read": "2026-11-26"
+      }
+    },
+    "ALM-10": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela Lisa Zincada Branco – M3, M4, M5, M6, M8, M10 e M12 (Para Parafuso: M10)",
+      "code": "ALM-10",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M10",
+      "dims": { "d1_mm": 10.5, "d2_mm": 20, "h_mm": 2 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+        "read": "2026-11-26"
+      }
+    },
+    "ALM-12": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela Lisa Zincada Branco – M3, M4, M5, M6, M8, M10 e M12 (Para Parafuso: M12)",
+      "code": "ALM-12",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M12",
+      "dims": { "d1_mm": 13, "d2_mm": 24, "h_mm": 2.5 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-lisa-zincada-branco-m3-m4-m5-m6-m8-m10-e-m12/",
+        "read": "2026-11-26"
+      }
+    },
+    "APM-4": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela de Pressão Zincada Branco – M4, M5, M6 e M8 (Para Parafuso: M4)",
+      "code": "APM-4",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M4",
+      "dims": { "d1_mm": 4.2, "d2_mm": 7.2, "h_mm": 0.8 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/",
+        "read": "2026-11-26"
+      }
+    },
+    "APM-5": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela de Pressão Zincada Branco – M4, M5, M6 e M8 (Para Parafuso: M5)",
+      "code": "APM-5",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M5",
+      "dims": { "d1_mm": 5.2, "d2_mm": 8.7, "h_mm": 1 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/",
+        "read": "2026-11-26"
+      }
+    },
+    "APM-6": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela de Pressão Zincada Branco – M4, M5, M6 e M8 (Para Parafuso: M6)",
+      "code": "APM-6",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M6",
+      "dims": { "d1_mm": 6.4, "d2_mm": 11.2, "h_mm": 1.5 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/",
+        "read": "2026-11-26"
+      }
+    },
+    "APM-8": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Arruela de Pressão Zincada Branco – M4, M5, M6 e M8 (Para Parafuso: M8)",
+      "code": "APM-8",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M8",
+      "dims": { "d1_mm": 8.3, "d2_mm": 14.2, "h_mm": 1.5 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/arruela-de-pressao-zincada-branco-m4-m5-m6-e-m8/",
+        "read": "2026-11-26"
+      }
+    },
+    "BR16-06": {
+      "kind": "fastener",
+      "subtype": "insert",
+      "name": "Bucha de Redução M16 p/ Perfil Base 40, 45 e 50 (Rosca Interna: M6)",
+      "code": "BR16-06",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p41" }],
+      "thread": "M6",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "BR16-08": {
+      "kind": "fastener",
+      "subtype": "insert",
+      "name": "Bucha de Redução M16 p/ Perfil Base 40, 45 e 50 (Rosca Interna: M8)",
+      "code": "BR16-08",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p41" }],
+      "thread": "M8",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "BR16-10": {
+      "kind": "fastener",
+      "subtype": "insert",
+      "name": "Bucha de Redução M16 p/ Perfil Base 40, 45 e 50 (Rosca Interna: M10)",
+      "code": "BR16-10",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p41" }],
+      "thread": "M10",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "BR16-12": {
+      "kind": "fastener",
+      "subtype": "insert",
+      "name": "Bucha de Redução M16 p/ Perfil Base 40, 45 e 50 (Rosca Interna: M12)",
+      "code": "BR16-12",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p41" }],
+      "thread": "M12",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "BRP16-12": {
+      "kind": "fastener",
+      "subtype": "insert",
+      "name": "Bucha de Redução M16 p/ Perfil Base 40, 45 e 50 (Rosca Interna: W1/2pol)",
+      "code": "BRP16-12",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p41" }],
+      "thread": "W1/2pol",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "BRP16-38": {
+      "kind": "fastener",
+      "subtype": "insert",
+      "name": "Bucha de Redução M16 p/ Perfil Base 40, 45 e 50 (Rosca Interna: W3/8pol)",
+      "code": "BRP16-38",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p41" }],
+      "thread": "W3/8pol",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/bucha-de-reducao-m16-p-perfil-base-40-45-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "CT100-286": {
+      "kind": "connector",
+      "subtype": "bracket",
+      "name": "Cantoneira em Alumínio 100x100mm – Base Simples p/ Perfil Base 30, 40, 45 e 50 (Largura da Cantoneira: 28mm)",
+      "code": "CT100-286",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-simples-p-perfil-base-30-40-45-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p34" }],
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-simples-p-perfil-base-30-40-45-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "CT100-388": {
+      "kind": "connector",
+      "subtype": "bracket",
+      "name": "Cantoneira em Alumínio 100x100mm – Base Simples p/ Perfil Base 30, 40, 45 e 50 (Largura da Cantoneira: 38mm)",
+      "code": "CT100-388",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-simples-p-perfil-base-30-40-45-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p34" }],
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-simples-p-perfil-base-30-40-45-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "CT100-788": {
+      "kind": "connector",
+      "subtype": "bracket",
+      "name": "Cantoneira em Alumínio 100x100mm – Base Dupla p/ Perfil Base 80 e 90 (Largura da Cantoneira: 78mm)",
+      "code": "CT100-788",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-dupla-p-perfil-base-80-e-90/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p35" }],
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-dupla-p-perfil-base-80-e-90/",
+        "read": "2026-11-26"
+      }
+    },
+    "CT100-888": {
+      "kind": "connector",
+      "subtype": "bracket",
+      "name": "Cantoneira em Alumínio 100x100mm – Base Dupla p/ Perfil Base 80 e 90 (Largura da Cantoneira: 88mm)",
+      "code": "CT100-888",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-dupla-p-perfil-base-80-e-90/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p35" }],
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/cantoneira-em-aluminio-100x100mm-base-dupla-p-perfil-base-80-e-90/",
+        "read": "2026-11-26"
+      }
+    },
+    "HG15-01R": {
+      "kind": "bar",
+      "name": "Guia Linear HGR Series – HGR15, HGR20, HGR25 e HGR30 – Aço S55C (Tamanho Guia Linear: 15mm)",
+      "code": "HG15-01R",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/",
+      "shape": "rail",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/",
+        "read": "2026-11-26"
+      }
+    },
+    "HG20-01R": {
+      "kind": "bar",
+      "name": "Guia Linear HGR Series – HGR15, HGR20, HGR25 e HGR30 – Aço S55C (Tamanho Guia Linear: 20mm)",
+      "code": "HG20-01R",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/",
+      "shape": "rail",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/",
+        "read": "2026-11-26"
+      }
+    },
+    "HG25-01R": {
+      "kind": "bar",
+      "name": "Guia Linear HGR Series – HGR15, HGR20, HGR25 e HGR30 – Aço S55C (Tamanho Guia Linear: 25mm)",
+      "code": "HG25-01R",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/",
+      "shape": "rail",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/",
+        "read": "2026-11-26"
+      }
+    },
+    "HG30-01R": {
+      "kind": "bar",
+      "name": "Guia Linear HGR Series – HGR15, HGR20, HGR25 e HGR30 – Aço S55C (Tamanho Guia Linear: 30mm)",
+      "code": "HG30-01R",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/",
+      "shape": "rail",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/guia-linear-hgr-series-hgr15-hgr20-hgr25-e-hgr30-aco-s55c/",
+        "read": "2026-11-26"
+      }
+    },
+    "HGH15-01CA": {
+      "kind": "carriage",
+      "name": "Patins HGH-CA Sem Abas P/ Guia Linear 15mm, 20mm, 25mm e 30mm – Aço 20CRMO (1 PÇ) (Tamanho Guia Linear: 15mm)",
+      "code": "HGH15-01CA",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/",
+        "read": "2026-11-26"
+      }
+    },
+    "HGH20-01CA": {
+      "kind": "carriage",
+      "name": "Patins HGH-CA Sem Abas P/ Guia Linear 15mm, 20mm, 25mm e 30mm – Aço 20CRMO (1 PÇ) (Tamanho Guia Linear: 20mm)",
+      "code": "HGH20-01CA",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/",
+        "read": "2026-11-26"
+      }
+    },
+    "HGH25-01CA": {
+      "kind": "carriage",
+      "name": "Patins HGH-CA Sem Abas P/ Guia Linear 15mm, 20mm, 25mm e 30mm – Aço 20CRMO (1 PÇ) (Tamanho Guia Linear: 25mm)",
+      "code": "HGH25-01CA",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/",
+        "read": "2026-11-26"
+      }
+    },
+    "HGH30-01CA": {
+      "kind": "carriage",
+      "name": "Patins HGH-CA Sem Abas P/ Guia Linear 15mm, 20mm, 25mm e 30mm – Aço 20CRMO (1 PÇ) (Tamanho Guia Linear: 30mm)",
+      "code": "HGH30-01CA",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/patins-hgh-ca-sem-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1-pc/",
+        "read": "2026-11-26"
+      }
+    },
+    "HGW15-01CC": {
+      "kind": "carriage",
+      "name": "Patins HGW-CC Com Abas P/ Guia Linear 15mm, 20mm, 25mm e 30mm – Aço 20CRMO (1PÇ) (Tamanho Guia Linear: 15mm)",
+      "code": "HGW15-01CC",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/",
+        "read": "2026-11-26"
+      }
+    },
+    "HGW20-01CC": {
+      "kind": "carriage",
+      "name": "Patins HGW-CC Com Abas P/ Guia Linear 15mm, 20mm, 25mm e 30mm – Aço 20CRMO (1PÇ) (Tamanho Guia Linear: 20mm)",
+      "code": "HGW20-01CC",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/",
+        "read": "2026-11-26"
+      }
+    },
+    "HGW25-01CC": {
+      "kind": "carriage",
+      "name": "Patins HGW-CC Com Abas P/ Guia Linear 15mm, 20mm, 25mm e 30mm – Aço 20CRMO (1PÇ) (Tamanho Guia Linear: 25mm)",
+      "code": "HGW25-01CC",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/",
+        "read": "2026-11-26"
+      }
+    },
+    "HGW30-01CC": {
+      "kind": "carriage",
+      "name": "Patins HGW-CC Com Abas P/ Guia Linear 15mm, 20mm, 25mm e 30mm – Aço 20CRMO (1PÇ) (Tamanho Guia Linear: 30mm)",
+      "code": "HGW30-01CC",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/patins-hgw-cc-com-abas-p-guia-linear-15mm-20mm-25mm-e-30mm-aco-20crmo-1pc/",
+        "read": "2026-11-26"
+      }
+    },
+    "PAM306-16": {
+      "kind": "fastener",
+      "subtype": "hammer-screw",
+      "name": "Parafuso Martelo T – Canal 8 – M6 p/ Perfil Base 30 e 40 (Comprimento do Parafuso: 16mm)",
+      "code": "PAM306-16",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p58" }],
+      "thread": "M6",
+      "length_mm": 16,
+      "insertion": "drop-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/",
+        "read": "2026-11-26"
+      }
+    },
+    "PAM306-20": {
+      "kind": "fastener",
+      "subtype": "hammer-screw",
+      "name": "Parafuso Martelo T – Canal 8 – M6 p/ Perfil Base 30 e 40 (Comprimento do Parafuso: 20mm)",
+      "code": "PAM306-20",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p58" }],
+      "thread": "M6",
+      "length_mm": 20,
+      "insertion": "drop-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/",
+        "read": "2026-11-26"
+      }
+    },
+    "PAM306-25": {
+      "kind": "fastener",
+      "subtype": "hammer-screw",
+      "name": "Parafuso Martelo T – Canal 8 – M6 p/ Perfil Base 30 e 40 (Comprimento do Parafuso: 25mm)",
+      "code": "PAM306-25",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p58" }],
+      "thread": "M6",
+      "length_mm": 25,
+      "insertion": "drop-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-30-e-40/",
+        "read": "2026-11-26"
+      }
+    },
+    "PAM408-20": {
+      "kind": "fastener",
+      "subtype": "hammer-screw",
+      "name": "Parafuso Martelo T – Canal 8 – M8 p/ Perfil Base 40 e 50 (Comprimento do Parafuso: 20mm)",
+      "code": "PAM408-20",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-40-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p58" }],
+      "thread": "M8",
+      "length_mm": 20,
+      "insertion": "drop-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-40-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "PAM408-20I": {
+      "kind": "fastener",
+      "subtype": "hammer-screw",
+      "name": "Parafuso Martelo T Inox – Canal 8 – M8 p/ Perfil Base 40 e 50 (Comprimento do Parafuso: 20mm)",
+      "code": "PAM408-20I",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-inox-canal-8-p-perfil-base-40-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p58" }],
+      "thread": "M8",
+      "length_mm": 20,
+      "insertion": "drop-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-inox-canal-8-p-perfil-base-40-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "PAM408-25": {
+      "kind": "fastener",
+      "subtype": "hammer-screw",
+      "name": "Parafuso Martelo T – Canal 8 – M8 p/ Perfil Base 40 e 50 (Comprimento do Parafuso: 25mm)",
+      "code": "PAM408-25",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-40-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p58" }],
+      "thread": "M8",
+      "length_mm": 25,
+      "insertion": "drop-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-8-p-perfil-base-40-e-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "PAM458-20": {
+      "kind": "fastener",
+      "subtype": "hammer-screw",
+      "name": "Parafuso Martelo T – Canal 10 – M8 p/ Perfil Base 45 (Comprimento do Parafuso: 20mm)",
+      "code": "PAM458-20",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-10-p-perfil-base-45/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p58" }],
+      "thread": "M8",
+      "length_mm": 20,
+      "insertion": "drop-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-10-p-perfil-base-45/",
+        "read": "2026-11-26"
+      }
+    },
+    "PAM458-25": {
+      "kind": "fastener",
+      "subtype": "hammer-screw",
+      "name": "Parafuso Martelo T – Canal 10 – M8 p/ Perfil Base 45 (Comprimento do Parafuso: 25mm)",
+      "code": "PAM458-25",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-10-p-perfil-base-45/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p58" }],
+      "thread": "M8",
+      "length_mm": 25,
+      "insertion": "drop-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-martelo-t-canal-10-p-perfil-base-45/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI3-6": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M3 (Comprimento do Parafuso: 6mm)",
+      "code": "PCI3-6",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M3",
+      "length_mm": 6,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI3-8": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M3 (Comprimento do Parafuso: 8mm)",
+      "code": "PCI3-8",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M3",
+      "length_mm": 8,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI3-10": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M3 (Comprimento do Parafuso: 10mm)",
+      "code": "PCI3-10",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M3",
+      "length_mm": 10,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI4-6": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M4 (Comprimento do Parafuso: 6mm)",
+      "code": "PCI4-6",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M4",
+      "length_mm": 6,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI4-8": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M4 (Comprimento do Parafuso: 8mm)",
+      "code": "PCI4-8",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M4",
+      "length_mm": 8,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI4-10": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M4 (Comprimento do Parafuso: 10mm)",
+      "code": "PCI4-10",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M4",
+      "length_mm": 10,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI4-12": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M4 (Comprimento do Parafuso: 12mm)",
+      "code": "PCI4-12",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M4",
+      "length_mm": 12,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI4-16": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M4 (Comprimento do Parafuso: 16mm)",
+      "code": "PCI4-16",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M4",
+      "length_mm": 16,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI5-8": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M5 (Comprimento do Parafuso: 8mm)",
+      "code": "PCI5-8",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M5",
+      "length_mm": 8,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI5-10": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M5 (Comprimento do Parafuso: 10mm)",
+      "code": "PCI5-10",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M5",
+      "length_mm": 10,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI5-12": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M5 (Comprimento do Parafuso: 12mm)",
+      "code": "PCI5-12",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M5",
+      "length_mm": 12,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI5-16": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M5 (Comprimento do Parafuso: 16mm)",
+      "code": "PCI5-16",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M5",
+      "length_mm": 16,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI5-20": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M5 (Comprimento do Parafuso: 20mm)",
+      "code": "PCI5-20",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M5",
+      "length_mm": 20,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI5-25": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M5 (Comprimento do Parafuso: 25mm)",
+      "code": "PCI5-25",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M5",
+      "length_mm": 25,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI6-8": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M6 Galvanizado Branco (Comprimento do Parafuso: 8mm)",
+      "code": "PCI6-8",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M6",
+      "length_mm": 8,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI6-10": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M6 Galvanizado Branco (Comprimento do Parafuso: 10mm)",
+      "code": "PCI6-10",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M6",
+      "length_mm": 10,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI6-12": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M6 Galvanizado Branco (Comprimento do Parafuso: 12mm)",
+      "code": "PCI6-12",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M6",
+      "length_mm": 12,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI6-16": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M6 Galvanizado Branco (Comprimento do Parafuso: 16mm)",
+      "code": "PCI6-16",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M6",
+      "length_mm": 16,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI6-16-ZP": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M6 Zincado Preto (Comprimento do Parafuso: 16mm)",
+      "code": "PCI6-16-ZP",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-zincado-preto/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M6",
+      "length_mm": 16,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-zincado-preto/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI6-20": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M6 Galvanizado Branco (Comprimento do Parafuso: 20mm)",
+      "code": "PCI6-20",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M6",
+      "length_mm": 20,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI6-25": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M6 Galvanizado Branco (Comprimento do Parafuso: 25mm)",
+      "code": "PCI6-25",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M6",
+      "length_mm": 25,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI6-30": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M6 Galvanizado Branco (Comprimento do Parafuso: 30mm)",
+      "code": "PCI6-30",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M6",
+      "length_mm": 30,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI6-35": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M6 Galvanizado Branco (Comprimento do Parafuso: 35mm)",
+      "code": "PCI6-35",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M6",
+      "length_mm": 35,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI6-40": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M6 Galvanizado Branco (Comprimento do Parafuso: 40mm)",
+      "code": "PCI6-40",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M6",
+      "length_mm": 40,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI8-10": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M8 Galvanizado Branco (Comprimento do Parafuso: 10mm)",
+      "code": "PCI8-10",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M8",
+      "length_mm": 10,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI8-12": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M8 Galvanizado Branco (Comprimento do Parafuso: 12mm)",
+      "code": "PCI8-12",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M8",
+      "length_mm": 12,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI8-16": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M8 Galvanizado Branco (Comprimento do Parafuso: 16mm)",
+      "code": "PCI8-16",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M8",
+      "length_mm": 16,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI8-20": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M8 Galvanizado Branco (Comprimento do Parafuso: 20mm)",
+      "code": "PCI8-20",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M8",
+      "length_mm": 20,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI8-25": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M8 Galvanizado Branco (Comprimento do Parafuso: 25mm)",
+      "code": "PCI8-25",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M8",
+      "length_mm": 25,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI8-30": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M8 Galvanizado Branco (Comprimento do Parafuso: 30mm)",
+      "code": "PCI8-30",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M8",
+      "length_mm": 30,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI8-35": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M8 Galvanizado Branco (Comprimento do Parafuso: 35mm)",
+      "code": "PCI8-35",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M8",
+      "length_mm": 35,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PCI8-40": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Parafuso Allen Cabeça Cilíndrica M8 Galvanizado Branco (Comprimento do Parafuso: 40mm)",
+      "code": "PCI8-40",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
+      "thread": "M8",
+      "length_mm": 40,
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
+        "read": "2026-11-26"
+      }
+    },
+    "PF20-14": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 20×60 V-Slot – Canal 6",
+      "code": "PF20-14",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-20x60-v-slot-canal-6/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p11" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF20-14",
+      "system": "s20-c6",
+      "mass_kg_per_m": 1.098,
+      "area_mm2": 407,
+      "Ix_mm4": 142300,
+      "Iy_mm4": 17100,
+      "core": { "bore_mm": 4.6, "tap": "M5" },
+      "options": { "finish": ["anodised", "black"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p11", "read": "2026-11-26" }
+    },
+    "PF30-02": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 30×60 Básico – Canal 8",
+      "code": "PF30-02",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-30x60-basico-canal-8/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p15" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF30-02",
+      "system": "s30-c8",
+      "mass_kg_per_m": 1.36,
+      "area_mm2": 504,
+      "Ix_mm4": 192500,
+      "Iy_mm4": 51700,
+      "core": { "bore_mm": 12.1, "tap": "M14" },
+      "options": { "finish": ["anodised", "black"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p15", "read": "2026-11-26" }
+    },
+    "PF30-04": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 30×30 Básico Fechado Destacável – Canal 8",
+      "code": "PF30-04",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-30x30-basico-fechado-canal-8mm-destacavel/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p14" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF30-04",
+      "system": "s30-c8",
+      "mass_kg_per_m": 0.816,
+      "area_mm2": 331,
+      "Ix_mm4": 33500,
+      "Iy_mm4": 33500,
+      "core": { "bore_mm": 12.1, "tap": "M16" },
+      "options": { "finish": ["anodised"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p14", "read": "2026-11-26" }
+    },
+    "PF40-00": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 40×40 Leve – Canal 8",
+      "code": "PF40-00",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x40-leve-canal-8/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p16" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF40-00",
+      "system": "s40-c8",
+      "mass_kg_per_m": 1.116,
+      "area_mm2": 413,
+      "Ix_mm4": 70800,
+      "Iy_mm4": 70800,
+      "core": { "bore_mm": 13.7, "tap": "M16" },
+      "options": { "finish": ["anodised"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p16", "read": "2026-11-26" }
+    },
+    "PF40-01": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 40×40 Básico – Canal 8",
+      "code": "PF40-01",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x40-basico-canal-8/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p16" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF40-01",
+      "system": "s40-c8",
+      "mass_kg_per_m": 1.493,
+      "area_mm2": 553,
+      "Ix_mm4": 91200,
+      "Iy_mm4": 91200,
+      "core": { "bore_mm": 13.7, "tap": "M16" },
+      "options": { "finish": ["anodised", "black"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p16", "read": "2026-11-26" }
+    },
+    "PF40-02": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 40×80 Básico – Canal 8",
+      "code": "PF40-02",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x80-basico-canal-8/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p17" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF40-02",
+      "system": "s40-c8",
+      "mass_kg_per_m": 2.743,
+      "area_mm2": 1006,
+      "Ix_mm4": 65500,
+      "Iy_mm4": 177600,
+      "core": { "bore_mm": 13.7, "tap": "M16" },
+      "options": { "finish": ["anodised", "black"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p17", "read": "2026-11-26" }
+    },
+    "PF40-03": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 80×80 Reforçado – Canal 8 – 1 metro",
+      "code": "PF40-03",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-80x80-reforcado-canal-8/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p21" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF40-03",
+      "system": "s40-c8",
+      "mass_kg_per_m": 5.753,
+      "area_mm2": 2131,
+      "Ix_mm4": 1515500,
+      "Iy_mm4": 1515500,
+      "core": { "bore_mm": 13.7, "tap": "M16" },
+      "options": { "finish": ["anodised"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p21", "read": "2026-11-26" }
+    },
+    "PF40-03B": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 80×80 Básico – Canal 8 – 1 metro",
+      "code": "PF40-03B",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-80x80-basico-canal-8/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p20" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF40-03B",
+      "system": "s40-c8",
+      "mass_kg_per_m": 4.547,
+      "area_mm2": 1724,
+      "Ix_mm4": 1156000,
+      "Iy_mm4": 1156000,
+      "core": { "bore_mm": 13.7, "tap": "M16" },
+      "options": { "finish": ["anodised"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p20", "read": "2026-11-26" }
+    },
+    "PF40-04": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 40×40 Básico Fechado Destacável – Canal 8",
+      "code": "PF40-04",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x40-basico-fechado-canal-8mm-destacavel/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p17" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF40-04",
+      "system": "s40-c8",
+      "mass_kg_per_m": 1.625,
+      "area_mm2": 591,
+      "Ix_mm4": 98000,
+      "Iy_mm4": 98000,
+      "core": { "bore_mm": 13.7, "tap": "M16" },
+      "options": { "finish": ["anodised"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p17", "read": "2026-11-26" }
+    },
+    "PF45-02": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 45×90 Básico – Canal 10",
+      "code": "PF45-02",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-45x90-basico-canal-10-forseti/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p18" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF45-02",
+      "system": "s45-c10",
+      "mass_kg_per_m": 2.882,
+      "area_mm2": 1067,
+      "Ix_mm4": 850000,
+      "Iy_mm4": 230900,
+      "core": { "bore_mm": 13.7, "tap": "M16" },
+      "options": { "finish": ["anodised", "black"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p18", "read": "2026-11-26" }
+    },
+    "PF45-12": {
+      "kind": "bar",
+      "name": "Perfil Estrutural em Alumínio 45×90 Parafuso – Canal Sextavado M8",
+      "code": "PF45-12",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-45x90-parafuso-canal-sextavado-m8-forseti/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p19" }],
+      "material": "al-6063-t5",
+      "shape": "tslot",
+      "section": "PF45-12",
+      "system": "s45-c8",
+      "mass_kg_per_m": 2.383,
+      "area_mm2": 882,
+      "Ix_mm4": 744500,
+      "Iy_mm4": 179800,
+      "core": { "bore_mm": 6.5, "tap": "M8" },
+      "options": { "finish": ["anodised", "black"] },
+      "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p19", "read": "2026-11-26" }
+    },
+    "PLU40-01": {
+      "kind": "connector",
+      "subtype": "plate",
+      "name": "Placa de União Simples p/ Perfil Base 40 (Para Perfil: Base 40)",
+      "code": "PLU40-01",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/placa-de-uniao-simples-p-perfil-base-40/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p29" }],
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/placa-de-uniao-simples-p-perfil-base-40/",
+        "read": "2026-11-26"
+      },
+      "options": { "finish": ["galvanised", "black"] }
+    },
+    "PRT20-03": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 6 – Para V-Slot (Rosca: M3)",
+      "code": "PRT20-03",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M3",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/",
+        "read": "2026-11-26"
+      }
+    },
+    "PRT20-04": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 6 – Para V-Slot (Rosca: M4)",
+      "code": "PRT20-04",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M4",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/",
+        "read": "2026-11-26"
+      }
+    },
+    "PRT20-05": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 6 – Para V-Slot (Rosca: M5)",
+      "code": "PRT20-05",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M5",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/",
+        "read": "2026-11-26"
+      }
+    },
+    "PRT20-06": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 6 – Para V-Slot (Rosca: M6)",
+      "code": "PRT20-06",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M6",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-6-para-v-slot/",
+        "read": "2026-11-26"
+      }
+    },
+    "PRT30-06": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 8 – Base 30 e 40 (Rosca: M6)",
+      "code": "PRT30-06",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-30-e-40/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M6",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-30-e-40/",
+        "read": "2026-11-26"
+      }
+    },
+    "PRT30-08": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 8 – Base 30 e 40 (Rosca: M8)",
+      "code": "PRT30-08",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-30-e-40/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M8",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-30-e-40/",
+        "read": "2026-11-26"
+      }
+    },
+    "PRT45-10": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 10 – Base 45 (Rosca: M10)",
+      "code": "PRT45-10",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M10",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/",
+        "read": "2026-11-26"
+      }
+    },
+    "PRT45-16": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 10 – Base 45 (Rosca: M6)",
+      "code": "PRT45-16",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M6",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/",
+        "read": "2026-11-26"
+      }
+    },
+    "PRT45-18": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 10 – Base 45 (Rosca: M8)",
+      "code": "PRT45-18",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M8",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-10-base-45/",
+        "read": "2026-11-26"
+      }
+    },
+    "PRT50-06": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 8 – Base 50 (Rosca: M6)",
+      "code": "PRT50-06",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M6",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "PRT50-08": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Porca T Reforçada Canal 8 – Base 50 (Rosca: M8)",
+      "code": "PRT50-08",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p56" }],
+      "thread": "M8",
+      "insertion": "slide-in",
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-t-reforcada-canal-8-base-50/",
+        "read": "2026-11-26"
+      }
+    },
+    "PSM-3": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Porca Sextavada Galvanizada Branca (Rosca: M3)",
+      "code": "PSM-3",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M3",
+      "dims": { "m_mm": 2.4, "pitch_mm": 0.5, "s_mm": 5.5 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+        "read": "2026-11-26"
+      }
+    },
+    "PSM-4": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Porca Sextavada Galvanizada Branca (Rosca: M4)",
+      "code": "PSM-4",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M4",
+      "dims": { "m_mm": 3.1, "pitch_mm": 0.5, "s_mm": 7 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+        "read": "2026-11-26"
+      }
+    },
+    "PSM-5": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Porca Sextavada Galvanizada Branca (Rosca: M5)",
+      "code": "PSM-5",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M5",
+      "dims": { "m_mm": 3.7, "pitch_mm": 0.8, "s_mm": 8 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+        "read": "2026-11-26"
+      }
+    },
+    "PSM-6": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Porca Sextavada Galvanizada Branca (Rosca: M6)",
+      "code": "PSM-6",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M6",
+      "dims": { "m_mm": 4.9, "pitch_mm": 1, "s_mm": 10 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+        "read": "2026-11-26"
+      }
+    },
+    "PSM-8": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Porca Sextavada Galvanizada Branca (Rosca: M8)",
+      "code": "PSM-8",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M8",
+      "dims": { "m_mm": 6.4, "pitch_mm": 1.25, "s_mm": 13 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+        "read": "2026-11-26"
+      }
+    },
+    "PSM-10": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Porca Sextavada Galvanizada Branca (Rosca: M10)",
+      "code": "PSM-10",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M10",
+      "dims": { "m_mm": 8, "pitch_mm": 1.5, "s_mm": 17 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+        "read": "2026-11-26"
+      }
+    },
+    "PSM-12": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Porca Sextavada Galvanizada Branca (Rosca: M12)",
+      "code": "PSM-12",
+      "brand": "Forseti",
+      "url": "https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p53" }],
+      "thread": "M12",
+      "dims": { "m_mm": 10, "pitch_mm": 1.75, "s_mm": 19 },
+      "prov": {
+        "src": "src",
+        "ref": "url:https://loja.forsetisolucoes.com.br/produto/porca-sextavada-galvanizada-branca/",
+        "read": "2026-11-26"
+      }
+    }
+  }
+}

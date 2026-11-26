@@ -8,14 +8,14 @@
     "method": "vector",
     "scale": "width 40 mm",
     "read": "2026-11-26",
-    "note": "Forseti 40x40 básico (PF40-01), vector path of 856 segments; the outline is the stroke centreline. Centred on its box, coordinates rounded to 0.0001 mm."
+    "note": "vector path of 856 segments; the outline is the stroke centreline. Centred on its box, coordinates rounded to 0.0001 mm."
   },
   "bbox_mm": [[-20, -20], [20, 20]],
   "grooves": [
-    { "face": "-y", "at_mm": 0, "type": "c8" },
-    { "face": "+x", "at_mm": 0, "type": "c8" },
-    { "face": "+y", "at_mm": 0, "type": "c8" },
-    { "face": "-x", "at_mm": 0, "type": "c8" }
+    { "face": "-y", "at_mm": 0, "type": "c8-40" },
+    { "face": "+x", "at_mm": 0, "type": "c8-40" },
+    { "face": "+y", "at_mm": 0, "type": "c8-40" },
+    { "face": "-x", "at_mm": 0, "type": "c8-40" }
   ],
   "outline": [
     [12.7513, -10.6527],

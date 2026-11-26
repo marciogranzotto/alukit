@@ -2,6 +2,7 @@ import { copyFile, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { sectionProperties } from "#core/section-properties.ts";
+import { BUILTIN_DIR } from "./open.ts";
 import { reportJson } from "./report.ts";
 import { at, checkTest, fixtureCopy, patchJson } from "./testing.ts";
 
@@ -12,14 +13,16 @@ describe("the test catalog", () => {
   it("loads and checks with no errors and no warnings", async () => {
     const { report, set } = await checkTest(await fixtureCopy());
     expect(report.diagnostics).toEqual([]);
-    expect(report.counts).toEqual({ items: 18, offers: 22, sections: 7, errors: 0, warnings: 0 });
-    expect([...set.catalogs.keys()].sort()).toEqual(["ref-test", "test"]);
+    expect(report.counts).toEqual({ items: 18, offers: 22, sections: 6, errors: 0, warnings: 0 });
+    // TS40E's section is the built-in Forseti outline; Forseti's rails reference ref-hiwin.
+    expect([...set.catalogs.keys()].sort()).toEqual(["forseti", "ref-hiwin", "ref-test", "test"]);
     expect(report.uncomputed).toEqual(["test:RAIL20", "test:TS40", "test:TS4080"]);
   });
 
   it("the 40x40 básico's exact outline gives 553.5 ± 0.1 mm² and Ix, Iy 9.13 ± 0.01 cm⁴ (design §12, M1)", async () => {
     const { set } = await checkTest(await fixtureCopy());
-    const ls = set.get("section", "PF40-01", "test")?.value;
+    // The importer's section in the built-in catalog, which the test catalog references.
+    const ls = set.get("section", "forseti:PF40-01", "test")?.value;
     expect(ls?.section.fidelity).toBe("exact");
     if (ls?.section.fidelity !== "exact") throw new Error("not exact");
     const p = sectionProperties([{ outline: ls.section.outline, holes: ls.section.holes ?? [] }]);
@@ -322,10 +325,16 @@ describe("computed against published (design §3.6)", () => {
 
   it("holds a traced outline to 2 % of the published area", async () => {
     const root = await fixtureCopy();
-    await patchJson(join(root, "test/sections/PF40-01.json"), (d) => {
+    // The built-in 40x40 básico outline, copied into the test catalog as a traced section.
+    const traced = join(root, "test/sections/PF40-T.json");
+    await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), traced);
+    await patchJson(traced, (d) => {
+      d.id = "PF40-T";
       d.fidelity = "traced";
+      for (const g of d.grooves as { type: string }[]) g.type = "c8";
     });
     await patchJson(join(root, "test/catalog.json"), (d) => {
+      at(d, "items", "TS40E").section = "PF40-T";
       at(d, "items", "TS40E").area_mm2 = 530;
     });
     const { report } = await checkTest(root);

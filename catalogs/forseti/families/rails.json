@@ -1,0 +1,291 @@
+{
+  "schema": "alukit.family/1",
+  "family": "rails",
+  "prov": {
+    "src": "est",
+    "ref": "pdf:G99TE24-2410.pdf",
+    "read": "2026-11-26",
+    "note": "geometry of the HIWIN parts the shop names (HGR, HGH-CA, HGW-CC), copied as estimates: the shop publishes none. Frames as in ref-hiwin: a carriage's origin is the rail's running-face centre line (run), +x along the rail, +z up"
+  },
+  "review": {
+    "by": "a second reader (agent)",
+    "date": "2026-11-26",
+    "note": "every value checked against HIWIN G99TE24-2410 pp. 40, 41, 45 and ref-hiwin"
+  },
+  "systems": {
+    "rail-hg15": { "type": "rail", "family": "HG", "size": 15, "name": "HG15 (HIWIN HGR pattern)" },
+    "rail-hg20": { "type": "rail", "family": "HG", "size": 20, "name": "HG20 (HIWIN HGR pattern)" },
+    "rail-hg25": { "type": "rail", "family": "HG", "size": 25, "name": "HG25 (HIWIN HGR pattern)" },
+    "rail-hg30": { "type": "rail", "family": "HG", "size": 30, "name": "HG30 (HIWIN HGR pattern)" }
+  },
+  "items": {
+    "HG15-01R": {
+      "section": "ref-hiwin:HGR15",
+      "system": "rail-hg15",
+      "mass_kg_per_m": {
+        "v": 1.45,
+        "src": "est",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "note": "HIWIN's"
+      },
+      "rail": {
+        "pitch_mm": {
+          "v": 60,
+          "src": "est",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "note": "HIWIN's, for the rail this one clones"
+        },
+        "E_min_mm": {
+          "v": 7.5,
+          "low": 4.75,
+          "high": 20,
+          "src": "est",
+          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+        },
+        "E_max_mm": {
+          "v": 30,
+          "src": "est",
+          "ref": "pdf:G99TE24-2410.pdf#p40",
+          "read": "2026-11-26",
+          "note": "HIWIN's recommended largest end distance, half the pitch (p. 40)"
+        },
+        "hole": { "thread": "M4", "d_mm": 4.5, "cbore_d_mm": 7.5, "cbore_depth_mm": 5.3 }
+      },
+      "clone_of": {
+        "item": "ref-hiwin:HGR15R",
+        "note": "the shop sells it as HIWIN's HGR15; a clone is not guaranteed to match its original"
+      }
+    },
+    "HG20-01R": {
+      "section": "ref-hiwin:HGR20",
+      "system": "rail-hg20",
+      "mass_kg_per_m": {
+        "v": 2.21,
+        "src": "est",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "note": "HIWIN's"
+      },
+      "rail": {
+        "pitch_mm": {
+          "v": 60,
+          "src": "est",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "note": "HIWIN's, for the rail this one clones"
+        },
+        "E_min_mm": {
+          "v": 9.5,
+          "low": 5.75,
+          "high": 20,
+          "src": "est",
+          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+        },
+        "E_max_mm": {
+          "v": 30,
+          "src": "est",
+          "ref": "pdf:G99TE24-2410.pdf#p40",
+          "read": "2026-11-26",
+          "note": "HIWIN's recommended largest end distance, half the pitch (p. 40)"
+        },
+        "hole": { "thread": "M5", "d_mm": 6, "cbore_d_mm": 9.5, "cbore_depth_mm": 8.5 }
+      },
+      "clone_of": {
+        "item": "ref-hiwin:HGR20R",
+        "note": "the shop sells it as HIWIN's HGR20; a clone is not guaranteed to match its original"
+      }
+    },
+    "HG25-01R": {
+      "section": "ref-hiwin:HGR25",
+      "system": "rail-hg25",
+      "mass_kg_per_m": {
+        "v": 3.21,
+        "src": "est",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "note": "HIWIN's"
+      },
+      "rail": {
+        "pitch_mm": {
+          "v": 60,
+          "src": "est",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "note": "HIWIN's, for the rail this one clones"
+        },
+        "E_min_mm": {
+          "v": 11,
+          "low": 6.5,
+          "high": 20,
+          "src": "est",
+          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+        },
+        "E_max_mm": {
+          "v": 30,
+          "src": "est",
+          "ref": "pdf:G99TE24-2410.pdf#p40",
+          "read": "2026-11-26",
+          "note": "HIWIN's recommended largest end distance, half the pitch (p. 40)"
+        },
+        "hole": { "thread": "M6", "d_mm": 7, "cbore_d_mm": 11, "cbore_depth_mm": 9 }
+      },
+      "clone_of": {
+        "item": "ref-hiwin:HGR25R",
+        "note": "the shop sells it as HIWIN's HGR25; a clone is not guaranteed to match its original"
+      }
+    },
+    "HG30-01R": {
+      "section": "ref-hiwin:HGR30",
+      "system": "rail-hg30",
+      "mass_kg_per_m": {
+        "v": 4.47,
+        "src": "est",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "note": "HIWIN's"
+      },
+      "rail": {
+        "pitch_mm": {
+          "v": 80,
+          "src": "est",
+          "ref": "pdf:G99TE24-2410.pdf#p41",
+          "note": "HIWIN's, for the rail this one clones"
+        },
+        "E_min_mm": {
+          "v": 14,
+          "low": 8,
+          "high": 20,
+          "src": "est",
+          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+        },
+        "E_max_mm": {
+          "v": 40,
+          "src": "est",
+          "ref": "pdf:G99TE24-2410.pdf#p40",
+          "read": "2026-11-26",
+          "note": "HIWIN's recommended largest end distance, half the pitch (p. 40)"
+        },
+        "hole": { "thread": "M8", "d_mm": 9, "cbore_d_mm": 14, "cbore_depth_mm": 12 }
+      },
+      "clone_of": {
+        "item": "ref-hiwin:HGR30R",
+        "note": "the shop sells it as HIWIN's HGR30; a clone is not guaranteed to match its original"
+      }
+    },
+    "HGH15-01CA": {
+      "rail_system": "rail-hg15",
+      "dims": {
+        "H_mm": { "v": 28, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+        "W_mm": { "v": 34, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+        "L_mm": { "v": 61.4, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" }
+      },
+      "mass_kg": { "v": 0.18, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+      "bbox_mm": [[-30.7, -17, -10.7], [30.7, 17, 13]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 13] },
+      "clone_of": {
+        "item": "ref-hiwin:HGH15CA",
+        "note": "the shop sells it as HIWIN's HGH15CA; a clone is not guaranteed to match its original"
+      }
+    },
+    "HGH20-01CA": {
+      "rail_system": "rail-hg20",
+      "dims": {
+        "H_mm": { "v": 30, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+        "W_mm": { "v": 44, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+        "L_mm": { "v": 77.5, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" }
+      },
+      "mass_kg": { "v": 0.3, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+      "bbox_mm": [[-38.75, -22, -12.9], [38.75, 22, 12.5]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 12.5] },
+      "clone_of": {
+        "item": "ref-hiwin:HGH20CA",
+        "note": "the shop sells it as HIWIN's HGH20CA; a clone is not guaranteed to match its original"
+      }
+    },
+    "HGH25-01CA": {
+      "rail_system": "rail-hg25",
+      "dims": {
+        "H_mm": { "v": 40, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+        "W_mm": { "v": 48, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+        "L_mm": { "v": 84, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" }
+      },
+      "mass_kg": { "v": 0.51, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+      "bbox_mm": [[-42, -24, -16.5], [42, 24, 18]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 18] },
+      "clone_of": {
+        "item": "ref-hiwin:HGH25CA",
+        "note": "the shop sells it as HIWIN's HGH25CA; a clone is not guaranteed to match its original"
+      }
+    },
+    "HGH30-01CA": {
+      "rail_system": "rail-hg30",
+      "dims": {
+        "H_mm": { "v": 45, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+        "W_mm": { "v": 60, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+        "L_mm": { "v": 97.4, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" }
+      },
+      "mass_kg": { "v": 0.88, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p41" },
+      "bbox_mm": [[-48.7, -30, -20], [48.7, 30, 19]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 19] },
+      "clone_of": {
+        "item": "ref-hiwin:HGH30CA",
+        "note": "the shop sells it as HIWIN's HGH30CA; a clone is not guaranteed to match its original"
+      }
+    },
+    "HGW15-01CC": {
+      "rail_system": "rail-hg15",
+      "dims": {
+        "H_mm": { "v": 24, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+        "W_mm": { "v": 47, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+        "L_mm": { "v": 61.4, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" }
+      },
+      "mass_kg": { "v": 0.17, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+      "bbox_mm": [[-30.7, -23.5, -10.7], [30.7, 23.5, 9]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 9] },
+      "clone_of": {
+        "item": "ref-hiwin:HGW15CC",
+        "note": "the shop sells it as HIWIN's HGW15CC; a clone is not guaranteed to match its original"
+      }
+    },
+    "HGW20-01CC": {
+      "rail_system": "rail-hg20",
+      "dims": {
+        "H_mm": { "v": 30, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+        "W_mm": { "v": 63, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+        "L_mm": { "v": 77.5, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" }
+      },
+      "mass_kg": { "v": 0.4, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+      "bbox_mm": [[-38.75, -31.5, -12.9], [38.75, 31.5, 12.5]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 12.5] },
+      "clone_of": {
+        "item": "ref-hiwin:HGW20CC",
+        "note": "the shop sells it as HIWIN's HGW20CC; a clone is not guaranteed to match its original"
+      }
+    },
+    "HGW25-01CC": {
+      "rail_system": "rail-hg25",
+      "dims": {
+        "H_mm": { "v": 36, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+        "W_mm": { "v": 70, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+        "L_mm": { "v": 84, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" }
+      },
+      "mass_kg": { "v": 0.59, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+      "bbox_mm": [[-42, -35, -16.5], [42, 35, 14]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 14] },
+      "clone_of": {
+        "item": "ref-hiwin:HGW25CC",
+        "note": "the shop sells it as HIWIN's HGW25CC; a clone is not guaranteed to match its original"
+      }
+    },
+    "HGW30-01CC": {
+      "rail_system": "rail-hg30",
+      "dims": {
+        "H_mm": { "v": 42, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+        "W_mm": { "v": 90, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+        "L_mm": { "v": 97.4, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" }
+      },
+      "mass_kg": { "v": 1.09, "src": "est", "ref": "pdf:G99TE24-2410.pdf#p45" },
+      "bbox_mm": [[-48.7, -45, -20], [48.7, 45, 16]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 16] },
+      "clone_of": {
+        "item": "ref-hiwin:HGW30CC",
+        "note": "the shop sells it as HIWIN's HGW30CC; a clone is not guaranteed to match its original"
+      }
+    }
+  }
+}

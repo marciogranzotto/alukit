@@ -103,7 +103,7 @@
       "name": "Profile 40x40 on an exact outline",
       "code": "TS40E",
       "shape": "tslot",
-      "section": "PF40-01",
+      "section": "forseti:PF40-01",
       "system": "s40-c8",
       "material": "al-6063-t5",
       "mass_kg_per_m": 1.493,

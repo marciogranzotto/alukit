@@ -1,0 +1,87 @@
+{
+  "schema": "alukit.overrides/1",
+  "overrides": [
+    {
+      "item": "PF40-02",
+      "field": "Ix_mm4",
+      "expect": 65500,
+      "value": 655000,
+      "why": "p. 17 prints 6,55 cm⁴ for the 40x80's strong axis, below its weak axis's 17,76: a decimal point slipped. 65,5 cm⁴ gives a radius of gyration of 0.32 of the 80 mm height, as the 30x60 (0.326), the 45x90 (0.314) and the 80x80 (0.333) have; 6,55 would give 0.10",
+      "src": "calc",
+      "ref": "pdf:catalogo_forsetiA4.pdf#p17",
+      "read": "2026-11-26"
+    },
+    {
+      "item": "PF30-04",
+      "field": "mass_kg_per_m",
+      "expect": 0.816,
+      "value": 0.894,
+      "why": "p. 14 prints 0,816 kg/m against an area of 3,31 cm², which the vector outline confirms (331.3 mm²); 331 mm² of 6063 at 2700 kg/m³ is 0.894 kg/m. Every other profile's printed mass is its area times 2700",
+      "src": "calc",
+      "ref": "pdf:catalogo_forsetiA4.pdf#p14",
+      "read": "2026-11-26"
+    },
+    {
+      "item": "PF40-04",
+      "field": "mass_kg_per_m",
+      "expect": 1.625,
+      "value": 1.596,
+      "why": "p. 17 prints 1,625 kg/m against an area of 5,91 cm²; 591 mm² at 2700 kg/m³ is 1.596 kg/m. 1,625 is the 45x45 básico's mass (p. 18, 6,02 cm²), so the mass is the copied value; the area stays, as the authority of every parametric section",
+      "src": "calc",
+      "ref": "pdf:catalogo_forsetiA4.pdf#p17",
+      "read": "2026-11-26"
+    },
+    {
+      "item": "PF40-03B",
+      "field": "mass_kg_per_m",
+      "expect": 4.547,
+      "value": 4.655,
+      "why": "p. 20 prints 4,547 kg/m against an area of 17,24 cm²; 1724 mm² at 2700 kg/m³ is 4.655 kg/m. As for PF40-04, the area is kept as the authority",
+      "src": "calc",
+      "ref": "pdf:catalogo_forsetiA4.pdf#p20",
+      "read": "2026-11-26"
+    },
+    {
+      "item": "ALM-3",
+      "field": "dims/d1_mm",
+      "expect": 8.4,
+      "value": 3.3,
+      "why": "the shop gives the M3 washer the M8's bore, 8,4, larger than its own outside diameter of 7; the catalogue's table gives 3,3",
+      "src": "src",
+      "ref": "pdf:catalogo_forsetiA4.pdf#p53",
+      "read": "2026-11-26"
+    },
+    {
+      "item": "PF20-14",
+      "field": "area_mm2",
+      "accept": true,
+      "why": "the vector outline on p. 11 has 3.6 % more area than the printed 4,07 cm², which agrees with the printed 1,098 kg/m; the weak axis agrees within 0.7 %. Drawing and table cannot both be right, and neither can be preferred"
+    },
+    {
+      "item": "PF20-14",
+      "field": "Ix_mm4",
+      "accept": true,
+      "why": "with the area: the outline gives 2.7 % more about the strong axis than printed"
+    },
+    {
+      "item": "PF20-14",
+      "field": "mass_kg_per_m",
+      "accept": true,
+      "why": "with the area: the printed mass is the printed area's"
+    },
+    {
+      "item": "PF40-00",
+      "field": "area_mm2",
+      "accept": true,
+      "why": "the 40x40 leve's vector outline on p. 16 has 2.7 % less area than the printed 4,13 cm², and 3.3 % less inertia; the printed area and 1,116 kg/m agree with each other. Neither can be preferred"
+    },
+    { "item": "PF40-00", "field": "Ix_mm4", "accept": true, "why": "with the area" },
+    { "item": "PF40-00", "field": "Iy_mm4", "accept": true, "why": "with the area" },
+    {
+      "item": "PF40-00",
+      "field": "mass_kg_per_m",
+      "accept": true,
+      "why": "with the area: the printed mass is the printed area's"
+    }
+  ]
+}

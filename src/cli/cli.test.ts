@@ -55,7 +55,7 @@ describe("alukit catalog", () => {
     expect(r.code).toBe(0);
     const text = r.out.join("\n");
     expect(text).toMatch(
-      /test:TS40E\s+test:PF40-01\s+exact\s+area_mm2\s+553\.53\s+553\s+\+0\.10 %\s+ok/,
+      /test:TS40E\s+forseti:PF40-01\s+exact\s+area_mm2\s+553\.53\s+553\s+\+0\.10 %\s+ok/,
     );
     expect(text).toMatch(/Iy_mm4 .* accepted: synthetic/);
     expect(text.trimEnd().endsWith("OK")).toBe(true);

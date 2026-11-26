@@ -1,0 +1,207 @@
+{
+  "schema": "alukit.family/1",
+  "family": "connectors",
+  "prov": {
+    "src": "src",
+    "ref": "pdf:catalogo_forsetiA4.pdf#p34",
+    "read": "2026-11-26",
+    "note": "brackets from the drawings on pp. 34 (base simples: CT100-286, CT100-388) and 35 (base dupla: CT100-788, CT100-888): legs 100, holes F at 35 and 90 from the heel on each leg, one row (4x) or two rows A apart (8x). Fits: the double-base page names 40x80, 80x80 and 45x90, and A (40, 45) picks the series; the single-base page names bases 30 to 50 for both, so the split (CT100-286 base 30; CT100-388 bases 40 and 45, base 50 having no system yet) follows the shop's kit names. Fastener sets, one per hole: one of each line of the kit for that base (CT100-286-K30, CT100-388-K4050 and -K45B, CT100-788-K4080, CT100-888-K4590), which is our reading, not the shop's. Union plate PLU40-01 from p. 29: 80 x 30 x 2.5, two slots 7 wide 40 apart with 3 of travel (10 long), across two base 40 bars side by side, so the plate's 80 runs along y and the bars along x; the shop states no fixings"
+  },
+  "review": {
+    "by": "a second reader (agent)",
+    "date": "2026-11-26",
+    "note": "drawings of pp. 29, 34, 35 and the kits checked; the kits' main item and the per-hole reading of the fastener sets settled after it"
+  },
+  "items": {
+    "CT100-286": {
+      "fits": ["s30-c8"],
+      "bbox_mm": [[0, -14, 0], [100, 14, 100]],
+      "datums": { "mount": [0, 0, 0] },
+      "frame": {
+        "x": [1, 0, 0],
+        "y": [0, 1, 0],
+        "note": "origin at the heel; x along the base leg, z up the standing leg"
+      },
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [35, 0, 0], "d_mm": 6 }, { "at_mm": [90, 0, 0], "d_mm": 6 }],
+          "fasteners": {
+            "s30-c8": [
+              { "item": "PAM306-20", "qty": 1 },
+              { "item": "ALM-6", "qty": 1 },
+              { "item": "APM-6", "qty": 1 },
+              { "item": "PSM-6", "qty": 1 }
+            ]
+          }
+        },
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [-1, 0, 0] },
+          "holes": [{ "at_mm": [0, 0, 35], "d_mm": 6 }, { "at_mm": [0, 0, 90], "d_mm": 6 }],
+          "fasteners": {
+            "s30-c8": [
+              { "item": "PAM306-20", "qty": 1 },
+              { "item": "ALM-6", "qty": 1 },
+              { "item": "APM-6", "qty": 1 },
+              { "item": "PSM-6", "qty": 1 }
+            ]
+          }
+        }
+      ]
+    },
+    "CT100-388": {
+      "fits": ["s40-c8", "s45-c10"],
+      "bbox_mm": [[0, -19, 0], [100, 19, 100]],
+      "datums": { "mount": [0, 0, 0] },
+      "frame": {
+        "x": [1, 0, 0],
+        "y": [0, 1, 0],
+        "note": "origin at the heel; x along the base leg, z up the standing leg"
+      },
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [35, 0, 0], "d_mm": 9 }, { "at_mm": [90, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "s40-c8": [
+              { "item": "PAM408-20", "qty": 1 },
+              { "item": "ALM-8", "qty": 1 },
+              { "item": "APM-8", "qty": 1 },
+              { "item": "PSM-8", "qty": 1 }
+            ],
+            "s45-c10": [
+              { "item": "PAM458-20", "qty": 1 },
+              { "item": "ALM-8", "qty": 1 },
+              { "item": "APM-8", "qty": 1 },
+              { "item": "PSM-8", "qty": 1 }
+            ]
+          }
+        },
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [-1, 0, 0] },
+          "holes": [{ "at_mm": [0, 0, 35], "d_mm": 9 }, { "at_mm": [0, 0, 90], "d_mm": 9 }],
+          "fasteners": {
+            "s40-c8": [
+              { "item": "PAM408-20", "qty": 1 },
+              { "item": "ALM-8", "qty": 1 },
+              { "item": "APM-8", "qty": 1 },
+              { "item": "PSM-8", "qty": 1 }
+            ],
+            "s45-c10": [
+              { "item": "PAM458-20", "qty": 1 },
+              { "item": "ALM-8", "qty": 1 },
+              { "item": "APM-8", "qty": 1 },
+              { "item": "PSM-8", "qty": 1 }
+            ]
+          }
+        }
+      ]
+    },
+    "CT100-788": {
+      "fits": ["s40-c8"],
+      "bbox_mm": [[0, -39, 0], [100, 39, 100]],
+      "datums": { "mount": [0, 0, 0] },
+      "frame": {
+        "x": [1, 0, 0],
+        "y": [0, 1, 0],
+        "note": "origin at the heel; x along the base leg, z up the standing leg"
+      },
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [
+            { "at_mm": [35, -20, 0], "d_mm": 9 },
+            { "at_mm": [35, 20, 0], "d_mm": 9 },
+            { "at_mm": [90, -20, 0], "d_mm": 9 },
+            { "at_mm": [90, 20, 0], "d_mm": 9 }
+          ],
+          "fasteners": {
+            "s40-c8": [
+              { "item": "PAM408-20", "qty": 1 },
+              { "item": "ALM-8", "qty": 1 },
+              { "item": "APM-8", "qty": 1 },
+              { "item": "PSM-8", "qty": 1 }
+            ]
+          }
+        },
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [-1, 0, 0] },
+          "holes": [
+            { "at_mm": [0, -20, 35], "d_mm": 9 },
+            { "at_mm": [0, 20, 35], "d_mm": 9 },
+            { "at_mm": [0, -20, 90], "d_mm": 9 },
+            { "at_mm": [0, 20, 90], "d_mm": 9 }
+          ],
+          "fasteners": {
+            "s40-c8": [
+              { "item": "PAM408-20", "qty": 1 },
+              { "item": "ALM-8", "qty": 1 },
+              { "item": "APM-8", "qty": 1 },
+              { "item": "PSM-8", "qty": 1 }
+            ]
+          }
+        }
+      ]
+    },
+    "CT100-888": {
+      "fits": ["s45-c10"],
+      "bbox_mm": [[0, -44, 0], [100, 44, 100]],
+      "datums": { "mount": [0, 0, 0] },
+      "frame": {
+        "x": [1, 0, 0],
+        "y": [0, 1, 0],
+        "note": "origin at the heel; x along the base leg, z up the standing leg"
+      },
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [
+            { "at_mm": [35, -22.5, 0], "d_mm": 9 },
+            { "at_mm": [35, 22.5, 0], "d_mm": 9 },
+            { "at_mm": [90, -22.5, 0], "d_mm": 9 },
+            { "at_mm": [90, 22.5, 0], "d_mm": 9 }
+          ],
+          "fasteners": {
+            "s45-c10": [
+              { "item": "PAM458-20", "qty": 1 },
+              { "item": "ALM-8", "qty": 1 },
+              { "item": "APM-8", "qty": 1 },
+              { "item": "PSM-8", "qty": 1 }
+            ]
+          }
+        },
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [-1, 0, 0] },
+          "holes": [
+            { "at_mm": [0, -22.5, 35], "d_mm": 9 },
+            { "at_mm": [0, 22.5, 35], "d_mm": 9 },
+            { "at_mm": [0, -22.5, 90], "d_mm": 9 },
+            { "at_mm": [0, 22.5, 90], "d_mm": 9 }
+          ],
+          "fasteners": {
+            "s45-c10": [
+              { "item": "PAM458-20", "qty": 1 },
+              { "item": "ALM-8", "qty": 1 },
+              { "item": "APM-8", "qty": 1 },
+              { "item": "PSM-8", "qty": 1 }
+            ]
+          }
+        }
+      ]
+    },
+    "PLU40-01": {
+      "fits": ["s40-c8"],
+      "bbox_mm": [[-15, -40, 0], [15, 40, 2.5]],
+      "datums": { "mount": [0, 0, 0] },
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [
+            { "at_mm": [0, -20, 0], "d_mm": 7, "slot_mm": 10 },
+            { "at_mm": [0, 20, 0], "d_mm": 7, "slot_mm": 10 }
+          ]
+        }
+      ]
+    }
+  }
+}
