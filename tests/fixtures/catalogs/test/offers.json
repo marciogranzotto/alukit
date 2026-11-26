@@ -1,0 +1,193 @@
+{
+  "schema": "alukit.offers/1",
+  "offers": {
+    "TS40-c7": {
+      "item": "TS40",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 12650,
+        "sale_minor": 11385,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src"
+      },
+      "in_stock": true
+    },
+    "TS40-pp-c7": {
+      "item": "TS40",
+      "options": { "finish": "black" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": {
+        "regular_minor": 13900,
+        "sale_minor": null,
+        "per": "m",
+        "read": "2026-11-26",
+        "src": "src"
+      },
+      "in_stock": true
+    },
+    "TS4080-c7": {
+      "item": "TS4080",
+      "options": { "finish": "anodised" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": { "regular_minor": 23100, "per": "m", "read": "2026-11-26", "src": "src" }
+    },
+    "TS4080-pp-c7": {
+      "item": "TS4080",
+      "options": { "finish": "black" },
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": { "regular_minor": 25400, "per": "m", "read": "2026-11-26", "src": "src" }
+    },
+    "TS40E-c7": {
+      "item": "TS40E",
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10,
+        "min_bill_mm": 100,
+        "bill": "piece"
+      },
+      "price": { "regular_minor": 12650, "per": "m", "read": "2026-11-26", "src": "src" }
+    },
+    "RHS-50x30x2-6000": {
+      "item": "RHS-50x30x2",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 18900, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "M10-ROD-1000": {
+      "item": "M10-ROD",
+      "sale": { "mode": "stock", "length_mm": 1000 },
+      "price": { "regular_minor": 1250, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "RAIL20-500": {
+      "item": "RAIL20",
+      "sale": { "mode": "stock", "length_mm": 500 },
+      "price": { "regular_minor": 9800, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "RAIL20-1000": {
+      "item": "RAIL20",
+      "sale": { "mode": "stock", "length_mm": 1000 },
+      "price": {
+        "regular_minor": 17900,
+        "sale_minor": 16100,
+        "per": "bar",
+        "read": "2026-11-26",
+        "src": "src"
+      }
+    },
+    "CAR20-1": {
+      "item": "CAR20",
+      "price": { "regular_minor": 10213, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "BRK-40": {
+      "item": "BRK-40",
+      "price": { "regular_minor": 890, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "BRK-40-K10": {
+      "item": "BRK-40",
+      "kit": [
+        { "item": "BRK-40", "qty": 10 },
+        { "item": "SCR-M8x16", "qty": 20 },
+        { "item": "TNUT-M8", "qty": 20 }
+      ],
+      "price": {
+        "regular_minor": 12900,
+        "sale_minor": 10900,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src"
+      }
+    },
+    "SPL-40": {
+      "item": "SPL-40",
+      "price": { "regular_minor": 2400, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "HNG-40": {
+      "item": "HNG-40",
+      "price": { "regular_minor": 3100, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "SCR-M8x16-10": {
+      "item": "SCR-M8x16",
+      "pack": 10,
+      "price": { "regular_minor": 650, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "SCR-M8x16-50": {
+      "item": "SCR-M8x16",
+      "pack": 50,
+      "price": {
+        "regular_minor": 2700,
+        "sale_minor": 2300,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src"
+      }
+    },
+    "TNUT-M8-10": {
+      "item": "TNUT-M8",
+      "pack": 10,
+      "price": { "regular_minor": 900, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "TNUT-M8-50": {
+      "item": "TNUT-M8",
+      "pack": 50,
+      "price": { "regular_minor": 3900, "per": "unit", "read": "2026-11-26", "src": "src" },
+      "in_stock": false
+    },
+    "TNUT-M8-C10-10": {
+      "item": "TNUT-M8-C10",
+      "pack": 10,
+      "price": { "regular_minor": 1100, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "FOOT-M8": {
+      "item": "FOOT-M8",
+      "price": { "regular_minor": 1500, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "PANEL-PC4-500x500": {
+      "item": "PANEL-PC4",
+      "price": { "regular_minor": 8900, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "PSU-24V": {
+      "item": "PSU-24V",
+      "price": {
+        "regular_minor": 9900,
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "est",
+        "ref": "a quote by phone"
+      }
+    }
+  }
+}

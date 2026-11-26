@@ -1,0 +1,8 @@
+{
+  "schema": "alukit.section/1",
+  "id": "M10",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "generator": "threaded-rod",
+  "params": { "d_mm": 10, "pitch_mm": 1.5 }
+}

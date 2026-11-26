@@ -1,0 +1,9 @@
+{
+  "schema": "alukit.section/1",
+  "id": "RHS-50x30x2",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "from": { "ref": "EN 10219-2 nominal dimensions", "method": "table" },
+  "generator": "rhs",
+  "params": { "b_mm": 30, "h_mm": 50, "t_mm": 2, "ro_mm": 4 }
+}

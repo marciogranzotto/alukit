@@ -1,0 +1,29 @@
+{
+  "schema": "alukit.overrides/1",
+  "overrides": [
+    {
+      "item": "TS4080",
+      "field": "Ix_mm4",
+      "expect": 177600,
+      "value": 655000,
+      "why": "printed with the axis labels swapped and a digit lost: the strong axis cannot be the smaller value",
+      "src": "calc",
+      "read": "2026-11-26"
+    },
+    {
+      "item": "TS4080",
+      "field": "Iy_mm4",
+      "expect": 65500,
+      "value": 177600,
+      "why": "printed with the axis labels swapped",
+      "src": "calc",
+      "read": "2026-11-26"
+    },
+    {
+      "item": "RHS-50x30x2",
+      "field": "Iy_mm4",
+      "accept": true,
+      "why": "synthetic: the published value is 1.5 % below the computed one"
+    }
+  ]
+}

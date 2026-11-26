@@ -1,0 +1,54 @@
+{
+  "schema": "alukit.family/1",
+  "family": "connectors",
+  "prov": { "src": "est", "note": "synthetic: modelled for tests" },
+  "review": { "by": "test fixture", "date": "2026-11-26" },
+  "items": {
+    "BRK-40": {
+      "fits": ["s40-c8", "s45-c10"],
+      "frame": {
+        "x": [1, 0, 0],
+        "y": [0, 1, 0],
+        "note": "x along the base leg, z up the standing leg"
+      },
+      "mounts": [
+        {
+          "plane": { "point_mm": [20, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [20, 0, 0], "d_mm": 8.5 }],
+          "fasteners": {
+            "s40-c8": [{ "item": "SCR-M8x16", "qty": 1 }, { "item": "TNUT-M8", "qty": 1 }],
+            "s45-c10": [{ "item": "SCR-M8x16", "qty": 1 }, { "item": "TNUT-M8-C10", "qty": 1 }]
+          }
+        },
+        {
+          "plane": { "point_mm": [0, 0, 20], "normal": [-1, 0, 0] },
+          "holes": [{ "at_mm": [0, 0, 20], "d_mm": 8.5 }],
+          "fasteners": {
+            "s40-c8": [{ "item": "SCR-M8x16", "qty": 1 }, { "item": "TNUT-M8", "qty": 1 }],
+            "s45-c10": [{ "item": "SCR-M8x16", "qty": 1 }, { "item": "TNUT-M8-C10", "qty": 1 }]
+          }
+        }
+      ],
+      "ratings": {
+        "F_N.x": {
+          "v": 1000,
+          "low": 600,
+          "high": 1500,
+          "src": "est",
+          "note": "no published rating"
+        },
+        "safety_factor": 2
+      }
+    },
+    "HNG-40": {
+      "kind": "connector",
+      "subtype": "hinge",
+      "name": "Hinge 40",
+      "fits": ["s40-c8"],
+      "mass_kg": 0.12,
+      "bbox_mm": [[-20, -20, 0], [20, 20, 40]],
+      "pivot": { "height_mm": 20, "end_mm": 20, "range_deg": [0, 180] },
+      "prov": { "src": "meas", "note": "measured on a sample" }
+    }
+  }
+}

@@ -1,0 +1,241 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test",
+  "name": "Test catalog (synthetic)",
+  "vendor": "test-vendor",
+  "currency": "BRL",
+  "prov": { "src": "est", "note": "synthetic test data, not a vendor's" },
+  "materials": {
+    "al-6063-t5": {
+      "name": "Aluminium 6063-T5",
+      "alloy": "6063",
+      "temper": "T5",
+      "E_MPa": 69000,
+      "G_MPa": 25900,
+      "nu": 0.33,
+      "density_kg_per_m3": 2700,
+      "Rp02_MPa": {
+        "v": 110,
+        "src": "est",
+        "note": "EN 755-2 minimum for thin sections, to verify"
+      },
+      "Rm_MPa": { "v": 150, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" },
+      "alpha_per_K": 0.0000234
+    },
+    "s235": {
+      "name": "Steel S235",
+      "E_MPa": 210000,
+      "G_MPa": 81000,
+      "nu": 0.3,
+      "density_kg_per_m3": 7850,
+      "Rp02_MPa": 235,
+      "Rm_MPa": 360,
+      "alpha_per_K": 0.000012
+    },
+    "steel-8.8": { "name": "Steel, property class 8.8", "density_kg_per_m3": 7850 },
+    "pc": { "name": "Polycarbonate", "density_kg_per_m3": 1200 }
+  },
+  "grooves": {
+    "c8": {
+      "opening_mm": 8.2,
+      "lip_mm": 2.2,
+      "depth_mm": 12.25,
+      "undercut_mm": 14.5,
+      "class": "standard"
+    },
+    "c10": {
+      "opening_mm": 10.2,
+      "lip_mm": 3,
+      "depth_mm": 13,
+      "undercut_mm": 17,
+      "class": "standard"
+    }
+  },
+  "systems": {
+    "s40-c8": { "type": "tslot", "series_mm": 40, "groove": "c8" },
+    "s45-c10": { "type": "tslot", "series_mm": 45, "groove": "c10" },
+    "rail-hg20": { "type": "rail", "family": "HG", "size": 20 }
+  },
+  "items": {
+    "TS40": {
+      "kind": "bar",
+      "name": "Profile 40x40 (parametric)",
+      "code": "TS40",
+      "shape": "tslot",
+      "section": "TS40",
+      "system": "s40-c8",
+      "material": "al-6063-t5",
+      "mass_kg_per_m": 1.493,
+      "area_mm2": 553,
+      "Ix_mm4": 91200,
+      "Iy_mm4": 91200,
+      "core": { "bore_mm": 6.8, "tap": "M8" },
+      "options": { "finish": ["anodised", "black"] }
+    },
+    "TS4080": {
+      "kind": "bar",
+      "name": "Profile 40x80 (parametric)",
+      "code": "TS4080",
+      "shape": "tslot",
+      "section": "TS4080",
+      "system": "s40-c8",
+      "material": "al-6063-t5",
+      "mass_kg_per_m": 2.743,
+      "area_mm2": 1016,
+      "Ix_mm4": {
+        "v": 177600,
+        "src": "src",
+        "ref": "pdf:test-catalogue.pdf#p17",
+        "read": "2026-11-26",
+        "note": "as printed"
+      },
+      "Iy_mm4": {
+        "v": 65500,
+        "src": "src",
+        "ref": "pdf:test-catalogue.pdf#p17",
+        "read": "2026-11-26",
+        "note": "as printed"
+      },
+      "options": { "finish": ["anodised", "black"] }
+    },
+    "TS40E": {
+      "kind": "bar",
+      "name": "Profile 40x40 on an exact outline",
+      "code": "TS40E",
+      "shape": "tslot",
+      "section": "PF40-01",
+      "system": "s40-c8",
+      "material": "al-6063-t5",
+      "mass_kg_per_m": 1.493,
+      "area_mm2": 553,
+      "Ix_mm4": 91200,
+      "Iy_mm4": 91200
+    },
+    "RHS-50x30x2": {
+      "kind": "bar",
+      "name": "RHS 50x30x2",
+      "shape": "rhs",
+      "section": "RHS-50x30x2",
+      "material": "s235",
+      "mass_kg_per_m": 2.31,
+      "area_mm2": 294,
+      "Ix_mm4": 95400,
+      "Iy_mm4": {
+        "v": 42300,
+        "src": "est",
+        "note": "deliberately 1.5 % low, for the accepted-mismatch test"
+      }
+    },
+    "M10-ROD": {
+      "kind": "bar",
+      "name": "Threaded rod M10",
+      "shape": "threaded-rod",
+      "section": "M10",
+      "thread": "M10",
+      "material": "steel-8.8",
+      "area_mm2": { "v": 58, "src": "src", "ref": "ISO 898-1, stress area of M10" }
+    },
+    "RAIL20": {
+      "kind": "bar",
+      "name": "Linear rail 20",
+      "shape": "rail",
+      "section": "RAIL20",
+      "system": "rail-hg20",
+      "material": "s235",
+      "mass_kg_per_m": 2.21,
+      "rail": {
+        "pitch_mm": 60,
+        "E_min_mm": 20,
+        "E_max_mm": 40,
+        "hole": { "thread": "M5", "d_mm": 6, "cbore_d_mm": 9.5, "cbore_depth_mm": 8.5 }
+      }
+    },
+    "CAR20": {
+      "kind": "carriage",
+      "name": "Carriage 20, flanged",
+      "rail_system": "rail-hg20",
+      "dims": { "H_mm": 30, "W_mm": 63, "L_mm": 77.5 },
+      "mass_kg": 0.4,
+      "bbox_mm": [[-31.5, -38.75, 0], [31.5, 38.75, 30]],
+      "clone_of": { "item": "ref-test:HG20CA" },
+      "ratings": { "preload_class": "ZA" }
+    },
+    "BRK-40": {
+      "kind": "connector",
+      "subtype": "bracket",
+      "name": "Angle bracket 40",
+      "code": "BRK-40",
+      "material": "al-6063-t5",
+      "mass_kg": 0.15,
+      "bbox_mm": [[0, -20, 0], [40, 20, 40]]
+    },
+    "SPL-40": {
+      "kind": "connector",
+      "subtype": "splice",
+      "name": "Splice for 40 series",
+      "fits": ["s40-c8"],
+      "mass_kg": 0.05,
+      "splice": { "parts": [{ "item": "SPL-STUD", "qty": 1 }], "tap": "M8", "tap_depth_mm": 20 }
+    },
+    "SPL-STUD": {
+      "kind": "fastener",
+      "subtype": "stud",
+      "name": "Splice stud M8x40",
+      "thread": "M8",
+      "length_mm": 40,
+      "mass_kg": 0.015
+    },
+    "TNUT-M8": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "T-nut M8, groove 8",
+      "thread": "M8",
+      "groove": "c8",
+      "insertion": "drop-in",
+      "mass_kg": 0.006
+    },
+    "TNUT-M8-C10": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "T-nut M8, groove 10",
+      "thread": "M8",
+      "groove": "c10",
+      "insertion": "slide-in",
+      "mass_kg": 0.009
+    },
+    "SCR-M8x16": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M8x16",
+      "thread": "M8",
+      "length_mm": 16,
+      "head": "ISO 4762",
+      "class": "8.8",
+      "material": "steel-8.8",
+      "torque_Nm": { "v": 25, "src": "est", "note": "typical for 8.8 into aluminium; verify" },
+      "mass_kg": 0.012
+    },
+    "FOOT-M8": {
+      "kind": "accessory",
+      "subtype": "foot",
+      "name": "Levelling foot M8",
+      "thread": "M8",
+      "dims": { "D_mm": 40, "H_mm": 55 },
+      "mass_kg": 0.08,
+      "ratings": { "load_N": "not published" }
+    },
+    "PANEL-PC4": {
+      "kind": "panel",
+      "name": "Polycarbonate sheet 4 mm",
+      "material": "pc",
+      "thickness_mm": 4
+    },
+    "PSU-24V": {
+      "kind": "generic",
+      "name": "Power supply 24 V",
+      "category": "electronics",
+      "mass_kg": 0.5,
+      "bbox_mm": [[0, 0, 0], [160, 98, 38]]
+    }
+  }
+}

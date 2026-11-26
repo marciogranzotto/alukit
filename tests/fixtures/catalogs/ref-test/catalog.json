@@ -1,0 +1,27 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "ref-test",
+  "name": "Reference catalog (synthetic)",
+  "prov": { "src": "est", "note": "synthetic test data, not a maker's" },
+  "systems": {
+    "rail-hg20": { "type": "rail", "family": "HG", "size": 20 }
+  },
+  "items": {
+    "HG20CA": {
+      "kind": "carriage",
+      "name": "HG20CA (reference)",
+      "rail_system": "rail-hg20",
+      "dims": { "H_mm": 30, "W_mm": 44, "L_mm": 77.5 },
+      "ratings": {
+        "C_N": { "v": 27100, "src": "src", "ref": "a maker's table, synthetic here" },
+        "C0_N": 36680,
+        "C_basis_km": 50,
+        "MR_Nm": 270,
+        "MP_Nm": 200,
+        "MY_Nm": 200,
+        "preload_class": "Z0"
+      },
+      "prov": { "src": "src", "ref": "a maker's table, synthetic here", "read": "2026-11-26" }
+    }
+  }
+}

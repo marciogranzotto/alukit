@@ -1,0 +1,21 @@
+{
+  "schema": "alukit.section/1",
+  "id": "TS4080",
+  "fidelity": "parametric",
+  "props_ok": false,
+  "generator": "tslot",
+  "params": {
+    "w_mm": 40,
+    "h_mm": 80,
+    "groove": "c8",
+    "grooves": [
+      { "face": "-y", "at_mm": 0 },
+      { "face": "+y", "at_mm": 0 },
+      { "face": "+x", "at_mm": -20 },
+      { "face": "+x", "at_mm": 20 },
+      { "face": "-x", "at_mm": -20 },
+      { "face": "-x", "at_mm": 20 }
+    ],
+    "bores": [{ "at_mm": [0, -20], "d_mm": 6.8 }, { "at_mm": [0, 20], "d_mm": 6.8 }]
+  }
+}
