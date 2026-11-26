@@ -70,6 +70,23 @@
       "fits": ["test:s40-c8"],
       "insertion": "drop-in",
       "mass_kg": 0.004
+    },
+    "PROF-G": {
+      "kind": "bar",
+      "name": "Profile G, cut to length (synthetic, G26)",
+      "shape": "flat",
+      "section": "FB-20x10",
+      "material": "test:s235"
+    },
+    "CLIP-G": {
+      "kind": "generic",
+      "name": "Clip G (synthetic, G26)",
+      "mass_kg": 0.01
+    },
+    "BLOCK-G": {
+      "kind": "generic",
+      "name": "Block G, quoted (synthetic, G26)",
+      "mass_kg": 0.2
     }
   }
 }

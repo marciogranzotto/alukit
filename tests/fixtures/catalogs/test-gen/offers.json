@@ -24,6 +24,31 @@
       "item": "TNUT-M5",
       "pack": 50,
       "price": { "regular_minor": 2500, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "PROF-G-c": {
+      "item": "PROF-G",
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": { "regular_minor": 12650, "per": "m", "read": "2026-11-26", "src": "src" }
+    },
+    "CLIP-G": {
+      "item": "CLIP-G",
+      "price": { "regular_minor": 1005, "per": "unit", "read": "2026-11-26", "src": "src" }
+    },
+    "BLOCK-G": {
+      "item": "BLOCK-G",
+      "price": {
+        "regular_minor": { "v": 5000, "low": 4500, "high": 6000, "ref": "a quote, synthetic" },
+        "per": "unit",
+        "read": "2026-11-26",
+        "src": "src"
+      }
     }
   }
 }

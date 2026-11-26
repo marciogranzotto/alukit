@@ -1,0 +1,31 @@
+{
+  "case": "G26",
+  "rule": "a band on minor units, rounded once, half away from zero; an offer's own range wins (§4.11)",
+  "design": "156.86: low 141.17, high 196.08 (19,607.5 minor units rounds up). 10.05: low 9.05 (904.5 rounds up; round-half-even would give 9.04), high 12.56. Third line: low 90.00, likely 100.00, high 120.00",
+  "expect": {
+    "order": {
+      "lines": {
+        "test-gen:PROF-G": {
+          "low_minor": 14117,
+          "likely_minor": 15686,
+          "high_minor": 19608,
+          "range": "band"
+        },
+        "test-gen:CLIP-G": {
+          "low_minor": 905,
+          "likely_minor": 1005,
+          "high_minor": 1256,
+          "range": "band"
+        },
+        "test-gen:BLOCK-G": {
+          "low_minor": 9000,
+          "likely_minor": 10000,
+          "high_minor": 12000,
+          "range": "quote"
+        }
+      },
+      "total": { "low_minor": 24022, "likely_minor": 26691, "high_minor": 32864 }
+    },
+    "errors": []
+  }
+}

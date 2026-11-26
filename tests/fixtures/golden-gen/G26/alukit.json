@@ -1,0 +1,24 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G26",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-gen"],
+  "currency": "BRL",
+  "bars": {
+    "b1": {
+      "item": "test-gen:PROF-G",
+      "a": [0, 0, 0],
+      "b": [1234, 0, 0],
+      "label": "review M7's 1,234 mm piece at R$ 126.50/m, billed in 10 mm steps: R$ 156.86"
+    }
+  },
+  "parts": {
+    "p1": { "item": "test-gen:CLIP-G", "qty": 1, "unplaced": true, "why": "a line at R$ 10.05" },
+    "p2": {
+      "item": "test-gen:BLOCK-G",
+      "qty": 2,
+      "unplaced": true,
+      "why": "2 units of an offer quoted at R$ 50.00, 45.00 to 60.00"
+    }
+  },
+  "price_bands": [{ "supplier": "test-gen-vendor", "low_pct": -10, "high_pct": 25 }]
+}
