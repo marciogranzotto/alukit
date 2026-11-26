@@ -587,6 +587,12 @@ const AutoConnect = z
       .describe("or a bar end, at its design point"),
     connector: ItemRef.optional().describe("defaults.butt.connector when absent"),
     qty: z.int().min(1).optional(),
+    optional: z
+      .boolean()
+      .optional()
+      .describe(
+        "do nothing, rather than refuse, when nothing butts at the point (the draw tool sends one for each end of a bar it adds)",
+      ),
   })
   .refine((a) => (a.at === undefined) !== (a.end === undefined), { message: "give at or end" });
 
@@ -638,10 +644,15 @@ function connectAt(ctx: CommandContext, a: z.infer<typeof AutoConnect>): Outcome
     return Math.hypot(t[0], t[1]) < TOL.vert;
   };
   const through = passing[0] ?? atEnds.find(vertical) ?? atEnds[0];
-  if (!through) return refuse("geometry", "no bar end meets at that point");
-  const butting = ends.filter((e) => !e.startsWith(`${through}.`));
-  if (butting.length === 0)
-    return refuse("geometry", `only ${through} meets at that point: nothing butts on it`);
+  const butting = through ? ends.filter((e) => !e.startsWith(`${through}.`)) : [];
+  if (!through || butting.length === 0) {
+    const why = through
+      ? `only ${through} meets at that point: nothing butts on it`
+      : "no bar end meets at that point";
+    // The draw tool asks at every end it closes on; an end in the open is not a refusal there.
+    if (a.optional) return done(ctx.state, {}, { skipped: why });
+    return refuse("geometry", why);
+  }
   const defaults =
     isObject(ctx.state.doc.defaults) && isObject(ctx.state.doc.defaults.butt)
       ? ctx.state.doc.defaults.butt

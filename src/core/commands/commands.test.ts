@@ -356,6 +356,34 @@ describe("connections", () => {
       "geometry",
     );
   });
+
+  it("autoConnect with optional does nothing where nothing butts, and connects where something does", () => {
+    // The draw tool sends one for each end of the bar it adds, in the same batch (§7.1).
+    const s = g("G01");
+    // At the corner, c1 already claims both ends.
+    const none = ok(s, { cmd: "autoConnect", args: { at: [1000, 0, 0], optional: true } });
+    expect(none.state).toBe(s);
+    expect(none.results[0]).toMatchObject({
+      created: [],
+      info: { skipped: "no bar end meets at that point" },
+    });
+    const alone = ok(s, { cmd: "autoConnect", args: { at: [0, 0, 0], optional: true } });
+    expect(alone.results[0]?.info).toEqual({
+      skipped: "only b1 meets at that point: nothing butts on it",
+    });
+    const bare = ok(s, { cmd: "removeEntity", args: { id: "c1" } }).state;
+    const a = ok(
+      bare,
+      { cmd: "addBar", args: { a: [1000, 600, 0], b: [1000, 900, 0] } },
+      { cmd: "autoConnect", args: { at: [1000, 0, 0], optional: true } },
+      { cmd: "autoConnect", args: { at: [1000, 600, 0], optional: true } },
+    );
+    expect(a.results.map((r) => r.info)).toEqual([
+      undefined,
+      { through: "b1", ends: ["b2.a"] },
+      { through: "b2", ends: ["b3.a"] },
+    ]);
+  });
 });
 
 describe("parts and patterns", () => {
