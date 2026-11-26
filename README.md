@@ -59,7 +59,7 @@ pnpm exec playwright install chromium   # once, for the end-to-end test
 
 | Script | Does |
 |---|---|
-| `pnpm dev` | Vite dev server with hot reload (the app only: the project API is not mounted there yet) |
+| `pnpm dev` | Vite dev server with hot reload; `ALUKIT_PROJECT=<dir> pnpm dev` mounts that project's server in it and prints the address with its token |
 | `pnpm build` | builds the app into `dist/` |
 | `pnpm serve <dir>` | serves a project and the built app on 127.0.0.1 (a free port) through the CLI |
 | `pnpm test` | unit tests (Vitest) |

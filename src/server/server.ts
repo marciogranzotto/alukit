@@ -30,7 +30,9 @@ import { viewModel } from "./view.ts";
 
 /**
  * `alukit serve` (design §7.1, §7.2, §10): one `node:http` server per project, bound to
- * 127.0.0.1. It serves the built app (`dist/`) and the project's API:
+ * 127.0.0.1. It serves the built app (`dist/`) and the project's API. The same session (the edit
+ * lock, the project host, the token and this handler) mounts in Vite's dev server while AluKit is
+ * developed (`dev.ts`), which then serves the app itself:
  *
  * | Request | Answer |
  * |---|---|
@@ -94,16 +96,19 @@ const CommandsBody = z.strictObject({
 
 const HistoryBody = z.strictObject({ source: Source });
 
-export interface ServerOptions {
+export interface SessionOptions {
   /** The project folder. */
   dir: string;
-  /** 0 picks a free port. */
-  port?: number;
-  /** The built app. Defaults to the repository's dist/. */
+  /** The built app to serve. Without one, a request for the app's files goes to `next`. */
   distDir?: string;
   builtinDir?: string;
   /** Passed to the project host: watching, its settle time and poll interval, today's date. */
   host?: Omit<HostOptions, "dir" | "builtinDir">;
+}
+
+export interface ServerOptions extends SessionOptions {
+  /** 0 picks a free port. */
+  port?: number;
 }
 
 export interface RunningServer {
@@ -189,7 +194,8 @@ function historyStatus(a: HistoryAnswer): number {
 }
 
 interface Ctx {
-  root: string;
+  /** The built app; undefined when another server (Vite's dev server) serves the app. */
+  root: string | undefined;
   port: () => number;
   token: string;
   project: ProjectHost;
@@ -198,14 +204,14 @@ interface Ctx {
   streams: Set<ServerResponse>;
 }
 
-async function serveStatic(ctx: Ctx, method: string, path: string, res: ServerResponse) {
+async function serveStatic(root: string, method: string, path: string, res: ServerResponse) {
   if (method !== "GET" && method !== "HEAD") {
     send(res, 405, undefined, { allow: "GET, HEAD" });
     return;
   }
   // Lexical check: a leading "/" makes normalize() drop any ".." that would climb above root.
-  const file = join(ctx.root, normalize(path === "/" ? "/index.html" : path));
-  if (!isInside(ctx.root, file)) {
+  const file = join(root, normalize(path === "/" ? "/index.html" : path));
+  if (!isInside(root, file)) {
     send(res, 403);
     return;
   }
@@ -213,7 +219,7 @@ async function serveStatic(ctx: Ctx, method: string, path: string, res: ServerRe
   let real: string;
   let realRoot: string;
   try {
-    [real, realRoot] = await Promise.all([realpath(file), realpath(ctx.root)]);
+    [real, realRoot] = await Promise.all([realpath(file), realpath(root)]);
   } catch {
     send(res, 404, "not found");
     return;
@@ -407,7 +413,12 @@ async function api(
   send(res, 404, "not found");
 }
 
-async function handle(ctx: Ctx, req: IncomingMessage, res: ServerResponse): Promise<void> {
+async function handle(
+  ctx: Ctx,
+  req: IncomingMessage,
+  res: ServerResponse,
+  next?: () => void,
+): Promise<void> {
   // Host and Origin first, on everything: a rebinding page or a foreign origin learns nothing.
   const foreign = checkHost(req.headers, ctx.port()) ?? checkOrigin(req.headers, ctx.port());
   if (foreign) {
@@ -446,20 +457,44 @@ async function handle(ctx: Ctx, req: IncomingMessage, res: ServerResponse): Prom
     await api(ctx, method, path, new URLSearchParams(rawQuery), req, res);
     return;
   }
-  await serveStatic(ctx, method, path, res);
+  if (ctx.root !== undefined) {
+    await serveStatic(ctx.root, method, path, res);
+    return;
+  }
+  // The app's files are another server's (Vite's, while AluKit is developed). Its answers carry
+  // the same headers as this server's: no framing, no sniffing, only the page's own scripts.
+  for (const [name, value] of Object.entries(COMMON)) res.setHeader(name, value);
+  if (next) next();
+  else send(res, 404, "not found");
 }
 
 /**
- * Starts the server for a project: takes the edit lock (§7.1), opens the project, listens on
- * 127.0.0.1, and writes `.alukit/owner.json` with a fresh token. `close` undoes all of it.
+ * A project's server, apart from where it listens (design §7.1, §7.2, §10): it holds the edit
+ * lock and the project host, makes the token, and answers requests behind the security gate.
+ * `startServer` gives it a `node:http` server of its own with the built app; Vite's dev server
+ * mounts `handle` as a middleware and serves the app itself (`dev.ts`).
  */
-export async function startServer(options: ServerOptions): Promise<RunningServer> {
-  const distDir = resolve(options.distDir ?? defaultDist);
-  try {
-    await readFile(join(distDir, "index.html"));
-  } catch {
-    throw new Error("the app is not built (no dist/index.html); run `pnpm build` first");
-  }
+export interface Session {
+  /** The project folder, resolved. */
+  dir: string;
+  host: ProjectHost;
+  token: string;
+  /**
+   * Answers a request; never rejects. A request for the app's files goes to `next` when the
+   * session serves no built app.
+   */
+  handle(req: IncomingMessage, res: ServerResponse, next?: () => void): Promise<void>;
+  /**
+   * The server listens on 127.0.0.1 at `port`: the gate admits that host and origin from now on,
+   * and `.alukit/owner.json` is written so the CLI finds it. Returns the app's address.
+   */
+  listening(port: number): Promise<string>;
+  /** Ends the event streams, closes the host, removes the owner file, releases the edit lock. */
+  close(): Promise<void>;
+}
+
+/** Takes a project: its edit lock (§7.1), then the host. Invalid files refuse to open. */
+export async function openSession(options: SessionOptions): Promise<Session> {
   let dir: string;
   try {
     dir = await realpath(options.dir);
@@ -482,49 +517,94 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   }
 
   const token = newToken();
+  // No request passes the gate before the server listens: port 0 is no request's Host.
   let port = 0;
   const ctx: Ctx = {
-    root: distDir,
+    root: options.distDir,
     port: () => port,
     token,
     project,
     model: undefined,
     streams: new Set(),
   };
+  let closing: Promise<void> | undefined;
+  return {
+    dir,
+    host: project,
+    token,
+    handle: (req, res, next) =>
+      handle(ctx, req, res, next).catch(() => {
+        // Never let one request's failure become an unhandled rejection that ends the process.
+        if (res.headersSent) res.destroy();
+        else send(res, 500, "internal error");
+      }),
+    async listening(p) {
+      port = p;
+      const url = `http://${HOST}:${port}/`;
+      await writeOwner(dir, { url, port, started: new Date().toISOString(), token });
+      return url;
+    },
+    close() {
+      closing ??= (async () => {
+        for (const s of ctx.streams) s.destroy();
+        await project.close();
+        await removeOwner(dir, token);
+        await release();
+      })();
+      return closing;
+    },
+  };
+}
+
+/**
+ * Starts the server for a project: takes the edit lock (§7.1), opens the project, listens on
+ * 127.0.0.1, and writes `.alukit/owner.json` with a fresh token. `close` undoes all of it.
+ */
+export async function startServer(options: ServerOptions): Promise<RunningServer> {
+  const distDir = resolve(options.distDir ?? defaultDist);
+  try {
+    await readFile(join(distDir, "index.html"));
+  } catch {
+    throw new Error("the app is not built (no dist/index.html); run `pnpm build` first");
+  }
+  const session = await openSession({ ...options, distDir });
   const server = createServer((req, res) => {
-    handle(ctx, req, res).catch(() => {
-      // Never let one request's failure become an unhandled rejection that ends the process.
-      if (res.headersSent) res.destroy();
-      else send(res, 500, "internal error");
-    });
+    void session.handle(req, res);
   });
+  let closing: Promise<void> | undefined;
+  const close = () => {
+    closing ??= (async () => {
+      if (server.listening) {
+        await new Promise<void>((ok) => {
+          server.close(() => ok());
+          server.closeAllConnections();
+        });
+      }
+      await session.close();
+    })();
+    return closing;
+  };
+  let port: number;
+  let url: string;
   try {
     await new Promise<void>((ok, fail) => {
       server.once("error", fail);
       server.listen(options.port ?? 0, HOST, ok);
     });
+    port = (server.address() as AddressInfo).port;
+    url = await session.listening(port);
   } catch (e) {
-    await project.close();
-    await release();
+    await close();
     throw e;
   }
-  port = (server.address() as AddressInfo).port;
-  const url = `http://${HOST}:${port}/`;
-  await writeOwner(dir, { url, port, started: new Date().toISOString(), token });
-
-  let closing: Promise<void> | undefined;
-  const close = () => {
-    closing ??= (async () => {
-      for (const s of ctx.streams) s.destroy();
-      await new Promise<void>((ok) => {
-        server.close(() => ok());
-        server.closeAllConnections();
-      });
-      await project.close();
-      await removeOwner(dir, token);
-      await release();
-    })();
-    return closing;
+  return {
+    server,
+    port,
+    url,
+    appUrl: `${url}#t=${session.token}`,
+    token: session.token,
+    dir: session.dir,
+    host: session.host,
+    close,
   };
-  return { server, port, url, appUrl: `${url}#t=${token}`, token, dir, host: project, close };
 }

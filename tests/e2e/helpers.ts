@@ -96,6 +96,63 @@ export async function serve(project = "cart"): Promise<Served> {
   };
 }
 
+/**
+ * `pnpm dev` with a project (design §10): Vite's dev server, as the `dev` script runs it, on a
+ * scratch copy of a fixture named relative to the folder pnpm ran in (`INIT_CWD`). The project's
+ * server is mounted in it and prints the address with the token.
+ */
+export async function dev(project = "cart"): Promise<Served> {
+  const base = await mkdtemp(join(tmpdir(), "alukit-e2e-dev-"));
+  await cp(join(FIXTURES, "catalogs"), join(base, "catalogs"), { recursive: true });
+  const dir = join(base, ...project.split("/"));
+  await cp(join(FIXTURES, ...project.split("/")), dir, { recursive: true });
+
+  const vite = join(ROOT, "node_modules", "vite", "bin", "vite.js");
+  const child: ChildProcess = spawn(process.execPath, [vite, "--port", "0"], {
+    cwd: ROOT,
+    env: { ...process.env, ALUKIT_PROJECT: project, INIT_CWD: base },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const appUrl = await new Promise<string>((ok, fail) => {
+    let out = "";
+    const timer = setTimeout(
+      () => fail(new Error(`vite did not mount the project: ${out}`)),
+      30_000,
+    );
+    const read = (b: Buffer) => {
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: Vite's colours are ANSI escapes
+      out += b.toString().replace(/\u001b\[[0-9;]*m/g, "");
+      const m = /AluKit: +(http:\/\/\S+#t=\S+)/.exec(out);
+      if (m) {
+        clearTimeout(timer);
+        ok(m[1] as string);
+      }
+    };
+    child.stdout?.on("data", read);
+    child.stderr?.on("data", read);
+    child.on("exit", (code) => {
+      clearTimeout(timer);
+      fail(new Error(`vite exited ${code}: ${out}`));
+    });
+  });
+  const u = new URL(appUrl);
+  return {
+    url: `${u.origin}/`,
+    appUrl,
+    token: u.hash.replace(/^#t=/, ""),
+    port: Number(u.port),
+    dir,
+    async stop() {
+      if (child.exitCode === null) {
+        const exited = new Promise((r) => child.once("exit", r));
+        child.kill("SIGTERM");
+        await exited;
+      }
+      await rm(base, { recursive: true, force: true });
+    },
+  };
+}
+
 export interface Raw {
   status: number;
   body: string;

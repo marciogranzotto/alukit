@@ -70,13 +70,19 @@ to fold into the design or veto. Labels: **verified** (run, with how), **read**,
 | 38 | The scene renders on demand (after a camera move, a model, a selection or a resize), and fits the camera to the first model only | Keeps the machine calm; later revisions keep the person's view |
 | 39 | Test hook: `window.__alukit` gives the scene's counts and the revisions announced and drawn, nothing else | The rendering test compares the scene's bar count with `alukit derive --json` |
 
-## The merge with M3b part 3 (offers, the order list, costs)
+## The merge into main, and what it folded in
+
+Main had gained M2b, design draft 2.2 and M3b part 3 (offers, the order list, costs). Decisions
+40–42 join M4a to part 3; 43 and 44 close the gap M4a left in the dev server.
 
 | # | Decision | Why |
 |---|---|---|
 | 40 | Each revision's snapshot holds its outputs (`modelOutputs`: the cut list, the BOM and the priced order, each computed on first use), and its checks are `alukit check`'s, with `mass()` and `cost()` read from them (m3b-doc decision 39). The view model, `/api/cutlist` and `/api/bom` read the same outputs | A `do` sent through the server must report the diagnostics a headless `do` reports; M4a's server called `checkModel` with no accessors, so every `mass()` or `cost()` check stayed `check-pending` there (**verified**: `server.test.ts` compares `/api/check` with `alukit check --json` on G26 with a `cost()` and a `mass()` check) |
 | 41 | `GET /api/order` and `GET /api/costs` answer what `alukit order` and `alukit costs --format json` print, byte for byte: one function (`checkedOrder`) runs the order rules after the checks for both, on the snapshot's outputs, derived from the lock the server holds and stamped with its hash. `?as_of=YYYY-MM-DD` is `--as-of`; without it, the server's today; anything else is 400. The revision is in `x-alukit-rev` | The order is judged as of a date as well as a revision, so it is not in `/api/model`, and nothing is priced until a tab or an agent asks. `--frozen` has no server counterpart: the server derives from the lock it holds and pins what an edit names (**verified**: `server.test.ts`, the cart's answer equals the hand golden plus the stamp) |
 | 42 | The drawer's tabs follow §8: Cut list, BOM, Order, Costs, Checks, Log. Order and Costs fetch when shown and again at each revision the scene draws; an older answer stays on screen, dimmed, until the drawn revision's arrives. One date picker sets `as_of` for both. A reason's entities link into the scene (an end or a stock piece selects its entity); items, cost lines and suppliers do not. Lines and cost lines are worded by the Markdown output's helpers, so the tab and `alukit order` say the same | Every panel settles on the revision the scene shows (decision 29); the tab is the order list, not a second rendering of it (**verified**: `tests/e2e/outputs.spec.ts`, each supplier's status and total and the totals against the CLI, and a CLI `addCost` reaching the tab live) |
+
+| 43 | `ALUKIT_PROJECT=<dir> pnpm dev` mounts the project's server in Vite's dev server (`src/server/dev.ts`, a plugin in `vite.config.ts`); a relative `<dir>` is read from the folder pnpm ran in (`INIT_CWD`). It is `alukit serve`'s session, split out of `startServer` as `openSession`: the edit lock, the host, the token, the owner file the CLI finds, and the same handler in front of every request, Vite's own included (`Host`, `Origin`, the security headers), with the token and `Sec-Fetch-Site` on `/api`. Vite then serves the app's files. With a project the dev server binds 127.0.0.1 and Vite's CORS middleware is off, so no answer carries a CORS header. The address with the token is printed when the server listens | §10: "the same server module mounts in Vite's dev server". Vite's default CORS allows any localhost origin, which §7.2 does not (**verified**: `dev.test.ts`, a preflight from another local port gets 403 and no CORS header; `tests/e2e/dev.spec.ts`, the page under Vite draws the cart, takes a CLI edit live, and logs no CSP refusal, the HMR socket included) |
+| 44 | The session opens when Vite's server listens and closes in Vite's `closeServer` hook. On a restart Vite builds the new server, then closes the old one, then listens; so the new session takes the edit lock only after the old one let it go, with a new token. A project that cannot be opened (invalid files, a lock held by `alukit serve`) is logged as an error; `/api` then answers 503 with why, and the app is still served | Opening in `configureServer` would meet the old session's lock on every config edit (**read**: Vite 8.4.0's `restartServer`; **verified**: `dev.test.ts` restarts and closes a mounted server) |
 
 ## Measured
 
@@ -90,9 +96,8 @@ to fold into the design or veto. Labels: **verified** (run, with how), **read**,
 
 ## Not done in M4a
 
-- The API mounted in Vite's dev server (§10): `pnpm dev` shows the app with no access. Built apps
-  through `alukit serve` only.
 - `serve` rebuilding `dist/` when the sources change (§10): it refuses to start without a build.
+  (The API in Vite's dev server came with the merge, decisions 43 and 44.)
 - Orthographic and standard views, the section plane, hole markers, placeholder hatching, and the
   drawer's open items, params and decisions tabs. (The order and costs tabs came with the merge,
   decision 42.)
