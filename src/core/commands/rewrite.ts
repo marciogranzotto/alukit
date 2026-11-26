@@ -34,8 +34,14 @@ export interface Rewriter {
   end?(ref: string): string;
   /** An inline point, [x, y, z]. */
   coords?(v: Vec): Vec;
-  /** A direction or normal. */
+  /** A direction or normal written as a vector, or a world axis such as `+x`. */
   direction?(v: Vec | string): Vec | string;
+  /**
+   * A bar named for its axis only: an end plane's `normal: "<bar>"`, square to that bar (G27).
+   * Defaults to `id`, since a copy keeps its template's axis; a rewriter that turns directions
+   * (mirror) says when the named bar's axis survives.
+   */
+  axisBar?(bar: string, where: string): string;
   /** A station (§4.3), with the entity and field it sits in for messages. */
   station?(st: O, where: string): O;
   /** A world pose (§4.7). */
@@ -65,7 +71,13 @@ function endSpec(e: unknown, rw: Rewriter, where: string): unknown {
   if (!isObject(e) || !isObject(e.plane)) return e;
   const pl = e.plane;
   if ("point" in pl) {
-    const normal = vec(pl.normal) && rw.direction ? rw.direction(pl.normal) : pl.normal;
+    let normal = pl.normal;
+    if (vec(normal) && rw.direction) normal = rw.direction(normal);
+    else if (typeof normal === "string") {
+      // A bar, not a world axis: `direction` must not see it.
+      if (rw.axisBar) normal = rw.axisBar(normal, `${where}/normal`);
+      else if (rw.id) normal = rw.id(normal);
+    }
     return { ...e, plane: { ...pl, point: point(pl.point, rw, `${where}/point`), normal } };
   }
   if (isObject(pl.face) && typeof pl.face.bar === "string") {
