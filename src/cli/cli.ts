@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { CATALOG_USAGE } from "./catalog-usage.ts";
 
 export interface Io {
   out: (text: string) => void;
@@ -20,7 +21,7 @@ const PLANNED: readonly (readonly [string, string])[] = [
   ["revision save|verify <name>", "revisions"],
   ["snapshot <dir>", "render a view to PNG"],
   ["export glb <dir>", "export a GLB"],
-  ["catalog search|show|check|import", "catalog work"],
+  ["catalog search | import", "find items; run a vendor importer"],
   ["skill install", "link the agent skill"],
 ];
 
@@ -28,6 +29,7 @@ const PLANNED: readonly (readonly [string, string])[] = [
 const PLANNED_NAMES = new Set(
   PLANNED.flatMap(([usage]) => usage.split(" | ").map((alt) => alt.split(" ")[0] as string)),
 );
+PLANNED_NAMES.delete("catalog");
 
 export function packageVersion(): string {
   const url = new URL("../../package.json", import.meta.url);
@@ -47,6 +49,7 @@ export function helpText(): string {
     "",
     "Commands:",
     `  ${"serve [--port N]".padEnd(width)}  serve the app on 127.0.0.1`,
+    ...CATALOG_USAGE.split("\n").map((line) => `  ${line.replace(/^alukit /, "")}`),
     ...rows,
     "",
     "Options:",
@@ -87,6 +90,10 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
       io.err(`alukit serve: ${e instanceof Error ? e.message : String(e)}`);
       return 1;
     }
+  }
+  if (cmd === "catalog") {
+    const { catalogCommand } = await import("./catalog.ts");
+    return catalogCommand(rest, io);
   }
   if (PLANNED_NAMES.has(cmd)) {
     io.err(`alukit ${cmd}: not implemented yet`);

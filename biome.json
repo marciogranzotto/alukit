@@ -5,6 +5,7 @@
       "**",
       "!dist",
       "!node_modules",
+      "!catalogs",
       "!internal",
       "!.cache",
       "!projects",
@@ -21,9 +22,15 @@
   },
   "linter": {
     "enabled": true,
-    "rules": { "preset": "recommended" }
+    "rules": {
+      "preset": "recommended"
+    }
   },
   "assist": {
-    "actions": { "source": { "organizeImports": "on" } }
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   }
 }
