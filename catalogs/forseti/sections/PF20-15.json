@@ -1,0 +1,29 @@
+{
+  "schema": "alukit.section/1",
+  "id": "PF20-15",
+  "fidelity": "parametric",
+  "props_ok": false,
+  "from": {
+    "ref": "url:https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x40-v-slot-canal-6mm/",
+    "method": "generator",
+    "read": "2026-11-26",
+    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the catalogue does not draw this profile. The catalogue does not list this 40x40 V-slot; the shop gives the 4.6 mm centre bore, and the hollow centre is not modelled"
+  },
+  "generator": "tslot",
+  "params": {
+    "w_mm": 40,
+    "h_mm": 40,
+    "groove": "c6-20",
+    "grooves": [
+      { "face": "-y", "at_mm": -10 },
+      { "face": "-y", "at_mm": 10 },
+      { "face": "+x", "at_mm": -10 },
+      { "face": "+x", "at_mm": 10 },
+      { "face": "+y", "at_mm": -10 },
+      { "face": "+y", "at_mm": 10 },
+      { "face": "-x", "at_mm": -10 },
+      { "face": "-x", "at_mm": 10 }
+    ],
+    "bores": [{ "at_mm": [0, 0], "d_mm": 4.6 }]
+  }
+}

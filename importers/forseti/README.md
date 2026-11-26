@@ -16,6 +16,10 @@ python3 -m venv .cache/forseti/venv
 .cache/forseti/venv/bin/python -I importers/forseti/import_forseti.py build .cache/forseti/snapshots/<date> <catalogo_forsetiA4.pdf>
 ```
 
+`python3 -I importers/forseti/import_forseti.py skus <snapshot>` prints the snapshot's orderable SKUs
+(the variations, and the products without any: 1,196 of them); `src/catalog/forseti-orderable-skus.json`
+is that list, and `build` refuses to write unless every one of them has an offer.
+
 `fetch` refuses a folder that exists, so each snapshot is new and whole. `build` writes into
 `catalogs/forseti` (or a third argument), prints what it emitted and what it left out, and fails
 rather than guess when the data is not where the tables say. `.cache/` is not committed.
@@ -49,7 +53,9 @@ measured on those outlines and checked against the printed opening.
 `forseti_importer/tables.py` holds every mapping the build does not derive: which product families
 are emitted, how attributes classify, which pages hold which profile, which kit lines name no
 code, the catalogue's IX/IY convention (IX is about the axis along the long side). A review reads
-that file, not the code. A product the tables do not name is counted and reported, not emitted.
+that file, not the code. A product no rule names becomes a `generic` item, so every orderable SKU has an offer; every profile
+stem has a section (exact where the page draws a vector outline, otherwise a parametric T-slot envelope).
+Choices of M2b are in `docs/notes/m2b-decisions.md`.
 
 | Module | Does |
 |---|---|
@@ -57,5 +63,6 @@ that file, not the code. A product the tables do not name is counted and reporte
 | `store.py` | reads a snapshot: products, variations, prices, cut rules |
 | `pdfcat.py` | the catalogue's tables, vector outlines and groove measurements |
 | `geometry.py` | rings, nesting and section properties (standard library) |
-| `build.py` | items, offers and sections from the two |
+| `build.py` | profiles, the M2a hardware families, kits, and the coverage check |
+| `rest.py` | the rest of the shop (M2b): every other product, classified by the rules in `tables.py` into fastener, connector, accessory, panel or `generic` |
 | `emit.py` | canonical JSON: key order kept, ids in the catalog's order, 100 columns |
