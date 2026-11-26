@@ -1,0 +1,14 @@
+{
+  "schema": "alukit.section/1",
+  "id": "HGR30",
+  "fidelity": "parametric",
+  "props_ok": false,
+  "from": {
+    "ref": "pdf:G99TE24-2410.pdf#p41",
+    "method": "generator",
+    "read": "2026-11-26",
+    "note": "the rail's envelope from its published width WR 28 and height HR 26"
+  },
+  "generator": "rail",
+  "params": { "w_mm": 28, "h_mm": 26 }
+}

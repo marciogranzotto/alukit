@@ -1,0 +1,675 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "ref-hiwin",
+  "name": "HIWIN linear guideways (reference)",
+  "prov": {
+    "src": "src",
+    "ref": "pdf:G99TE24-2410.pdf",
+    "read": "2026-11-26",
+    "note": "HIWIN Linear Guideway technical catalogue G99TE24-2410. Page numbers are the PDF's, three ahead of the printed ones. Ratings and dimensions of the maker's own parts, for clones to refer to"
+  },
+  "systems": {
+    "rail-hg15": { "type": "rail", "family": "HG", "size": 15, "name": "HIWIN HG15" },
+    "rail-hg20": { "type": "rail", "family": "HG", "size": 20, "name": "HIWIN HG20" },
+    "rail-hg25": { "type": "rail", "family": "HG", "size": 25, "name": "HIWIN HG25" },
+    "rail-hg30": { "type": "rail", "family": "HG", "size": 30, "name": "HIWIN HG30" }
+  },
+  "items": {
+    "HGH15CA": {
+      "kind": "carriage",
+      "name": "HGH15CA block",
+      "code": "HGH15CA",
+      "brand": "HIWIN",
+      "docs": [{ "ref": "pdf:G99TE24-2410.pdf#p41" }],
+      "rail_system": "rail-hg15",
+      "dims": {
+        "H_mm": 28,
+        "H1_mm": 4.3,
+        "N_mm": 9.5,
+        "W_mm": 34,
+        "B_mm": 26,
+        "B1_mm": 4,
+        "C_mm": 26,
+        "L1_mm": 39.4,
+        "L_mm": 61.4,
+        "K1_mm": 10,
+        "K2_mm": 4.85,
+        "G_mm": 5.3,
+        "T_mm": 6,
+        "H2_mm": 7.95,
+        "H3_mm": 7.7
+      },
+      "mass_kg": 0.18,
+      "bbox_mm": [[-30.7, -17, -10.7], [30.7, 17, 13]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 13] },
+      "ratings": {
+        "C_N": 14700,
+        "C0_N": 23470,
+        "C_basis_km": {
+          "v": 50,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p6",
+          "read": "2026-11-26",
+          "note": "the dynamic rating's nominal life for ball types"
+        },
+        "MR_Nm": 120,
+        "MP_Nm": 140,
+        "MY_Nm": 140,
+        "seal_N": {
+          "v": 2.35,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p38",
+          "read": "2026-11-26",
+          "note": "maximum resistance per end seal, Table 2-1-21"
+        },
+        "mu": {
+          "v": 0.004,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p12",
+          "read": "2026-11-26",
+          "note": "'about 0.004' for ball-type guideways"
+        }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "read": "2026-11-26",
+        "note": "mounting thread M4x5. Frame: origin at the rail's running-face centre line (run), +x along the rail, +z up from it; the block spans H1 above the rail's foot to H"
+      }
+    },
+    "HGH20CA": {
+      "kind": "carriage",
+      "name": "HGH20CA block",
+      "code": "HGH20CA",
+      "brand": "HIWIN",
+      "docs": [{ "ref": "pdf:G99TE24-2410.pdf#p41" }],
+      "rail_system": "rail-hg20",
+      "dims": {
+        "H_mm": 30,
+        "H1_mm": 4.6,
+        "N_mm": 12,
+        "W_mm": 44,
+        "B_mm": 32,
+        "B1_mm": 6,
+        "C_mm": 36,
+        "L1_mm": 50.5,
+        "L_mm": 77.5,
+        "K1_mm": 12.25,
+        "K2_mm": 6,
+        "G_mm": 12,
+        "T_mm": 8,
+        "H2_mm": 6,
+        "H3_mm": 6
+      },
+      "mass_kg": 0.3,
+      "bbox_mm": [[-38.75, -22, -12.9], [38.75, 22, 12.5]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 12.5] },
+      "ratings": {
+        "C_N": 27100,
+        "C0_N": 36680,
+        "C_basis_km": {
+          "v": 50,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p6",
+          "read": "2026-11-26",
+          "note": "the dynamic rating's nominal life for ball types"
+        },
+        "MR_Nm": 270,
+        "MP_Nm": 280,
+        "MY_Nm": 280,
+        "seal_N": {
+          "v": 2.75,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p38",
+          "read": "2026-11-26",
+          "note": "maximum resistance per end seal, Table 2-1-21"
+        },
+        "mu": {
+          "v": 0.004,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p12",
+          "read": "2026-11-26",
+          "note": "'about 0.004' for ball-type guideways"
+        }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "read": "2026-11-26",
+        "note": "mounting thread M5x6. Frame: origin at the rail's running-face centre line (run), +x along the rail, +z up from it; the block spans H1 above the rail's foot to H"
+      }
+    },
+    "HGH25CA": {
+      "kind": "carriage",
+      "name": "HGH25CA block",
+      "code": "HGH25CA",
+      "brand": "HIWIN",
+      "docs": [{ "ref": "pdf:G99TE24-2410.pdf#p41" }],
+      "rail_system": "rail-hg25",
+      "dims": {
+        "H_mm": 40,
+        "H1_mm": 5.5,
+        "N_mm": 12.5,
+        "W_mm": 48,
+        "B_mm": 35,
+        "B1_mm": 6.5,
+        "C_mm": 35,
+        "L1_mm": 58,
+        "L_mm": 84,
+        "K1_mm": 15.7,
+        "K2_mm": 6,
+        "G_mm": 12,
+        "T_mm": 8,
+        "H2_mm": 10,
+        "H3_mm": 9
+      },
+      "mass_kg": 0.51,
+      "bbox_mm": [[-42, -24, -16.5], [42, 24, 18]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 18] },
+      "ratings": {
+        "C_N": 34900,
+        "C0_N": 52820,
+        "C_basis_km": {
+          "v": 50,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p6",
+          "read": "2026-11-26",
+          "note": "the dynamic rating's nominal life for ball types"
+        },
+        "MR_Nm": 420,
+        "MP_Nm": 490,
+        "MY_Nm": 490,
+        "seal_N": {
+          "v": 3.14,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p38",
+          "read": "2026-11-26",
+          "note": "maximum resistance per end seal, Table 2-1-21"
+        },
+        "mu": {
+          "v": 0.004,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p12",
+          "read": "2026-11-26",
+          "note": "'about 0.004' for ball-type guideways"
+        }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "read": "2026-11-26",
+        "note": "mounting thread M6x8. Frame: origin at the rail's running-face centre line (run), +x along the rail, +z up from it; the block spans H1 above the rail's foot to H"
+      }
+    },
+    "HGH30CA": {
+      "kind": "carriage",
+      "name": "HGH30CA block",
+      "code": "HGH30CA",
+      "brand": "HIWIN",
+      "docs": [{ "ref": "pdf:G99TE24-2410.pdf#p41" }],
+      "rail_system": "rail-hg30",
+      "dims": {
+        "H_mm": 45,
+        "H1_mm": 6,
+        "N_mm": 16,
+        "W_mm": 60,
+        "B_mm": 40,
+        "B1_mm": 10,
+        "C_mm": 40,
+        "L1_mm": 70,
+        "L_mm": 97.4,
+        "K1_mm": 20.25,
+        "K2_mm": 6,
+        "G_mm": 12,
+        "T_mm": 8.5,
+        "H2_mm": 9.5,
+        "H3_mm": 13.8
+      },
+      "mass_kg": 0.88,
+      "bbox_mm": [[-48.7, -30, -20], [48.7, 30, 19]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 19] },
+      "ratings": {
+        "C_N": 48500,
+        "C0_N": 71870,
+        "C_basis_km": {
+          "v": 50,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p6",
+          "read": "2026-11-26",
+          "note": "the dynamic rating's nominal life for ball types"
+        },
+        "MR_Nm": 660,
+        "MP_Nm": 700,
+        "MY_Nm": 700,
+        "seal_N": {
+          "v": 3.53,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p38",
+          "read": "2026-11-26",
+          "note": "maximum resistance per end seal, Table 2-1-21"
+        },
+        "mu": {
+          "v": 0.004,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p12",
+          "read": "2026-11-26",
+          "note": "'about 0.004' for ball-type guideways"
+        }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "read": "2026-11-26",
+        "note": "mounting thread M8x10. Frame: origin at the rail's running-face centre line (run), +x along the rail, +z up from it; the block spans H1 above the rail's foot to H"
+      }
+    },
+    "HGR15R": {
+      "kind": "bar",
+      "name": "HGR15R rail",
+      "code": "HGR15R",
+      "brand": "HIWIN",
+      "docs": [
+        { "ref": "pdf:G99TE24-2410.pdf#p41" },
+        { "ref": "pdf:G99TE24-2410.pdf#p40", "note": "rail lengths, pitch and end distance" }
+      ],
+      "shape": "rail",
+      "section": "HGR15",
+      "system": "rail-hg15",
+      "mass_kg_per_m": 1.45,
+      "rail": {
+        "pitch_mm": 60,
+        "E_min_mm": {
+          "v": 7.5,
+          "low": 4.75,
+          "high": 20,
+          "src": "est",
+          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+        },
+        "E_max_mm": {
+          "v": 30,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p40",
+          "read": "2026-11-26",
+          "note": "the recommended largest end distance, half the pitch: 'for non-standard E-values, the recommended dimension should no greater than 1/2 of the pitch'"
+        },
+        "hole": { "thread": "M4", "d_mm": 4.5, "cbore_d_mm": 7.5, "cbore_depth_mm": 5.3 }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "read": "2026-11-26",
+        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M4"
+      }
+    },
+    "HGR20R": {
+      "kind": "bar",
+      "name": "HGR20R rail",
+      "code": "HGR20R",
+      "brand": "HIWIN",
+      "docs": [
+        { "ref": "pdf:G99TE24-2410.pdf#p41" },
+        { "ref": "pdf:G99TE24-2410.pdf#p40", "note": "rail lengths, pitch and end distance" }
+      ],
+      "shape": "rail",
+      "section": "HGR20",
+      "system": "rail-hg20",
+      "mass_kg_per_m": 2.21,
+      "rail": {
+        "pitch_mm": 60,
+        "E_min_mm": {
+          "v": 9.5,
+          "low": 5.75,
+          "high": 20,
+          "src": "est",
+          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+        },
+        "E_max_mm": {
+          "v": 30,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p40",
+          "read": "2026-11-26",
+          "note": "the recommended largest end distance, half the pitch: 'for non-standard E-values, the recommended dimension should no greater than 1/2 of the pitch'"
+        },
+        "hole": { "thread": "M5", "d_mm": 6, "cbore_d_mm": 9.5, "cbore_depth_mm": 8.5 }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "read": "2026-11-26",
+        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M5"
+      }
+    },
+    "HGR25R": {
+      "kind": "bar",
+      "name": "HGR25R rail",
+      "code": "HGR25R",
+      "brand": "HIWIN",
+      "docs": [
+        { "ref": "pdf:G99TE24-2410.pdf#p41" },
+        { "ref": "pdf:G99TE24-2410.pdf#p40", "note": "rail lengths, pitch and end distance" }
+      ],
+      "shape": "rail",
+      "section": "HGR25",
+      "system": "rail-hg25",
+      "mass_kg_per_m": 3.21,
+      "rail": {
+        "pitch_mm": 60,
+        "E_min_mm": {
+          "v": 11,
+          "low": 6.5,
+          "high": 20,
+          "src": "est",
+          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+        },
+        "E_max_mm": {
+          "v": 30,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p40",
+          "read": "2026-11-26",
+          "note": "the recommended largest end distance, half the pitch: 'for non-standard E-values, the recommended dimension should no greater than 1/2 of the pitch'"
+        },
+        "hole": { "thread": "M6", "d_mm": 7, "cbore_d_mm": 11, "cbore_depth_mm": 9 }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "read": "2026-11-26",
+        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M6"
+      }
+    },
+    "HGR30R": {
+      "kind": "bar",
+      "name": "HGR30R rail",
+      "code": "HGR30R",
+      "brand": "HIWIN",
+      "docs": [
+        { "ref": "pdf:G99TE24-2410.pdf#p41" },
+        { "ref": "pdf:G99TE24-2410.pdf#p40", "note": "rail lengths, pitch and end distance" }
+      ],
+      "shape": "rail",
+      "section": "HGR30",
+      "system": "rail-hg30",
+      "mass_kg_per_m": 4.47,
+      "rail": {
+        "pitch_mm": 80,
+        "E_min_mm": {
+          "v": 14,
+          "low": 8,
+          "high": 20,
+          "src": "est",
+          "note": "not published. Taken as the counterbore's diameter D, which leaves half a counterbore of wall at the end; low: the counterbore 1 mm inside the end; high: the standard end distance Es 20"
+        },
+        "E_max_mm": {
+          "v": 40,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p40",
+          "read": "2026-11-26",
+          "note": "the recommended largest end distance, half the pitch: 'for non-standard E-values, the recommended dimension should no greater than 1/2 of the pitch'"
+        },
+        "hole": { "thread": "M8", "d_mm": 9, "cbore_d_mm": 14, "cbore_depth_mm": 12 }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p41",
+        "read": "2026-11-26",
+        "note": "standard end distance Es 20; lengths L = (n − 1) P + 2 E, at most 4000 (p. 40); rail bolt M8"
+      }
+    },
+    "HGW15CC": {
+      "kind": "carriage",
+      "name": "HGW15CC block, flanged",
+      "code": "HGW15CC",
+      "brand": "HIWIN",
+      "docs": [{ "ref": "pdf:G99TE24-2410.pdf#p45" }],
+      "rail_system": "rail-hg15",
+      "dims": {
+        "H_mm": 24,
+        "H1_mm": 4.3,
+        "N_mm": 16,
+        "W_mm": 47,
+        "B_mm": 38,
+        "B1_mm": 4.5,
+        "C_mm": 30,
+        "L1_mm": 39.4,
+        "L_mm": 61.4,
+        "K1_mm": 8,
+        "K2_mm": 4.85,
+        "G_mm": 5.3,
+        "T_mm": 6,
+        "T1_mm": 8.9,
+        "T2_mm": 6.95,
+        "H2_mm": 3.95,
+        "H3_mm": 3.7
+      },
+      "mass_kg": 0.17,
+      "bbox_mm": [[-30.7, -23.5, -10.7], [30.7, 23.5, 9]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 9] },
+      "ratings": {
+        "C_N": 14700,
+        "C0_N": 23470,
+        "C_basis_km": {
+          "v": 50,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p6",
+          "read": "2026-11-26",
+          "note": "the dynamic rating's nominal life for ball types"
+        },
+        "MR_Nm": 120,
+        "MP_Nm": 140,
+        "MY_Nm": 140,
+        "seal_N": {
+          "v": 2.35,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p38",
+          "read": "2026-11-26",
+          "note": "maximum resistance per end seal, Table 2-1-21"
+        },
+        "mu": {
+          "v": 0.004,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p12",
+          "read": "2026-11-26",
+          "note": "'about 0.004' for ball-type guideways"
+        }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p45",
+        "read": "2026-11-26",
+        "note": "mounting thread M5. Frame: origin at the rail's running-face centre line (run), +x along the rail, +z up from it; the block spans H1 above the rail's foot to H"
+      }
+    },
+    "HGW20CC": {
+      "kind": "carriage",
+      "name": "HGW20CC block, flanged",
+      "code": "HGW20CC",
+      "brand": "HIWIN",
+      "docs": [{ "ref": "pdf:G99TE24-2410.pdf#p45" }],
+      "rail_system": "rail-hg20",
+      "dims": {
+        "H_mm": 30,
+        "H1_mm": 4.6,
+        "N_mm": 21.5,
+        "W_mm": 63,
+        "B_mm": 53,
+        "B1_mm": 5,
+        "C_mm": 40,
+        "L1_mm": 50.5,
+        "L_mm": 77.5,
+        "K1_mm": 10.25,
+        "K2_mm": 6,
+        "G_mm": 12,
+        "T_mm": 8,
+        "T1_mm": 10,
+        "T2_mm": 9.5,
+        "H2_mm": 6,
+        "H3_mm": 6
+      },
+      "mass_kg": 0.4,
+      "bbox_mm": [[-38.75, -31.5, -12.9], [38.75, 31.5, 12.5]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 12.5] },
+      "ratings": {
+        "C_N": 27100,
+        "C0_N": 36680,
+        "C_basis_km": {
+          "v": 50,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p6",
+          "read": "2026-11-26",
+          "note": "the dynamic rating's nominal life for ball types"
+        },
+        "MR_Nm": 270,
+        "MP_Nm": 280,
+        "MY_Nm": 280,
+        "seal_N": {
+          "v": 2.75,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p38",
+          "read": "2026-11-26",
+          "note": "maximum resistance per end seal, Table 2-1-21"
+        },
+        "mu": {
+          "v": 0.004,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p12",
+          "read": "2026-11-26",
+          "note": "'about 0.004' for ball-type guideways"
+        }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p45",
+        "read": "2026-11-26",
+        "note": "mounting thread M6. Frame: origin at the rail's running-face centre line (run), +x along the rail, +z up from it; the block spans H1 above the rail's foot to H"
+      }
+    },
+    "HGW25CC": {
+      "kind": "carriage",
+      "name": "HGW25CC block, flanged",
+      "code": "HGW25CC",
+      "brand": "HIWIN",
+      "docs": [{ "ref": "pdf:G99TE24-2410.pdf#p45" }],
+      "rail_system": "rail-hg25",
+      "dims": {
+        "H_mm": 36,
+        "H1_mm": 5.5,
+        "N_mm": 23.5,
+        "W_mm": 70,
+        "B_mm": 57,
+        "B1_mm": 6.5,
+        "C_mm": 45,
+        "L1_mm": 58,
+        "L_mm": 84,
+        "K1_mm": 10.7,
+        "K2_mm": 6,
+        "G_mm": 12,
+        "T_mm": 8,
+        "T1_mm": 14,
+        "T2_mm": 10,
+        "H2_mm": 6,
+        "H3_mm": 5
+      },
+      "mass_kg": 0.59,
+      "bbox_mm": [[-42, -35, -16.5], [42, 35, 14]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 14] },
+      "ratings": {
+        "C_N": 34900,
+        "C0_N": 52820,
+        "C_basis_km": {
+          "v": 50,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p6",
+          "read": "2026-11-26",
+          "note": "the dynamic rating's nominal life for ball types"
+        },
+        "MR_Nm": 420,
+        "MP_Nm": 490,
+        "MY_Nm": 490,
+        "seal_N": {
+          "v": 3.14,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p38",
+          "read": "2026-11-26",
+          "note": "maximum resistance per end seal, Table 2-1-21"
+        },
+        "mu": {
+          "v": 0.004,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p12",
+          "read": "2026-11-26",
+          "note": "'about 0.004' for ball-type guideways"
+        }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p45",
+        "read": "2026-11-26",
+        "note": "mounting thread M8. Frame: origin at the rail's running-face centre line (run), +x along the rail, +z up from it; the block spans H1 above the rail's foot to H"
+      }
+    },
+    "HGW30CC": {
+      "kind": "carriage",
+      "name": "HGW30CC block, flanged",
+      "code": "HGW30CC",
+      "brand": "HIWIN",
+      "docs": [{ "ref": "pdf:G99TE24-2410.pdf#p45" }],
+      "rail_system": "rail-hg30",
+      "dims": {
+        "H_mm": 42,
+        "H1_mm": 6,
+        "N_mm": 31,
+        "W_mm": 90,
+        "B_mm": 72,
+        "B1_mm": 9,
+        "C_mm": 52,
+        "L1_mm": 70,
+        "L_mm": 97.4,
+        "K1_mm": 14.25,
+        "K2_mm": 6,
+        "G_mm": 12,
+        "T_mm": 8.5,
+        "T1_mm": 16,
+        "T2_mm": 10,
+        "H2_mm": 6.5,
+        "H3_mm": 10.8
+      },
+      "mass_kg": 1.09,
+      "bbox_mm": [[-48.7, -45, -20], [48.7, 45, 16]],
+      "datums": { "run": [0, 0, 0], "top": [0, 0, 16] },
+      "ratings": {
+        "C_N": 48500,
+        "C0_N": 71870,
+        "C_basis_km": {
+          "v": 50,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p6",
+          "read": "2026-11-26",
+          "note": "the dynamic rating's nominal life for ball types"
+        },
+        "MR_Nm": 660,
+        "MP_Nm": 700,
+        "MY_Nm": 700,
+        "seal_N": {
+          "v": 3.53,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p38",
+          "read": "2026-11-26",
+          "note": "maximum resistance per end seal, Table 2-1-21"
+        },
+        "mu": {
+          "v": 0.004,
+          "src": "src",
+          "ref": "pdf:G99TE24-2410.pdf#p12",
+          "read": "2026-11-26",
+          "note": "'about 0.004' for ball-type guideways"
+        }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "pdf:G99TE24-2410.pdf#p45",
+        "read": "2026-11-26",
+        "note": "mounting thread M10. Frame: origin at the rail's running-face centre line (run), +x along the rail, +z up from it; the block spans H1 above the rail's foot to H"
+      }
+    }
+  }
+}
