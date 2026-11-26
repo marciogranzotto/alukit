@@ -164,7 +164,9 @@ export const ConnectorItem = z.strictObject({
         fasteners: z
           .record(Ref, z.array(z.union([ItemQty, Sleeve])).min(1))
           .optional()
-          .describe("the fastener set for each system it fits (review B3); it may list sleeves"),
+          .describe(
+            "the fastener set for each system it fits, used once per hole of the mount (review B3); it may list sleeves",
+          ),
       }),
     )
     .optional(),
