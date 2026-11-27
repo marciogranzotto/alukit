@@ -26,6 +26,8 @@ export interface BarGroove {
   type?: string;
   /** The lip's thickness: a T-nut's grip counts the grooved layer to it (§4.5). */
   lip_mm?: number;
+  /** The opening's width at the face: a head seated over it bears only on the lips. */
+  opening_mm?: number;
 }
 
 /** A mass with the provenance of the value it came from (§3.5's authority rule). */
@@ -352,7 +354,7 @@ function barGrooves(
       face: g.face,
       at_mm: g.at_mm,
       ...(type ? { type } : {}),
-      ...(gt ? { lip_mm: num(gt.lip_mm) } : {}),
+      ...(gt ? { lip_mm: num(gt.lip_mm), opening_mm: num(gt.opening_mm) } : {}),
     };
   });
 }

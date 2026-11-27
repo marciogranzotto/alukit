@@ -320,6 +320,24 @@ export interface FaceStation {
   piece?: string;
   /** Sleeves cut from bar stock: their pieces and lengths. */
   sleeves: { piece: string; len: number }[];
+  /** What the fastener's head and its nut bear on (after acceptance run 4), where checked. */
+  seats: HeadSeat[];
+}
+
+/**
+ * A head's or a nut's seat on the face it bears on (§4.5, after acceptance run 4): its bearing
+ * annulus, from the hole (or a washer's bore) out to its bearing diameter (a washer's outside
+ * diameter where one is under it), and the fraction of that annulus on the face's material.
+ */
+export interface HeadSeat {
+  side: "head" | "nut";
+  /** The part that bears: the fastener, a nut, or a washer under either. */
+  item: string;
+  d_in: number;
+  d_out: number;
+  /** The face: `b1 +y`, an inner face's name, or a part's `p1 +z`. */
+  on: string;
+  bearing: number;
 }
 
 /** A face connection's contacts and fastenings (§4.5). */

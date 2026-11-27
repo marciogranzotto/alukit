@@ -158,6 +158,18 @@ function fasteningJson(f: FaceResult) {
       ...(s.sleeves.length > 0
         ? { sleeves: s.sleeves.map((x) => ({ piece: x.piece, len_mm: len(x.len) })) }
         : {}),
+      ...(s.seats.length > 0
+        ? {
+            seats: s.seats.map((x) => ({
+              side: x.side,
+              item: x.item,
+              on: x.on,
+              d_in_mm: len(x.d_in),
+              d_out_mm: len(x.d_out),
+              bearing_pct: len(100 * x.bearing),
+            })),
+          }
+        : {}),
     })),
   };
 }

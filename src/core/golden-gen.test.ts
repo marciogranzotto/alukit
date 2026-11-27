@@ -80,6 +80,22 @@ interface Expect {
       overlap_mm: number;
     }[]
   >;
+  /**
+   * Per face connection: every station's head and nut seats (§4.5, after acceptance run 4), the
+   * part that bears, the face, its annulus and the percentage of it on the face's material.
+   */
+  seats?: Record<
+    string,
+    {
+      k: number;
+      side: string;
+      item: string;
+      on: string;
+      d_in_mm: number;
+      d_out_mm: number;
+      bearing_pct: number;
+    }[]
+  >;
   /** Every warning derive reports, by code and entity (and refs), where the case gives them. */
   warnings?: { code: string; entity: string; refs?: string[] }[];
   errors: { code: string; entity: string; refs?: string[] }[];
@@ -146,6 +162,20 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
       overlap_mm: r2(e.overlap),
     }));
     expect(got, `${label}: ${id}'s seats`).toEqual(seats);
+  }
+  for (const [id, seats] of Object.entries(want.seats ?? {})) {
+    const got = d.fastenings.get(id)?.stations.flatMap((st) =>
+      st.seats.map((x) => ({
+        k: st.k,
+        side: x.side,
+        item: x.item,
+        on: x.on,
+        d_in_mm: r2(x.d_in),
+        d_out_mm: r2(x.d_out),
+        bearing_pct: r2(100 * x.bearing),
+      })),
+    );
+    expect(got, `${label}: ${id}'s head seats`).toEqual(seats);
   }
 
   for (const [id, r] of Object.entries(want.rails ?? {})) {
@@ -302,6 +332,7 @@ describe("golden generation cases (design §4.6)", () => {
       "G34",
       "G35",
       "G36",
+      "G37",
     ]);
   });
 

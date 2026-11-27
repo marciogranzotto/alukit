@@ -2,7 +2,7 @@
   "schema": "alukit.lock/1",
   "catalogs": {
     "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
-    "test-seat": { "hash": "sha256:cc4e47ae6dff65246cd5e8e928b8e0b4352d1575e7dd405ff358d07cffb04d7f", "name": "Joint geometry test catalog (synthetic)", "vendor": "test-seat-vendor", "currency": "BRL" },
+    "test-seat": { "hash": "sha256:7690d93754bf89eda195e3b27906edd6027a16aa4821f25258def06ed242d160", "name": "Joint geometry test catalog (synthetic)", "vendor": "test-seat-vendor", "currency": "BRL" },
     "test-stud": { "hash": "sha256:37e5b1a53f0c4b3a6b03d02f45b3be497dbf929fabf23d852339df53ad10f7f0", "name": "Stud joint test catalog (synthetic)", "vendor": "test-stud-vendor", "currency": "BRL" }
   },
   "items": {

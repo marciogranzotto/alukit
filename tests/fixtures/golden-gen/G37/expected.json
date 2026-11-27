@@ -1,0 +1,173 @@
+{
+  "case": "G37",
+  "rule": "a screw head, a nut, or a washer under either, must bear on material: the fraction of its bearing annulus on the face's material, a fit warning below 50 %, a fit error on nothing (§4.5, §5.5)",
+  "design": "An M8 socket head (dk 13) centred on a 40x40's c8 groove (opening 8.2), over its Ø9 hole, bears only on the lips: 45.87 %, a fit warning. A washer (d2 16) under it: 53.74 %. An M4 head (dk 7) lies wholly over the opening: a fit error. On a 50 x 10 flat face: 100 %. Bolted through two 40x40s, the hex head and the nut (s 13) each bear 45.87 %, two warnings; with two washers, one under each, 53.74 %",
+  "expect": {
+    "seats": {
+      "c1": [
+        {
+          "k": 1,
+          "side": "head",
+          "item": "test-seat:SHCS-M8x50",
+          "on": "b1 +y",
+          "d_in_mm": 9,
+          "d_out_mm": 13,
+          "bearing_pct": 45.87
+        }
+      ]
+    },
+    "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "with a washer",
+      "patch": { "connections": { "c1": { "stack": ["test-seat:W8"] } } },
+      "expect": {
+        "seats": {
+          "c1": [
+            {
+              "k": 1,
+              "side": "head",
+              "item": "test-seat:W8",
+              "on": "b1 +y",
+              "d_in_mm": 9,
+              "d_out_mm": 16,
+              "bearing_pct": 53.74
+            }
+          ]
+        },
+        "warnings": [],
+        "errors": []
+      }
+    },
+    {
+      "name": "an M4 head",
+      "patch": { "connections": { "c1": { "fastener": "test-seat:SHCS-M4x50" } } },
+      "expect": {
+        "seats": {
+          "c1": [
+            {
+              "k": 1,
+              "side": "head",
+              "item": "test-seat:SHCS-M4x50",
+              "on": "b1 +y",
+              "d_in_mm": 4.5,
+              "d_out_mm": 7,
+              "bearing_pct": 0
+            }
+          ]
+        },
+        "warnings": [],
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "on a flat face",
+      "patch": {
+        "bars": {
+          "b1": { "item": "test-geo:FB-50x10" },
+          "b2": { "a": [0, 0, -10], "b": [400, 0, -10] }
+        }
+      },
+      "expect": {
+        "seats": {
+          "c1": [
+            {
+              "k": 1,
+              "side": "head",
+              "item": "test-seat:SHCS-M8x50",
+              "on": "b1 +y",
+              "d_in_mm": 9,
+              "d_out_mm": 13,
+              "bearing_pct": 100
+            }
+          ]
+        },
+        "warnings": [],
+        "errors": []
+      }
+    },
+    {
+      "name": "bolted through two 40x40s",
+      "patch": {
+        "bars": { "b2": { "item": "test:TS40", "a": [0, 0, -40], "b": [400, 0, -40] } },
+        "connections": {
+          "c1": {
+            "fastening": "bolt",
+            "fastener": "test-seat:HEX-M8x90",
+            "stack": ["test-seat:N8"]
+          }
+        }
+      },
+      "expect": {
+        "seats": {
+          "c1": [
+            {
+              "k": 1,
+              "side": "head",
+              "item": "test-seat:HEX-M8x90",
+              "on": "b1 +y",
+              "d_in_mm": 9,
+              "d_out_mm": 13,
+              "bearing_pct": 45.87
+            },
+            {
+              "k": 1,
+              "side": "nut",
+              "item": "test-seat:N8",
+              "on": "b2 -y",
+              "d_in_mm": 9,
+              "d_out_mm": 13,
+              "bearing_pct": 45.87
+            }
+          ]
+        },
+        "warnings": [
+          { "code": "fit", "entity": "c1", "refs": ["b1"] },
+          { "code": "fit", "entity": "c1", "refs": ["b2"] }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "name": "bolted, with two washers",
+      "patch": {
+        "bars": { "b2": { "item": "test:TS40", "a": [0, 0, -40], "b": [400, 0, -40] } },
+        "connections": {
+          "c1": {
+            "fastening": "bolt",
+            "fastener": "test-seat:HEX-M8x90",
+            "stack": [{ "item": "test-seat:W8", "qty": 2 }, "test-seat:N8"]
+          }
+        }
+      },
+      "expect": {
+        "seats": {
+          "c1": [
+            {
+              "k": 1,
+              "side": "head",
+              "item": "test-seat:W8",
+              "on": "b1 +y",
+              "d_in_mm": 9,
+              "d_out_mm": 16,
+              "bearing_pct": 53.74
+            },
+            {
+              "k": 1,
+              "side": "nut",
+              "item": "test-seat:W8",
+              "on": "b2 -y",
+              "d_in_mm": 9,
+              "d_out_mm": 16,
+              "bearing_pct": 53.74
+            }
+          ]
+        },
+        "warnings": [],
+        "errors": []
+      }
+    }
+  ]
+}

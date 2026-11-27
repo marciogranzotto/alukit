@@ -131,11 +131,14 @@ describe("the cart", () => {
   it("derives with no errors, and warns of the three end faces that overhang their faces", () => {
     const d = derive(project.raw, project.items);
     // The beam's ends stand 30 past the base rails' faces above and below, and the grip's 45° end
-    // 16.28 past the arm's end (§4.5, after acceptance run 4): worked in hand/cart_by_hand.py.
+    // 16.28 past the arm's end; the rods' washers and the rail screws give no bearing diameter, so
+    // their seats are not checked (§4.5, after acceptance run 4): worked in hand/cart_by_hand.py.
     expect(d.diagnostics.map((x) => [x.severity, x.code, x.entity])).toEqual([
       ["warn", "connection", "c21"],
       ["warn", "connection", "c22"],
       ["warn", "connection", "c33"],
+      ["info", "fit", "c23"],
+      ["info", "fit", "c35"],
     ]);
     expect(d.bars.size).toBe(39);
     // The grip bears on the arm's end (an end provider reading a placement provider's end),

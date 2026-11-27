@@ -241,6 +241,18 @@
         "b31"
       ],
       "message": "b32.b's end face overhangs b31's end b by 16.28 mm: 662.74 of its 2262.74 mm² (29.3 %) bear on nothing"
+    },
+    {
+      "severity": "info",
+      "code": "fit",
+      "entity": "c23",
+      "message": "test-geo:WSH-M10 gives no outside diameter (d2_mm), so its seats are not checked: c23"
+    },
+    {
+      "severity": "info",
+      "code": "fit",
+      "entity": "c35",
+      "message": "test-gen:SCR-M5x25 gives no bearing diameter (dw_mm, dk_mm or s_mm), so its seats are not checked: c35"
     }
   ]
 }

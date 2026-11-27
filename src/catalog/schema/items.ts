@@ -398,3 +398,4 @@ export const Item = z.discriminatedUnion("kind", [
 export type Item = z.infer<typeof Item>;
 export type BarItem = z.infer<typeof BarItem>;
 export type ConnectorItem = z.infer<typeof ConnectorItem>;
+export type FastenerItem = z.infer<typeof FastenerItem>;

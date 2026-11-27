@@ -13,7 +13,7 @@ import { derivedJson } from "./output.ts";
  * beyond what G35–G37 pin down: the words and the refusals.
  */
 
-type Name = "G31" | "G34" | "G35" | "G36" | "G17" | "G05";
+type Name = "G31" | "G34" | "G35" | "G36" | "G37" | "G17" | "G05";
 
 async function project(name: Name, patch: unknown = {}) {
   const set = name === "G17" || name === "G05" ? "golden-ends" : "golden-gen";
@@ -229,5 +229,106 @@ describe("a butt's end face sits on its face (part 2)", () => {
         ],
       },
     });
+  });
+});
+
+describe("a screw head seats on material (part 3)", () => {
+  const fits = (d: ReturnType<typeof derive>) => said(d, "fit");
+
+  it("warns of a head on the lips, with the fraction, and errs on one wholly over the opening", async () => {
+    const { d } = await project("G37");
+    expect(fits(d)).toEqual([
+      [
+        "warn",
+        "c1",
+        "station 1: the head of test-seat:SHCS-M8x50, Ø13.00, bears on 45.9 % of its seat on b1's face +y, less than 50 %",
+      ],
+    ]);
+    const m4 = await project("G37", { connections: { c1: { fastener: "test-seat:SHCS-M4x50" } } });
+    expect(fits(m4.d)).toEqual([
+      [
+        "error",
+        "c1",
+        "station 1: the head of test-seat:SHCS-M4x50, Ø7.00, bears on nothing of b1's face +y: its seat lies wholly over an opening or off the face",
+      ],
+    ]);
+  });
+
+  it("names the nut and the washers, the first under the head and the next under the nut", async () => {
+    const two = {
+      bars: { b2: { item: "test:TS40", a: [0, 0, -40], b: [400, 0, -40] } },
+      connections: {
+        c1: {
+          fastening: "bolt",
+          fastener: "test-seat:HEX-M8x90",
+          stack: ["test-seat:N8"],
+          stations: { at_mm: [100, 300] },
+        },
+      },
+    };
+    const bolted = await project("G37", two);
+    expect(fits(bolted.d).map((x) => x[2])).toEqual([
+      "stations 1, 2: the head of test-seat:HEX-M8x90, Ø13.00, bears on 45.9 % of its seat on b1's face +y, less than 50 %",
+      "stations 1, 2: the nut test-seat:N8, Ø13.00, bears on 45.9 % of its seat on b2's face -y, less than 50 %",
+    ]);
+    // One washer goes under the head; the nut still bears on the lips alone.
+    const one = await project("G37", {
+      ...two,
+      connections: { c1: { ...two.connections.c1, stack: ["test-seat:W8", "test-seat:N8"] } },
+    });
+    expect(fits(one.d).map((x) => x[2])).toEqual([
+      "stations 1, 2: the nut test-seat:N8, Ø13.00, bears on 45.9 % of its seat on b2's face -y, less than 50 %",
+    ]);
+    const seats = derivedJson(one.d).fastenings as Record<
+      string,
+      { stations: { seats: unknown[] }[] }
+    >;
+    expect(seats.c1?.stations[0]?.seats).toEqual([
+      {
+        side: "head",
+        item: "test-seat:W8",
+        on: "b1 +y",
+        d_in_mm: 9,
+        d_out_mm: 16,
+        bearing_pct: 53.74,
+      },
+      {
+        side: "nut",
+        item: "test-seat:N8",
+        on: "b2 -y",
+        d_in_mm: 9,
+        d_out_mm: 13,
+        bearing_pct: 45.87,
+      },
+    ]);
+  });
+
+  it("counts a head hanging off the face's end as off its material", async () => {
+    // On the 50 x 10 flat bar, 3 from its end: the annulus 4.5..6.5 loses the segments past the
+    // end, ρ² acos(3/ρ) − 3 √(ρ² − 9) for each radius, of its 22π.
+    const { d } = await project("G37", {
+      bars: { b1: { item: "test-geo:FB-50x10" }, b2: { a: [0, 0, -10], b: [400, 0, -10] } },
+      connections: { c1: { stations: { at_mm: [3] } } },
+    });
+    const cut = (r: number) => r * r * Math.acos(3 / r) - 3 * Math.sqrt(r * r - 9);
+    const want = 1 - (cut(6.5) - cut(4.5)) / (Math.PI * (6.5 ** 2 - 4.5 ** 2));
+    const seat = d.fastenings.get("c1")?.stations[0]?.seats[0];
+    expect(seat?.bearing).toBeCloseTo(want, 9);
+    expect(Math.round(want * 1000) / 10).toBe(68.4);
+    expect(fits(d)).toEqual([]);
+  });
+
+  it("does not check a part that gives no bearing diameter, and says so", async () => {
+    const { d } = await project("G37", {
+      connections: { c1: { fastener: "test-seat:SCR-M8x50" } },
+    });
+    expect(fits(d)).toEqual([
+      [
+        "info",
+        "c1",
+        "test-seat:SCR-M8x50 gives no bearing diameter (dw_mm, dk_mm or s_mm), so its seats are not checked: c1",
+      ],
+    ]);
+    expect(d.fastenings.get("c1")?.stations[0]?.seats).toEqual([]);
   });
 });

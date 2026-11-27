@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   area2,
   convexPieces,
+  discArea,
   distanceOutside,
   inPolygon,
   isConvex,
@@ -73,5 +74,29 @@ describe("plane polygons", () => {
     expect(distanceOutside([1.5, 1.5], L)).toBeCloseTo(0.5, 12);
     // The L has no corner at (2, 2): the nearest points are (2, 1) and (1, 2).
     expect(distanceOutside([3, 3], L)).toBeCloseTo(Math.sqrt(5), 12);
+  });
+});
+
+describe("a disc on a polygon", () => {
+  it("shares its whole area with a polygon round it, half with a half-plane, and a band's chord", () => {
+    const big = square(-10, -10, 20);
+    expect(discArea([0, 0], 1, big)).toBeCloseTo(Math.PI, 12);
+    expect(discArea([0, 0], 1, [...big].reverse())).toBeCloseTo(Math.PI, 12);
+    expect(discArea([0, 0], 1, square(0, -10, 20))).toBeCloseTo(Math.PI / 2, 12);
+    // The band |x| ≤ h through a disc of radius r: 2 (h √(r² − h²) + r² asin(h / r)).
+    const [r, h] = [6.5, 4.1];
+    const band: P2[] = [
+      [-h, -10],
+      [h, -10],
+      [h, 10],
+      [-h, 10],
+    ];
+    const want = 2 * (h * Math.sqrt(r * r - h * h) + r * r * Math.asin(h / r));
+    expect(discArea([0, 0], r, band)).toBeCloseTo(want, 10);
+    // Off centre, and a disc that misses the polygon.
+    expect(discArea([3, 0], 1, square(0, -10, 20))).toBeCloseTo(Math.PI, 12);
+    expect(discArea([30, 0], 1, big)).toBeCloseTo(0, 12);
+    // A disc on an L's inner corner: three quarters of it.
+    expect(discArea([1, 1], 0.5, L)).toBeCloseTo((3 * Math.PI * 0.25) / 4, 12);
   });
 });

@@ -28,6 +28,57 @@
       "recipe": true,
       "overhang_mm": 5
     },
+    "SHCS-M8x50": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M8x50 (synthetic, ISO 4762's head)",
+      "thread": "M8",
+      "length_mm": 50,
+      "head": "ISO 4762",
+      "dims": { "dk_mm": 13, "k_mm": 8 }
+    },
+    "SHCS-M4x50": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M4x50 (synthetic, ISO 4762's head)",
+      "thread": "M4",
+      "length_mm": 50,
+      "head": "ISO 4762",
+      "dims": { "dk_mm": 7, "k_mm": 4 }
+    },
+    "SCR-M8x50": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Screw M8x50 that publishes no dimensions (synthetic)",
+      "thread": "M8",
+      "length_mm": 50,
+      "head": "ISO 4762"
+    },
+    "HEX-M8x90": {
+      "kind": "fastener",
+      "subtype": "bolt",
+      "name": "Hex head bolt M8x90 (synthetic, ISO 4017's head)",
+      "thread": "M8",
+      "length_mm": 90,
+      "head": "ISO 4017",
+      "dims": { "s_mm": 13, "k_mm": 5.3 }
+    },
+    "N8": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Hex nut M8 (synthetic, ISO 4032's)",
+      "thread": "M8",
+      "head": "ISO 4032",
+      "dims": { "s_mm": 13, "m_mm": 6.8 }
+    },
+    "W8": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Plain washer 8 (synthetic, ISO 7089's)",
+      "thread": "M8",
+      "head": "ISO 7089",
+      "dims": { "d1_mm": 8.4, "d2_mm": 16, "h_mm": 1.6 }
+    },
     "J2-H": {
       "kind": "connector",
       "subtype": "end-connector",

@@ -43,8 +43,9 @@ Rules used, from docs/design.md:
   angle's heel (and, on its flat blank, leg a's free edge); bars' machining stays on the cut list,
   which the sheet only points to;
 - a butting end face that reaches past the face it bears on, both seen along the face's normal, is
-  a `connection` warning that says how far and how much of it: the sheet and the order list carry
-  derive's warnings (§4.5, §5.5, after acceptance run 4).
+  a `connection` warning that says how far and how much of it; a head, nut or washer whose item
+  gives no bearing diameter has its seats left unchecked, an info naming its connections: the
+  sheet and the order list carry derive's warnings and infos (§4.5, §5.5, after acceptance run 4).
 
 Run with python3 -I; then Biome formats expected-cutlist.json and expected-bom.json, while
 expected-order.json and expected-machining.json are left exactly as written (they are compared
@@ -319,10 +320,21 @@ def overhang(conn, end, refs, on, by, area, bearing):
 
 beam_end = 50 * 100 - (4 - math.pi) * 6**2
 grip_end = T40 * T40 * math.sqrt(2)
+
+# Heads and nuts on their faces: the rods' washers (c23, under each nut of the bolted stack) give
+# no outside diameter, and the rail screws (c35) no head diameter, so neither is checked: an info
+# each, naming the connection. Every other face connection rests, with no fastener.
+def unchecked(conn, item, what):
+    message = f"{item} gives {what}, so its seats are not checked: {conn}"
+    return {"severity": "info", "code": "fit", "entity": conn, "message": message}
+
+
 SEATS = [
     overhang("c21", "b18.a", ["b18", "b9"], "b9's face +x", (100 - T40) / 2, beam_end, 50 * T40),
     overhang("c22", "b18.b", ["b18", "b10"], "b10's face -x", (100 - T40) / 2, beam_end, 50 * T40),
     overhang("c33", "b32.b", ["b32", "b31"], "b31's end b", 780 - (792 - 20 * math.sqrt(2)), grip_end, T40 * T40),
+    unchecked("c23", "test-geo:WSH-M10", "no outside diameter (d2_mm)"),
+    unchecked("c35", "test-gen:SCR-M5x25", "no bearing diameter (dw_mm, dk_mm or s_mm)"),
 ]
 
 # --- Id order, the canonical orientation and grouping ---------------------------------------

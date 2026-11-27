@@ -1,10 +1,11 @@
-import type { Item } from "#catalog/schema/items.ts";
+import { num } from "#catalog/schema/common.ts";
+import type { FastenerItem, Item } from "#catalog/schema/items.ts";
 import { type ExprScope, evalNumber } from "../expr.ts";
 import { compareIds } from "../ids.ts";
 import { type AnyItem, type BarItemInfo, fullRef } from "../items.ts";
 import type { Face, FaceConnT, StackEntry } from "../project/schema.ts";
 import type { Vec2 } from "../section-properties.ts";
-import { clearanceHole, sleeveHole } from "../threads.ts";
+import { clearanceHole, sleeveHole, threadDiameter } from "../threads.ts";
 import { TOL } from "../tolerances.ts";
 import {
   add,
@@ -29,13 +30,14 @@ import {
   outlineFaces,
 } from "./outline.ts";
 import { boxCentre, faceLocal, facePlane, localOf, onBar } from "./place.ts";
-import { area2, ccw, clip, type P2 } from "./polygon.ts";
+import { area2, ccw, clip, discArea, type P2 } from "./polygon.ts";
 import { holePoint, selectHoles } from "./rails.ts";
 import type {
   DerivedPart,
   FaceResult,
   FaceStation,
   HardwareUse,
+  HeadSeat,
   PlacedPart,
   PlacedRun,
   StationLayer,
@@ -61,7 +63,34 @@ import type {
  *
  * A rail layer at one of its own holes is not drilled again. A fastener or sleeve cut from bar
  * stock is a piece for the cut list.
+ *
+ * The head and, for a bolt, the nut must bear on material (after acceptance run 4, `seats`): on a
+ * T-slot face a head over the groove bears only on the lips.
  */
+
+/** A seat bearing on less than this fraction of its annulus is a `fit` warning (§5.5). */
+export const SEAT_MIN = 0.5;
+/** How deep below a bar's face its outline is read for the material a seat bears on, in mm. */
+const SEAT_DEPTH = 0.1;
+
+/** A seat met at a station, with the words for its bearer and the face. */
+interface Seated {
+  k: number;
+  seat: HeadSeat;
+  what: string;
+  body: string;
+  face: string;
+}
+
+/** A part that bears on a layer's outer face: its item, its words, and its bearing annulus. */
+interface Bearer {
+  item: string;
+  what: string;
+  /** The bearing diameter (a washer's outside one), absent when the item gives none. */
+  out?: number;
+  /** A washer's bore. */
+  in?: number;
+}
 
 export interface GenOut {
   fastenings: Map<string, FaceResult>;
@@ -368,6 +397,64 @@ function overlap(f: BodyFace, g: BodyFace): number {
   return c.length < 3 ? 0 : Math.abs(area2(c));
 }
 
+/**
+ * The material of a layer's face that a seat can bear on, in the face's own plane's terms, as
+ * convex pieces (after acceptance run 4). A bar's bounding face is its side less every opening
+ * in it: where the section's outline, read SEAT_DEPTH below the face, is not there (a T-slot's
+ * groove between its lips), and the opening of each groove declared on it, where its groove
+ * type gives one. An inner face, or a part's, is its face whole.
+ */
+function seatMaterial(body: Body, f: BodyFace): P2[][] {
+  const poly = ownPoly(f);
+  const b = body.bar;
+  if (!b || !f.bounding) return [poly];
+  const placed = b.placed;
+  const face = f.name as Face;
+  const { section } = placed.item;
+  const [[x0, y0], [x1, y1]] = section.bbox_mm;
+  // Along the side in section terms, and the section coordinate's shift to the face's u: §4.3's
+  // u is local x on the ±y faces and local y on the ±x faces (BarBody).
+  const alongX = face === "+y" || face === "-y";
+  const o: Vec2 = alongX
+    ? [x0 - 1, face === "+y" ? y1 - SEAT_DEPTH : y0 + SEAT_DEPTH]
+    : [face === "+x" ? x1 - SEAT_DEPTH : x0 + SEAT_DEPTH, y0 - 1];
+  const d: Vec2 = alongX ? [1, 0] : [0, 1];
+  const shift = alongX ? -placed.anchor[0] + placed.off[0] : -placed.anchor[1] + placed.off[1];
+  const start = (alongX ? o[0] : o[1]) + shift;
+  let spans = materialAlong(section.draw.outline, o, d).map(
+    ([a, z]) => [start + a, start + z] as [number, number],
+  );
+  for (const g of placed.item.grooves) {
+    if (g.face !== face || g.opening_mm === undefined) continue;
+    const c = g.at_mm + shift;
+    const [lo, hi] = [c - g.opening_mm / 2, c + g.opening_mm / 2];
+    spans = spans.flatMap(([a, z]): [number, number][] => {
+      if (hi <= a || lo >= z) return [[a, z]];
+      return [
+        ...(lo > a ? [[a, lo] as [number, number]] : []),
+        ...(hi < z ? [[hi, z] as [number, number]] : []),
+      ];
+    });
+  }
+  // The face's u runs along the side; its other coordinate, along the bar, is left whole.
+  let vLo = Infinity;
+  let vHi = -Infinity;
+  for (const [, v] of poly) {
+    vLo = Math.min(vLo, v - 1);
+    vHi = Math.max(vHi, v + 1);
+  }
+  return spans
+    .map(([a, z]) =>
+      clip(poly, [
+        [a, vLo],
+        [z, vLo],
+        [z, vHi],
+        [a, vHi],
+      ]),
+    )
+    .filter((p) => p.length >= 3);
+}
+
 /** A point of the face's plane is on the face, within tol.len of its edges. */
 function onFace(f: BodyFace, P: V3): boolean {
   const poly = ownPoly(f);
@@ -391,13 +478,29 @@ export function generateFaces(
   parts: ReadonlyMap<string, DerivedPart>,
   out: GenOut,
 ): void {
+  const unchecked: Unchecked = new Map();
   for (const id of [...ctx.conns.keys()].sort(compareIds)) {
     const ent = ctx.conns.get(id);
     if (ent?.spec.type !== "face") continue;
-    const r = new FaceGen(ctx, id, ent.spec, !ent.copy, bars, runs, parts, out).run();
+    const r = new FaceGen(ctx, id, ent.spec, !ent.copy, bars, runs, parts, out, unchecked).run();
     if (r) out.fastenings.set(id, r);
   }
+  // A part that gives no bearing diameter: one info, naming the connections it is not checked in.
+  for (const [item, u] of [...unchecked].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    const what = u.washer
+      ? "no outside diameter (d2_mm)"
+      : "no bearing diameter (dw_mm, dk_mm or s_mm)";
+    ctx.d.info(
+      "fit",
+      u.conns[0],
+      `${item} gives ${what}, so its seats are not checked: ${u.conns.join(", ")}`,
+      u.conns.length > 1 ? { refs: u.conns.slice(1) } : {},
+    );
+  }
 }
+
+/** Per part that gives no bearing diameter: a washer or not, and the connections it is in. */
+type Unchecked = Map<string, { washer: boolean; conns: string[] }>;
 
 /** Two adjacent layers' faces in contact. */
 interface Contact {
@@ -443,6 +546,8 @@ class FaceGen {
   private readonly runs: ReadonlyMap<string, PlacedRun>;
   private readonly parts: ReadonlyMap<string, DerivedPart>;
   private readonly out: GenOut;
+  /** Parts that give no bearing diameter, and the connections whose seats they make. */
+  private readonly unchecked: Unchecked;
 
   constructor(
     ctx: Ctx,
@@ -453,6 +558,7 @@ class FaceGen {
     runs: ReadonlyMap<string, PlacedRun>,
     parts: ReadonlyMap<string, DerivedPart>,
     out: GenOut,
+    unchecked: Unchecked,
   ) {
     this.ctx = ctx;
     this.id = id;
@@ -462,6 +568,7 @@ class FaceGen {
     this.runs = runs;
     this.parts = parts;
     this.out = out;
+    this.unchecked = unchecked;
   }
 
   private error(code: string, message: string, extra: { field?: string; refs?: string[] } = {}) {
@@ -673,6 +780,9 @@ class FaceGen {
     };
     const tapDepth =
       spec.tap_depth_mm === undefined ? undefined : ctx.num(id, "tap_depth_mm", spec.tap_depth_mm);
+    const bearers = this.bearers(fastener, stack.hardware);
+    const seatHole = clearance ?? (fastener.thread ? threadDiameter(fastener.thread) : undefined);
+    const seatsAt: Seated[] = [];
 
     let k = 0;
     let sleeveNo = 0;
@@ -722,6 +832,34 @@ class FaceGen {
         this.out.pieces.push({ source: piece, item: sl.item, opt: sl.opt, len });
       }
       if (!sleevesOk) continue;
+
+      // What the head and the nut bear on: the first layer's face the fastener enters by, the
+      // last layer's it leaves by.
+      const seats: HeadSeat[] = [];
+      const sides = [
+        {
+          side: "head" as const,
+          b: bearers.head,
+          w: walk[0] as Walk,
+          face: (walk[0] as Walk).entry,
+        },
+        ...(spec.fastening === "bolt"
+          ? [{ side: "nut" as const, b: bearers.nut, w: last, face: last.exit }]
+          : []),
+      ];
+      for (const sd of sides) {
+        if (!sd.b?.out) continue;
+        const w = sd.face === sd.w.entry ? sd.w.we : sd.w.wx;
+        const seat = this.seat(sd.w.body, sd.face, addScaled(at.P, axis, w), sd.b, seatHole);
+        seats.push({ side: sd.side, ...seat });
+        seatsAt.push({
+          k,
+          seat: { side: sd.side, ...seat },
+          what: sd.b.what,
+          body: sd.w.body.id,
+          face: sd.face.name,
+        });
+      }
 
       // Holes.
       for (const [i, w] of walk.entries()) {
@@ -823,8 +961,139 @@ class FaceGen {
         grip,
         ...(piece ? { piece } : {}),
         sleeves: sleeves.map((s) => ({ piece: s.piece, len: s.len })),
+        seats,
       };
       result.stations.push(station);
+    }
+    this.reportSeats(seatsAt);
+  }
+
+  /**
+   * What bears on the outer faces (after acceptance run 4): at the head, the fastener's head, or
+   * a nut from the stack where the fastener has no head of its own there (a rod cut from bar
+   * stock, or a hammer screw, whose head is in the groove); for a bolt, at the nut, a nut from the
+   * stack. The stack's washers go one under the head, then one under the nut; a washer's outside
+   * diameter replaces what it is under. The bearing diameter is an item's `dw_mm`, else a round
+   * head's `dk_mm`, else a hex head's or a nut's `s_mm` (across flats); a part that gives none is
+   * not checked, an `info`.
+   */
+  private bearers(
+    fastener: { out: { item: string }; cut?: unknown },
+    hardware: readonly { item: string; qty: number }[],
+  ): { head?: Bearer; nut?: Bearer } {
+    const { ctx, spec, id } = this;
+    const look = (ref: string): { id: string; item: FastenerItem } | undefined => {
+      const found = ctx.items.item(ref);
+      if (!found.ok || found.item.kind !== "fastener") return undefined;
+      return { id: found.id, item: found.item };
+    };
+    const parts = hardware.flatMap((h) => {
+      const p = look(h.item);
+      return p ? Array.from({ length: h.qty }, () => p) : [];
+    });
+    const nuts = parts.filter((p) => p.item.subtype === "nut");
+    const washers = parts.filter((p) => p.item.subtype === "washer");
+    const dim = (it: FastenerItem, k: string) => {
+      const v = it.dims?.[k];
+      return v === undefined ? undefined : num(v);
+    };
+    const bearing = (it: FastenerItem) => dim(it, "dw_mm") ?? dim(it, "dk_mm") ?? dim(it, "s_mm");
+    const own = fastener.cut ? undefined : look(fastener.out.item);
+    const headless = !own || own.item.subtype === "hammer-screw";
+    const under = (
+      side: "head" | "nut",
+      p: { id: string; item: FastenerItem } | undefined,
+      washer: { id: string; item: FastenerItem } | undefined,
+    ): Bearer | undefined => {
+      const what = (x: { id: string; item: FastenerItem }) =>
+        x === own ? `the head of ${x.id}` : `the ${x.item.subtype} ${x.id}`;
+      const b: Bearer | undefined = washer
+        ? {
+            item: washer.id,
+            what: `the washer ${washer.id} under the ${side}`,
+            ...(dim(washer.item, "d2_mm") !== undefined ? { out: dim(washer.item, "d2_mm") } : {}),
+            ...(dim(washer.item, "d1_mm") !== undefined ? { in: dim(washer.item, "d1_mm") } : {}),
+          }
+        : p
+          ? { item: p.id, what: what(p), ...(bearing(p.item) ? { out: bearing(p.item) } : {}) }
+          : undefined;
+      if (b && b.out === undefined && this.report) {
+        const u = this.unchecked.get(b.item) ?? { washer: washer !== undefined, conns: [] };
+        if (!u.conns.includes(id)) u.conns.push(id);
+        this.unchecked.set(b.item, u);
+      }
+      return b;
+    };
+    const head = under("head", headless ? nuts.shift() : own, washers[0]);
+    const nut = spec.fastening === "bolt" ? under("nut", nuts.shift(), washers[1]) : undefined;
+    return { ...(head ? { head } : {}), ...(nut ? { nut } : {}) };
+  }
+
+  /**
+   * A bearer's seat on a layer's outer face at the point the axis meets it: the fraction of its
+   * annulus, from the hole (or a washer's bore, if wider) out to its bearing diameter, on the
+   * face's material (`seatMaterial`).
+   */
+  private seat(
+    body: Body,
+    f: BodyFace,
+    X: V3,
+    b: Bearer,
+    hole: number | undefined,
+  ): Omit<HeadSeat, "side"> {
+    const R = (b.out as number) / 2;
+    const r = Math.max((hole ?? 0) / 2, (b.in ?? 0) / 2);
+    const c = to2(f, X);
+    const ring = Math.PI * (R * R - r * r);
+    let bears = 0;
+    if (ring > 0) {
+      for (const piece of seatMaterial(body, f)) {
+        bears += discArea(c, R, piece) - (r > 0 ? discArea(c, r, piece) : 0);
+      }
+    }
+    return {
+      item: b.item,
+      d_in: 2 * r,
+      d_out: 2 * R,
+      on: `${body.id} ${f.name}`,
+      bearing: ring > 0 ? Math.min(1, Math.max(0, bears / ring)) : 0,
+    };
+  }
+
+  /**
+   * A seat on nothing is a `fit` error; on less than SEAT_MIN of its annulus, a `fit` warning.
+   * The stations that share one are named together.
+   */
+  private reportSeats(seats: readonly Seated[]): void {
+    if (!this.report) return;
+    const groups = new Map<string, Seated & { ks: number[]; pct: string }>();
+    for (const s of seats) {
+      if (s.seat.bearing >= SEAT_MIN) continue;
+      const pct = (100 * s.seat.bearing).toFixed(1);
+      const key = JSON.stringify([s.seat.side, s.what, s.seat.on, s.seat.d_out, pct]);
+      const g = groups.get(key);
+      if (g) g.ks.push(s.k);
+      else groups.set(key, { ...s, ks: [s.k], pct });
+    }
+    for (const g of groups.values()) {
+      const where = `${g.ks.length === 1 ? "station" : "stations"} ${g.ks.join(", ")}`;
+      const { body, face } = g;
+      const refs = { refs: [body] };
+      if (g.seat.bearing <= 1e-9) {
+        this.ctx.d.error(
+          "fit",
+          this.id,
+          `${where}: ${g.what}, Ø${fmt(g.seat.d_out)}, bears on nothing of ${body}'s face ${face}: its seat lies wholly over an opening or off the face`,
+          refs,
+        );
+      } else {
+        this.ctx.d.warn(
+          "fit",
+          this.id,
+          `${where}: ${g.what}, Ø${fmt(g.seat.d_out)}, bears on ${g.pct} % of its seat on ${body}'s face ${face}, less than ${(100 * SEAT_MIN).toFixed(0)} %`,
+          refs,
+        );
+      }
     }
   }
 

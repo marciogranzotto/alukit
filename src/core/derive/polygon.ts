@@ -186,3 +186,41 @@ export function distanceToEdges(p: P2, poly: readonly P2[]): number {
 export function distanceOutside(p: P2, poly: readonly P2[]): number {
   return inPolygon(p, poly) ? 0 : distanceToEdges(p, poly);
 }
+
+/**
+ * The area a disc shares with a simple polygon, any winding: the sum over its edges of the signed
+ * area the disc shares with the triangle from its centre to the edge, each a triangle where the
+ * edge is inside and a sector where it is outside.
+ */
+export function discArea(c: P2, r: number, poly: readonly P2[]): number {
+  let sum = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i] as P2;
+    const q = poly[(i + 1) % poly.length] as P2;
+    sum += discTriangle([p[0] - c[0], p[1] - c[1]], [q[0] - c[0], q[1] - c[1]], r);
+  }
+  return Math.abs(sum);
+}
+
+/** The signed area a disc about the origin shares with the triangle (origin, a, b). */
+function discTriangle(a: P2, b: P2, r: number): number {
+  const tri = (p: P2, q: P2) => (p[0] * q[1] - p[1] * q[0]) / 2;
+  const sector = (p: P2, q: P2) =>
+    ((r * r) / 2) * Math.atan2(p[0] * q[1] - p[1] * q[0], p[0] * q[0] + p[1] * q[1]);
+  const d: P2 = [b[0] - a[0], b[1] - a[1]];
+  const A = d[0] * d[0] + d[1] * d[1];
+  if (A === 0) return 0;
+  // Where the edge a + t·d crosses the circle, t1 ≤ t2, when it does.
+  const B = a[0] * d[0] + a[1] * d[1];
+  const C = a[0] * a[0] + a[1] * a[1] - r * r;
+  const disc = B * B - A * C;
+  if (disc <= 0) return sector(a, b);
+  const s = Math.sqrt(disc);
+  const t1 = (-B - s) / A;
+  const t2 = (-B + s) / A;
+  if (t1 >= 1 || t2 <= 0) return sector(a, b);
+  const at = (t: number): P2 => [a[0] + t * d[0], a[1] + t * d[1]];
+  const p1 = t1 > 0 ? at(t1) : a;
+  const p2 = t2 < 1 ? at(t2) : b;
+  return (t1 > 0 ? sector(a, p1) : 0) + tri(p1, p2) + (t2 < 1 ? sector(p2, b) : 0);
+}
