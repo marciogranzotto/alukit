@@ -110,6 +110,11 @@ On the audit's frame (`tests/fixtures/brace`), 1440 × 900, dark theme.
 - `src/ui/styles/shell.css`, `viewport.css`: the strip, the readout, hidden rows, the help's
   navigation choice, the crossing box.
 - `tests/e2e/keys.spec.ts`, `first-run.spec.ts`: E2.8's and E2.7's tests, as their tasks say.
+- `tests/e2e/view.spec.ts` (X11's test): it waits for the opened revision to be drawn before
+  reading its link count. It read 15 and then 17 under load, on main too (2 of 4 runs), because
+  the model's materials link on the frame that first draws it; the guard itself is unchanged.
+- `src/ui/inspector/edit-actions.test.ts` (E5's): its exact menus gain the view's Hide and
+  Isolate, at the merge.
 
 ## Against E-UX decisions
 
