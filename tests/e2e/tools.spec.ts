@@ -55,7 +55,6 @@ test("places a part on a face, patterns it along a bar, and measures", async ({ 
   expect(await derivedParts(served.dir)).toMatchObject({ p1: { item: "test:FOOT-M8", bar: "b9" } });
 
   // Pattern: the foot, selected in the tree, every 200 along b9, three in all.
-  await page.getByTestId("left-project").click();
   await page.getByTestId("tree").locator('[data-id="p1"]').click();
   await page.getByTestId("tool-pattern").click();
   await expect(page.getByTestId("pattern-template")).toHaveText("p1");

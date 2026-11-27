@@ -67,7 +67,23 @@ export async function serve(project = "cart"): Promise<Served> {
   await cp(join(FIXTURES, "catalogs"), join(base, "catalogs"), { recursive: true });
   const dir = join(base, ...project.split("/"));
   await cp(join(FIXTURES, ...project.split("/")), dir, { recursive: true });
+  return serveAt(dir, base);
+}
 
+/**
+ * A project as `alukit new` makes it, with the options given (the README's first run:
+ * `--catalog forseti --currency BRL`), in a scratch folder, served by `alukit serve`.
+ */
+export async function serveNew(args: string[] = []): Promise<Served> {
+  const base = await mkdtemp(join(tmpdir(), "alukit-e2e-new-"));
+  const dir = join(base, "project");
+  const made = await cli(["new", dir, ...args]);
+  if (made.code !== 0) throw new Error(`alukit new failed: ${made.err}`);
+  return serveAt(dir, base);
+}
+
+/** `alukit serve` on a folder; stopping it removes `base`, the scratch folder it is in. */
+async function serveAt(dir: string, base: string): Promise<Served> {
   const child: ChildProcess = spawn(process.execPath, [MAIN, "serve", dir, "--no-open"], {
     cwd: ROOT,
     stdio: ["ignore", "pipe", "pipe"],

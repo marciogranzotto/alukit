@@ -85,3 +85,14 @@ export function show(req: ShowRequest): void {
 export function clearShow(): void {
   shown.value = undefined;
 }
+
+/**
+ * Esc first leaves Show, and the dimming of what it did not show, before it steps back any
+ * further (D-UX-18: Esc steps back one level). The app registers it above the tools' Esc; the
+ * status bar says "Esc to leave" while Show is on.
+ */
+export function showKey(e: KeyboardEvent): boolean {
+  if (e.key !== "Escape" || !shown.value) return false;
+  clearShow();
+  return true;
+}

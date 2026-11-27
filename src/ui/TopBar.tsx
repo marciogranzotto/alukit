@@ -1,6 +1,7 @@
 import { signal } from "@preact/signals";
 import { useState } from "preact/hooks";
 import { compareIds } from "#core/ids.ts";
+import { helpOpen } from "./shell/Help.tsx";
 import {
   busy,
   chooseVariant,
@@ -23,13 +24,11 @@ import { ThemeSwitch } from "./theme/ThemeSwitch.tsx";
 
 /**
  * The top bar (design §8): project, variant, undo and redo naming the step, the revision, the
- * read-only banner's restore, export, and the link.
+ * read-only banner's restore, export, help. The connection and the step are the status bar's.
  */
 export function TopBar() {
   const s = summary.value;
-  const drawn = model.value?.rev;
   const readOnly = s?.status.readOnly === true;
-  const conn = connection.value;
   return (
     <header class="topbar">
       <span class="brand">AluKit</span>
@@ -63,15 +62,6 @@ export function TopBar() {
           {notice.value.text}
         </span>
       )}
-      <span
-        class="rev"
-        data-testid="rev"
-        data-rev={s?.rev ?? ""}
-        data-drawn={drawn ?? ""}
-        title={drawn !== undefined && s && drawn !== s.rev ? `drawing rev ${drawn}` : "revision"}
-      >
-        {s ? `rev ${s.rev}` : ""}
-      </span>
       <Revisions />
       <button
         type="button"
@@ -83,15 +73,18 @@ export function TopBar() {
         Export GLB
       </button>
       <ThemeSwitch />
-      <span class={`conn ${conn}`} data-testid="connection" title="the server's event stream">
-        {conn === "live"
-          ? "live"
-          : conn === "connecting"
-            ? "connecting"
-            : conn === "lost"
-              ? "reconnecting"
-              : "no access"}
-      </span>
+      <button
+        type="button"
+        class="help-btn"
+        data-testid="help-open"
+        aria-label="Keys and help"
+        title="Keys and help (?)"
+        onClick={() => {
+          helpOpen.value = true;
+        }}
+      >
+        ?
+      </button>
       {readOnly && (
         <button type="button" class="restore" onClick={() => void restore()} disabled={busy.value}>
           Restore last good

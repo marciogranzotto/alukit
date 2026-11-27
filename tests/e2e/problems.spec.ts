@@ -124,6 +124,8 @@ test.describe("on an empty project", () => {
 
   test("each sheet says what is missing and offers the next step", async ({ page }) => {
     await openTab(page, served, 0);
+    // An empty project's sheets start collapsed (S2.2): open the cut list.
+    await page.getByRole("tab", { name: "Cut list" }).click();
     const cut = page.getByTestId("cutlist");
     await expect(cut).toContainText("Nothing to cut yet");
     await expect(cut.getByRole("button", { name: /Draw a bar/ })).toBeVisible();

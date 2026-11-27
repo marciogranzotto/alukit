@@ -21,7 +21,10 @@ export type { Diagnostic };
 export interface StepInfo {
   rev: number;
   source: string;
+  /** The commands' names, as the log has always written them: `addBar, autoConnect`. */
   what: string;
+  /** The step in words (BE-4): `add bar b35`; absent from a server before BE-4. */
+  text?: string;
 }
 
 export type Status =
@@ -41,7 +44,23 @@ export interface LogEntry {
   rev: number;
   source: string;
   what: string;
+  /** The step in words (BE-4); absent from a server before BE-4. */
+  text?: string;
   of?: number;
+}
+
+/** A `rev` event (design §7.1): the step that made a revision, as the server broadcast it. */
+export interface RevEvent {
+  rev: number;
+  source: string;
+  what: string;
+  text?: string;
+  /** For an undo or redo: the revision of the step taken back or applied again. */
+  of?: number;
+  changes?: { created: string[]; removed: string[]; changed: string[] };
+  diagnostics?: { new: Diagnostic[]; resolved: Diagnostic[] };
+  undo: StepInfo | null;
+  redo: StepInfo | null;
 }
 
 export interface Model {

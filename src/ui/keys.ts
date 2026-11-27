@@ -1,3 +1,6 @@
+import { signal } from "@preact/signals";
+import { isBoolean, readPref, writePref } from "./shell/prefs.ts";
+
 /**
  * The keys (design §8; docs/ux/plan.md §5.3, D-UX-18): one listener on the window offers each key
  * to the handlers the regions register, in order, until one takes it. Each stream registers its
@@ -12,6 +15,14 @@
  *
  * A handler sees every key that passes the guard, Ctrl, Cmd or Alt held or not: one that takes
  * plain keys only starts with `if (chord(e)) return false`.
+ *
+ * Single-character shortcuts can be switched off (WCAG 2.1.4, U65): then no `app` handler sees a
+ * key that is one printable character with no Ctrl, Cmd or Alt (a letter, a digit, `/`, `?`,
+ * Space, Shift held or not). The `overlay` and `tool` scopes still do: what an open overlay or a
+ * live gesture takes is input, not a shortcut. Every action stays a button.
+ *
+ * Each region also says what its keys do (`describeKeys`), beside the handler that binds them, so
+ * the help overlay lists the keys that exist and nothing else.
  */
 
 export type KeyScope = "overlay" | "tool" | "app";
@@ -68,10 +79,28 @@ export function chord(e: Pick<KeyboardEvent, "ctrlKey" | "metaKey" | "altKey">):
   return e.ctrlKey || e.metaKey || e.altKey;
 }
 
+const LETTER_KEYS = "alukit.letter-keys";
+
+/** Whether single-character shortcuts are on (remembered per browser). */
+export const letterKeys = signal(readPref(LETTER_KEYS, true, isBoolean));
+
+/** Turns single-character shortcuts on or off, and remembers it. */
+export function setLetterKeys(on: boolean): void {
+  letterKeys.value = on;
+  writePref(LETTER_KEYS, on);
+}
+
+/** Whether a key is a single-character shortcut: one printable character, no Ctrl, Cmd or Alt. */
+export function isCharacterKey(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">) {
+  return e.key.length === 1 && !chord(e);
+}
+
 /** Offers a key to the handlers in order; true when one took it, whose default is prevented. */
 export function routeKey(e: KeyboardEvent): boolean {
   if (typingIn(e.target)) return false;
+  const shortcutsOff = !letterKeys.value && isCharacterKey(e);
   for (const x of entries) {
+    if (shortcutsOff && x.scope === "app") continue;
     if (x.handler(e)) {
       e.preventDefault();
       return true;
@@ -87,4 +116,36 @@ export function listenKeys(target: Window = window): () => void {
   };
   target.addEventListener("keydown", listener);
   return () => target.removeEventListener("keydown", listener);
+}
+
+// ---------------------------------------------------------------------------------------------
+// What the keys do, for the help overlay
+
+/** One line of the help: the keys, as written on their caps, and what they do. */
+export interface KeyHelpRow {
+  keys: readonly string[];
+  does: string;
+}
+
+/** A group of lines, from the region that binds them. */
+export interface KeyHelpSection {
+  /** Stable: describing a section again under its id replaces it. */
+  id: string;
+  title: string;
+  /** Its place in the help: lower first. */
+  order: number;
+  rows: readonly KeyHelpRow[];
+}
+
+/** The sections described so far, by order. */
+export const keyHelp = signal<readonly KeyHelpSection[]>([]);
+
+/** Describes a region's keys for the help; returns the undo. */
+export function describeKeys(section: KeyHelpSection): () => void {
+  keyHelp.value = [...keyHelp.value.filter((x) => x.id !== section.id), section].sort(
+    (a, b) => a.order - b.order,
+  );
+  return () => {
+    keyHelp.value = keyHelp.value.filter((x) => x !== section);
+  };
 }

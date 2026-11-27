@@ -52,7 +52,7 @@ test("a CLI command appears in two open tabs within 1 s, at the same revision", 
   expect(shown - r.exitedAt).toBeLessThan(1000);
 
   for (const t of tabs) {
-    await expect(t.getByTestId("rev")).toHaveText("rev 1");
+    await expect(t.getByTestId("rev")).toHaveText("Step 1");
     await expect(t.getByTestId("undo")).toHaveText("Undo addBar");
     await expect(t.getByTestId("tree").locator('[data-id="b35"]')).toBeVisible();
   }
