@@ -343,11 +343,9 @@ function OptionRows({ m, id }: { m: Model; id: string }) {
               }}
             >
               {value === undefined && <option value="-">not chosen</option>}
-              {value !== undefined &&
-                value !== "" &&
-                !f.choices.some((c) => c.value === value) && (
-                  <option value={value}>{value} (not one of the item's)</option>
-                )}
+              {value !== undefined && value !== "" && !f.choices.some((c) => c.value === value) && (
+                <option value={value}>{value} (not one of the item's)</option>
+              )}
               {f.choices.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.value === "" ? `(${c.label})` : c.label}
