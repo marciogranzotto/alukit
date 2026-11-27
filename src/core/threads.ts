@@ -153,3 +153,81 @@ export function tapDrill(thread: string): number | undefined {
   const p = threadPitch(thread);
   return d === undefined || p === undefined ? undefined : d - p;
 }
+
+/**
+ * The minor-diameter tolerance T_D1 of an internal thread in tolerance class 6H, by pitch, in mm:
+ * ISO 965-3:1998, Table 1, the minor diameter's upper deviation ES (EI is 0 for position H). Read
+ * from the standard's public preview pages, 2026-11-27, which give the pitches 0.3 to 2.5 mm
+ * (M1.4 to M22 in the coarse series); T_D1 depends on the pitch alone, so a fine pitch takes the
+ * same value as a coarse one. 6H is the medium class ISO 965-1 gives general-purpose tapped holes.
+ */
+const TD1_6H: ReadonlyMap<number, number> = new Map([
+  [0.3, 0.085],
+  [0.35, 0.1],
+  [0.4, 0.112],
+  [0.45, 0.125],
+  [0.5, 0.14],
+  [0.6, 0.16],
+  [0.7, 0.18],
+  [0.75, 0.19],
+  [0.8, 0.2],
+  [1, 0.236],
+  [1.25, 0.265],
+  [1.5, 0.3],
+  [1.75, 0.335],
+  [2, 0.375],
+  [2.5, 0.45],
+]);
+
+/** To 0.001 mm, the resolution ISO 724 and ISO 965 tabulate thread diameters in. */
+const um = (x: number) => Math.round(x * 1000) / 1000;
+
+/**
+ * The largest minor diameter a 6H internal thread may have: its basic minor diameter, D − 1.082532
+ * P (ISO 724: D less twice 5H/8, H = 0.866025 P), plus T_D1. A hole wider than this leaves the
+ * thread short of its depth. Undefined for a thread that is not metric, or whose pitch the table
+ * does not give.
+ */
+export function minorDiameterMax(thread: string): number | undefined {
+  const d = threadDiameter(thread);
+  const p = threadPitch(thread);
+  const td1 = p === undefined ? undefined : TD1_6H.get(p);
+  return d === undefined || p === undefined || td1 === undefined
+    ? undefined
+    : um(um(d - 1.082532 * p) + td1);
+}
+
+/** A tap's fit to a core (`tapFit`): `limit_mm` is the bound the core's diameter crossed. */
+export type TapFit =
+  | { fits: true }
+  | { fits: false; why: "core-wide" | "core-narrow"; limit_mm: number };
+
+/**
+ * Whether a tap fits a core of diameter `d_mm` (design §5.5). A core is a bore sized for a thread,
+ * and tapping it may first drill it up to the tap drill. The tap fits when both hold:
+ *
+ * - **the core is no wider than the thread's largest minor diameter** (`minorDiameterMax`, 6H).
+ *   The tap drill, `tapDrill`'s major-minus-pitch, is one size inside that tolerance, and a shop
+ *   rounds it to the drills it stocks: an M8's 6.75 is drilled 6.8, the core of every 40x40 with
+ *   an M8 centre, and 6.8 is within M8's 6.912. A wider core leaves a shallow thread: "core-wide",
+ *   with that diameter as `limit_mm`;
+ * - **its tap drill takes at most one pitch off the core's diameter**: half a pitch of wall on each
+ *   side, a little less than the thread's own depth (5H/8, 0.54 P). More, and the core was made
+ *   for a smaller thread, and the wall around it, which no section states, decides: "core-narrow",
+ *   with the narrowest core it fits, tap drill less pitch, as `limit_mm`.
+ *
+ * So an M16 fits a Ø13.7 core (drilled up 0.30 to 14.00) and not a Ø5 corner hole (14.00 is 9.00
+ * over); an M6 fits the Ø5 (its tap drill is 5.00) and an M8 does not (1.75 over its 1.25 pitch).
+ * Undefined when the thread has no tap drill or no 6H tolerance here: not metric, or a pitch past
+ * the table's 2.5 mm.
+ */
+export function tapFit(thread: string, d_mm: number): TapFit | undefined {
+  const max = minorDiameterMax(thread);
+  const drill = tapDrill(thread);
+  const p = threadPitch(thread);
+  if (max === undefined || drill === undefined || p === undefined) return undefined;
+  const eps = 1e-9;
+  if (d_mm > max + eps) return { fits: false, why: "core-wide", limit_mm: max };
+  if (drill > d_mm + p + eps) return { fits: false, why: "core-narrow", limit_mm: um(drill - p) };
+  return { fits: true };
+}
