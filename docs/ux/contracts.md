@@ -148,3 +148,63 @@ which S0 listed as the sheets' present set and which the plan's own grouping (D-
 - **`problems/source.ts`**: `problemList` and `problemCounts` read `store.problems`, with the
   check's diagnostics standing in until S2.6 fills it (see s4-decisions.md for what to delete).
 - **Fonts** are files in `src/ui/fonts` with `OFL.txt`, not a dependency (D-UX-22 said `@fontsource`).
+
+## S3 changes
+
+S3 ([s3-decisions.md](s3-decisions.md)) changed these contracts. Each adds, except two fields of
+`ViewTheme`, which C's rendering spec replaces.
+
+- **`ViewTheme`** (`src/viewer/theme.ts`). Replaced: `lights.fill` by `lights.sky` (a hemisphere
+  light, with `ground`), and `grid.centre` by `grid.major`, `grid.axis` and `grid.axisOpacity`
+  (metre lines, and the world X and Y across the ground), because C §5.1 drops the fill light and
+  the centre lines; a field kept for nothing would still need a value. Added: `fog`, `cut` (the
+  cut faces' factors), `body.neutral`, `edge.onDark`, `edge.outline`, `edge.detail`,
+  `edge.selected`, `edge.xray`, `overlay.marker.face`, `overlay.marker.datum`, `overlay.ring`.
+  Only `viewTheme` builds one.
+- **`tokens.ts`** (S4's file, cross-edited): `VIEW_DARK` holds C's dark values (§5.1 to §5.3);
+  `VIEW_LIGHT` keeps S4's light values and adds S3's roles (light fog, lights, metre lines,
+  `neutral` as the light steel). The line, pick and preview markers take the `tool` token in both
+  themes, the grid marker `text-3` and the free one `text-1` (U42: amber is the selection's
+  alone). S4 may retune any value. `tokens.test.ts` no longer holds the dark view's bodies to the
+  export's (they are C's now); `src/viewer/theme.test.ts` holds the export's palette (D-UX-24)
+  and the view's contrast rules.
+- **`Icons.tsx`** (S4's file, cross-edited): adds `joints`, for the Joints toggle.
+- **`MarkerKind`** (`src/viewer/overlay.ts`) adds `face` (a triangle: a face's centre) and
+  `datum` (⊕: a part's origin or datum). Each kind has its shape (C §5.3): `point` a square (a
+  node or a bar's end), `line` a diamond, `grid` a cross, `free` a ring, `pick` a dot. The tools
+  still send `point` for every station; S5 maps a face centre to `face` and a part's origin to
+  `datum`.
+- **The viewer** (`src/viewer/scene.ts`): S0's no-ops are built. It adds `camera()`
+  (`CameraState`: position, target, right, up, in the world), `renderStats()` (`RenderStats`:
+  frames, render ms, hover picks and their ms) and `CORNER_PREFIX` (`corner:`; also in
+  `markers.ts`). `ViewerStats` adds `outlineSegments`, `detailSegments`, `joints` (joined, open,
+  failed) and `badges`. `fitBox(box)` takes a world box and keeps the view's direction.
+  `onHover` reports a body's id or `corner:<key>`, once per change, in Select with no tool armed.
+  `setGhost` fades the joint markers and badges with the bodies.
+- **`resolveTargets(model, refs, ctx?)`** (`targets.ts`): S3.6's refs (ends, connections, runs,
+  patterns, corners, items, open items, suppliers given `ctx.order`); no refs is the whole model.
+  `Targets` adds `bodies`. `ids` stay what S0's were, the entities the refs name (what Show
+  selects and a selection filter matches): a connection is `c35`, a run `r1`, a corner
+  `corner:<key>`; a ref that names no entity (an item, an open item, a supplier) gives the
+  entities that stand for it. `bodies` are what draws them in the scene (a connection's
+  fasteners under its id and its bars, a run's bars, a corner's bars), which the view tints,
+  pulses, keeps out of the ghost, badges and frames. `boxOf(model, ids, points)` is exported.
+- **`corners.ts`**: `cornersOf` is built; adds `cornerKey(ref)` and `pointKey(p)`.
+- **The viewport**: signals `showJoints`, `showProblems`, `colourBy` (`"finish" | "item"`) and
+  `drawnCorners` (`viewport/viewer.ts`). The `left` slot is a column down the viewport's left
+  edge (`.tool-rail`, `data-testid="tool-rail"`); the view controls sit at the top right
+  (`.toolbar`, `data-testid="toolbar"`, as before), in three groups with S4's icons. Esc leaves
+  Show before it clears the selection (`onKey("app", …, 10)`). A Show dims the rest when it
+  shows a problem or asks to (`ghostsRest(shown)`: B §5.3 dims for every problem; `isolate`
+  stays the caller's way to ask for it otherwise). The badges and the callout's row read S4's
+  `problemList`, so they follow the check until S2.6 serves the problems. Snapshot mode draws no
+  hover, markers, badges or labels.
+- **The hook** adds `corners()`, `camera()` and `frames()`. `hovered()` stays S4's.
+- **`src/mesh/bars.ts`** adds `sectionEdgeSets(section)` (outline and detail edges);
+  `angledGeometry` keeps the extrusion's two groups, which the GLB writer ignores, so its bytes
+  do not change.
+- **`src/ui/testing.ts`** adds `viewOf(dir, ...batches)`: the served view model of a scratch
+  project after command batches.
+- **Tests**: `tests/e2e/png.ts`'s `coverage` counts the pixels off their row's commonest colour,
+  since the background is a gradient; snapshot.spec is otherwise unchanged. view.spec checks the
+  projection by `aria-pressed` (§5.10).
