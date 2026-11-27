@@ -94,6 +94,14 @@ export function barWords(m: Model, id: string): string | undefined {
 const SEVERITY = { "blocks-order": "block", error: "error", warning: "warn" } as const;
 
 /**
+ * Problems that badge no body: the butts that name no connector are one buying problem over
+ * every butt alike, whose fix is the project's (docs/ux/polish-decisions.md 2). A triangle on each
+ * butted bar would cover a frame (the cart: 18 butts) and bury the problems that have a place;
+ * the readiness pill, the lists and Show (which frames the butts) carry it.
+ */
+const NO_BADGE: ReadonlySet<string> = new Set(["butt-no-connector"]);
+
+/**
  * The problems as badges on the entities they are about (S3.7): one per problem that blocks the
  * order, is an error or a warning (notes get none), on the bodies its targets stand for.
  */
@@ -101,7 +109,7 @@ export function badgesOf(p: ProblemsAnswer | undefined, m: Model): ProblemBadge[
   if (!p) return [];
   const out: ProblemBadge[] = [];
   for (const x of p.problems) {
-    if (x.group === "note") continue;
+    if (x.group === "note" || NO_BADGE.has(x.code)) continue;
     const ids = resolveTargets(m, x.targets).bodies.filter(
       (id) => id in (m.derived?.bars ?? {}) || id in (m.derived?.parts ?? {}),
     );

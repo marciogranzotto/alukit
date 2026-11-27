@@ -16,6 +16,7 @@ import {
   CORNER_WORDS,
   type FrameDraft,
   frameDraft,
+  frameNumbers,
   frameOptions,
   frameStage,
   JOIN_NONE,
@@ -179,6 +180,15 @@ export function FrameForm({
       ? { why: "pick a profile above" }
       : frameBatch({ ...d, at }, o, bar, project, params, profile?.patch);
   const numbers = useNumbers(JSON.stringify(batch), batch);
+  // The panel's numbers are the command bar's too, while the frame tool draws (review m9).
+  useEffect(() => {
+    if (inCard) return;
+    frameNumbers.value =
+      numbers && "lines" in numbers ? numbers.lines.slice(0, -1).join(" · ") : undefined;
+    return () => {
+      frameNumbers.value = undefined;
+    };
+  }, [numbers, inCard]);
   const [outcome, setOutcome] = useState<CommandOutcome | undefined>(undefined);
   const setDraft = (next: Partial<FrameDraft>) => {
     frameDraft.value = { ...frameDraft.value, ...next };

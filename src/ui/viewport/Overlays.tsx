@@ -153,8 +153,9 @@ export function Callout() {
             <button type="button" aria-label="Previous target" onClick={() => go(-1)}>
               ◀
             </button>
+            {/* The targets' stepper, named so it is not read as the problems' (review m7). */}
             <span data-testid="callout-step">
-              {k + 1} of {n}
+              target {k + 1} of {n}
             </span>
             <button type="button" aria-label="Next target" onClick={() => go(1)}>
               ▶
@@ -169,7 +170,7 @@ export function Callout() {
       {problem ? (
         <div class="callout-problem">
           <ProblemList label="The problem shown">
-            <ProblemRow p={problem} compact />
+            <ProblemRow p={problem} compact inCallout />
           </ProblemList>
         </div>
       ) : (

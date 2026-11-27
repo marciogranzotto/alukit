@@ -320,3 +320,26 @@ marked **moved**, which §5.4 asked for.
 - **Toasts** (S2's `shell/Toasts.tsx`, cross-edited): the person's own step's toast offers "Undo
   it" too (D-UX-13).
 - **`src/ui/testing.ts`**: `hostOf(dir)`, dry runs on a scratch project for unit tests.
+
+## Polish changes
+
+*The phase-4 review's fixes ([polish-decisions.md](polish-decisions.md)).*
+
+- **Core**: the order rule `no-connector` (`ORDER_RULES`, `RULE_DEFAULTS`: `warn`); the check's
+  note `butt-no-connector` per butt (`core/check/joints.ts`: `unjoinedButts`, `buttSystems`); the
+  problem model folds both into one problem whose `Fix` is the new
+  `{ kind: "connector"; butts; systems }`.
+- **`catalog/search.ts`**: a listed entry carries `shape`, `system` and `fits` (full ids) and
+  `offers` (how many offers sell it).
+- **`tools/state.ts`**: `FrameOptions` gains `joint` (a connector id, `JOIN_NONE` for nothing, `""`
+  for the project's default) and `qty`; `frameNumbers`, the panel's dry run in a line.
+  **`tools/commands.ts`**: `frameBatch(draft, options, bar, project, params, defaultBar?)` gives
+  the frame's step (`setProject` defaults, then `addFrame`) or why not; `frameCommand` takes the
+  project's `{ hasDefaultBar, defaultButt }`.
+- **`shell/start.ts`**: `frameWay` takes `{ onDone, profile }`, `profile` the card's first step
+  (`FrameProfile`, its `patch` absent when it is the default bar already).
+- **`common/ConnectorSelect.tsx`**: the connector picker every connector field uses, fit first.
+- **The viewer**: `setJoinedShown(all)`; `MarkerLayer.setQuiet(glyphs)`. The viewport's slots gain
+  `lane`, the message lane; the command bar is no longer a viewport slot but a row of the canvas
+  column (`App.tsx`).
+- **`outline/rows.ts`**: a `Row` gains `figure` and `title`.

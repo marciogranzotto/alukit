@@ -216,6 +216,7 @@ test("the box frame way, joined with a bracket that fits, reads READY and buys t
   await sheet.getByTestId("as-of").fill(pinned);
   await expect(sheet.getByTestId("verdict")).toHaveAttribute("data-status", "READY");
   await expect(sheet.getByTestId("verdict")).toHaveAttribute("data-warnings", "0");
+  await sheet.getByRole("button", { name: /^Show \d+ lines$/ }).click();
   await expect(sheet).toContainText("CT38-06");
   expect(errors).toEqual([]);
 });

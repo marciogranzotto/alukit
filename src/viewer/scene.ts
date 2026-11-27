@@ -870,17 +870,18 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   /** An entity's edges now: colour and alpha for its outline, alpha for its detail. */
   function edgeLook(id: string, body: Hex): { colour: Hex; outline: number; detail: number } {
     const ghosted = ghost !== undefined && !ghost.has(id) && !selection.has(id);
+    // Only what blocks or errs outlines its bar, in red; a warning keeps its triangle badge and
+    // leaves the amber band to the selection, which its outline was read as (review m1).
     const badge = badgeOf.get(id);
+    const red = badge !== undefined && badge !== "warn";
     const colour = selection.has(id)
       ? theme.edge.selected
-      : badge
-        ? badge === "warn"
-          ? theme.status.warn
-          : theme.status.blocked
+      : red
+        ? theme.status.blocked
         : edgeColour(theme, body);
     return {
       colour,
-      outline: ghosted ? GHOST_EDGES.outline : badge ? 1 : theme.edge.outline,
+      outline: ghosted ? GHOST_EDGES.outline : red ? 1 : theme.edge.outline,
       detail: ghosted ? GHOST_EDGES.detail / theme.edge.detail : 1,
     };
   }

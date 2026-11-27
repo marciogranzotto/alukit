@@ -265,6 +265,12 @@ export interface FrameDraft {
 }
 export const frameDraft = signal<FrameDraft>({ w: "", d: "", h: "" });
 
+/**
+ * The box frame panel's dry run in a line ("posts 4 × 800 · top ring 2 × 1000, 2 × 520"), which
+ * the command bar shows while the frame is drawn (review m9); undefined while there is none.
+ */
+export const frameNumbers = signal<string | undefined>(undefined);
+
 /** Which value the box frame's gesture asks for next. */
 export function frameStage(d: FrameDraft): "corner" | "size" | "height" | "done" {
   if (!d.at) return "corner";

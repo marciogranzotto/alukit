@@ -18,6 +18,7 @@ import {
   fieldDone,
   fieldWanted,
   frameDraft,
+  frameNumbers,
   frameStage,
   hint,
   jointPreview,
@@ -441,12 +442,12 @@ function ValueField({ tool }: { tool: ToolName }) {
  */
 export function CommandBar() {
   const tool = activeTool.value;
-  if (!model.value) return <Hint />;
   const prompt = toolPrompt.value;
   return (
     <>
       <Hint />
-      {tool === "select" ? (
+      {/* The row is there before the model too, so the view never changes height under it. */}
+      {tool === "select" || !model.value ? (
         <div class="command-row viewport-help" data-testid="viewport-help">
           drag: orbit · right-drag: pan · wheel: zoom · Shift-drag: box select · Delete: remove the
           selection · ?: keys
@@ -468,6 +469,11 @@ export function CommandBar() {
           {tool === "draw" && <DrawOptions />}
           {tool === "place" && <PlaceOptions />}
           {tool === "measure" && <MeasureResult />}
+          {tool === "frame" && frameNumbers.value && (
+            <output class="cb-chip" data-testid="frame-result" title={frameNumbers.value}>
+              {frameNumbers.value}
+            </output>
+          )}
           <Result />
         </section>
       )}

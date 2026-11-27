@@ -81,6 +81,18 @@ describe("badgesOf", () => {
     expect(badgesOf(undefined, cart)).toEqual([]);
   });
 
+  // docs/ux/polish-decisions.md: butts that name no connector are one buying problem over the
+  // cart's 18 butts; a triangle on each of their bars would bury the problems that have a place.
+  it("badges no body for the butts that name no connector: Show and the lists carry it", () => {
+    const one = {
+      ...PROBLEMS,
+      problems: PROBLEMS.problems.filter((p) => p.code === "butt-no-connector"),
+    };
+    expect(one.problems).toHaveLength(1);
+    expect(one.problems[0]?.targets).toHaveLength(18);
+    expect(badgesOf(one, cart)).toEqual([]);
+  });
+
   it("badges the check's warnings while they stand in for the problems (S4's fromCheck)", () => {
     // The cart's check warns on three connections, the overhanging butts c21 and c22 and the
     // handle's end plate c33; its notes badge nothing.

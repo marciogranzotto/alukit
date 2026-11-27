@@ -267,7 +267,7 @@ export function ViewControls() {
           testid="toggle-problems"
           icon="problems"
           word="Problems"
-          title="Problems drawn on their parts: octagon blocks or errs, triangle warns"
+          title="Problems drawn on their parts: an octagon and a red outline blocks or errs, a triangle warns"
           onClick={() => {
             showProblems.value = !showProblems.value;
           }}

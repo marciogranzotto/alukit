@@ -330,11 +330,15 @@
   color: var(--text-2);
 }
 
-/* The orientation gizmo: bottom left (the help line is the command row's now); its ends are buttons */
+/*
+ * The orientation gizmo: bottom left, where S3.9 put it; its ends are buttons. Not lower: at 6 px
+ * from the canvas's foot Chrome draws it a sub-pixel differently once the toolbar's layers change
+ * (measured in view.spec's section test, 168 pixels; none at 24 px).
+ */
 .gizmo {
   position: absolute;
   left: 6px;
-  bottom: 6px;
+  bottom: 24px;
   width: 72px;
   height: 72px;
   z-index: 2;

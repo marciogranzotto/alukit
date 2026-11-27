@@ -978,6 +978,11 @@
   color: var(--warn);
 }
 
+/* A price on one line, never wrapped digit by digit (review m10) */
+.card-detail .offers .n {
+  white-space: nowrap;
+}
+
 .card-detail .offers {
   margin-top: var(--sp-4);
 }

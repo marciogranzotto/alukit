@@ -39,26 +39,32 @@
     flex: none;
   }
 
+  /*
+   * What gives way, in this order: the prompt, then the value's words and the armed profile's
+   * name, down to nothing (their words are in their titles; the prompt is announced). The result
+   * of the last step keeps 8em, so a refusal is always seen.
+   */
   .command-row > .cb-prompt {
-    flex: 1 1 10em;
+    flex: 1 1 0;
+    min-width: 0;
   }
 
-  .command-row > .cb-armed {
+  .command-row > .cb-armed,
+  .command-row > .cb-eval {
     flex: 0 1 auto;
-    min-width: 4em;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .command-row .cb-field {
-    width: 9em;
+    width: 8em;
   }
 
-  .command-row > .cb-chip,
-  .command-row > .cb-eval {
+  .command-row > .cb-chip {
     flex: 0 1 auto;
-    min-width: 6em;
+    min-width: 8em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

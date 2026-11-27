@@ -64,6 +64,12 @@ test("a length typed with no way to go says which way, and makes nothing (M2)", 
   const result = page.getByTestId("tool-result");
   await expect(result).toHaveAttribute("data-error", "true");
   await expect(result).toContainText("Which way? Move the pointer, or press → ← ↑");
+  // Seen whole within the bar, which keeps to its row (M5): nothing runs out of it.
+  const bar = page.getByTestId("command-bar");
+  const [r, b] = [await result.boundingBox(), await bar.boundingBox()];
+  if (!r || !b) throw new Error("no result or bar");
+  expect(r.x + r.width).toBeLessThanOrEqual(b.x + b.width);
+  expect(await bar.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
   expect(await bars()).toEqual([]);
   // Pointed up, the same length makes the bar.
   await hover(page, [0, 0, 250], /^\+z /);
@@ -94,13 +100,14 @@ test("the command bar is a row under the view, one row high at 1280 px, and Fit 
   // Under the view, not over it; the view keeps its height when the tool turns on.
   expect(box.y).toBeGreaterThanOrEqual(after.y + after.height - 1);
   expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(2);
-  // One row: Plane, Join ends and Corners are in Options.
+  // One row: Plane, Join ends and Corners are in Options; nothing runs out of it.
   expect(box.height).toBeLessThanOrEqual(44);
+  expect(await bar.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
   await expect(page.getByTestId("draw-autoconnect")).toBeHidden();
   await page.getByTestId("draw-options").click();
   await expect(page.getByTestId("draw-autoconnect")).toBeVisible();
-  // A press anywhere else closes them.
-  await page.mouse.click(after.x + after.width / 2, after.y + after.height / 2);
+  // A press anywhere else closes them (here on the status bar, so no bar is started).
+  await page.getByTestId("statusbar").click();
   await expect(page.getByTestId("draw-autoconnect")).toBeHidden();
 
   // A post drawn, then Fit: its top projects inside the view, never under the bar.
@@ -146,6 +153,8 @@ test("the box frame's typed values fill its panel as they are typed, its options
   await page.keyboard.type("800");
   await expect(panel.getByTestId("frame-h")).toHaveValue("800");
   await expect(panel.getByTestId("frame-numbers")).toContainText("posts 4 × 800");
+  // And in the command bar, beside the value (review m9).
+  await expect(page.getByTestId("frame-result")).toContainText("posts 4 × 800");
   // Its own steps, not Draw's (review M4).
   await expect(page.getByTestId("coach")).toHaveAttribute("data-coach", "frame");
   await page.keyboard.press("Enter");
