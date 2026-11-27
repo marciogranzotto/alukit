@@ -959,3 +959,18 @@ anything, and each has a default in place.
   - **Connection actions** are in the right-click menu.
   - **A cross hole's face** can be named per end (F12's `hole_faces`).
   - **Core fix found on the way:** every `setConnection` on a joint whose sleeve length is bound to the bore was refused, because the check took `bore` for an unknown param. A field now declares the names it binds (`exprNames`); the failing test came first, and no golden moved.
+- **17:45**: E2 merged (gate PASS, 1,384 tests). It adds select all, similar, by tag and connected; a crossing box; hide, isolate and show all (H, Shift+H, Alt+H); the menu on outline rows and Shift+F10; the Alt size box; mouse and trackpad navigation; the palette following the default bar; and labels kept inside the view and clear of the gizmo.
+- **18:00**: Shader-link test fix merged (gate PASS, 1,384 tests).
+  - **Symptom:** an intermittent failure in X11's shader-link test, 15 expected and 17 linked, roughly 1 in 8 runs under load. Measured, the old helper and the first fix failed alike, 1 in 16.
+  - **Two causes:**
+    - `waitDrawn` returned when the revision was handed to the viewer, not when a frame drew it.
+    - The problem badges' markers compiled their two programs on the first badge, on a frame of their own.
+  - **Fix:**
+    - `waitDrawn` now waits for the model's frame.
+    - Each marker layer holds a hidden point per program, so the startup compile links them, and `RenderStats.badgeFrame` marks the badges' frame.
+  - **Tests:** a new test fails 4/4 without the primers and passes with them. With the X11 test, 48/48 on 8 workers at load averages up to 144.
+  - `CLAUDE.md` now states the rule.
+- **18:17**: E4 merged (gate PASS, 1,410 tests). It adds editable end cuts, stops at a face, extension and free; offsets and the anchor dots; split and reverse; holes from the menu and the inspector; fields shared by several bars; lengths bound to params with a choice of which end moves; node fields; and `(est)` masses in the BOM. The audit's three wrong details were corrected.
+- **18:20**: Every editing stream is in. Two pieces of work started:
+  - the integration pass: design §6 and §8, the guide and README, and `editing.spec` scripting §12's scenarios, each checked against the CLI, with timings for the designer review;
+  - a core fix: an end whose joint fails was treated as free by `moveEnd` and the end handles.
