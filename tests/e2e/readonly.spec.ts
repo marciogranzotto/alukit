@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 import { cli, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
 
 /**
@@ -50,7 +50,14 @@ test("an invalid direct edit makes both tabs read-only, showing the error", asyn
   // Broken again: "Restore last good" in one tab writes the state the server holds.
   await writeFile(file, "{");
   for (const t of tabs) await expect(t.getByTestId("read-only")).toBeVisible({ timeout: 3000 });
+  // It asks first (D-UX-15), then names the copy the server kept of the rejected text (BE-9).
   await tabs[0]?.getByRole("button", { name: "Restore last good" }).click();
+  await tabs[0]?.getByTestId("restore-confirm").click();
   for (const t of tabs) await expect(t.getByTestId("read-only")).toBeHidden({ timeout: 3000 });
   expect(await readFile(file, "utf8")).toContain('"Hb": "150"');
+  const told = tabs[0]?.getByTestId("notice");
+  await expect(told as Locator).toContainText("The rejected text is kept in .alukit/rejected/");
+  const kept = /(\.alukit\/rejected\/\S+\.json)/.exec((await told?.textContent()) ?? "")?.[1];
+  expect(kept).toBeDefined();
+  expect(await readFile(join(served.dir, kept as string), "utf8")).toBe("{");
 });

@@ -1,8 +1,8 @@
 import { useState } from "preact/hooks";
 import type { Fix, Problem } from "#core/problems/types.ts";
 import { Errors } from "../Feedback.tsx";
+import { pointParam } from "../records/Params.tsx";
 import { ResolveForm } from "../records/ResolveForm.tsx";
-import { openSheet } from "../sheets/registry.ts";
 import { busy, type CommandOutcome, model, sendCommands, summary } from "../store.ts";
 
 /**
@@ -96,7 +96,8 @@ export function FixControls({ p, children }: { p: Problem; children?: preact.Com
         await sendCommands([{ cmd: "lockUpdate", args: { items: [fix.item] } }], fix.label),
       );
     } else if (fix.kind === "param") {
-      openSheet("params");
+      // The params are in the project panel (D-UX-4): the fix opens the param's row there.
+      pointParam(fix.param);
     } else {
       setOpen(open === fix ? undefined : fix);
     }

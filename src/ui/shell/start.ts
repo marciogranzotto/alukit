@@ -34,10 +34,33 @@ export const startShown = computed(
   () => startForced.value || (emptyProject.value === true && !startDismissed.value),
 );
 
+/**
+ * The project was empty when this tab first drew it (kept for the tab's session): the project
+ * panel's First steps are for such a project (D-UX-4).
+ */
+const STARTED_EMPTY = "alukit.started-empty";
+export const startedEmpty = signal(readPref(STARTED_EMPTY, false, isBoolean, "session"));
+
+/** The person hid First steps, for this tab's session. */
+const STEPS_HIDDEN = "alukit.first-steps.hidden";
+export const firstStepsHidden = signal(readPref(STEPS_HIDDEN, false, isBoolean, "session"));
+
+export function hideFirstSteps(): void {
+  firstStepsHidden.value = true;
+  writePref(STEPS_HIDDEN, true, "session");
+}
+
+/** The person has looked at the order (First steps' last step): its sheet was open. */
+export const orderSeen = signal(false);
+
 /** Follows the drawn project: something in it ends a dismissal, so emptying it again shows the card. */
 export function noteProject(m: Model): void {
   const empty =
     Object.keys(m.derived.bars).length === 0 && Object.keys(m.derived.parts).length === 0;
+  if (emptyProject.peek() === undefined && empty && !startedEmpty.peek()) {
+    startedEmpty.value = true;
+    writePref(STARTED_EMPTY, true, "session");
+  }
   emptyProject.value = empty;
   if (!empty && startDismissed.peek()) {
     startDismissed.value = false;

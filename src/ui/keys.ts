@@ -95,11 +95,18 @@ export function isCharacterKey(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaK
   return e.key.length === 1 && !chord(e);
 }
 
-/** Offers a key to the handlers in order; true when one took it, whose default is prevented. */
+/**
+ * Offers a key to the handlers in order; true when one took it, whose default is prevented.
+ * While a text field has focus its keys are its own, except Esc, which still closes the overlay
+ * the field is in (a dialog, the catalog: WAI-ARIA's dialog pattern); no tool or app handler
+ * sees it, so Esc in a form never cancels a gesture.
+ */
 export function routeKey(e: KeyboardEvent): boolean {
-  if (typingIn(e.target)) return false;
+  const typing = typingIn(e.target);
+  if (typing && e.key !== "Escape") return false;
   const shortcutsOff = !letterKeys.value && isCharacterKey(e);
   for (const x of entries) {
+    if (typing && x.scope !== "overlay") continue;
     if (shortcutsOff && x.scope === "app") continue;
     if (x.handler(e)) {
       e.preventDefault();

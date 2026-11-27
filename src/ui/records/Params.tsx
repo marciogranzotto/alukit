@@ -1,16 +1,18 @@
-import { useState } from "preact/hooks";
+import { signal } from "@preact/signals";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { compareIds } from "#core/ids.ts";
 import { Errors } from "../Feedback.tsx";
+import { select } from "../focus.ts";
 import type { Model } from "../model.ts";
-import { registerSheet } from "../sheets/registry.ts";
 import { busy, type CommandOutcome, sendCommands, summary } from "../store.ts";
 import { typedValue } from "../tools.ts";
 
 /**
- * The params (design §8, §4.2: a number, an expression, or a valued field): each as written, its
- * value in the variant derived and its provenance, edited through `setParam`, each edit one step
- * the top bar's undo takes back (§7.1). What a command refuses is shown in its row. Owner: S2,
- * which moves it to the project panel (D-UX-4, S2.12).
+ * The params (design §8, §4.2: a number, an expression, or a valued field), in the project panel
+ * (D-UX-4, S2.12): each as written, its value in the variant derived and its provenance, edited
+ * through `setParam`, each edit one step the top bar's undo takes back (§7.1). What a command
+ * refuses is shown in its row, where the edit happened. A problem's "param" fix points at a row
+ * (`pointParam`), which opens it for editing. Owner: S2.
  */
 
 const isObject = (x: unknown): x is Record<string, unknown> =>
@@ -43,6 +45,16 @@ function provenance(p: unknown): string {
     .join("; ");
 }
 
+/** The param a fix points at, and how many times one was pointed at (to point again). */
+export const pointedParam = signal<{ name: string; n: number } | undefined>(undefined);
+let points = 0;
+
+/** Shows the project panel (by clearing the selection) with the param's row open to edit. */
+export function pointParam(name: string): void {
+  select([], "replace");
+  pointedParam.value = { name, n: ++points };
+}
+
 function ParamRow({
   name,
   written,
@@ -56,41 +68,56 @@ function ParamRow({
 }) {
   const [editing, setEditing] = useState<string | undefined>(undefined);
   const [outcome, setOutcome] = useState<CommandOutcome>();
+  const row = useRef<HTMLTableRowElement>(null);
+  const pointed = pointedParam.value;
+  useEffect(() => {
+    if (pointed?.name !== name) return;
+    setEditing(paramText(written));
+    row.current?.scrollIntoView({ block: "nearest" });
+  }, [pointed?.n]);
   const set = async (e: Event) => {
     e.preventDefault();
     if (editing === undefined || editing.trim() === "") return;
     const r = await sendCommands(
       [{ cmd: "setParam", args: { name, value: editedParam(written, editing) } }],
       `set ${name}`,
+      { inline: true },
     );
     setOutcome(r);
     if (r.ok) setEditing(undefined);
   };
   const remove = async () => {
     setOutcome(
-      await sendCommands([{ cmd: "setParam", args: { name, value: null } }], `remove ${name}`),
+      await sendCommands([{ cmd: "setParam", args: { name, value: null } }], `remove ${name}`, {
+        inline: true,
+      }),
     );
   };
+  const prov = provenance(written);
   return (
     <>
-      <tr data-param={name}>
-        <td>
+      <tr data-param={name} ref={row} class={pointed?.name === name ? "pointed" : undefined}>
+        <th scope="row">
           <code>{name}</code>
-        </td>
+        </th>
         <td>
           {editing === undefined ? (
-            <code>{paramText(written)}</code>
+            <span title={prov || undefined}>
+              <code>{paramText(written)}</code>
+              {prov && <span class="sub"> · {prov}</span>}
+            </span>
           ) : (
             <form class="inline-form" onSubmit={(e) => void set(e)}>
               <input
                 data-testid="param-edit"
+                aria-label={`${name}: a number or an expression`}
                 value={editing}
                 onInput={(e) => setEditing((e.currentTarget as HTMLInputElement).value)}
               />
-              <button type="submit" class="tp-btn" data-testid="param-set" disabled={busy.value}>
+              <button type="submit" class="btn" data-testid="param-set" disabled={busy.value}>
                 Set
               </button>
-              <button type="button" class="tp-btn" onClick={() => setEditing(undefined)}>
+              <button type="button" class="btn" onClick={() => setEditing(undefined)}>
                 Cancel
               </button>
             </form>
@@ -102,32 +129,37 @@ function ParamRow({
         <td class="n" data-testid="param-value">
           {value === undefined ? "" : value}
         </td>
-        <td class="sub">{provenance(written)}</td>
-        <td>
+        <td class="actions">
           <button
             type="button"
-            class="tp-btn"
+            class="btn"
             data-testid="param-change"
+            aria-label={`Edit ${name}`}
             disabled={readOnly()}
+            title={
+              readOnly()
+                ? "Read-only: fix the file, or restore the last good state"
+                : `Edit ${name}`
+            }
             onClick={() => setEditing(paramText(written))}
           >
             Edit
-          </button>{" "}
+          </button>
           <button
             type="button"
-            class="tp-btn"
+            class="btn"
             data-testid="param-remove"
+            aria-label={`Remove ${name}`}
             disabled={readOnly() || busy.value}
             title="Remove the param; refused while something reads it"
             onClick={() => void remove()}
           >
-            Remove
+            ×
           </button>
         </td>
       </tr>
       {outcome && !outcome.ok && (
         <tr>
-          <td />
           <td colSpan={4}>
             <Errors outcome={outcome} />
           </td>
@@ -137,7 +169,8 @@ function ParamRow({
   );
 }
 
-export function ParamsSheet({ m }: { m: Model }) {
+/** The params table, with the form that adds one. */
+export function ParamsTable({ m }: { m: Model }) {
   const params = isObject(m.doc.params) ? m.doc.params : {};
   const names = Object.keys(params).sort(compareIds);
   const variants = isObject(m.doc.variants) ? m.doc.variants : {};
@@ -152,6 +185,7 @@ export function ParamsSheet({ m }: { m: Model }) {
     const r = await sendCommands(
       [{ cmd: "setParam", args: { name: name.trim(), value: typedValue(value) } }],
       `set ${name.trim()}`,
+      { inline: true },
     );
     setOutcome(r);
     if (r.ok) {
@@ -162,16 +196,19 @@ export function ParamsSheet({ m }: { m: Model }) {
   return (
     <div data-testid="params">
       {names.length === 0 ? (
-        <p class="sub">No params.</p>
+        <p class="sub">No params yet: a size the bars are written from, such as W = 1200.</p>
       ) : (
-        <table class="grid">
+        <table class="grid params-table">
           <thead>
             <tr>
-              <th>name</th>
-              <th>as written</th>
-              <th class="n">value{m.variant ? ` (${m.variant})` : ""}</th>
-              <th>provenance</th>
-              <th />
+              <th scope="col">Name</th>
+              <th scope="col">As written</th>
+              <th scope="col" class="n">
+                Value{m.variant ? ` (${m.variant})` : ""}
+              </th>
+              <th scope="col">
+                <span class="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -190,28 +227,29 @@ export function ParamsSheet({ m }: { m: Model }) {
       <form class="record-form" data-testid="param-add" onSubmit={(e) => void add(e)}>
         <input
           data-testid="param-name"
+          aria-label="A new param's name"
           placeholder="name"
+          size={6}
           value={name}
           onInput={(e) => setName((e.currentTarget as HTMLInputElement).value)}
         />
         <input
           data-testid="param-value-new"
-          placeholder="a number or an expression, e.g. W / 2"
+          aria-label="Its value: a number or an expression"
+          placeholder="value, e.g. W / 2"
           value={value}
           onInput={(e) => setValue((e.currentTarget as HTMLInputElement).value)}
         />
         <button
           type="submit"
-          class="tp-btn"
+          class="btn"
           data-testid="param-apply"
           disabled={busy.value || readOnly() || name.trim() === "" || value.trim() === ""}
         >
-          Set
+          Add
         </button>
         <Errors outcome={outcome} />
       </form>
     </div>
   );
 }
-
-registerSheet({ id: "params", title: "Params", order: 80, Body: ParamsSheet });

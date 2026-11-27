@@ -62,7 +62,7 @@ function sellsText(o: OfferCard): string {
 }
 
 /** The options' fields, as selects: a value no offer sells is marked. */
-function OptionSelects({
+export function OptionSelects({
   fields,
   picked,
   onPick,

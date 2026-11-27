@@ -243,6 +243,18 @@ export function numberText(printed: string): RegExp {
   return new RegExp(escaped.join(" ?"));
 }
 
+/**
+ * The newest step's words as `alukit log --json` gives them (BE-4's `text`, else the commands'
+ * names): what the top bar's Undo names, an oracle independent of the app.
+ */
+export async function lastStepWords(dir: string): Promise<string> {
+  const r = await cli(["log", dir, "--json"]);
+  const entries = (JSON.parse(r.out) as { entries: { what: string; text?: string }[] }).entries;
+  const last = entries[entries.length - 1];
+  if (!last) throw new Error("the log is empty");
+  return last.text ?? last.what;
+}
+
 /** The number of bars `alukit derive --json` reports: an oracle independent of the app. */
 export async function derivedBarCount(dir: string): Promise<number> {
   const r = await cli(["derive", dir, "--json"]);

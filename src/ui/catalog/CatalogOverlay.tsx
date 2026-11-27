@@ -2,6 +2,7 @@ import { signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 import type { CatalogTree, ListedEntry } from "../../server/catalog.ts";
 import { get } from "../api.ts";
+import { type CatalogItems, fetchCatalogItems } from "../client/catalog.ts";
 import { kgPerM, money } from "../format.ts";
 import { chord, describeKeys, onKey } from "../keys.ts";
 import { model } from "../store.ts";
@@ -33,14 +34,8 @@ import {
  * tool wants, which ranks first within each rank (BE-8; a server before BE-8 ignores it).
  */
 
-/** A list entry, with what newer servers add: a bar's own size (BE-8), the lowest price (BE-12). */
-type Listed = ListedEntry & {
-  size_mm?: [number, number];
-  from?: { minor: number; currency?: string; per?: string };
-};
-
 const tree = signal<{ rev: number; tree: CatalogTree[] } | undefined>(undefined);
-const results = signal<{ total: number; items: Listed[] } | undefined>(undefined);
+const results = signal<CatalogItems | undefined>(undefined);
 const loadError = signal<string | undefined>(undefined);
 
 /** Kinds in words, for the kind row. */
@@ -150,7 +145,7 @@ function KindRow() {
   );
 }
 
-function ResultRow({ e }: { e: Listed }) {
+function ResultRow({ e }: { e: ListedEntry }) {
   const chosen = catalogChosen.value?.id === e.id;
   const size = e.kind === "bar" ? sizeOf(e) : undefined;
   const facts = [
@@ -158,7 +153,7 @@ function ResultRow({ e }: { e: Listed }) {
     size ? `${size[0]} × ${size[1]}` : undefined,
     e.mass_kg_per_m !== undefined ? `${kgPerM(e.mass_kg_per_m)} kg/m` : undefined,
     e.from
-      ? `from ${money(e.from.minor)} ${e.from.currency ?? ""}${e.from.per ? `/${e.from.per}` : ""}`.trim()
+      ? `from ${money(e.from.minor)}${e.from.currency ? ` ${e.from.currency}` : ""}/${e.from.per === "m" ? "m" : "unit"}`
       : undefined,
     e.fidelity ? `${e.fidelity} section` : undefined,
     e.pinned ? "in use" : undefined,
@@ -248,24 +243,13 @@ export function CatalogOverlay() {
 
   useEffect(() => {
     if (!open) return;
-    const params = new URLSearchParams();
-    if (q.trim()) params.set("q", q.trim());
-    for (const k of ["vendor", "kind", "family"] as const) {
-      const v = f[k];
-      if (v !== undefined) params.set(k, v);
-    }
-    params.set("prefer", prefer);
-    params.set("limit", "80");
     const t = setTimeout(() => {
-      get<{ total: number; items: Listed[] }>(`/api/catalog/items?${params}`).then(
-        (r) => {
-          results.value = r;
+      void fetchCatalogItems({ q: q.trim(), ...f, prefer, limit: 80 }).then((r) => {
+        if (r.ok) {
+          results.value = r.value;
           loadError.value = undefined;
-        },
-        (e) => {
-          loadError.value = (e as Error).message;
-        },
-      );
+        } else loadError.value = r.why;
+      });
     }, 120);
     return () => clearTimeout(t);
   }, [open, q, f.vendor, f.kind, f.family, prefer, rev]);

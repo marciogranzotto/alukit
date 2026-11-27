@@ -398,32 +398,38 @@ export const redo = () => send("/api/redo", { source: "ui" }, "redo");
 export interface Restored {
   ok: boolean;
   rev?: number;
-  /** Where the server kept the rejected text (BE-9), when it keeps it. */
-  kept?: string;
+  /**
+   * The files the server kept the rejected text in (BE-9), relative to the project: the
+   * document's and, when it differed, the lock's. Empty when the files already held the state.
+   */
+  kept: string[];
   message?: string;
 }
 
 /**
  * Writes the state the server holds over the files (§7.1's "restore last good"), and resolves
- * with the answer: the revision, the file the server kept the rejected text in when it keeps one
- * (BE-9's `kept`, in the project's folder), or why it could not.
+ * with the answer: the revision, the files the server kept the rejected text in (BE-9's `kept`,
+ * in `.alukit/rejected/`), or why it could not.
  */
 export async function restore(): Promise<Restored> {
   busy.value = true;
   try {
-    const r = await post<{ ok?: boolean; rev?: number; kept?: string; message?: string }>(
+    const r = await post<{ ok?: boolean; rev?: number; kept?: unknown; message?: string }>(
       "/api/restore",
       {},
     );
     const ok = r.status === 200 && r.body.ok !== false;
+    const kept = Array.isArray(r.body.kept)
+      ? r.body.kept.filter((k): k is string => typeof k === "string")
+      : [];
     return {
       ok,
+      kept,
       ...(typeof r.body.rev === "number" ? { rev: r.body.rev } : {}),
-      ...(typeof r.body.kept === "string" ? { kept: r.body.kept } : {}),
       ...(ok ? {} : { message: r.body.message ?? `the server answered ${r.status}` }),
     };
   } catch (e) {
-    return { ok: false, message: (e as Error).message };
+    return { ok: false, kept: [], message: (e as Error).message };
   } finally {
     busy.value = false;
   }

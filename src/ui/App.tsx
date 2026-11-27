@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { CatalogOverlay } from "./catalog/CatalogOverlay.tsx";
 import { PartsBin } from "./catalog/PartsBin.tsx";
@@ -7,19 +7,26 @@ import { showKey } from "./focus.ts";
 import { listenKeys, onKey } from "./keys.ts";
 import { Outline } from "./outline/Outline.tsx";
 import { Properties } from "./Properties.tsx";
+import { activeSheet, sheetsOpen } from "./sheets/registry.ts";
 import { Sheets } from "./sheets/Sheets.tsx";
 import { Help } from "./shell/Help.tsx";
 import { isNumber, readPref, writePref } from "./shell/prefs.ts";
+import { wirePresence } from "./shell/presence.ts";
+import { LastGood, NoAccess, ReadOnlyBanner } from "./shell/ReadOnly.tsx";
+import { Settings } from "./shell/Settings.tsx";
 import { Splitter } from "./shell/Splitter.tsx";
+import { Coach, StartCard } from "./shell/StartCard.tsx";
 import { StatusBar } from "./shell/StatusBar.tsx";
-import { model, redo, summary, undo } from "./store.ts";
+import { noteProject, orderSeen } from "./shell/start.ts";
+import { Toasts } from "./shell/Toasts.tsx";
+import { requestRedo, requestUndo, UndoConfirm } from "./shell/Undo.tsx";
+import { model, summary } from "./store.ts";
 import { ToolButtons, ToolOverlay, ToolPanel } from "./ToolPanel.tsx";
-import { NoAccess, ReadOnlyBanner, TopBar } from "./TopBar.tsx";
+import { TopBar, VariantStrip } from "./TopBar.tsx";
 import { activeTool, connectTools } from "./tools.ts";
 import { Viewport } from "./viewport/Viewport.tsx";
 // The sheets, which register themselves with the container (sheets/registry.ts).
 import "./tables/index.ts";
-import "./records/Params.tsx";
 
 /**
  * The app's layout (docs/ux/plan.md §1, D-UX-1, D-UX-2, S2.1): the top bar and its banners; then
@@ -34,12 +41,15 @@ import "./records/Params.tsx";
  * so Tab reaches the tools in two stops), the columns are complementary, the sheets a region.
  */
 
-/** Ctrl or Cmd with Z: undo; with Shift too: redo (none while read-only). */
+/**
+ * Ctrl or Cmd with Z: undo, asking first when the step is another source's (D-UX-14); with Shift
+ * too: redo. None while read-only.
+ */
 function undoKey(e: KeyboardEvent): boolean {
   if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return false;
   if (summary.value?.status.readOnly) return true;
-  if (e.shiftKey) void redo();
-  else void undo();
+  if (e.shiftKey) requestRedo();
+  else requestUndo();
   return true;
 }
 
@@ -51,7 +61,10 @@ const COLUMN = {
 const leftWidth = signal(readPref(COLUMN.left.key, COLUMN.left.initial, isNumber));
 const rightWidth = signal(readPref(COLUMN.right.key, COLUMN.right.initial, isNumber));
 
-/** The keys, the tools on the viewport's viewer, and the palette, while the app is shown. */
+/**
+ * The keys, the tools on the viewport's viewer, the palette, the step toasts, the start card's
+ * and First steps' view of the project, while the app is shown.
+ */
 function useWiring(): void {
   useEffect(() => {
     let started = false;
@@ -61,10 +74,17 @@ function useWiring(): void {
       onKey("app", showKey, 10),
       connectTools(),
       keepPalette(),
+      wirePresence(),
       model.subscribe((m) => {
-        if (!m || started) return;
+        if (!m) return;
+        noteProject(m);
+        if (started) return;
         started = true;
         void startPalette(m.defaults);
+      }),
+      // First steps' last step: the order's sheet has been open.
+      effect(() => {
+        if (sheetsOpen.value && activeSheet.value === "order") orderSeen.value = true;
       }),
     ];
     return () => {
@@ -107,6 +127,7 @@ export function App() {
         Skip to the 3D view and its tools
       </button>
       <TopBar />
+      <VariantStrip />
       <NoAccess />
       <ReadOnlyBanner />
       <div class="work">
@@ -122,7 +143,18 @@ export function App() {
           <main id="canvas" class="canvas" tabIndex={-1} aria-label="3D view and tools">
             <Viewport
               tool={activeTool.value}
-              slots={{ left: <ToolButtons />, bottom: <ToolOverlay /> }}
+              slots={{
+                left: <ToolButtons />,
+                centre: (
+                  <>
+                    <StartCard />
+                    <Coach />
+                    <LastGood />
+                  </>
+                ),
+                bottom: <ToolOverlay />,
+                topRight: <Toasts />,
+              }}
             />
             <StatusBar />
           </main>
@@ -136,6 +168,8 @@ export function App() {
         <Sheets />
       </div>
       <Help />
+      <Settings />
+      <UndoConfirm />
     </div>
   );
 }

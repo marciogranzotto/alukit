@@ -166,6 +166,32 @@
   border-color: var(--line);
 }
 
+/* An answer for an older revision, shown while the newer one is on its way */
+.topbar .pill.stale {
+  opacity: 0.6;
+}
+
+.topbar .menu-btn.project {
+  color: var(--text-1);
+  font-weight: 500;
+}
+
+.dialog-check {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0;
+  color: var(--text-2);
+}
+
+.banner .guess {
+  font-style: italic;
+}
+
+.banner > .btn {
+  margin-left: var(--sp-4);
+}
+
 /* The project menu and the revisions' popover */
 .menu-anchor,
 .revisions-anchor {
@@ -1166,19 +1192,29 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
 }
 
 .profile-chip {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  gap: var(--sp-3);
   min-height: 36px;
   padding: var(--sp-2) var(--sp-4);
   background: var(--bg-raised);
+  color: var(--text-1);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-control);
   cursor: pointer;
   text-align: left;
+}
+
+.profile-chip > span {
+  display: flex;
+  flex-direction: column;
 }
 
 .profile-chip[aria-pressed="true"] {
@@ -1188,6 +1224,10 @@
 
 .profile-chip .sub {
   font-size: var(--fs-tiny);
+}
+
+.start-way .cd-row {
+  margin: 0;
 }
 
 .start-links {
@@ -1359,6 +1399,51 @@
   font-size: var(--fs-small);
 }
 
+/* A heading with its action on the right: the panel's name and Settings, First steps and Hide */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.section-head h2,
+.section-head h3 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-panel .params-table th[scope="row"] {
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.project-panel .params-table td.actions {
+  white-space: nowrap;
+  text-align: right;
+  padding-right: 0;
+}
+
+.project-panel .params-table td.actions .btn {
+  min-width: 24px;
+  margin-left: var(--sp-2);
+  padding: 0 var(--sp-3);
+}
+
+.project-panel .record-form {
+  margin-top: var(--sp-3);
+}
+
+.project-panel .record-form input {
+  flex: 1;
+}
+
+.project-panel .record-form input[data-testid="param-name"] {
+  flex: 0 0 7ch;
+}
+
 /* ------------------------------------------------------------------------------------------- */
 /* Dialogs: help, settings, confirmations                                                       */
 
@@ -1488,7 +1573,7 @@
   margin: var(--sp-3) 0;
 }
 
-.settings-form .field > span:first-child {
+.settings-form .field > :first-child {
   min-width: 14ch;
   color: var(--text-2);
 }

@@ -38,7 +38,7 @@ test("the app under Vite draws the project, follows a CLI edit, and shows the or
   expect(d.code).toBe(0);
   await waitDrawn(page, 1);
 
-  await page.getByRole("tab", { name: "Order" }).click();
+  await page.getByRole("tab", { name: /^Order & costs/ }).click();
   await expect(page.getByTestId("order")).toHaveAttribute("data-rev", "1");
   await expect(page.getByTestId("order").locator("section").first()).toBeVisible();
   // Nothing refused by the page's policy (the HMR socket included), nothing thrown.

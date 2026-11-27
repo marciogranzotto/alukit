@@ -86,6 +86,17 @@ describe("routeKey", () => {
     expect(routeKey(key("b", { target: el("INPUT", "checkbox") }))).toBe(true);
   });
 
+  it("offers Esc typed into a field to the overlays alone: it closes a dialog, not a gesture", () => {
+    const tool = vi.fn(() => true);
+    const overlay = vi.fn(() => false);
+    offs.push(onKey("tool", tool), onKey("overlay", overlay));
+    expect(routeKey(key("Escape", { target: el("INPUT", "search") }))).toBe(false);
+    expect(overlay).toHaveBeenCalledOnce();
+    expect(tool).not.toHaveBeenCalled();
+    overlay.mockReturnValue(true);
+    expect(routeKey(key("Escape", { target: el("INPUT", "search") }))).toBe(true);
+  });
+
   it("stops offering a key to a handler once it is unregistered", () => {
     const h = vi.fn(() => true);
     const off = onKey("app", h);
