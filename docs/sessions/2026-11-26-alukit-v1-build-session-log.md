@@ -117,8 +117,10 @@ anything, and each has a default in place.
 | Forseti sections: secondary cores, and the tap's thread against the core | **done**, merged (01:56), pushed | Note: `docs/notes/section-cores.md`. |
 | Acceptance re-runs on the reference project's new heads (internal) | **ran** (01:26, 01:53) | Decided frame, run 4: **pass**. Alternative frame, first run: **fail** on AluKit gaps X1–X4, though one variant passes every numeric test. |
 | X4: stock length of parallel-cut bars | **done**, merged (02:42), pushed | Golden G38. Note: `docs/notes/x4-stock-length.md`. |
-| UX redesign, phase 1: three designer reviews | running (3 × Opus, worktrees), launched 02:27 | task flows and IA; heuristics and first run; visual design and 3D readability |
-| F2: end-hole axis, butt end-face coverage, head seats | running (Opus, worktree), launched 01:30 | goldens G35–G37 |
+| UX redesign, phase 1: three designer reviews | **done** (02:52–02:59), merged | `docs/ux/flows-and-ia.md`, `heuristics-and-first-run.md`, `visual-design.md` |
+| UX redesign, phase 2: one plan | running (Opus), launched 03:01 | `docs/ux/plan.md` | task flows and IA; heuristics and first run; visual design and 3D readability |
+| F2: end-hole axis, butt end-face coverage, head seats | **built** (03:05); merge held until the acceptance re-runs finish | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
+| X1–X3 plus F2a/F2b: blind fasteners, a butt screw through two bodies, plain bars held by a drilled-hole screw, head sizes from the cited standard, butt screws seat-checked | running (Opus, worktree on top of F2), launched 03:08 | goldens G39+ |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -180,6 +182,11 @@ anything, and each has a default in place.
     outline only on compound cuts in rounded sections, where it errs long.
   - The BOM's total length adds spans.
   - Two parallel pieces sharing one saw cut when nested is a v1 limit.
+- **F2 calls (calls 39–43 in the design).**
+  - The overhang limit defaults to 0 (projects can raise it per connector or in defaults).
+  - The 50 % head-seat limit is fixed.
+  - Holes are matched to screws by tap position, with no new field.
+  - G17's brace overhangs 5.00 per side and now warns, correctly.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
@@ -590,3 +597,21 @@ anything, and each has a default in place.
 - **02:57**: The reference project's fix round arrived (new heads for both frames). Acceptance run 5
   on the decided frame and run 2 on the alternative launched in the main checkout; F2's merge is
   held so the code doesn't change under them.
+- **02:59**: UX review C (visual design) merged. Its direction:
+  - the model is the brightest thing; one meaning per colour;
+  - status as shape + word + colour;
+  - IBM Plex, bundled; tables like a fabricator's cut sheet;
+  - a selection that can't hide; hover labels; camera-following light; edges legible on black
+    profiles.
+- **03:01**: An Opus agent merges the three reviews into one plan (`docs/ux/plan.md`): a deduplicated
+  problem list, the plain bugs, the disputed decisions (D-UX-n), backend and CLI additions with
+  parity, parallel implementation streams with file ownership and interfaces, and sequencing.
+- **03:05**: F2 built (4 commits; G35–G37; gate PASS, 758 tests).
+  - End holes follow the screw's axis; a screw leaving the block by a side is an error.
+  - End-face overhang (warning) and overlap (error); on the reference frame they reproduce the
+    record's own figures.
+  - Heads seat on material: the annulus fraction off groove openings; below 50 % a warning.
+  - New warnings on earlier fixtures are all real overhangs.
+  - Merge held until the acceptance re-runs finish.
+- **03:08**: X1–X3 launched with F2a (head sizes from the standard a vendor screw cites, so Forseti's
+  screws get seat-checked) and F2b (butt connectors' screws seat-checked), on top of F2's branch.
