@@ -20,7 +20,7 @@ decision notes and the 21 entries of [`notes/design-vs-built.md`](notes/design-v
 below as dvb), so that the design again describes the system as built. A recorded deviation that
 proved the better choice is now the rule; a feature v1 does not have is stated as a **v1 limit**,
 with the version that takes it up. Calls left for the owner's review are marked *open* (§14, call 6
-and calls 31–34; after the second acceptance run, 36–38). Changed text is marked *2.3*. The build
+and calls 31–34; after the second acceptance run, 36–38; after the third, 39). Changed text is marked *2.3*. The build
 was not changed for this draft, except as "After acceptance run 2" and "After acceptance run 3"
 below record. Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
@@ -182,6 +182,16 @@ moved; two of G34's fault cases and G31's tapped case gain an error (below).
   cores; a section that gives no core positions (only a `tslot`'s `bores` do) an info. Two of
   G34's fault cases, their taps at the centre, gain that error beside the coincidence error, and
   G31's tapped case gains it, its M8 10.00 off the block's core; no value moves (v1-limits 16–21).
+- §3.5, §5.5, §14: **every core a section's drawing shows, and the tap's fit to it**
+  ([`notes/section-cores.md`](notes/section-cores.md)). Forseti's sections list all their cores:
+  the base-40 profiles' Ø5 (M6) corner holes 4.5 mm in from both faces (on the 40x80, both
+  80x80s, the 40x40 básico and enclausurado), the eight drawn sections' cores as a new `cores`
+  list, each checked to be one of the outline's holes, the 20x40 V-slot's Ø5 and the 50x50's Ø13.7
+  centre core as their pages print them. A tap on a core must fit it: the core no wider than the
+  thread's largest 6H minor diameter, and the tap drill at most one pitch over the core, so an M6 in
+  an 80x80's corner hole passes and an M16 there is an error; a thread AluKit has no tap drill or
+  6H tolerance for is an info. Call 39 (open). No golden value moves; the envelopes' computed areas
+  shrink by their new bores, and every bar keeps its published mass.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -534,7 +544,8 @@ per stud in both spliced ends: at the positions of its `at_mm`, else each at the
 several coincide (§5.5). `catalog check` warns about a splice whose studs have no positions and
 refuses one whose positions do not number them. Every tap into a bar's end, a requirement's end
 tap or tapped end hole or a splice's tap, is then checked against the cores of its bar's section
-(§3.5): one on none of them is a `machining` error naming the nearest (*2.3*, §5.5).
+(§3.5): one on none of them is a `machining` error naming the nearest, and so is one on a core its
+thread does not fit (*2.3*, §5.5).
 
 **The ratings bag** (review m7, m16). Instead of fixed schemas for drive, damper and anchor, which
 nothing reads in v1, every item has `ratings`: a map whose keys come from one vocabulary file in
@@ -578,8 +589,8 @@ A section file holds one section, in mm, about its nominal centre (local x = wid
 | `box` | the bounding box only | as a box | no |
 
 **Generators**: `tslot` (overall size, the groove from its groove type, one groove centred per
-face by default, a list of core `bores`, which are the section's cores where an end tap is cut,
-§5.5, *2.3*), `rhs` (with corner radii), `tube` (round), `rod`,
+face by default, a list of core `bores`, each with its diameter, which are the section's cores
+where an end tap is cut, §5.5, *2.3*), `rhs` (with corner radii), `tube` (round), `rod`,
 `threaded-rod` (nominal for drawing, stress area for properties), `flat`, `angle` (rolled, with
 root and toe radii), `rail` (envelope from published dimensions). A local steel catalog then needs
 no outline files. Arcs are flattened at a fixed 0.5° step, which keeps the error relative: 0.0025 %
@@ -596,6 +607,17 @@ affects only drawing and computed properties.
 
 **Datums** are named points a section may declare: a rail's mounting face centre, an angle's
 heel. An anchor may name a datum (§4.4).
+
+**Cores** (*2.3*) are the bores an end tap is cut in (§5.5), each a centre and the diameter the
+vendor prints: a `tslot`'s `bores`, or a drawn section's `cores`,
+`[{ "at_mm": [x, y], "d_mm": 13.7 }, …]`, which must each be a hole of its outline, the hole's
+inscribed circle about that centre its diameter within 0.1 mm on the radius. A section lists every
+core its drawing shows: the module cores and, on Forseti's base-40 profiles, the Ø5 (M6) corner
+holes 4.5 mm in from both faces (the 80x80 básico's four Ø13.7 at (±20, ±20) and four Ø5 at
+(±35.5, ±35.5), and no core at its open centre). A drawn section's holes alone do not say which
+is a core, a keyed bore and a square pocket look alike to geometry, so the Forseti importer takes
+the holes whose inscribed circle is a printed diameter and checks their count against the page
+([notes](notes/section-cores.md)). A box section, or one that lists none, has no known cores.
 
 **Authority rule** (review M6, M10). For mass and section properties the published value wins,
 after overrides. A computed value is used only when nothing is published and the section's
@@ -1357,7 +1379,7 @@ which gives its stored outputs (*2.3*).
    and a butt held by another's through-fastener (*2.3*, §3.4, §4.5); fastening stacks, their walk
    and their grip. Last, ops of one bar of the same kind and size at one place, one op made twice,
    are a `machining` error (*2.3*, §5.5), and so is a tap into a bar's end on none of its
-   section's cores (*2.3*, §5.5).
+   section's cores, or on one its thread does not fit (*2.3*, §5.5).
 5. **Collect.** Cut list, BOM (joint recipes apart), machining sheet, order list (offers, packs,
    kits), costs and totals (§5.3, §5.4).
 6. **Check.** Built-in and project checks, then the order rules (§5.5).
@@ -1478,8 +1500,28 @@ along the box's centre line from each end face (*2.3*).
 | Ends and connections | the validation column of §4.5, two providers, an undeclared angled cut, a chain of end providers, a station on a run's joint, a run not spliced in order; a `held_by` that does not hold, a connector position that falls off its end or face (*2.3*) | error |
 | Unconnected ends | a point shared by two or more bar ends with no connection | warn |
 | Fit | a connector that holds a joined bar in no way it may (§3.4, by role; *2.3*); a T-nut that does not fit its groove; a carriage on another rail system; a `face` with no contact | error |
-| Machining (*2.3*) | two ops of one bar of the same kind and size at one place, one op made twice (§5.1): a requirement written once per screw, a splice whose studs have no positions, two ends that each pass a hole through one axis. Places compare as the cut list's identity does, a through hole by its axis. A tap into a bar's end on none of its section's cores (its centre more than `tol.len` from every core's): an end tap, a connector's in a butting or a through bar's end or a splice's, or a tapped end hole (a drilled one is not checked); the error names the bar, the end, the place and the nearest cores (*2.3*) | error |
-| Machining (*2.3*) | a tap into the end of a bar whose section gives no core positions, so it is not checked: in v1 only a `tslot` generator's `bores` give them (§3.5); a drawn, traced or box section does not say which of its holes is a core | info |
+| Machining (*2.3*) | two ops of one bar of the same kind and size at one place, one op made twice (§5.1): a requirement written once per screw, a splice whose studs have no positions, two ends that each pass a hole through one axis. Places compare as the cut list's identity does, a through hole by its axis. A tap into a bar's end on none of its section's cores (its centre more than `tol.len` from every core's): an end tap, a connector's in a butting or a through bar's end or a splice's, or a tapped end hole (a drilled one is not checked); the error names the bar, the end, the place and the nearest cores (*2.3*). A tap on a core its thread does not fit (the tap rule below): an M16 in an 80x80's Ø5 corner hole (*2.3*) | error |
+| Machining (*2.3*) | a tap into the end of a bar whose section gives no core positions, so it is not checked: a `tslot`'s `bores` and a drawn section's `cores` give them (§3.5), a box section or one that lists none does not; a tap on a core whose thread has no tap drill or 6H tolerance in AluKit (not metric, or a pitch over 2.5 mm), its place checked and its fit not | info |
+
+**The tap rule** (*2.3*). A tap fits the core it stands on when both hold
+([notes](notes/section-cores.md) 7):
+
+- **the core is no wider than the thread's largest minor diameter** in tolerance class 6H, the
+  medium class for general-purpose tapped holes: ISO 724's basic minor diameter, D − 1.082532 P,
+  plus ISO 965-3's T_D1 for the pitch. A wider core leaves a shallow thread. This is "the tap
+  drill no smaller than the core" read with the thread's own tolerance: the tap drill AluKit uses
+  (`tapDrill`, major minus pitch, the rule behind every tapped hole, §4.8) lies inside that
+  tolerance, and shops round it to the drills they stock, so an M8's 6.75 is drilled 6.8, the
+  core of every 40x40 with an M8 centre, inside M8's 6.647 to 6.912;
+- **its tap drill is at most one pitch over the core**: a core may be drilled up to the tap drill,
+  taking off half a pitch of wall on each side at most, a little under the thread's own depth. No
+  section states the wall around its cores, so a tap that needs more was not made for that core
+  (*inferred*; call 39).
+
+So an M16 fits a Ø13.7 core (drilled up 0.30 to 14.00) and not a Ø5 corner hole (14.00 is 9.00
+over the core, its pitch 2); an M6 fits the Ø5 (its tap drill is 5.00); an M8 does not fit a
+Ø13.7 (wider than 6.912). Neither bound is met by M5 in Ø4.6, the pre-hole of a forming tap, which
+v1 does not model (call 39).
 | Lengths | cut length ≤ 0, outside the offer's range, a cut angle outside the supplier's service range | error |
 | Rails | end distance E outside the rail's range; a factory end that is not square | error |
 | Rails | a stock rail with no factory end named (§4.7) | warn |
@@ -2126,6 +2168,12 @@ compared number moves: the check is right, and the question is the record's.
     written (§3.4).
 38. *New in 2.3, after acceptance run 2, open.* One op made twice at one place is an error, which
     blocks the bar's supplier, not a warning (§5.5).
+39. *New in 2.3, after acceptance run 3, open.* A tap fits a core whose diameter is between its tap
+    drill less one pitch and the thread's largest 6H minor diameter (§5.5). The one-pitch limit on
+    drilling up is inferred, not read. A cut thread is assumed: an M5 in the 20-series V-slot's
+    Ø4.6 core, which Forseti's shop and its 20x60 drawing offer (a forming tap's pre-hole), is an
+    error, as are the shop's M5 and M6 for PF20-21's Ø6 core. Whether a core should carry the
+    vendor's stated thread as a fit is open.
 
 ## 15. Review 1 resolution
 
