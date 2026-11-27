@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0" and 80–84 in "Gap X11"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "Gap X11". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11" and 90–94 in "3D editing, E3"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "3D editing, E3". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -611,6 +611,35 @@ tests written first and a golden case worked by an independent hand script
   value or fixture output moved (x11, what moved).
 - §4.5, a correction: a butt's through body is counted and **not drawn**, a v1 limit; the text said
   "drawn and counted" (x11, not done here).
+
+### 3D editing, E3
+
+Stream E3 of the [editing audit](ux/editing-audit.md) builds the transform and copy tools
+([`ux/e3-decisions.md`](ux/e3-decisions.md), cited as "e3"; the interfaces in
+[`ux/contracts.md`](ux/contracts.md), "Editing round: E3 changes"). Every edit is a command the
+core had: `transform`, `mirror`, `array`, `removeEntity` and `autoConnect`, so nothing in the
+document, the commands or the CLI changes. §8's text takes these in when the editing round is
+folded in.
+
+- §8: **Rotate is a tool, `Q`**: the gizmo's rings at the selection's centre; a click on a snap
+  is the centre, Enter the selection's; X, Y or Z (Z at first); a typed angle, or a ring dragged
+  in 15° steps whose release commits; one `transform` turn, then a join at each turned bar's
+  ends, as Move (e3 1–5). Call 90.
+- §8: **Duplicate (Ctrl/Cmd+D) and Paste (Ctrl/Cmd+V) are Move's session on a copy**, one `array`
+  along the offset with a join at each new bar's ends; `4x` and `/4` typed after the offset make
+  more; the first click on a snap is a Duplicate's base point; a paste hangs from the pointer by
+  the copied entities' lowest corner; Copy (Ctrl/Cmd+C) remembers the selection in the tab; the
+  copies are selected after the step (e3 8–10). Call 91.
+- §8: **Mirror, in the menu**: a plane square to X, Y or Z through the selection's centre, a snap
+  or a typed coordinate; "Remove the originals" removes what was mirrored, with its cascade, in
+  the same step; the images are selected after it (e3 6, 7). Call 92.
+- §8: **Align, in the menu**: a click on a bar's face moves the selection along its normal until
+  its own face that looks the same way is flush, one `transform` (e3 16). Call 93.
+- §8: **a part selected alone shows the gizmo's arrow along its bar**, which a drag slides it by,
+  as a `transform` (e3 17); **a live gesture's keys are its own wherever the focus is**, but in a
+  text field, a dialog or a menu (e3 13); every preview is local, and a dry run comes after a
+  snap, a typed value or a rest (e3 5, 11; **measured**: at most 4 dry runs in 60 pointer moves).
+  Call 94.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -3563,7 +3592,6 @@ reasons. Marking the room is the run's own change, in its project.
     E2.1, because the menu's first test opens it so: on what is under the pointer, selected first
     when it is not, else on the selection, in Select only. A greyed entry says why it cannot run.
     The outline's rows, the menu key and Shift+F10 stay E2.1's (e0 10, 11).
-
 80. *New in 2.3, gap X11, open.* Context is a field of the member, `context: true` on a bar, a placed
     part or a butt's through body, not a kind of item or a field of a placeholder: one item is built
     in one place and context in another (an existing frame extended with new bars of its profile, a
@@ -3588,6 +3616,30 @@ reasons. Marking the room is the run's own change, in its project.
     moved by the room; no `bbox()` of everything drawn, since no check has asked for one. The view
     draws context translucent in one neutral tone, whatever its item, and the GLB keeps it, flagged,
     in its own material, so the frame exports in its room (x11 13, 15, 16).
+90. *New in 2.3, 3D editing E3, open.* Rotate's ring drag turns in 15° steps (SketchUp's angle
+    snapping), and its release commits; any other angle is typed. Its axis is Z until X, Y or Z
+    (or → ← ↑) is pressed; in Rotate with a selection those letters are Rotate's (X starts a turn
+    about X, as Blender's R X), so X there does not pick the Pattern tool. The step joins each
+    turned bar's ends as Move's does (e3 1–4).
+91. *New in 2.3, 3D editing E3, open.* A Duplicate or a Paste is one `array` step with an
+    `autoConnect` at each new bar's end points, so a rail duplicated between two legs is butted
+    on both; its log words are `array`'s. `4x` and `/4` are read only as the typed text's last
+    token, with nothing inside it, so an expression's `/` and `*` stay arithmetic. A paste's base
+    is the copied entities' lowest corner; the copies are selected after the step (e3 8–10).
+92. *New in 2.3, 3D editing E3, open.* Mirror's plane follows the snap under the pointer until a
+    coordinate is typed, and starts through the selection's centre; "Remove the originals"
+    removes them with Delete's cascade in the same step. A mirror's preview draws its bars'
+    images; parts are named by the dry run, not drawn (e3 6, 7, 11).
+93. *New in 2.3, 3D editing E3, open.* Align makes flush the faces that look the same way (a
+    rail's top with a post's top), along the picked face's normal, the offset read from the
+    derived bodies in the app and sent as `transform`; an agent reads the same numbers from
+    `alukit derive` (e3 16).
+94. *New in 2.3, 3D editing E3, open.* A part's slide by its arrow is a `transform`, not the
+    audit's `setPart`: the same document, one edit path for every move. The arrow is shown only
+    for a bar along a world axis, the gizmo's arrows being world axes. While a gesture is on, its
+    keys reach it before an outline row's own handler, never before a text field's, a dialog's or
+    a menu's (e3 13, 17).
+
 
 ## 15. Review 1 resolution
 

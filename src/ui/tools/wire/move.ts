@@ -1,16 +1,19 @@
 import { idList } from "#core/commands/words.ts";
 import type { V3 } from "../../../mesh/model.ts";
-import type { GhostBar, MarkerKind } from "../../../viewer/overlay.ts";
+import type { GizmoPart, GizmoSpec } from "../../../viewer/gizmo.ts";
+import type { MarkerKind } from "../../../viewer/overlay.ts";
 import type { Grab, Hit, ToolHandler, ToolPointer, Viewer } from "../../../viewer/scene.ts";
 import { rayLineParams, type Snap, type SnapTargets } from "../../../viewer/snap.ts";
 import { rayPlane } from "../../../viewer/workplane.ts";
-import { transformBatch } from "../../edit/batches.ts";
+import { duplicateBatch, transformBatch } from "../../edit/batches.ts";
+import { centreOf, ghostsOf, splitCopies, translation } from "../../edit/geometry.ts";
 import { select, selection } from "../../focus.ts";
 import { chord, describeKeys, onKey } from "../../keys.ts";
 import type { Model } from "../../model.ts";
 import { model } from "../../store.ts";
 import type { GestureSpec, Gestures } from "../drag.ts";
 import {
+  copyWords,
   MOVE_LOCKS,
   type MoveSet,
   moveSet,
@@ -36,18 +39,36 @@ import { VALUE_START } from "./common.ts";
  * along it. The moved bars are drawn where they would be; after a snap or a pause a dry run of the
  * step says what follows, frees or joins. The release is one step: `transform`, then an
  * `autoConnect` at each moved bar's end. Joined ends follow (the default); Alt frees them.
+ *
+ * The same session moves a copy (docs/ux/e3-decisions.md; the editing audit's E3.3–E3.5, E3.7):
+ * - **Duplicate** (Ctrl/Cmd+D) starts from the original's place: the first click on a snap is the
+ *   base point (point to point), the next where the copy goes; `4x` typed after the offset makes
+ *   four copies at that spacing, `/4` divides it into four. The step is one `array`, with a join
+ *   at each new bar's ends, and the copies are selected after it.
+ * - **Paste** (Ctrl/Cmd+V) is a Duplicate whose base is set already: the copied selection's
+ *   lowest corner, hanging from the pointer, so the first click places it.
+ * - **A part selected alone**, in Select, shows the gizmo's arrow along its bar (when the bar runs
+ *   along a world axis); dragging the arrow slides it along the bar, a typed distance too.
  * Owner: E3.
  */
-
-/** At most this many moved bars are drawn as ghosts; the rest show by the marker and the line. */
-const MAX_GHOSTS = 48;
 
 export interface MoveTool {
   handler: ToolHandler;
   grab: Grab;
   /** A value key with the tool on and a selection: a move from the keyboard, base at its centre. */
   startFromKeyboard(): boolean;
+  /**
+   * A Move session on a copy of `ids` (Duplicate, Paste): from `base` (the selection's centre
+   * when absent), with the base already chosen (`based`, Paste) or chosen by the first click.
+   */
+  startCopy(ids: Iterable<string>, how: CopyHow, e?: ToolPointer): boolean;
   dispose(): void;
+}
+
+export interface CopyHow {
+  title: string;
+  base?: V3;
+  based: boolean;
 }
 
 export interface MoveDeps {
@@ -57,6 +78,12 @@ export interface MoveDeps {
   pick(e: ToolPointer): Hit | undefined;
 }
 
+/** A move on: the gesture, and what a gizmo's arrow tells it. */
+interface MoveSpec extends GestureSpec {
+  /** An arrow dragged: the world offset from its press. */
+  dragged(delta: V3 | undefined): void;
+}
+
 const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const add = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const scale = (a: V3, s: number): V3 => [a[0] * s, a[1] * s, a[2] * s];
@@ -64,64 +91,34 @@ const dot = (a: V3, b: V3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const norm = (a: V3) => Math.hypot(a[0], a[1], a[2]);
 const num = (x: number) => (Math.round(x * 100) / 100).toString();
 
-/** The centre of what a set moves: its bars' ends, its parts' and points' positions. */
-function centreOf(m: Model, set: MoveSet): V3 {
-  const pts: V3[] = [];
-  for (const b of set.bars) {
-    const bar = m.derived.bars[b];
-    if (bar) pts.push(bar.ends.a.point, bar.ends.b.point);
-  }
-  for (const n of set.nodes) {
-    const p = m.derived.nodes[n];
-    if (p) pts.push(p);
-  }
-  for (const p of set.parts) {
-    const at = m.derived.parts[p]?.point ?? m.derived.parts[p]?.origin;
-    if (at) pts.push(at);
-  }
-  if (pts.length === 0) return [0, 0, 0];
-  const s = pts.reduce((acc, p) => add(acc, p), [0, 0, 0] as V3);
-  return scale(s, 1 / pts.length);
-}
-
-/** Each moved bar as a ghost, offset by `d`. */
-function ghostsOf(m: Model, set: MoveSet, d: V3): GhostBar[] {
-  const out: GhostBar[] = [];
-  for (const id of set.bars.slice(0, MAX_GHOSTS)) {
-    const b = m.derived.bars[id];
-    const view = m.display.bars[id];
-    const section = view ? m.display.sections[view.section] : undefined;
-    if (!b || !view || !section) continue;
-    const a = b.ends.a.point;
-    const bp = b.ends.b.point;
-    out.push({
-      section,
-      x: b.frame.x,
-      y: b.frame.y,
-      t: b.frame.z,
-      a: add(a, d),
-      len: norm(sub(bp, a)),
-      shift: view.shift,
-    });
-  }
-  return out;
+/** The axis a world unit vector runs along, if it does. */
+function worldAxis(u: V3): "x" | "y" | "z" | undefined {
+  const k = [0, 1, 2].find((i) => Math.abs(Math.abs(u[i] as number) - 1) < 1e-9);
+  return k === undefined ? undefined : (["x", "y", "z"] as const)[k];
 }
 
 export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDeps): MoveTool {
   const preview = createPreviewer(
     viewer,
-    () => gesture.peek()?.kind === "move",
+    () => {
+      const k = gesture.peek()?.kind;
+      return k === "move" || k === "duplicate";
+    },
     () => drawOptions.peek().prefer,
   );
 
-  function spec(m: Model, set: MoveSet, base: V3): GestureSpec {
+  function spec(m: Model, set: MoveSet, start: V3, copy?: CopyHow): MoveSpec {
     const slide = slideAxis(m, set);
+    let base = start;
+    let based = copy ? copy.based : true;
     let lock: "x" | "y" | "z" | undefined;
     let way: V3 | undefined;
     let now: Offset = offsetOf([0, 0, 0]);
     let why: string | undefined;
     let detach = false;
     let label = "";
+    let arrow: V3 | undefined;
+    let copies: { count?: number; divide?: number } = {};
     const moving = new Set([...set.bars, ...set.parts]);
     /** What the moved set is not: its own ends and faces are no place to move to. */
     const others = (t: SnapTargets): SnapTargets => ({
@@ -131,63 +128,119 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
       }),
       lines: t.lines.filter((l) => !moving.has(l.bar.split("@")[0] ?? "")),
     });
-    const title = `Move ${idList(set.ids)}`;
+    const kind = copy ? "duplicate" : "move";
+    const title = copy ? `${copy.title} ${idList(set.ids)}` : `Move ${idList(set.ids)}`;
     const axisU = (): V3 | undefined => (lock ? UNIT[lock] : slide?.u);
+    const rule = () => preview.flipped ?? drawOptions.peek().prefer;
+    /** A copy's step with a corner rule (Tab's, else the gesture's), or why it cannot be built. */
+    const copyBatch = (prefer = rule()) =>
+      duplicateBatch(m, set.ids, [now.d[0], now.d[1], now.d[2]], { ...copies, prefer });
+
+    function prompt(): string {
+      if (copy && !based) return "click a base point, or drag; or type an offset, then 4x or /4";
+      if (lock) return `along ${lock.toUpperCase()}: drag, or type the distance`;
+      if (slide) return `along ${slide.bar}: drag, or type the distance`;
+      return copy
+        ? "click where the copy goes, or type x, y, z; then 4x for more, /4 to divide"
+        : "drag, or type a distance, x, y, z or [x, y, z]";
+    }
 
     function draw(): void {
       const d = now.d;
       const dest = add(base, d);
-      const snapped = label !== "" && label !== "free" && label !== "typed";
-      const kind: MarkerKind = snapped ? "point" : "free";
+      const snapped = label !== "" && label !== "free" && label !== "typed" && !arrow;
+      const markerKind: MarkerKind = snapped ? "point" : "free";
+      const steps = copy ? (copies.divide ?? copies.count ?? 1) : 1;
+      const pitch = copy && copies.divide ? scale(d, 1 / copies.divide) : d;
+      const ghosts = copy
+        ? Array.from({ length: Math.min(steps, 24) }, (_, i) =>
+            ghostsOf(m, set.bars, translation(scale(pitch, i + 1)), 48),
+          ).flat()
+        : ghostsOf(m, set.bars, translation(d));
       viewer.setOverlay({
-        ghosts: ghostsOf(m, set, d),
+        ghosts: ghosts.slice(0, 96),
         line: norm(d) > 0 ? { a: base, b: dest } : undefined,
-        marker: { p: dest, kind },
+        marker: { p: dest, kind: markerKind },
         ...(lock ? { guide: { through: base, axis: lock } } : {}),
       });
       const dist = norm(d);
+      const many = copy
+        ? copies.divide
+          ? ` · ${copies.divide} copies, ${num(dist / copies.divide)} apart`
+          : copies.count
+            ? ` · ${copies.count} copies`
+            : ""
+        : "";
       const reading =
         why ??
-        `by [${now.written.map((x) => (typeof x === "number" ? num(x) : x)).join(", ")}] · ${num(dist)} mm`;
+        `by [${now.written.map((x) => (typeof x === "number" ? num(x) : x)).join(", ")}] · ${num(dist)} mm${many}`;
       gesture.value = {
-        kind: "move",
+        kind,
         title,
-        prompt: lock
-          ? `along ${lock.toUpperCase()}: drag, or type the distance`
-          : slide
-            ? `along ${slide.bar}: drag, or type the distance`
-            : "drag, or type a distance, x, y, z or [x, y, z]",
-        reading: `${reading}${detach ? " · detached (Alt)" : ""}`,
+        prompt: prompt(),
+        reading: `${reading}${detach && !copy ? " · detached (Alt)" : ""}`,
         snap: label,
       };
       if (why || dist < 0.005) {
         preview.ask(undefined);
         return;
       }
+      const soon = snapped || label === "typed";
+      if (copy) {
+        preview.ask({
+          commands: (prefer) => {
+            const b = copyBatch(prefer ?? rule());
+            return "why" in b ? undefined : b;
+          },
+          at: dest,
+          soon,
+          words: copyWords,
+        });
+        return;
+      }
       preview.ask({
         commands: (prefer) => transformBatch(set, now.written, detach, prefer ?? rule()),
         at: dest,
-        soon: snapped || label === "typed",
+        soon,
         words: (r) => moveWords(r, detach),
       });
     }
-    const rule = () => preview.flipped ?? drawOptions.peek().prefer;
 
     return {
-      kind: "move",
+      kind,
       update(e) {
         if (e) detach = e.altKey;
         why = undefined;
-        const text = typed.peek();
+        let text = typed.peek();
+        copies = {};
+        if (copy) {
+          const c = splitCopies(text, m.derived.params);
+          if ("why" in c) {
+            why = c.why;
+            text = "";
+          } else {
+            text = c.rest;
+            copies = {
+              ...(c.count !== undefined ? { count: c.count } : {}),
+              ...(c.divide !== undefined ? { divide: c.divide } : {}),
+            };
+          }
+        }
         if (text.trim() !== "") {
           const o = typedOffset(text, m.derived.params, base, axisU() ?? way);
           if (o && "why" in o) why = o.why;
           else if (o) now = o;
           label = "typed";
+        } else if (arrow) {
+          // An arrow dragged: along it, in whole millimetres, from the press.
+          const u = axisU();
+          const s = u ? dot(arrow, u) : 0;
+          now = offsetOf(u ? scale(u, Math.round(s)) : [0, 0, 0]);
+          label = `along ${slide?.bar ?? lock ?? ""}`;
         } else if (e) {
           const ray = viewer.ray(e.clientX, e.clientY);
           const u = axisU();
-          const sn = e.shiftKey ? undefined : deps.snap(e, others);
+          const sn = e.shiftKey ? undefined : deps.snap(e, copy ? undefined : others);
           let d: V3;
           if (u) {
             // Along the lock: what is snapped, or the pointer's ray, read on the axis (§4.4).
@@ -209,11 +262,38 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
       },
       commit() {
         if (why) return { why };
+        if (copy && !based && norm(now.d) < 0.005) {
+          return { why: "click a base point, then where the copy goes, or type an offset" };
+        }
         if (norm(now.d) < 0.005) return "nothing";
+        if (copy) {
+          const b = copyBatch();
+          if ("why" in b) return b;
+          return { commands: b, what: `copy ${idList(set.ids)}` };
+        }
         return {
           commands: transformBatch(set, now.written, detach, rule()),
           what: `move ${idList(set.ids)}`,
         };
+      },
+      press(e) {
+        // Duplicate: the first click is the base point (point to point, E3.5), the next commits.
+        if (!copy || based) return undefined;
+        const sn = deps.snap(e);
+        const hit = sn ? undefined : deps.pick(e);
+        base =
+          sn?.p ?? hit?.p ?? rayPlane(viewer.ray(e.clientX, e.clientY), workPlane.peek()) ?? base;
+        based = true;
+        now = offsetOf([0, 0, 0]);
+        way = undefined;
+        return "drag";
+      },
+      done(o) {
+        // The copies are what a person works on next: they are selected.
+        if (copy && o.ok) {
+          const made = o.created.filter((id) => /^(b|p|n)\d+$/.test(id));
+          if (made.length > 0) select(made, "replace");
+        }
       },
       key(e) {
         const axis = MOVE_LOCKS[e.key];
@@ -227,28 +307,90 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
       flip() {
         void preview.flip();
       },
+      dragged(delta) {
+        arrow = delta;
+        this.update(undefined);
+      },
       stop() {
         preview.reset();
         viewer.setOverlay({});
         hint.value = undefined;
+        live = undefined;
+        restArrow();
       },
     };
   }
 
-  /** Starts a move of `ids` from `base`. */
-  function begin(ids: Iterable<string>, base: V3 | undefined, e: ToolPointer | undefined): boolean {
+  /** The move on now, while its gesture is. */
+  let live: MoveSpec | undefined;
+
+  /** Starts a move of `ids` from `base`, or a copy's. */
+  function begin(
+    ids: Iterable<string>,
+    base: V3 | undefined,
+    e: ToolPointer | undefined,
+    held: boolean,
+    copy?: CopyHow,
+  ): boolean {
     const m = model.peek();
     if (!m) return false;
     const set = moveSet(m, ids);
     if ("why" in set) {
-      lastResult.value = { rev: m.rev, created: [], error: set.why };
+      const why = copy ? set.why.replace("to move", "to copy") : set.why;
+      lastResult.value = { rev: m.rev, created: [], error: why };
       return false;
     }
     // The hover hint gives way to the gesture's own words.
     hint.value = undefined;
-    gestures.start(spec(m, set, base ?? centreOf(m, set)), e, e !== undefined);
+    const s = spec(m, set, base ?? centreOf(m, set), copy);
+    live = s;
+    gestures.start(s, e, held);
     return true;
   }
+
+  // A part selected alone, in Select: the gizmo's arrow along its bar (E3.7).
+  let arrowShown: GizmoSpec | undefined;
+  function restArrow(): void {
+    // A move of this tool's on (the arrow's own slide among them) leaves the arrow as it is.
+    if (live) return;
+    const m = model.peek();
+    const sel = selection.peek();
+    let want: GizmoSpec | undefined;
+    // Another gesture on (a Mirror, a Duplicate) takes the arrow away until it ends.
+    if (m && !gesture.peek() && activeTool.peek() === "select" && sel.size > 0) {
+      const set = moveSet(m, sel);
+      const slide = "why" in set ? undefined : slideAxis(m, set);
+      const k = slide ? worldAxis(slide.u) : undefined;
+      if (k && !("why" in set)) want = { at: centreOf(m, set), parts: [`move-${k}` as GizmoPart] };
+    }
+    if (want) {
+      arrowShown = want;
+      viewer.setGizmo(want);
+    } else {
+      if (arrowShown && viewer.gizmo() === arrowShown) viewer.setGizmo(undefined);
+      arrowShown = undefined;
+    }
+  }
+  const offGizmo = viewer.onGizmoDrag((g) => {
+    if (!arrowShown || activeTool.peek() !== "select" || !g.part.startsWith("move-")) return;
+    if (g.phase === "start") {
+      const at = "at" in arrowShown ? arrowShown.at : undefined;
+      if (!live && !begin(selection.peek(), at, undefined, false)) return;
+      live?.dragged([0, 0, 0]);
+      return;
+    }
+    if (g.phase === "move") {
+      live?.dragged(g.delta);
+      return;
+    }
+    // A drag commits where it let go; a click on the arrow leaves the slide on, to type the
+    // distance or click where it goes. Either way the pointer steers from here.
+    if (norm(g.delta) >= 0.5) {
+      live?.dragged(g.delta);
+      gestures.enter();
+    }
+    live?.dragged(undefined);
+  });
 
   const grab: Grab = {
     press(e) {
@@ -264,7 +406,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
       if (!hit && sel.size === 0) return false;
       const base = deps.snap(e)?.p ?? hit?.p ?? undefined;
       const at = base ?? rayPlane(viewer.ray(e.clientX, e.clientY), workPlane.peek());
-      return begin(ids, at, e);
+      return begin(ids, at, e, true);
     },
     move(e, held) {
       gestures.pointer(e, held);
@@ -298,10 +440,14 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
 
   function startFromKeyboard(): boolean {
     if (gestures.live() || selection.peek().size === 0) return false;
-    return begin(selection.peek(), undefined, undefined);
+    return begin(selection.peek(), undefined, undefined, false);
   }
 
   const offKeys = [
+    selection.subscribe(restArrow),
+    model.subscribe(restArrow),
+    activeTool.subscribe(restArrow),
+    gesture.subscribe(restArrow),
     // Move with a selection and no drag on: a value typed moves it from the keyboard (D-UX-17).
     // Above the drag's own keys (wiring.ts), which take the value once the move is on.
     onKey(
@@ -336,6 +482,10 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
           does: "Hold to free what joins the selection to the rest, instead of it following",
         },
         { keys: ["Tab"], does: "Flip the previewed joint where a moved end lands on a bar" },
+        {
+          keys: ["4x", "/4"],
+          does: "While duplicating: after the offset, four copies at that spacing, or four gaps",
+        },
       ],
     }),
   ];
@@ -344,9 +494,15 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
     handler,
     grab,
     startFromKeyboard,
+    startCopy(ids, how, e) {
+      if (gestures.live()) gestures.cancel();
+      return begin(ids, how.base, e, false, how);
+    },
     dispose() {
+      offGizmo();
       for (const off of offKeys) off();
       preview.reset();
+      if (arrowShown && viewer.gizmo() === arrowShown) viewer.setGizmo(undefined);
     },
   };
 }
