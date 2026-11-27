@@ -1,4 +1,6 @@
 import { effect, signal } from "@preact/signals";
+import { heldWords } from "#core/commands/hold.ts";
+import type { MoveEndInfo } from "#core/commands/move.ts";
 import type { CornerRule } from "#core/project/schema.ts";
 import type { V3 } from "../../../mesh/model.ts";
 import {
@@ -97,7 +99,7 @@ function stateWords(bar: string, h: Handle): string {
         ? `${ref} · drag to lengthen or shorten; it leaves ${h.state.corner}'s corner`
         : `${ref} · drag to lengthen or shorten, or click and type the cut`;
     case "detach":
-      return `${ref} ${h.state.words.join(" and ")}: dragging frees it`;
+      return `${ref} ${heldWords(h.state)}: dragging frees it`;
     default:
       return h.state.words;
   }
@@ -142,8 +144,8 @@ export function endGhost(
 export function endWords(r: DryRun, bar: string, stop: Stop | undefined): JointWords {
   if (!r.ok) return { text: r.why, shape: "refused", joins: false };
   const w = jointWords(r, bar);
-  const info = r.results[0]?.info as { detached?: string; left?: string } | undefined;
-  const freed = [info?.detached, info?.left].filter((x) => x !== undefined);
+  const info = r.results[0]?.info as MoveEndInfo | undefined;
+  const freed = [...(info?.detached ?? []), ...(info?.left ? [info.left] : [])];
   const lead = freed.length > 0 ? [`frees it from ${freed.join(" and ")}`] : [];
   const open = "no joint: the ends stay open";
   if (!w.joins && stop?.kind === "face") {
@@ -246,13 +248,13 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
     let now: Landing = { len: axis.len, face: axis.face, cut: axis.cut };
     let why: string | undefined;
 
+    const conns = (m.doc.connections ?? {}) as Record<string, { through?: string }>;
     const unchanged = () =>
       Math.abs(now.len - axis.len) < 0.005 &&
       // Where it was, or back on the bar it already butts on: nothing to do.
       (state.kind !== "detach" ||
-        (state.conn !== undefined &&
-          now.stop?.bar ===
-            (m.doc.connections as Record<string, { through?: string }>)[state.conn]?.through));
+        (state.conns !== undefined &&
+          state.conns.some((c) => now.stop?.bar === conns[c]?.through)));
 
     const commands = (prefer: CornerRule | undefined): Cmd[] =>
       endBatch(ref, now, state.kind === "detach", prefer);

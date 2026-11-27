@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { scratchFixtures } from "#core/testing.ts";
@@ -33,9 +34,31 @@ describe("end handles", () => {
     expect(endAxis(m, "b2", "a")).toMatchObject({ len: 600, face: 580 });
   });
 
+  it("holds an end a failing joint claims, saying the joint fails (the audit's brace, D2)", async () => {
+    // The brace butted through b3 (c9) and b4 (c10), its cuts then undeclared: each joint fails
+    // (`by: "default"`), and each still claims its end, so a drag frees it and says so first.
+    const fx = join(await scratchFixtures(), "brace");
+    const brace = JSON.parse(await readFile(join(fx, "brace.json"), "utf8")) as {
+      commands: unknown[];
+    };
+    const b = await viewOf(fx, brace.commands, [
+      { cmd: "setBar", args: { id: "b13", set: { ends: null } } },
+    ]);
+    expect(b.derived.bars.b13?.ends.a.by).toBe("default");
+    expect(endState(b, "b13", "a")).toEqual({
+      kind: "detach",
+      words: ["butts on b3 (c9)"],
+      fails: "the joint fails",
+      conns: ["c9"],
+    });
+    expect(labelEnd(b, "b13")).toEqual({
+      why: "both ends are held: b13.a butts on b3 (c9), and the joint fails; b13.b butts on b4 (c10), and the joint fails. Drag an end to free it",
+    });
+  });
+
   it("says what holds each end, by the rule moveEnd applies", () => {
     expect(endState(m, "b3", "b")).toEqual({ kind: "free" });
-    expect(endState(m, "b2", "a")).toMatchObject({ kind: "detach", conn: "c1" });
+    expect(endState(m, "b2", "a")).toMatchObject({ kind: "detach", conns: ["c1"] });
     expect(endState(m, "b1", "b")).toEqual({ kind: "free", corner: "c1" });
     expect(endState(m, "b4", "b")).toMatchObject({ kind: "driven", params: ["L"] });
     // b4's foot moves along Z too, but its z is a number: free.
