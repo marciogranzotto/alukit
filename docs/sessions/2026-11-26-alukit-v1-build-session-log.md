@@ -116,7 +116,7 @@ anything, and each has a default in place.
 | v1 limits: the stamp on every output, `bbox()` over parts, end taps on cores | **done**, merged (00:17), pushed | Note: `docs/notes/v1-limits-closed.md`. |
 | Forseti sections: secondary cores, and the tap's thread against the core | **done**, merged (01:56), pushed | Note: `docs/notes/section-cores.md`. |
 | Acceptance re-runs on the reference project's new heads (internal) | **ran** (01:26, 01:53) | Decided frame, run 4: **pass**. Alternative frame, first run: **fail** on AluKit gaps X1–X4, though one variant passes every numeric test. |
-| X4: stock length of parallel-cut bars | running (Opus, worktree), launched 01:57 | golden G38 |
+| X4: stock length of parallel-cut bars | **done**, merged (02:42), pushed | Golden G38. Note: `docs/notes/x4-stock-length.md`. |
 | UX redesign, phase 1: three designer reviews | running (3 × Opus, worktrees), launched 02:27 | task flows and IA; heuristics and first run; visual design and 3D readability |
 | F2: end-hole axis, butt end-face coverage, head seats | running (Opus, worktree), launched 01:30 | goldens G35–G37 |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
@@ -175,6 +175,11 @@ anything, and each has a default in place.
   - **PF20-21's Ø6 core:** it accepts M5 and M6 only because the shop text says so; a cut M6 in Ø6
     has no thread.
   - **The drill-up limit** for unlabelled cores: one pitch, a judgement, not a source.
+- **X4 calls (`docs/notes/x4-stock-length.md`).**
+  - The span is measured over the section's bounding box, as §4.5 sets cuts; it differs from the
+    outline only on compound cuts in rounded sections, where it errs long.
+  - The BOM's total length adds spans.
+  - Two parallel pieces sharing one saw cut when nested is a v1 limit.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
@@ -556,3 +561,20 @@ anything, and each has a default in place.
   2. The coordinator merges the three into one plan and decides, logging each call for Marcio.
   3. Implementation in parallel streams.
   4. A designer review of the result.
+- **02:32**: X4 fixed (6 commits, G38 first).
+  - A piece is ordered, billed (`step_mm`), checked against offer limits and nested at its
+    **span**: along its axis, from one end cut's farthest point to the other's.
+  - It equals the long point unless both cuts lean the same way; parallel cuts add w·tan θ.
+  - Source: Autodesk Inventor's Frame Generator help (members are extruded between planes square
+    to the axis, then cut); the parallel case is inferred from it.
+  - No earlier golden moved: no fixture had two cuts leaning the same way. The cart's hand script
+    now works the span out itself.
+- **02:35–02:42**: The merge's first gate failed in e2e; all 28 passed run alone. The second failed
+  on `skill.test.ts`, timing out at 5 s with the load average at 50 (three designer agents running
+  browsers).
+  - **The cause:** that test's probes, which only read results, spawned three more CLI processes
+    inside the default 5 s budget. They now run in-process: 1.4 s → 0.17 s, its own commit.
+  - The example's commands still run as processes, as written.
+  - Which e2e test failed in the first run is unknown: the gate script threw its output away. It
+    now keeps every step's full log in a fresh folder and prints the failing lines and the load.
+  - Gate PASS (744 tests).
