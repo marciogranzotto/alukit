@@ -22,7 +22,7 @@ proved the better choice is now the rule; a feature v1 does not have is stated a
 with the version that takes it up. Calls left for the owner's review are marked *open* (§14, call 6
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "UX redesign, integration". Notes are cited by
+groups below record, from "After acceptance run 2" to "Forseti traced sections". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -441,6 +441,28 @@ output moved, nor the GLB's bytes (s3 10).
   verified*.
 - §6: **`addFrame` refuses a frame with no item** (none given, no default bar), saying so; it
   refused at its first corner as if no bar end met there (int 26).
+
+### Forseti traced sections
+
+19 of Forseti's 27 profile sections were T-slot envelopes. The catalogue draws 13 of them as filled
+raster images, one as a raster line drawing and one as a vector path the build had missed; each
+now has its real outline where it passes a check against the published values
+([`notes/forseti-traced-sections.md`](notes/forseti-traced-sections.md), cited as "ts").
+
+- §3.5: **a traced section** states its method and uncertainty and is accepted within 2 % of the
+  published area and 4 % of the published inertias; a trace outside them is not shipped (ts, the
+  check). Call 63.
+- §3.6: **`catalog check` holds a traced section to its tolerance**, not 1 %, and reports a
+  `traced-area` or `traced-inertia` error beyond it that no override accepts (ts). Call 63.
+- §11: **9 exact, 8 traced, 10 parametric.** The 20x20 V-slot's vector outline; eight traces
+  accepted, the worst −1.34 % of area and +1.48 % of inertia; five refused, each with its errors
+  in its note. Each traced section measures its own groove on its trace and takes as printed what
+  its page prints; the face-plate 30x30's printed inertias go to its outline's axes (ts, per
+  profile; grooves). Calls 64, 65.
+- No mass moved, nor any golden value or fixture diagnostic. The two acceptance frames' checks
+  keep their errors; the heads under and on the 40x80 bear up to 1.8 points of their seat less or
+  0.6 more, and its end faces lose 2 mm² to the trace's rounded corners, all warnings before and
+  after (ts, what moved).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -901,7 +923,7 @@ A section file holds one section, in mm, about its nominal centre (local x = wid
 | `fidelity` | What it is | Drawn | Computed properties stand in for missing published ones |
 |---|---|---|---|
 | `exact` | vector outline from the vendor's drawing or CAD | yes | yes, tagged `calc` |
-| `traced` | traced from a raster image, accepted only within 2 % of the published area | yes | yes, tagged `est` |
+| `traced` | traced from a raster image, accepted only within 2 % of the published area and, *2.3*, 4 % of the published inertias where there are any (call 63) | yes | yes, tagged `est` |
 | `parametric` | built by a generator from published dimensions | yes | steel shapes: yes (`props_ok: true`); a T-slot envelope: **no** (`props_ok: false`) |
 | `box` | the bounding box only | as a box | no |
 
@@ -918,6 +940,15 @@ of a circle's I at any radius, where a fixed chord tolerance grows as the radius
 **v1 limit** (*2.3*): the `tslot` envelope is its box less its slots, with no `wall` parameter,
 and there is no `channel` or `beam` generator yet: such a section is `exact`, `traced` or `box`
 until one is added (v1.1 or later).
+
+**A traced section** (*2.3*; call 63) is an outline read off a raster image by a stated method, its
+`from` saying so (`method: "raster"`, the image, and in `note` the method, the scale and the
+outline stroke's margin fitted to the printed dimensions, its uncertainty overall and locally,
+and its errors against the published values). It enters only within its tolerance: an inertia's
+error weighs an edge by its distance from the axis squared, so it was up to 2.1 times the area's on
+traces checked against vector outlines, hence 4 % where the area has 2 %. A trace outside its
+tolerance is not shipped: the section stays what it was, and its note says why
+([notes](notes/forseti-traced-sections.md)).
 
 **A section's own groove** (*2.3*, after the round-4 acceptance; gap F9, G49; call 61). Profiles of
 one groove type differ: a series' 40x80 has a deeper lip than its 40x40. A section states the
@@ -967,7 +998,11 @@ at 0.05 mm; properties always use the exact outline (review m11).
 `alukit catalog check <id>` computes area, centroid, Ix, Iy and Ixy from each outline
 ([polygon formulas](https://en.wikipedia.org/wiki/Second_moment_of_area#Any_polygon)) and mass
 from the density. It flags any mismatch beyond 1 % unless an override accepts it, reports stale
-overrides and family collisions, and checks that every option of an item has an offer. The
+overrides and family collisions, and checks that every option of an item has an offer. *2.3*
+(call 63): a traced section's computed values carry its uncertainty, so they are held to the
+tolerance it was accepted within, 2 % for area and mass and 4 % for inertias and moduli; beyond it
+the check reports a mismatch and a `traced-area` or `traced-inertia` error, which no override
+accepts. The
 survey found 16 inconsistencies in Forseti's data (*read*); this makes such errors visible. J is
 computed in v2 by a Saint-Venant [torsion](https://en.wikipedia.org/wiki/Torsion_constant) solve
 on the polygon, which is FEM work.
@@ -2637,11 +2672,13 @@ Vite's HMR socket into every user's runtime, a second surface to secure, so it i
 2. **PDF tables.** Map pages to families and parse A, Ix, Iy and kg/m per profile; material
    6063-T5, E 69,000 MPa (p. 6).
 3. **Sections**, for every profile stem (review M6): 27, 8 `exact` and 19 `parametric`, where
-   draft 2 counted 25 (*2.3*; M2b). The **reference project's profiles go first** (M2a), the rest
-   in M2b.
+   draft 2 counted 25 (*2.3*; M2b); *2.3*, after the traced sections: 9 `exact`, 8 `traced` and
+   10 `parametric`. The **reference project's profiles go first** (M2a), the rest in M2b.
    - **`exact`** from the PDF's vector paths: 8 of about 20 catalogue profiles (p. 11, 14, 15, 16
      ×2, 18, 19, 21; *verified by review 1*). Six agree within 1 %; the 40x40 leve and the 20x60
      are 3–4 % off and enter as accepted mismatches until checked by hand (*read: survey §4*).
+     *2.3*: a ninth, the 20x20 V-slot, which p. 10 draws as a vector path where M2b read a raster;
+     its inertias are 1.4 % over the printed ones, an accepted mismatch.
    - **`parametric`** T-slot for every other stem, from the published overall size, groove and
      core dimensions, with `props_ok: false`. This puts every profile on the cut list at once
      (§3.5). The catalogue's other 10 or more profiles and the shop-only stems (PF20-15, PF20-13,
@@ -2654,11 +2691,27 @@ Vite's HMR socket into every user's runtime, a second surface to secure, so it i
      raw edges, and each image's line weight is taken out against the dimensions it prints): the
      40x80 and the 80x80 básico. A closed profile (*fechado destacável*) is drawn with its covers
      in the slots: the dimensions printed behind them are taken, the rest `unread`. The other
-     profiles drawn as raster images still take their series' groove (call 62).
+     profiles drawn as raster images still take their series' groove (call 62). *2.3*: a traced
+     section measures its own on its trace, as an exact outline does, and takes as printed what
+     its page prints (call 65); the 40x80 now takes its trace's.
    - Upgrades, as each becomes available: **`traced`** from the page's raster image (accepted
      within 2 % of the published area), or **`exact`** from vendor CAD (the one IGES on the
      shop's media library, PF30-02; GrabCAD models downloaded by Marcio, because GrabCAD blocks
      automated access).
+   - *2.3*, **the traced sections** (call 63; [notes](notes/forseti-traced-sections.md)). The
+     importer traces each raster drawing in its reviewed table `TRACES` (`trace.py`): the 50 %
+     coverage contour by marching squares, simplified by Douglas–Peucker, the scale and the
+     outline stroke's margin fitted by least squares to the printed size and groove dimensions,
+     the margin taken off by an exact inner offset, the box and the printed bores snapped. Checked
+     against four pages that draw a raster under a vector outline, the margin came out within
+     0.011 mm and the area within 1.04 %. Eight are accepted, the worst at −1.34 % of area and
+     +1.48 % of inertia: the 20x20 T-slot, the 30x30 básico, de face and centro M8, the 40x80,
+     the 45x45 básico and parafuso, and the 50x50 (against the shop's kg/m, its table on p. 20
+     repeating another profile's values). Five fall outside and stay envelopes, the trace's
+     errors in their note: the 20x40 (its bores), the 30x30 de canto and abaulado, the 80x80
+     básico and the 40x40 fechado. The C-beam is a line drawing with no fill, and four stems have
+     no drawing. A square profile printing two inertias gives the smaller to its outline's weaker
+     axis (call 64).
 4. **Family modelling by agents.**
    - For connectors, fasteners, linear parts and accessories, one agent per family reads the
      catalogue and shop pages and writes `families/*.json` (mounting, fastener sets per system,
@@ -3011,6 +3064,24 @@ new head warnings each a bearing below half. Both frames now pass acceptance.
     pages print behind the covers, the rest `unread`. **v1 limit**: the other profiles drawn as
     raster images (bases 20, 30 and 45, the base-40 shop-only stems, the 50x50) still take their
     series' groove type, measured on another profile, until their images are read (v1.1).
+    *2.3, after the traced sections*: the eight traced profiles and the 20x20 V-slot's vector
+    outline now give their own (call 65); the envelopes left (the 20x40, the C-beam, the 30x30 de
+    canto and abaulado, and the stems with no drawing) still take their series'.
+63. *New in 2.3, Forseti traced sections, open.* A section traced from a raster image is accepted
+    within 2 % of the published area and 4 % of the published inertias, where there are any (an
+    inertia's error was up to 2.1 times the area's on traces checked against vector outlines), and
+    `catalog check` holds its computed values to the same tolerances rather than 1 %; beyond them
+    it is an error no override accepts. A trace outside them is not shipped: the section stays an
+    envelope, the trace's errors in its note. The 50x50 is checked against the shop's kg/m alone.
+64. *New in 2.3, Forseti traced sections, open.* The catalogue's IX is the weak axis's inertia.
+    A square profile that prints two (the 30x30 de face: IX 2,58, IY 2,82) gives the smaller to the
+    axis its outline is weaker about, so the face plate's stiffening shows on the axis it
+    stiffens; with no outline the drawing's order stays.
+65. *New in 2.3, Forseti traced sections, open.* A traced section's own groove takes as printed
+    what its page prints, and measures the rest on the trace with a range (its uncertainty and the
+    grooves' spread). Where the image contradicts a dimension laid over it (the 20x20 T-slot's
+    chamber, printed 14,1 and drawn 14.66 wide at the lips), the printed value is the groove's but
+    does not calibrate the trace (`printed_only`), and the note gives both.
 
 ## 15. Review 1 resolution
 
