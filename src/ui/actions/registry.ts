@@ -91,13 +91,28 @@ export function parseKey(k: string): Binding {
 /** A printable character that is not a letter: Shift is part of what it is. */
 const symbol = (key: string) => key.length === 1 && key.toLowerCase() === key.toUpperCase();
 
+/**
+ * The key an event names, lower case, as `KeyboardEvent.key` gives it; but where Alt composes a
+ * character in place of a letter or a digit (Option+H types ˙ on a Mac), the letter or digit of
+ * the key pressed, from `code`. A layout whose Alt gives the letter itself keeps it (an AZERTY
+ * A is `KeyQ` and stays a).
+ */
+function keyOf(e: Pick<KeyboardEvent, "key" | "altKey"> & { code?: string }): string {
+  const k = e.key.toLowerCase();
+  if (!e.altKey || /^[a-z0-9]$/.test(k) || e.code === undefined) return k;
+  const m = /^(?:Key([A-Z])|Digit(\d))$/.exec(e.code);
+  return m ? ((m[1] ?? m[2]) as string).toLowerCase() : k;
+}
+
 /** Whether a key event is the binding `k`. */
 export function keyMatches(
   k: string,
-  e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">,
+  e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey"> & {
+    code?: string;
+  },
 ): boolean {
   const b = parseKey(k);
-  if (e.key.toLowerCase() !== b.key) return false;
+  if (keyOf(e) !== b.key) return false;
   if ((e.ctrlKey || e.metaKey) !== b.mod || e.altKey !== b.alt) return false;
   return symbol(b.key) || e.shiftKey === b.shift;
 }

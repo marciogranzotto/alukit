@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { compareIds } from "#core/ids.ts";
 import type { Problem } from "#core/problems/types.ts";
+import { ActionButtons } from "../actions/ActionButtons.tsx";
 import { EntityChips } from "../common/EntityChip.tsx";
 import { cornerKey } from "../corners.ts";
 import { select, selection } from "../focus.ts";
@@ -16,7 +17,7 @@ import { drawnCorners } from "../viewport/viewer.ts";
 import { inspectorActions, useReplaceAsked } from "./actions.ts";
 import { BarFields, ReplaceForm } from "./BarFields.tsx";
 import { barActions } from "./barActions.ts";
-import { DeleteButton, DeleteFlow } from "./Delete.tsx";
+import { DeleteFlow } from "./Delete.tsx";
 import { BarDerived, Item, OtherDerived, ProjectItem } from "./Derived.tsx";
 import { editActions } from "./edit-actions.ts";
 import { PointedField, pointedFor } from "./Fields.tsx";
@@ -76,7 +77,7 @@ function Head({ m, id, kind }: { m: Model; id: string; kind: RefKind }) {
         {label && <span class="sub"> {label}</span>}
       </h2>
       <span class="insp-kind">{kind === "connection" ? "connection" : NOUN[kind]}</span>
-      {deletable && <DeleteButton label={kind === "copy" ? "Leave out" : "Delete"} />}
+      {deletable && <ActionButtons m={m} />}
     </div>
   );
 }
@@ -237,7 +238,7 @@ function Many({ m, ids }: { m: Model; ids: string[] }) {
     <div class="props" data-testid="properties">
       <div class="insp-head">
         <h2>{ids.length} selected</h2>
-        <DeleteButton />
+        <ActionButtons m={m} />
       </div>
       <p class="sub">
         {[...kinds.entries()]

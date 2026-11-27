@@ -120,6 +120,49 @@ test("a typed value takes units and params; the arrow keys lock; Space chains", 
   expect(errors).toEqual([]);
 });
 
+test("Ctrl+A selects all; H hides, Shift+H isolates, Alt+H shows all; single keys off: H does nothing", async ({
+  page,
+}) => {
+  // The editing round's keys (E2.8), on the audit's frame: twelve bars, b1–b4 its posts.
+  await served.stop();
+  served = await serve("brace");
+  await openTab(page, served, 0);
+  const selection = () => page.evaluate(() => window.__alukit?.selection());
+  const hidden = () => page.evaluate(() => window.__alukit?.hidden());
+  const twelve = Array.from({ length: 12 }, (_, i) => `b${i + 1}`);
+  await page.locator("body").press("ControlOrMeta+a");
+  expect(await selection()).toEqual(twelve);
+  await page.locator("body").press("h");
+  expect(await hidden()).toEqual(twelve);
+  expect(await selection()).toEqual([]);
+  await page.locator("body").press("Alt+h");
+  expect(await hidden()).toEqual([]);
+  await page.getByTestId("tree").locator('[data-id="b1"]').click();
+  await page.locator("body").press("Shift+H");
+  expect(await hidden()).toEqual(twelve.filter((b) => b !== "b1"));
+  await page.locator("body").press("Alt+h");
+  expect(await hidden()).toEqual([]);
+
+  // The help lists them, under Selecting and View.
+  await page.locator("body").press("?");
+  const help = page.getByTestId("help");
+  await expect(help).toContainText("Select every bar and part shown");
+  await expect(help).toContainText("Hide the selection");
+  await expect(help).toContainText("Show only the selection; hide the rest");
+  await expect(help).toContainText("Show everything hidden again");
+
+  // Single-key shortcuts off: H and Shift+H do nothing; the chords still work.
+  await help.getByTestId("letter-keys").uncheck();
+  await page.keyboard.press("Escape");
+  await page.getByTestId("tree").locator('[data-id="b1"]').click();
+  await page.locator("body").press("h");
+  await page.locator("body").press("Shift+H");
+  expect(await hidden()).toEqual([]);
+  await page.locator("body").press("ControlOrMeta+a");
+  expect(await selection()).toEqual(twelve);
+  expect(await page.evaluate(() => window.__alukit?.rev())).toBe(0);
+});
+
 test("Esc steps back one level; X opens Pattern; with single keys off, B does nothing", async ({
   page,
 }) => {

@@ -23,7 +23,7 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 90–94 in "3D editing, E3", 100–104 in "3D editing, E5" and 95–99 in "3D editing, E4"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4" and 100–104 in "3D editing, E5"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
 groups below record, from "After acceptance run 2" to "3D editing, E4". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
@@ -524,6 +524,35 @@ note is the same [`ux/drag-ends-decisions.md`](ux/drag-ends-decisions.md), "The 
 - §8 Tools: **Move, `D`**: drag the selection or what is pressed, or click a base point and then
   where it goes; snaps, `→ ← ↑` locks, typed offsets, the moved bars drawn where they would be,
   the dry run's words before the release, Alt to detach; one step (move 11–18).
+
+### 3D editing, E2
+
+Stream E2 of the [editing audit](ux/editing-audit.md) builds selection, visibility, the menus and
+navigation ([`ux/e2-decisions.md`](ux/e2-decisions.md), cited as "e2"; the interfaces in
+[`ux/contracts.md`](ux/contracts.md)). Each is built test first. Nothing in the document, the
+commands or the outputs changes; `alukit query` gains one form.
+
+- §8: **the context menu everywhere**: on an outline row or a group's head (about its members), and
+  from Shift+F10 or the Menu key, about the selection; a right-drag still pans. The selection
+  header's buttons are the registry's edits, greyed with why (e2 1–4).
+- §8, §7.3: **select all (Ctrl/Cmd+A), similar, the same tags, connected and the whole assembly**,
+  from the menu; a click on an outline group's head selects its members, its twisty still opens
+  and closes it. The app asks the server's `GET /api/query`, which selects as `alukit query` does;
+  **`alukit query` takes `like:<id> by tag`** (e2 5–9). Calls 86, 89.
+- §8: **a box drawn right to left is a crossing**, dashed, and takes what it touches; left to right
+  a window, solid, takes what lies inside (e2 10). Call 87.
+- §8: **hide (H), isolate (Shift+H), show all (Alt+H)**, by visibility, so no shader program links;
+  a hidden body is not picked, snapped to, boxed or framed; the status bar says how many are hidden
+  with Show all, and the outline marks them (e2 11–15). Call 85.
+- §8: **the size readout**: the selection's W × D × H, or the model's, in the status bar, and as a
+  box in the view while Alt is held (e2 16, 17).
+- §8: **Mouse or Trackpad navigation**, a preference in the help: with Trackpad a two-finger scroll
+  pans; a pinch zooms in both, and in perspective it dollies (e2 18, 19). Call 88.
+- §8: **the palette arms the document's default bar whenever it has no bar and the default
+  changes**, so after the start card's frame B draws a bar of its profile (the audit's D1; e2 20).
+- §8: **labels over the view stay inside it, and clear of the gizmo**; the selected bar's label
+  was cut off at the view's right edge, and could cover Rotate's ring and take its press (e2 21,
+  23).
 
 ### 3D editing, E1
 
@@ -3677,6 +3706,24 @@ reasons. Marking the room is the run's own change, in its project.
     moved by the room; no `bbox()` of everything drawn, since no check has asked for one. The view
     draws context translucent in one neutral tone, whatever its item, and the GLB keeps it, flagged,
     in its own material, so the frame exports in its room (x11 13, 15, 16).
+85. *New in 2.3, 3D editing E2, open.* Isolate hides the rest: it writes every other drawn body into
+    the hidden set, rather than ghosting it as E-UX-9 said, so nothing put out of the way is picked
+    or snapped to, and Show's ghost stays Show's. What hides is what draws the selection (a corner
+    its bars, a joint its fasteners and bars), and hiding takes it out of the selection (e2 12, 13).
+86. *New in 2.3, 3D editing E2, open.* Ctrl/Cmd+A selects the document's bars and placed parts that
+    the view draws and does not hide, not pattern copies, connections, nodes or runs; it acts
+    anywhere but in a text field, where the audit said only on the view or the outline (e2 7).
+87. *New in 2.3, 3D editing E2, open.* A box drawn right to left is a crossing and takes a body
+    whose outline (the hull of its projected corners) touches it; left to right a window takes a
+    body wholly inside. The crossing is drawn dashed and the window, dashed before, solid (e2 10).
+88. *New in 2.3, 3D editing E2, open.* Navigation is Mouse (the wheel zooms) or Trackpad (a
+    two-finger scroll pans), per browser, Mouse by default. A pinch, or Ctrl + wheel, dollies in
+    perspective in both, where camera-controls zoomed the lens; in orthographic it zooms (e2 18,
+    19).
+89. *New in 2.3, 3D editing E2, open.* "The same tags" is `like:<id> by tag`, the entities of its
+    kind carrying every tag it carries, in `alukit query` and the app alike; the app's selection
+    verbs ask the server (`GET /api/query`), which holds the derived model, rather than bring the
+    schema into the page (e2 5, 6).
 90. *New in 2.3, 3D editing E3, open.* Rotate's ring drag turns in 15° steps (SketchUp's angle
     snapping), and its release commits; any other angle is typed. Its axis is Z until X, Y or Z
     (or → ← ↑) is pressed; in Rotate with a selection those letters are Rotate's (X starts a turn

@@ -16,11 +16,16 @@
   touch-action: none;
 }
 
+/* Box select (E-UX-10): left to right a window, solid; right to left a crossing, dashed */
 .select-box {
   position: absolute;
-  border: 1px dashed var(--sel);
+  border: 1px solid var(--sel);
   background: color-mix(in srgb, var(--sel) 8%, transparent);
   pointer-events: none;
+}
+
+.select-box.crossing {
+  border-style: dashed;
 }
 
 /*

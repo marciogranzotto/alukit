@@ -1,10 +1,11 @@
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
-import { shown } from "../focus.ts";
+import { hidden, hiddenCount, isolated, selection, showAll, shown } from "../focus.ts";
 import { problemList } from "../problems/source.ts";
 import { ago, who, whoWhat } from "../steps.ts";
 import { connection, heardAt, log, model, notice, summary } from "../store.ts";
 import { activeTool, toolPrompt } from "../tools/state.ts";
+import { sizeOf, sizeText } from "../viewport/size.ts";
 import { presence, stepToasts } from "./presence.ts";
 
 /**
@@ -100,6 +101,8 @@ export function StatusBar() {
           {showing}
         </span>
       )}
+      <HiddenStrip />
+      <SizeReadout />
       {/* The command bar says the prompt while a tool is on (review m2); in Select, here. */}
       {prompt && !showing && activeTool.value === "select" && (
         <span class="prompt" data-testid="tool-prompt">
@@ -122,6 +125,45 @@ export function StatusBar() {
       </span>
       <LiveRegion />
     </div>
+  );
+}
+
+/**
+ * While anything is hidden (E-UX-9): how many bodies, and Show all. Hidden things are easy to
+ * forget, and nothing else on the page says they exist.
+ */
+function HiddenStrip() {
+  const n = hiddenCount(model.value, hidden.value);
+  if (n === 0) return null;
+  return (
+    <span class="hidden-note" data-testid="hidden-strip">
+      {isolated.value ? "isolated · " : ""}
+      {n} hidden ·{" "}
+      <button type="button" class="link" onClick={showAll} title="Show everything again (Alt+H)">
+        Show all
+      </button>
+    </span>
+  );
+}
+
+/**
+ * The size readout (E2.5): the selection's bounding W × D × H, the model's when nothing is
+ * selected, in millimetres, along X, Y and Z.
+ */
+function SizeReadout() {
+  const m = model.value;
+  if (!m) return null;
+  const sel = [...selection.value];
+  const box = sizeOf(m, sel.length > 0 ? sel : undefined);
+  if (!box) return null;
+  return (
+    <span
+      class="size"
+      data-testid="size-readout"
+      title={`${sel.length > 0 ? "The selection's" : "The model's"} size: W along X × D along Y × H along Z (hold Alt to see it in the view)`}
+    >
+      {sizeText(box)}
+    </span>
   );
 }
 

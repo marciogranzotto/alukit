@@ -437,6 +437,19 @@
   color: var(--text-1);
 }
 
+/* While anything is hidden (E-UX-9): the count and Show all */
+.statusbar .hidden-note {
+  flex: none;
+  color: var(--text-1);
+}
+
+/* The selection's or the model's size (E2.5) */
+.statusbar .size {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+
 .statusbar .presence::before {
   content: "◉ ";
   color: var(--info);
@@ -708,6 +721,20 @@
   border: 1px solid var(--info);
   border-radius: var(--radius-control);
   color: var(--info);
+  font-size: var(--fs-tiny);
+}
+
+/* A hidden entity's row (E-UX-9): its id struck through and the word, on a dashed outline */
+.tree .row.hidden-row .id {
+  text-decoration: line-through;
+}
+
+.tree .hidden-mark {
+  flex: none;
+  padding: 0 var(--sp-2);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-control);
+  color: var(--text-2);
   font-size: var(--fs-tiny);
 }
 
@@ -1594,6 +1621,23 @@
   display: block;
   margin-top: var(--sp-5);
   color: var(--text-2);
+}
+
+/* How the view takes a wheel (E-UX-17): Mouse or Trackpad */
+.help-nav {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.help-nav legend {
+  padding: 0;
+  margin-bottom: var(--sp-2);
+  color: var(--text-1);
+}
+
+.help-nav label {
+  display: block;
 }
 
 .help-grid a {

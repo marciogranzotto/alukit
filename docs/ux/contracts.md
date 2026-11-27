@@ -428,6 +428,54 @@ tool"). Each adds.*
   `axisMeetsLine`, which `moveEnd` and `transform` share. **CLI**: `src/cli/move.ts` (`alukit
   move`, `alukit rotate`); `add.ts` exports `vec3` and `numbers3` for it.
 
+## Editing round: E2 changes
+
+*Stream E2 of the [editing audit](editing-audit.md) ([e2-decisions.md](e2-decisions.md), cited as
+"e2"). Owner of everything below: E2, unless a line names another; other streams add to it only.*
+
+- **Actions** E2 registers: `select-all` (`mod+a`), `select-similar`, `select-tagged`,
+  `select-connected`, `select-assembly` (group `select`; `src/ui/actions/select.ts`,
+  `selectActions()`, registered by the outline); `hide` (`h`), `isolate` (`shift+h`), `show-all`
+  (`alt+h`) (group `view`; `src/ui/viewport/actions.ts`); `menu` (`shift+f10`, `contextmenu`; never
+  an entry of a menu; `src/ui/shell/ContextMenu.tsx`, registered by `connectMenu()`).
+- **`keyMatches(keys, e)`** (`src/ui/actions/registry.ts`, E0's): with Alt held, a key that is not
+  a plain letter or digit is read from `e.code` (`KeyH`, `Digit1`), so `alt+h` matches Option+H on
+  a Mac, which types ˙ (e2 15).
+- **`selectable(m)`**: the ids Ctrl+A selects, the document's bars and placed parts the view draws
+  and does not hide, in id order (e2 7). **`queryIds(selector)`**: the ids `alukit query` selects,
+  asked of the server.
+- **`GET /api/query?select=<selector>&variant=<v>`** (`src/server/server.ts`, E1's file): `200 {
+  ok: true, rev, selector, ids }`, or `400 { ok: false, message }` with the selector's error (e2 5).
+- **`select(doc, "like:<id> by tag")`** (`src/core/query.ts`, E1's): `similarTo(…, "tag")`; `by
+  item` is the default (e2 6).
+- **`<ActionButtons m />`** (`src/ui/actions/ActionButtons.tsx`): the registry's `edit` and
+  `transform` actions for the selection as buttons, greyed with their `when`; the inspector's
+  selection header shows it in place of `DeleteButton`, which is gone (e2 3, 4).
+- **`outlineMenu(e, ids)`** (`ContextMenu.tsx`): opens the menu about `ids` at the pointer, from
+  `"outline"`, selecting them first unless they are all selected (e2 2). **`membersOf(group)`**
+  (`src/ui/outline/rows.ts`): a group's rows, its subgroups' first (e2 8).
+- **`src/ui/focus.ts`** (E0's): `drawnBodies(m)`, `bodiesOf(m, refs)` (what draws the refs, as
+  `resolveTargets` says), `hide(m, refs)`, `isolate(m, refs)`, `showAll()`, `hiddenCount(m, h)`.
+  `isolate` writes the rest into `hidden` and the refs into `isolated` (e2 12, 13).
+- **`src/ui/viewport/size.ts`**: `sizeOf(m, refs?)` (the bounding box of what draws the refs, or of
+  every body), `extentOf`, `sizeNumber`, `sizeText` (`1000 × 600 × 750 mm`), `altHeld`,
+  `connectSizeBox()` (e2 16, 17). **`src/ui/viewport/navigation.ts`**: `navigation` (`"mouse" |
+  "trackpad"`, kept as `alukit.navigation`), `setNavigation`, `connectNavigation()` (e2 18).
+- **`Viewer`** (`src/viewer/scene.ts`): `setHidden(ids)` hides by visibility (e2 11);
+  `setDimensions({ box, words } | undefined)`, the size box, labels `size-w`, `size-d`, `size-h`;
+  `setNavigation(n)`; `camera().moving` turns false when camera-controls sleeps, after an instant
+  move too (e2 22). `CornerMarker.bars?`: the corner's bars, so a corner whose bars are all hidden
+  is not drawn. A box drawn right to left gets the class `crossing`.
+- **`src/viewer/pick.ts`**: `boxTakes(points, rect, "window" | "crossing")`, `convexHull(points)`,
+  `ScreenRect` (e2 10).
+- **`src/viewer/labels.ts`** (S3's): `placeInside(el, at, view, avoid?)`, `nudgeInside(box, view,
+  gap)`, `clearOf(box, view, avoid, gap)`, `EDGE_GAP_PX`; `Labels` takes an `avoid` provider. The
+  labels and the anchored overlays place inside the view and clear of the gizmo (e2 21, 23).
+- **`src/viewer/gizmo.ts`** (E3's): `gizmoFootprint(spec, project, mmPerPx)`, where on the screen a
+  press is the gizmo's; **`Viewer.gizmoFootprint()`**, the shown gizmo's, on the page (e2 23).
+- **`src/ui/catalog/state.ts`**: `keepPalette()` starts the palette and arms `defaults.bar` whenever
+  the palette has no bar and the default changes; `startPalette` is gone (e2 20).
+
 ## Editing round: E1 changes
 
 *Stream E1 of the [editing audit](editing-audit.md) ([e1-decisions.md](e1-decisions.md)). Owner of

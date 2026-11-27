@@ -1,6 +1,7 @@
 import { signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 import type { V3 } from "../../mesh/model.ts";
+import { placeInside } from "../../viewer/labels.ts";
 import { ItemSwatch } from "../common/ItemSwatch.tsx";
 import { clearShow, hover, selection, show, shown } from "../focus.ts";
 import { ProblemList, ProblemRow } from "../problems/ProblemRow.tsx";
@@ -22,7 +23,11 @@ import { endsWords, hoverWords, itemCode, legendItems } from "./words.ts";
 
 const css = (c: number) => `#${c.toString(16).padStart(6, "0")}`;
 
-/** Keeps an element at a world point's place in the viewport, after every frame. */
+/**
+ * Keeps an element at a world point's place in the viewport, after every frame, inside the view
+ * and clear of the gizmo: a label by a bar near an edge is moved back in, not cut off, and one
+ * over a gizmo's part is moved off it, so a press there reaches the gizmo (`placeInside`).
+ */
 function useAnchor(at: V3 | undefined, host: { current: HTMLElement | null }) {
   useEffect(() => {
     const v = viewer.value;
@@ -35,9 +40,8 @@ function useAnchor(at: V3 | undefined, host: { current: HTMLElement | null }) {
         el.style.visibility = "hidden";
         return;
       }
-      const r = parent.getBoundingClientRect();
       el.style.visibility = "";
-      el.style.transform = `translate(${Math.round(s[0] - r.left)}px, ${Math.round(s[1] - r.top)}px)`;
+      placeInside(el, s, parent.getBoundingClientRect(), v.gizmoFootprint());
     };
     place();
     return v.onRender(place);

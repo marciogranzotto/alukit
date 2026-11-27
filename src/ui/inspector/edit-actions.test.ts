@@ -52,11 +52,13 @@ describe("the menu on a connection, a pattern and a part (E5.6)", () => {
       ["change-connector", "Change connector…"],
       ["fit", "Fit to the selection"],
       ["show", "Show"],
+      ["hide", "Hide"],
+      ["isolate", "Isolate"],
     ]);
     expect(splice.find((e) => e.id === "edit-connection")?.enabled).toBe(true);
     expect(ids(on("c13"))).toContain("change-connector");
     expect(ids(on("c1"))).toContain("change-connector");
-    expect(ids(on("c23"))).toEqual(["delete", "edit-connection", "fit", "show"]);
+    expect(ids(on("c23"))).toEqual(["delete", "edit-connection", "fit", "show", "hide", "isolate"]);
     // A pattern copy's connection is edited through its template: greyed, saying so.
     const copy = menuEntries(on("c26@1")).find((e) => e.id === "edit-connection");
     expect(copy?.enabled).toBe("c26@1 is a pattern copy: change c26, its template");
@@ -81,17 +83,32 @@ describe("the menu on a connection, a pattern and a part (E5.6)", () => {
   it("a pattern or one of its copies: Explode; a part: Replace; a bar: neither", () => {
     offs.push(inspectorActions(), editActions(), viewActions());
     const pattern = menuEntries(on("pt1"));
-    expect(pattern.map((e) => e.id)).toEqual(["delete", "explode-pattern", "fit", "show"]);
+    expect(pattern.map((e) => e.id)).toEqual([
+      "delete",
+      "explode-pattern",
+      "fit",
+      "show",
+      "hide",
+      "isolate",
+    ]);
     expect(pattern.find((e) => e.id === "explode-pattern")?.title).toBe("Explode pt1");
     expect(menuEntries(on("b26@2")).find((e) => e.id === "explode-pattern")?.title).toBe(
       "Explode pt1",
     );
-    expect(ids(on("p1"))).toEqual(["delete", "replace-part", "fit", "show"]);
+    expect(ids(on("p1"))).toEqual(["delete", "replace-part", "fit", "show", "hide", "isolate"]);
     expect(runAction("replace-part", on("p1"))).toBe(true);
     expect(asked.value).toMatchObject({ id: "p1", what: "replace" });
-    // A bar's menu is as the inspector and the view made it.
-    expect(ids(on("b1"))).toEqual(["delete", "join-end", "replace", "fit", "show"]);
+    // A bar's menu is as the inspector and the view made it (the view's Hide and Isolate: E2).
+    expect(ids(on("b1"))).toEqual([
+      "delete",
+      "join-end",
+      "replace",
+      "fit",
+      "show",
+      "hide",
+      "isolate",
+    ]);
     // Two selected: none of these is about one thing.
-    expect(ids(on("c9", "c13"))).toEqual(["delete", "fit", "show"]);
+    expect(ids(on("c9", "c13"))).toEqual(["delete", "fit", "show", "hide", "isolate"]);
   });
 });

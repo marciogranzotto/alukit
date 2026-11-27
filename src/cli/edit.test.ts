@@ -695,6 +695,8 @@ describe("alukit query", () => {
     // The 80 × 40 top rails, by the item they name; the posts take the default bar's.
     expect(await ids("like:b5")).toEqual(["b5", "b6"]);
     expect(await ids("like:b1")).toHaveLength(22);
+    // By tag (E2.2): the posts carry the same tags as b2.
+    expect(await ids("like:b2 by tag")).toEqual(["b1", "b2", "b3", "b4"]);
     expect(await ids("connected:b9")).toEqual(["b1", "b2", "b9", "b14", "b15", "b18", "b26"]);
     expect(await ids("connected*:b9")).toHaveLength(33);
     expect((await capture(["query", dir, "connected:c13,r1", "--summary"])).out).toBe(

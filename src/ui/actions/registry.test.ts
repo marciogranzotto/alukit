@@ -2,11 +2,11 @@ import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { scratchFixtures } from "#core/testing.ts";
-import { selection } from "../focus.ts";
+import { hidden, selection } from "../focus.ts";
 import { inspectorActions } from "../inspector/actions.ts";
 import { routeKey } from "../keys.ts";
 import type { Model } from "../model.ts";
-import { menuEntries } from "../shell/ContextMenu.tsx";
+import { connectMenu, menuEntries } from "../shell/ContextMenu.tsx";
 import { model } from "../store.ts";
 import { viewOf } from "../testing.ts";
 import { activeTool } from "../tools/state.ts";
@@ -22,11 +22,13 @@ import {
   registerAction,
   runAction,
 } from "./registry.ts";
+import { selectActions, selectable } from "./select.ts";
 
 /**
  * The action registry (editing audit E0.2): keys bind through keys.ts exactly as named, the help
  * lists every action that has keys, no two actions share a key in one scope, and the seeded
- * actions (Delete, Join end, Replace, Fit, Show) are what the menu offers on a bar.
+ * actions (Delete, Join end, Replace, Fit, Show), the view's Hide, Isolate and Show all, and the
+ * selection verbs (E2.2, E2.4, E2.8) are what the menu offers on a bar.
  */
 
 function key(k: string, mods: { ctrl?: boolean; meta?: boolean; shift?: boolean } = {}) {
@@ -64,6 +66,7 @@ afterEach(() => {
   for (const off of offs.splice(0)) off();
   model.value = undefined;
   selection.value = new Set();
+  hidden.value = new Set();
   activeTool.value = "select";
 });
 
@@ -78,6 +81,13 @@ describe("keys", () => {
     expect(keyMatches("delete", key("Delete", { ctrl: true }))).toBe(false);
     expect(keyMatches("?", key("?", { shift: true }))).toBe(true);
     expect(keyMatches("shift+f10", key("F10", { shift: true }))).toBe(true);
+    // Alt: H as typed, or, where Alt composes a character (Option+H is ˙ on a Mac), by its key.
+    const alt = (k: string, code: string) => ({ ...key(k), altKey: true, code });
+    expect(keyMatches("alt+h", alt("h", "KeyH"))).toBe(true);
+    expect(keyMatches("alt+h", alt("˙", "KeyH"))).toBe(true);
+    expect(keyMatches("alt+h", alt("a", "KeyQ"))).toBe(false);
+    expect(keyMatches("alt+h", key("h"))).toBe(false);
+    expect(keyMatches("h", alt("˙", "KeyH"))).toBe(false);
     expect(keyCaps("mod+shift+d")).toEqual(["Ctrl", "Shift", "D"]);
     expect(keyCaps("delete")).toEqual(["Delete"]);
   });
@@ -109,9 +119,17 @@ describe("keys", () => {
 
 describe("the seeded actions", () => {
   it("every action with keys is in the help, and no two share a key in one scope", () => {
-    offs.push(inspectorActions(), viewActions());
+    offs.push(inspectorActions(), viewActions(), selectActions(), connectMenu());
     const keyed = actions.value.filter((a) => a.keys?.length);
-    expect(keyed.map((a) => a.id).sort()).toEqual(["delete", "fit"]);
+    expect(keyed.map((a) => a.id).sort()).toEqual([
+      "delete",
+      "fit",
+      "hide",
+      "isolate",
+      "menu",
+      "select-all",
+      "show-all",
+    ]);
     const rows = helpSections.value.flatMap((s) => s.rows);
     for (const a of keyed) {
       for (const k of a.keys ?? []) {
@@ -137,7 +155,15 @@ describe("the seeded actions", () => {
     offs.push(inspectorActions(), viewActions());
     const c: ActionContext = { m: cart, selection: new Set(["b1"]), from: "view" };
     const entries = menuEntries(c);
-    expect(entries.map((e) => e.id)).toEqual(["delete", "join-end", "replace", "fit", "show"]);
+    expect(entries.map((e) => e.id)).toEqual([
+      "delete",
+      "join-end",
+      "replace",
+      "fit",
+      "show",
+      "hide",
+      "isolate",
+    ]);
     const by = Object.fromEntries(entries.map((e) => [e.id, e]));
     expect(by.delete?.enabled).toBe(true);
     expect(by.replace?.enabled).toBe(true);
@@ -156,9 +182,73 @@ describe("the seeded actions", () => {
     // A part has no ends to join and no profile to replace.
     const part = Object.keys(cart.derived.parts)[0] as string;
     const onPart = menuEntries({ ...c, selection: new Set([part]) }).map((e) => e.id);
-    expect(onPart).toEqual(["delete", "fit", "show"]);
+    expect(onPart).toEqual(["delete", "fit", "show", "hide", "isolate"]);
     // Delete works in Select only, and says so in a tool.
     activeTool.value = "draw";
     expect(runAction("delete", c)).toBe("Delete works in Select: press Esc first");
+  });
+});
+
+describe("the selection verbs and the view's visibility (E2.2, E2.4)", () => {
+  it("offer select all, similar, the same tags and connected on a bar, each saying why not", () => {
+    offs.push(selectActions(), viewActions());
+    const on = (id: string) =>
+      Object.fromEntries(
+        menuEntries({ m: cart, selection: new Set([id]), from: "view" }).map((e) => [e.id, e]),
+      );
+    const b1 = on("b1");
+    expect(Object.keys(b1)).toEqual([
+      "select-all",
+      "select-similar",
+      "select-tagged",
+      "select-connected",
+      "select-assembly",
+      "fit",
+      "show",
+      "hide",
+      "isolate",
+    ]);
+    expect(b1["select-tagged"]?.title).toBe("Select tagged post");
+    expect(b1["select-tagged"]?.enabled).toBe(true);
+    // The top rail carries no tag: the verb says so.
+    expect(on("b5")["select-tagged"]).toMatchObject({
+      title: "Select the same tags",
+      enabled: "b5 has no tag",
+    });
+    // A pattern copy is no entity of its own: no similar, no connected.
+    const copy = Object.keys(cart.derived.bars).find((id) => id.includes("@")) as string;
+    expect(Object.keys(on(copy))).not.toContain("select-similar");
+    expect(Object.keys(on(copy))).not.toContain("select-connected");
+  });
+
+  it("select all takes the document's drawn bars and parts, less what is hidden", () => {
+    const all = selectable(cart);
+    expect(all.filter((id) => id.startsWith("b"))).toHaveLength(34);
+    expect(all.some((id) => id.includes("@"))).toBe(false);
+    expect(all.every((id) => cart.derived.bars[id] || cart.derived.parts[id])).toBe(true);
+    hidden.value = new Set(["b1", "b2"]);
+    expect(selectable(cart)).toEqual(all.filter((id) => id !== "b1" && id !== "b2"));
+    model.value = cart;
+    offs.push(selectActions());
+    expect(routeKey(key("a", { ctrl: true }))).toBe(true);
+    expect([...selection.value].sort()).toEqual([...selectable(cart)].sort());
+  });
+
+  it("H hides the selection and takes it out of it; Shift+H isolates; Alt+H shows all", () => {
+    model.value = cart;
+    offs.push(viewActions());
+    selection.value = new Set(["b9"]);
+    expect(routeKey(key("h"))).toBe(true);
+    expect([...hidden.value]).toEqual(["b9"]);
+    expect([...selection.value]).toEqual([]);
+    selection.value = new Set(["b10"]);
+    expect(routeKey(key("H", { shift: true }))).toBe(true);
+    expect(hidden.value.has("b10")).toBe(false);
+    expect(hidden.value.has("b9")).toBe(true);
+    expect(hidden.value.has("b1")).toBe(true);
+    expect(routeKey({ ...key("˙"), altKey: true, code: "KeyH" } as KeyboardEvent)).toBe(true);
+    expect([...hidden.value]).toEqual([]);
+    // Nothing hidden: Alt+H has nothing to do, and leaves the key alone.
+    expect(routeKey({ ...key("h"), altKey: true, code: "KeyH" } as KeyboardEvent)).toBe(false);
   });
 });

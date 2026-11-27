@@ -690,6 +690,10 @@ test("context draws translucent, apart from the build; marking it or not links n
   const badges = async () => (await stats())?.badges;
   await expect.poll(badges).toBe(1);
   await expect.poll(frames).toBeGreaterThan(1);
+  // The opened revision drawn before the count is read: the model's materials link on the frame
+  // that first draws it, which under load can come after the badge and the first frames, and
+  // the count read before it then took those two links for the step's (measured: 15, then 17).
+  await waitDrawn(page, 1);
   // Five bars and three parts drawn; the bench's three bars and the floor as context.
   expect(await stats()).toMatchObject({ bars: 5, parts: 3, context: 4 });
   const before = await links();

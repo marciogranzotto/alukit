@@ -1,24 +1,49 @@
 import type { TargetedKeyboardEvent } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ProblemGroup } from "#core/problems/types.ts";
+import { selectActions } from "../actions/select.ts";
 import { openCatalog } from "../catalog/state.ts";
 import { type Status, StatusGlyph } from "../common/StatusGlyph.tsx";
 import { cornersOf } from "../corners.ts";
-import { hover, select, selection, shown } from "../focus.ts";
+import { hidden, hover, select, selection, shown } from "../focus.ts";
 import { problemList } from "../problems/source.ts";
+import { outlineMenu } from "../shell/ContextMenu.tsx";
 import { marks } from "../shell/presence.ts";
 import { model } from "../store.ts";
 import { resolveTargets } from "../targets.ts";
-import { type Group, groupsOf, placesOf, problemsByEntity, type Row } from "./rows.ts";
+import { type Group, groupsOf, membersOf, placesOf, problemsByEntity, type Row } from "./rows.ts";
 
 /**
  * The model outline (docs/ux/plan.md S2.5; design §8, left): every entity in words, by kind or by
  * tag, with the Joints group by corner; a problem's mark (a shape and a word, never colour alone:
  * U55) on the rows it is about; another source's new entities marked until the person's next
  * step. One tree widget (WAI-ARIA's tree pattern): Tab enters it once and leaves it once (U52),
- * the arrow keys move, open and close, Enter or Space selects (Ctrl or Cmd adds). Show reveals
- * and scrolls to the row of what it shows. Owner: S2.
+ * the arrow keys move, open and close, Enter or Space selects (Ctrl or Cmd adds). A group's head
+ * selects its members, every row under it (a tag's, a kind's), while its twisty opens and closes
+ * it; a corner's head selects the corner (editing audit E2.2). A right-click on a row or a head
+ * opens the context menu about it (E2.1). A hidden entity's row says so. Show reveals and scrolls
+ * to the row of what it shows. The selection verbs register here (src/ui/actions/select.ts).
+ * Owner: S2; the editing round's E2.
  */
+
+/**
+ * Selects a head's members; with Ctrl or Cmd, adds them, or takes them out when every one is
+ * selected already.
+ */
+function selectMembers(ids: readonly string[], toggle: boolean): void {
+  if (!toggle) {
+    select(ids, "replace");
+    return;
+  }
+  const sel = selection.peek();
+  if (ids.length > 0 && ids.every((id) => sel.has(id))) {
+    const out = new Set(ids);
+    select(
+      [...sel].filter((id) => !out.has(id)),
+      "replace",
+    );
+  } else select(ids, "add");
+}
 
 /** A line of the tree as the keyboard walks it: a group head or a row. */
 interface Item {
@@ -69,6 +94,8 @@ export function Outline() {
   const [focusKey, setFocusKey] = useState<string | undefined>(undefined);
   const [revealed, setRevealed] = useState<string | undefined>(undefined);
   const tree = useRef<HTMLDivElement>(null);
+  // The selection verbs, for the keys and the menus, while the outline is shown.
+  useEffect(() => selectActions(), []);
 
   const corners = useMemo(() => (m ? cornersOf(m) : []), [m]);
   const groups = useMemo(
@@ -80,6 +107,7 @@ export function Outline() {
   const items = flatten(groups, isOpen);
   const problems = problemsByEntity(problemList.value?.answer.problems ?? []);
   const sel = selection.value;
+  const off = hidden.value;
   const newBy = marks.value;
   // Several new rows in one group: one mark on its head (review p3), a quiet edge on each row.
   const headMarks = new Map<string, string>();
@@ -146,7 +174,7 @@ export function Outline() {
     const mode = e.ctrlKey || e.metaKey ? "toggle" : "replace";
     if (it.row) select([it.row.id], mode);
     else if (it.group?.ref) select([it.group.ref], mode);
-    else if (it.group) setOpen(it.group, !isOpen(it.group));
+    else if (it.group) selectMembers(membersOf(it.group), mode === "toggle");
   };
   const onKeyDown = (e: TargetedKeyboardEvent<HTMLDivElement>) => {
     const i = items.findIndex((x) => x.key === current?.key);
@@ -239,12 +267,21 @@ export function Outline() {
                   class={`tree-head level-${it.level}${selected ? " selected" : ""}${revealed === it.key ? " revealed" : ""}`}
                   onClick={(e) => {
                     setFocusKey(it.key);
-                    if (g.ref && !(e.target as HTMLElement).closest(".twisty"))
-                      select([g.ref], e.ctrlKey || e.metaKey ? "toggle" : "replace");
-                    else setOpen(g, !open);
+                    const toggle = e.ctrlKey || e.metaKey;
+                    if ((e.target as HTMLElement).closest(".twisty")) setOpen(g, !open);
+                    else if (g.ref) select([g.ref], toggle ? "toggle" : "replace");
+                    else selectMembers(membersOf(g), toggle);
+                  }}
+                  onContextMenu={(e) => {
+                    setFocusKey(it.key);
+                    outlineMenu(e, g.ref ? [g.ref] : membersOf(g));
                   }}
                 >
-                  <span class="twisty" aria-hidden="true">
+                  <span
+                    class="twisty"
+                    aria-hidden="true"
+                    title={open ? "Close the group" : "Open the group"}
+                  >
                     {open ? "▾" : "▸"}
                   </span>
                   {g.state && (
@@ -266,6 +303,7 @@ export function Outline() {
             const p = problems.get(r.id);
             const by = newBy.get(r.id);
             const selected = sel.has(r.id);
+            const isHidden = off.has(r.id);
             return (
               <div
                 key={it.key}
@@ -276,10 +314,14 @@ export function Outline() {
                 onKeyDown={onKeyDown}
                 aria-level={it.level}
                 aria-selected={selected}
-                class={`row level-${it.level}${selected ? " selected" : ""}${r.copy ? " copy" : ""}${by ? " new" : ""}${revealed === it.key ? " revealed" : ""}`}
+                class={`row level-${it.level}${selected ? " selected" : ""}${r.copy ? " copy" : ""}${by ? " new" : ""}${revealed === it.key ? " revealed" : ""}${isHidden ? " hidden-row" : ""}`}
                 onClick={(e) => {
                   setFocusKey(it.key);
                   select([r.id], e.ctrlKey || e.metaKey ? "toggle" : "replace");
+                }}
+                onContextMenu={(e) => {
+                  setFocusKey(it.key);
+                  outlineMenu(e, [r.id]);
                 }}
                 onMouseEnter={() => {
                   hover.value = { ids: [r.id], from: "tree" };
@@ -293,6 +335,11 @@ export function Outline() {
                   {r.text}
                 </span>
                 {r.figure && <span class="figure">{r.figure}</span>}
+                {isHidden && (
+                  <span class="hidden-mark" data-testid="hidden-mark">
+                    hidden
+                  </span>
+                )}
                 {by && !quiet.has(r.id) && (
                   <span class="new-mark" data-testid="new-mark">
                     new · {by}
