@@ -19,6 +19,7 @@ import { barActions } from "./barActions.ts";
 import { DeleteButton, DeleteFlow } from "./Delete.tsx";
 import { BarDerived, Item, OtherDerived, ProjectItem } from "./Derived.tsx";
 import { PointedField, pointedFor } from "./Fields.tsx";
+import { ManyFields } from "./ManyFields.tsx";
 import { ButtConnector, ConnectionFields, PartFields, PlainFields } from "./OtherFields.tsx";
 import { copyMembers } from "./remove.ts";
 import { copyOf, entityName, labelOf, NOUN, patternOf, type RefKind, refKind } from "./words.ts";
@@ -245,6 +246,7 @@ function Many({ m, ids }: { m: Model; ids: string[] }) {
       </p>
       <SelectionProblems m={m} ids={ids} />
       {item && <ReplaceMany m={m} bars={bars} item={item} />}
+      <ManyFields m={m} ids={ids} />
       {butts.length > 0 && (
         <section>
           <h3>Butts</h3>

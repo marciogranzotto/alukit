@@ -9,6 +9,7 @@ import {
   openTab,
   type Served,
   scratchProject,
+  selectByIds,
   serve,
   waitDrawn,
 } from "./helpers.ts";
@@ -363,4 +364,37 @@ test("an offset in the bar's plane, and the anchor on the section's dots (E4.2),
   await waitDrawn(page, 3);
   expect((await written(served.dir)).bars?.b13).toMatchObject({ anchor: "+x", off_mm: [-20, 0] });
   await expect(page.getByTestId("field-anchor")).toHaveValue("+x");
+});
+
+test("several selected: four legs set to finish black in one step, which one Undo takes back", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  served = await serve("base-frame/cli");
+  await openTab(page, served, 0);
+  const was = await bomLines(served.dir);
+  await selectByIds(page, ["b1", "b2", "b3", "b4"]);
+  const finish = page.getByTestId("many-opt-finish");
+  // They share the project's default finish and the tag post; none has a label.
+  await expect(finish).toHaveValue("");
+  await expect(page.getByTestId("many-tags")).toHaveValue("post");
+  await expect(page.getByTestId("many-label")).toHaveValue("");
+  await finish.selectOption("black");
+  await waitDrawn(page, 1);
+  const bars = (await written(served.dir)).bars as Record<string, { opt?: unknown }>;
+  for (const id of ["b1", "b2", "b3", "b4"]) expect(bars[id]?.opt).toEqual({ finish: "black" });
+  // One BOM line of four black posts, as the CLI counts it.
+  const black = (await bomLines(served.dir)).find(
+    (l) => l.item === "test:TS40" && l.sources?.includes("b1"),
+  );
+  expect(black).toMatchObject({ qty: 4, sources: ["b1", "b2", "b3", "b4"] });
+  await expect(finish).toHaveValue("black");
+  expect(await lastStepWords(served.dir)).toBe(
+    "change b1's options, change b2's options and 2 more",
+  );
+
+  // One Undo takes all four back.
+  await page.getByTestId("undo").click();
+  await waitDrawn(page, 2);
+  expect(await bomLines(served.dir)).toEqual(was);
 });
