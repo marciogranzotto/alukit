@@ -716,3 +716,14 @@ anything, and each has a default in place.
   IBM Plex's licence text. The hook now exempts licence texts shipped with bundled assets.
   Pushed `eab4f38`.
 - **05:30**: S2 (app shell and IA) launched; S5 (tools and inspector) waits for S3.
+- **05:31**: The alternative frame's acceptance run 3 (internal; CLI at `eb14da6`).
+  - All four numeric tests pass on both variants.
+  - Gaps X1–X3, X5 and X6 work on the real frame: blind fasteners grip one wall, the butt's stack
+    is drilled, the drilled-hole fit holds, and the sleeved walls clear.
+  - It fails on one new gap, **X7**: an access hole cannot be placed across its face. The schema
+    refuses a position and the code always drills the face's centre line, so on a two-core
+    profile two connectors' cross holes land in one place.
+  - A check gap, **X8**: F2b finds a butt connector's head only through an end tap. A connector
+    whose pin sits untapped in a core is not seat-checked, and with a tap its head is modelled as a
+    plain cylinder and wrongly rejected.
+  - The X7/X8 fix waits for the decided frame's run 6, to batch whatever it finds.
