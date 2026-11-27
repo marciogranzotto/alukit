@@ -983,3 +983,10 @@ anything, and each has a default in place.
     - polish A: stretch, mirror re-home, log arguments, Move's keys;
     - polish B: A4, the anchor dots, A1, A8;
     - an independent designer review of the running app, with the known items excluded.
+- **20:12**: The reference project's decided frame passed acceptance run 10 on its re-pinned revision, with **no exception**. Tests 1–4 match run 9 to the gram and the cent.
+  - Run 9's AluKit on the new record gives byte-identical outputs.
+  - Main's differences each have their cause:
+    - the traced PF40-02 outline moves the bearing under its lips;
+    - walls arriving after assembly (F11) turn 5 wall-side errors into warnings;
+    - context members (X11) take the walls out of the BOM and order, and the height check out of reach of the room.
+  - AluKit's own geometry puts A's block 9.7759 mm behind the back plane, the record's figure exactly.
