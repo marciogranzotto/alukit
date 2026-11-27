@@ -196,18 +196,77 @@ and C's [rendering spec](visual-design.md#5-the-3d-view-rendering-spec). Labels 
     in `renderer.render` is 2 to 4 ms a frame in both models. On the GPU every case holds 60 Hz
     (16.7 ms, the display's interval) before and after, the 1,000 bars included; the after build
     spends 0.25 to 1.9 ms of CPU a frame in `renderer.render` and 0.2 to 0.6 ms a hover pick.
-26. **The bundle** grows by 36 kB (964.7 kB on main, 1,000.9 kB here; gzip 257.3 to 270.5 kB),
+26. **The bundle** grows by 36 kB (964.7 kB on main with S1, 1,001.2 kB here; gzip 257.3 to
+    270.6 kB),
     which crosses Vite's 1,000 kB advice; the build still passes. Splitting the viewer's code into
     its own chunk is a later change, not S3's.
 
+## The live update (after merging S1)
+
+27. **What made it slow: every revision linked its shader programs again (measured).** Merged
+    with main, S3 took live.spec's update (a CLI command in two tabs) from about 0.1 s to about
+    1 s, over the test's limit. `setModel` rebuilt the scene and disposed the replaced model's
+    materials before the new model was drawn. three.js deletes a program once no material uses
+    it (`releaseProgram` at `usedTimes` 0, read), so the revision's first frame compiled and
+    linked those programs again; the marker layers also made new materials on every set, hover
+    and fade. Counting `linkProgram` calls: six per revision on the cart, before S3 as with it.
+    What changed with S3 is what the six cost: 112 ms of waiting on them before S3 and 1,120 ms
+    with it (medians below). The relink was already there before S3: one of the four runs
+    before S3 waited 3.5 s on it. The time is not in compiling S3's shaders: alone in an empty
+    page, a Lambert program links in about 5 ms with S3's lights and fog as with main's, and
+    Chrome's program cache, off or 256 MB, changes nothing (measured). Inferred: three reads each
+    program's link status and log, calls that wait until the GPU process has done everything
+    queued before them, and on SwiftShader that is rendering, the two tabs' together; S3's frames
+    are heavier there (decision 25). The CPU stages are a few milliseconds each and barely moved:
+    S3's corners, joint markers and badges add about 3 ms together.
+28. **The fix: the old model goes after the frame that draws the new one.** A revision's build
+    keeps the model it replaces (`retired` in scene.ts) and disposes it after the next frame. By
+    then the new model's materials have found their programs in three's cache, so nothing is
+    released or linked. At most one model waits: a model never drawn holds no programs and is
+    disposed at once. The marker layers keep one material per glyph and variant for their life,
+    updating size, glyph and opacity. The scene drawn at a revision is the same, and so is
+    `drawnRev`: it is still set when the scene is built at the revision, before the frame that
+    draws it, as on main. One limit: a body out of view in that frame, whose program nothing
+    else uses, has its program released with the old model and linked when it comes into view.
+    On the cart nothing is linked across a revision and its undo (measured; view.spec checks
+    it). Not taken: `renderer.compile()` after each build. It prepares every material in the
+    scene, hidden ones too (`scene.traverse`, read), so it can link programs no frame needs.
+29. **Measured.** The same headless Chromium on SwiftShader as live.spec, the cart, two tabs.
+    Each probe run adds a bar from the CLI, profiles tab 0 and reads `performance.measure` stage
+    timings in instrumented copies of three builds (main before S3 at `d8d3746`; this branch
+    before the fix; after it), run in turn, four rounds, load average 28 to 37. Then live.spec
+    itself, alone, `--workers=1`, alternating main before S3 and this branch, four pairs, load
+    31 to 51.
+
+| Stage, ms (median of 4) | Before S3 | S3, before the fix | S3, fixed |
+|---|---|---|---|
+| Model fetch | 8.5 | 8.1 | 6.6 |
+| Model swap (the signal set, every subscriber) | 6.5 | 10.4 | 10.0 |
+| `setModel`: build (bar geometry; edges; parts) | 5.7 (2.3; 1.7; 0.9) | 7.0 (2.3; 2.5; 1.3) | 6.2 (2.6; 2.1; 1.0) |
+| Corners (`cornersOf`); joint markers; badges | – | 1.3; 0.6; 0.9 | 1.8; 0.4; 0.7 |
+| Labels, in the frame | – | 0.0 | 0.1 |
+| The revision's frame (`renderer.render`) | 120.5 | 1,126.1 | 2.2 |
+| of which, waiting on program links (count) | 112.5 (6) | 1,119.5 (6) | 0 (0) |
+| Revision event to its frame drawn, tab 0 | 136.6 | 1,148.8 | 22.2 |
+| Both tabs at the revision, after the CLI exits | 120 | 1,121 | 3.5 |
+
+| live.spec, both tabs after the CLI exits, ms | Pair 1 | Pair 2 | Pair 3 | Pair 4 |
+|---|---|---|---|---|
+| Main before S3 (`d8d3746`) | 324 | 125 | 170 | 250 |
+| This branch, fixed | 11 | 19 | 5 | 4 |
+
+All eight runs passed. Under 20 ms is less than a frame (inferred: the server tells the tabs
+before the CLI process exits, so they often have the revision drawn by the time it does).
+
 ## Tests
 
-- view.spec adds seven tests: hover (b2 sets `hovered()`, tints, names its cut, clears), x-ray,
+- view.spec adds eight tests: hover (b2 sets `hovered()`, tints, names its cut, clears), x-ray,
   the black profile's edge contrast, the unconnected rectangle (4 open markers, `corners()` equal
   to `cornersOf` of the served model, none drawn with Joints off, a hovered corner), Show on the
   order's O1 (c35: the camera's target in its box, the direction kept, the rest dimmed until
   Esc), colour by item (the legend equals the BOM's items; an entry frames b18 and dims the
-  rest), and the gizmo. The pixel tests turn the problem badges off, whose warning tint is near
+  rest), the gizmo, and the live update's shader programs (no WebGL program linked across a
+  revision and its undo, decision 27). The pixel tests turn the problem badges off, whose warning tint is near
   the selection's amber and the open ring's yellow. The projection is checked by
   `aria-pressed`; the section test moves the pointer off the viewport before its last picture.
 - **The tests wait for the camera to rest, not to look still.** The old wait (the camera in the
