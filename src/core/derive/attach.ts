@@ -3,6 +3,7 @@ import type { Ctx } from "./context.ts";
 import { coreTaps } from "./cores.ts";
 import type { DerivedBar } from "./derive.ts";
 import { duplicateOps } from "./duplicates.ts";
+import { faceTaps } from "./face-taps.ts";
 import { type GenOut, generateFaces } from "./fastenings.ts";
 import { connectorHardware } from "./hardware.ts";
 import { placeParts } from "./parts.ts";
@@ -60,6 +61,7 @@ export function attach(
   connectorHardware(ctx, bars, out, stacks);
   duplicateOps(ctx, bars);
   coreTaps(ctx, bars);
+  faceTaps(ctx, bars);
   return {
     parts,
     fastenings: out.fastenings,

@@ -483,6 +483,20 @@ export function barFaceBearing(bar: DerivedBar, face: Face, X: V3, dOut: number,
   return annulusBearing(body, f, X, dOut / 2, dIn / 2);
 }
 
+/**
+ * Where a hole in a bar's bounding face is centred: `at` from its design point, `across` along
+ * the face's u from its centre line (the inverse of `FaceGen`'s placing of a hole).
+ */
+export function holeCentre(bar: DerivedBar, o: HoleOp): V3 {
+  const P = bar.placed;
+  const s = o.from === "a" ? o.at : bar.lengths.len - o.at;
+  const fl = faceLocal(P.box, o.face);
+  const C = onBar(P, s, fl.at[0], fl.at[1]);
+  if (!o.across) return C;
+  const f = barBody(bar).faces.find((x) => x.name === o.face) as BodyFace;
+  return addScaled(C, f.u, o.across);
+}
+
 /** A point of the face's plane is on the face, within tol.len of its edges. */
 function onFace(f: BodyFace, P: V3): boolean {
   const poly = ownPoly(f);

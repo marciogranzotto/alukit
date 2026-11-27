@@ -1,0 +1,16 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G44",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo", "../../catalogs/test-x"],
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [400, 0, 0], "label": "40x40 along +X, tapped in its top face" },
+    "b2": { "item": "test-geo:FB-50x10", "a": [100, 0, 25], "b": [300, 0, 25], "label": "flat bar on it" }
+  },
+  "connections": {
+    "c1": { "type": "face", "bars": ["b2", "b1"], "fastening": "screw", "fastener": "test-x:SCR-M8x20", "stations": { "at_mm": [100], "across_mm": [12] }, "tap_depth_mm": 10 }
+  }
+}

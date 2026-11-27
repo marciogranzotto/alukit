@@ -1,3 +1,4 @@
+import type { BarGroove } from "../items.ts";
 import {
   type Bar,
   type Face,
@@ -435,6 +436,24 @@ export function resolveStation(ctx: Ctx, st: Station, owner: Owner): StationPoin
 }
 
 /** A face's centre line in local coordinates, and which local axis its normal runs along. */
+/**
+ * Each groove of a bar's bounding face, with a point's offset across the face from its centre line
+ * (§4.3's u: local x on the ±y faces, local y on the ±x faces, as `at_mm` is given in section
+ * terms and the anchor shifts it).
+ */
+export function grooveOffsets(
+  P: PlacedBar,
+  face: Face,
+  X: V3,
+): { groove: BarGroove; off: number }[] {
+  const alongX = faceLocal(P.box, face).dir === "y";
+  const local = dot(sub(X, P.A), alongX ? P.frame.x : P.frame.y);
+  const shift = alongX ? P.off[0] - P.anchor[0] : P.off[1] - P.anchor[1];
+  return P.item.grooves
+    .filter((g) => g.face === face)
+    .map((g) => ({ groove: g, off: local - (g.at_mm + shift) }));
+}
+
 export function faceLocal(
   b: Box,
   face: Face,

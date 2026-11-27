@@ -9,7 +9,7 @@ import { add, addScaled, angleDeg, dot, neg, norm, scale, sub, type V3 } from ".
 import type { Ctx } from "./context.ts";
 import type { DerivedBar, EndHoleOp, HoleOp } from "./derive.ts";
 import { barFaceBearing, fitsGroove, type GenOut, SEAT_MIN, stockOptions } from "./fastenings.ts";
-import { boxCentre, faceLocal, facePlane, onBar, resolveStation } from "./place.ts";
+import { boxCentre, faceLocal, facePlane, grooveOffsets, onBar, resolveStation } from "./place.ts";
 import type {
   ButtHead,
   Copy,
@@ -1563,16 +1563,9 @@ function grooveAt(
   face: Face,
   X: V3,
 ): { groove: BarItemInfo["grooves"][number]; off: number } | undefined {
-  const P = bar.placed;
-  const fl = faceLocal(P.box, face);
-  const local = dot(sub(X, P.A), fl.dir === "y" ? P.frame.x : P.frame.y);
-  for (const g of P.item.grooves) {
-    if (g.face !== face) continue;
-    const c = g.at_mm - (fl.dir === "y" ? P.anchor[0] - P.off[0] : P.anchor[1] - P.off[1]);
-    const off = local - c;
-    if (Math.abs(off) <= (g.opening_mm ?? 2 * TOL.len) / 2) return { groove: g, off };
-  }
-  return undefined;
+  return grooveOffsets(bar.placed, face, X).find(
+    ({ groove, off }) => Math.abs(off) <= (groove.opening_mm ?? 2 * TOL.len) / 2,
+  );
 }
 
 /** A splice's studs (its parts that are fasteners of subtype `stud`, by qty), at least one. */

@@ -143,6 +143,53 @@ describe("a butt's stack (X2)", () => {
   });
 });
 
+describe("a tap over a groove's opening (X5)", () => {
+  const at = (across: number, more: object = {}) => ({
+    connections: { c1: { stations: { at_mm: [100], across_mm: [across] }, ...more } },
+  });
+  const of = async (patch: unknown, code = "machining") =>
+    said((await project("G44", patch)).d, code);
+
+  it("says which face, groove and offset, and how much of the tap drill lies in the opening", async () => {
+    expect(await of(at(0))).toEqual([
+      [
+        "error",
+        "b1",
+        "the tap M8 200.00 from design point a on face +y (c1): its Ø6.75 tap drill lies 100.0 % in the 8.20 opening of the groove test:c8 on face +y at 0.00, 0.00 off its centre line, so its thread has less than half its circle of wall",
+      ],
+    ]);
+    expect(await of(at(3))).toEqual([
+      [
+        "error",
+        "b1",
+        "the tap M8 200.00 from design point a on face +y, 3.00 across (c1): its Ø6.75 tap drill lies 70.4 % in the 8.20 opening of the groove test:c8 on face +y at 0.00, 3.00 off its centre line, so its thread has less than half its circle of wall",
+      ],
+    ]);
+    expect(await of(at(6))).toEqual([]);
+    expect(await of(at(12))).toEqual([]);
+  });
+
+  it("checks a tapped hole a person wrote, from either end", async () => {
+    const written = (from: string, at_mm: number) => ({
+      connections: { c1: null },
+      bars: { b1: { ops: [{ op: "hole", face: "-y", from, at_mm, thread: "M6", depth_mm: 8 }] } },
+    });
+    const a = await of(written("a", 50));
+    expect(a.map((x) => x.slice(0, 2))).toEqual([["error", "b1"]]);
+    expect(a[0]?.[2]).toContain("on face -y");
+    const b = await of(written("b", 50));
+    expect(b.map((x) => x.slice(0, 2))).toEqual([["error", "b1"]]);
+  });
+
+  it("still gives a T-nut off the groove its fit error (X5b)", async () => {
+    const tnut = at(10, { fastening: "tnut", stack: ["test:TNUT-M8"], tap_depth_mm: null });
+    expect(await of(tnut, "fit")).toEqual([
+      ["error", "c1", "station 1: no groove of b1's face +y where the T-nut goes"],
+    ]);
+    expect(await of(tnut)).toEqual([]);
+  });
+});
+
 describe("a butt connector's screw heads (F2b)", () => {
   const of = async (patch: unknown, code = "fit") => said((await project("G43", patch)).d, code);
   const conn = (c: string) => ({ connections: { c1: { connector: `test-x:${c}` } } });

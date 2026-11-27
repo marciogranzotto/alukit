@@ -231,3 +231,34 @@ chamber; 3 and 10 off the groove's centre; through the rail 45.87 %, on a washer
 before and after): G41's J1 head on the rail's bottom face, over its groove, warns at 45.87 % in its
 base and five of its cases; that is the seat this gap adds, and G41's base expectation now pins it.
 No other fixture moved: no earlier butt seats a screw on a grooved far face.
+
+## X5: a tap over a groove's opening
+
+**The case.** A short profile shoe screwed to a profile chord: the `screw` fastening taps the
+chord's face at the station, which stands on the face's centre line, where its groove opens.
+`check` passed it. **The cause** (**read**, `fastenings.ts` and `cores.ts`): a T-nut station is
+checked to land on a groove, and an end tap on a core (`coreTaps`), but nothing checked a face tap
+against the grooves the bar's item already carries.
+
+32. **A face analogue of `coreTaps`** (`faceTaps`, `face-taps.ts`), run after all machining is
+    generated, so it reads every tapped hole in a bounding face: a `screw` fastening's, a
+    connector's, and one a person wrote (from either end). A pattern copy reports through its
+    template, as `coreTaps` does.
+33. **The measure is the tap drill's circle** (d − P, `tapDrill`) and the fraction of it between
+    the opening's two edges, a disc between two chords, worked in closed form
+    (`bandFraction`). More than half is a `machining` error on the bar naming the face, the groove
+    (its type and place), the hole's offset from the groove's centre line and the fraction
+    (call 50: the threshold is F2's `SEAT_MIN`; a tap that breaks into an opening by less is not
+    flagged).
+34. **The room for a head and its T-nut seat in a groove's depth**, the brief's second half, is
+    F2b's slot check (x1 28): lip + seat body + head ≤ the groove's depth, its own `fit` error.
+    The T-nut off a groove (X5b) was already a `fit` error, and `x-gaps.test.ts` keeps it one.
+35. **`grooveOffsets`** (`place.ts`) gives each groove of a face with a point's offset from its
+    centre line; F2b's `grooveAt` and this check share it, and `holeCentre` places a hole op back
+    on its face (the inverse of `FaceGen`'s placing).
+
+**Golden G44** (`by_hand.py`, the same chord integral in Python): Ø6.75 at 12 across, none; on
+the centre line 100 %; 3 across 70.38 %; 6 across 16.16 %; −12, none; the T-nut 10 across, `fit`.
+
+**Diagnostics on earlier fixtures**: none moved (**verified**: every golden and cart case's
+diagnostics compared before and after). No earlier fixture taps a face on a groove.
