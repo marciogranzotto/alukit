@@ -1,0 +1,15 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G35",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-stud", "../../catalogs/test-seat"],
+  "defaults": {
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "item": "test-stud:TS80", "a": [0, 0, 0], "b": [160, 0, 0], "label": "80x80 block, 160 long" },
+    "b2": { "item": "test:TS4080", "a": [1660, -190, 0], "b": [160, 10, 0], "roll_deg": 90, "ends": { "b": { "cut": "angle" } }, "label": "40x80 laid flat, 7.59° off the block's axis in plan, 10 off its centre line" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1.b", "ends": ["b2.b"], "connector": "test-seat:J2" }
+  }
+}

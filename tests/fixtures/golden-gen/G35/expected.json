@@ -1,0 +1,178 @@
+{
+  "case": "G35",
+  "rule": "a hole a connector requires in a block a butt bears on the end of follows the screw: along the butting bar's core axis when the connector taps that core (§3.4, §4.5)",
+  "design": "b2's two cores (0, ±20) meet b1's end face b at x -10.18 and 30.18, 10 + 20/cos 7.59° either side of the centre; the screw into each runs along b2's axis, 7.59° off square, and drifts 160 · 2/15 = 21.33 over the block. The one at -10.18 exits end a at 11.16: a Ø9 end hole with its entry, exit and angle. The one at 30.18 would exit at 51.51, past the block's side at 40: it leaves through the side 73.67 mm in, a connection error on c1, and no hole. b2's long point 1518.61, its taps at its cores",
+  "expect": {
+    "lines": {
+      "test-stud:TS80": [
+        {
+          "count": 1,
+          "cut_mm": 160,
+          "machining": [
+            "Ø9.00 hole in end a at x 10.18, y 0.00 from the centre, 7.59° off square, exiting end b at x -11.16, y 0.00, through"
+          ]
+        }
+      ],
+      "test:TS4080": [
+        {
+          "count": 1,
+          "cut_mm": 1518.61,
+          "machining": [
+            "tap M8 in end a, at x 0.00, y -20.00 from the centre",
+            "tap M8 in end a, at x 0.00, y 20.00 from the centre"
+          ]
+        }
+      ]
+    },
+    "ops": {
+      "b1": [
+        {
+          "op": "end-hole",
+          "from": "b",
+          "off": [-10.18, 0],
+          "exit": [11.16, 0],
+          "angle": 7.59,
+          "d": 9,
+          "by": "c1"
+        }
+      ],
+      "b2": [
+        { "op": "end-tap", "from": "b", "off": [0, -20], "thread": "M8", "by": "c1" },
+        { "op": "end-tap", "from": "b", "off": [0, 20], "thread": "M8", "by": "c1" }
+      ]
+    },
+    "recipes": { "test-seat:J2": 1 },
+    "errors": [{ "code": "connection", "entity": "c1", "refs": ["b1"] }]
+  },
+  "cases": [
+    {
+      "name": "20 lower",
+      "patch": { "bars": { "b2": { "a": [1660, -210, 0], "b": [160, -10, 0] } } },
+      "expect": {
+        "lines": {
+          "test-stud:TS80": [
+            {
+              "count": 1,
+              "cut_mm": 160,
+              "machining": [
+                "Ø9.00 hole in end a at x -10.18, y 0.00 from the centre, 7.59° off square, exiting end b at x -31.51, y 0.00, through",
+                "Ø9.00 hole in end a at x 30.18, y 0.00 from the centre, 7.59° off square, exiting end b at x 8.84, y 0.00, through"
+              ]
+            }
+          ],
+          "test:TS4080": [
+            {
+              "count": 1,
+              "cut_mm": 1518.61,
+              "machining": [
+                "tap M8 in end a, at x 0.00, y -20.00 from the centre",
+                "tap M8 in end a, at x 0.00, y 20.00 from the centre"
+              ]
+            }
+          ]
+        },
+        "ops": {
+          "b1": [
+            {
+              "op": "end-hole",
+              "from": "b",
+              "off": [-30.18, 0],
+              "exit": [-8.84, 0],
+              "angle": 7.59,
+              "d": 9,
+              "by": "c1"
+            },
+            {
+              "op": "end-hole",
+              "from": "b",
+              "off": [10.18, 0],
+              "exit": [31.51, 0],
+              "angle": 7.59,
+              "d": 9,
+              "by": "c1"
+            }
+          ],
+          "b2": [
+            { "op": "end-tap", "from": "b", "off": [0, -20], "thread": "M8", "by": "c1" },
+            { "op": "end-tap", "from": "b", "off": [0, 20], "thread": "M8", "by": "c1" }
+          ]
+        },
+        "recipes": { "test-seat:J2": 1 },
+        "errors": []
+      }
+    },
+    {
+      "name": "no tap in the 40x80",
+      "patch": { "connections": { "c1": { "connector": "test-seat:J2-H" } } },
+      "expect": {
+        "lines": {
+          "test-stud:TS80": [
+            {
+              "count": 1,
+              "cut_mm": 160,
+              "machining": [
+                "Ø9.00 hole in end a along the axis, at x -30.18, y 0.00 from the centre, through",
+                "Ø9.00 hole in end a along the axis, at x 10.18, y 0.00 from the centre, through"
+              ]
+            }
+          ],
+          "test:TS4080": [{ "count": 1, "cut_mm": 1518.61 }]
+        },
+        "ops": {
+          "b1": [
+            { "op": "end-hole", "from": "b", "off": [-10.18, 0], "d": 9, "by": "c1" },
+            { "op": "end-hole", "from": "b", "off": [30.18, 0], "d": 9, "by": "c1" }
+          ]
+        },
+        "recipes": { "test-seat:J2-H": 1 },
+        "errors": []
+      }
+    },
+    {
+      "name": "spacer_mm 8",
+      "patch": { "connections": { "c1": { "spacer_mm": 8 } } },
+      "expect": {
+        "lines": {
+          "test-stud:TS80": [
+            {
+              "count": 1,
+              "cut_mm": 160,
+              "machining": [
+                "Ø9.00 hole in end a at x 10.18, y 0.00 from the centre, 7.59° off square, exiting end b at x -11.16, y 0.00, through"
+              ]
+            }
+          ],
+          "test:TS4080": [
+            {
+              "count": 1,
+              "cut_mm": 1510.54,
+              "machining": [
+                "tap M8 in end a, at x 0.00, y -20.00 from the centre",
+                "tap M8 in end a, at x 0.00, y 20.00 from the centre"
+              ]
+            }
+          ]
+        },
+        "ops": {
+          "b1": [
+            {
+              "op": "end-hole",
+              "from": "b",
+              "off": [-10.18, 0],
+              "exit": [11.16, 0],
+              "angle": 7.59,
+              "d": 9,
+              "by": "c1"
+            }
+          ],
+          "b2": [
+            { "op": "end-tap", "from": "b", "off": [0, -20], "thread": "M8", "by": "c1" },
+            { "op": "end-tap", "from": "b", "off": [0, 20], "thread": "M8", "by": "c1" }
+          ]
+        },
+        "recipes": { "test-seat:J2": 1 },
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b1"] }]
+      }
+    }
+  ]
+}

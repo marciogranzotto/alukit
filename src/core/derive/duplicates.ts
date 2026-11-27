@@ -47,8 +47,14 @@ function placeKey(b: DerivedBar, o: ResolvedOp): string {
   const off = (p: readonly [number, number] | undefined) => [q(p?.[0] ?? 0), q(p?.[1] ?? 0)];
   if (o.op === "end-tap") return JSON.stringify(["tap", o.from, ...off(o.off), o.thread, o.depth]);
   if (o.op === "end-hole") {
+    if (o.exit && o.depth === undefined) {
+      // Through at an angle: the same hole from either end, by where it meets each end.
+      const [atA, atB] = o.from === "a" ? [o.off, o.exit] : [o.exit, o.off];
+      return JSON.stringify(["end-angled", ...off(atA), ...off(atB), o.d, o.thread]);
+    }
     const end = o.depth === undefined ? "*" : o.from;
-    return JSON.stringify(["end", end, ...off(o.off), o.d, o.thread, o.depth]);
+    const tilt = o.exit ? [...off(o.exit), quantize(o.angle ?? 0, QUANTUM.ang_deg)] : [];
+    return JSON.stringify(["end", end, ...off(o.off), ...tilt, o.d, o.thread, o.depth]);
   }
   const s = o.from === "a" ? o.at : b.lengths.len - o.at;
   const plain = o.depth === undefined && !o.csk && !o.cbore;
@@ -73,7 +79,12 @@ export function opText(b: DerivedBar, o: ResolvedOp): string {
     p ? `at x ${mm(p[0])}, y ${mm(p[1])} from the centre` : "at the centre";
   if (o.op === "end-tap") return `the tap ${o.thread} in end ${o.from} ${at(o.off)}`;
   const what = o.thread ? `tap ${o.thread}` : `Ø${o.d === undefined ? "?" : mm(o.d)} hole`;
-  if (o.op === "end-hole") return `the ${what} in end ${o.from} along the axis, ${at(o.off)}`;
+  if (o.op === "end-hole") {
+    if (o.exit && o.angle !== undefined) {
+      return `the ${what} in end ${o.from} ${at(o.off)}, ${mm(o.angle)}° off square`;
+    }
+    return `the ${what} in end ${o.from} along the axis, ${at(o.off)}`;
+  }
   const s = o.from === "a" ? o.at : b.lengths.len - o.at;
   const across = o.across === undefined ? "" : `, ${mm(o.across)} across`;
   const through = o.depth === undefined && !o.csk && !o.cbore ? ", through" : "";

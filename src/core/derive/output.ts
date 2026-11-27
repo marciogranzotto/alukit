@@ -88,6 +88,8 @@ function opJson(o: ResolvedOp) {
       op: o.op,
       from: o.from,
       ...(o.off ? { off_mm: [len(o.off[0]), len(o.off[1])] } : {}),
+      ...(o.exit ? { exit_mm: [len(o.exit[0]), len(o.exit[1])] } : {}),
+      ...(o.angle !== undefined ? { angle_deg: ang(o.angle) } : {}),
       ...(o.d !== undefined ? { d_mm: len(o.d) } : {}),
       ...(o.thread ? { thread: o.thread } : {}),
       ...(o.depth !== undefined ? { depth_mm: len(o.depth) } : {}),

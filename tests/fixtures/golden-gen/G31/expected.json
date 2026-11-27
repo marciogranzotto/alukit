@@ -1,7 +1,7 @@
 {
   "case": "G31",
   "rule": "a hole a connector requires in the through bar, when the butt bears on that bar's end: into the end face, along its axis (§3.4, §4.5)",
-  "design": "block b1 120.00 with an end hole Ø9 at its end b, 10.00 off its centre in x (where the brace's centre line meets the end face), through; the brace as G17, long point 2015.00, centre line 2000.00, short point 1985.00. The cut list turns the block end for end: Ø9.00 hole in end a, at x -10.00. With spacer_mm 8: the brace's centre line 1990.00, and the hole 16.00 off centre (the centre line meets the spacer at y 16, carried along the face's normal). A tapped hole M8 20 deep: the same place, and a machining error on b1, as a tap 10.00 off the block's one core, at its centre, has no core to be cut in (design 2.3, §5.5)",
+  "design": "block b1 120.00 with an end hole Ø9 at its end b, 10.00 off its centre in x (where the brace's centre line meets the end face), through; the brace as G17, long point 2015.00, centre line 2000.00, short point 1985.00. The cut list turns the block end for end: Ø9.00 hole in end a, at x -10.00. With spacer_mm 8: the brace's centre line 1990.00, and the hole 16.00 off centre (the centre line meets the spacer at y 16, carried along the face's normal), where its Ø9 breaks out of the 40 x 40's side by 16 + 4.5 - 20 = 0.50 along its whole length: a connection error on c1 (design 2.3, after acceptance run 4). A tapped hole M8 20 deep: the same place, and a machining error on b1, as a tap 10.00 off the block's one core, at its centre, has no core to be cut in (design 2.3, §5.5)",
   "expect": {
     "lines": {
       "test:TS40": [
@@ -36,7 +36,7 @@
           ]
         },
         "ops": { "b1": [{ "op": "end-hole", "from": "b", "off": [16, 0], "d": 9, "by": "c1" }] },
-        "errors": []
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b1"] }]
       }
     },
     {

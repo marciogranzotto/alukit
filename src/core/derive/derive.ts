@@ -68,16 +68,27 @@ export interface EndTapOp {
 }
 
 /**
- * A hole into a bar's end face, along its axis (acceptance gap A4): one a connector `requires` in
- * the through bar of a butt that bears on that end (§4.5, G17). It stands where the butting bar's
- * centre line, moved by the spacer, meets the end face: `off` from the section's box centre, in
- * the section's x and y. Drilled `d` or tapped `thread`; `depth` along the axis, else through.
+ * A hole into a bar's end face (acceptance gap A4): one a connector `requires` in the through bar
+ * of a butt that bears on that end (§4.5, G17). It follows its fastener's axis (after acceptance
+ * run 4): for a screw into a tap the connector makes in the butting end at the same position, the
+ * butting bar's axis through that position, which enters the end face where it meets it; for
+ * any other, the through bar's own axis, where the butting bar's centre line (or the line at a
+ * position), moved by the spacer, meets the end face. `off` is the entry, from the section's box
+ * centre in the section's x and y. Drilled `d` or tapped `thread`; `depth` along its axis, else
+ * through to the other end face.
  */
 export interface EndHoleOp {
   op: "end-hole";
   from: "a" | "b";
-  /** In the section's x and y, from its box centre; absent at the centre. */
+  /** The entry, in the section's x and y, from its box centre; absent at the centre. */
   off?: readonly [number, number];
+  /**
+   * A hole not along the bar's axis: where its axis leaves the other end face (through) or where
+   * it ends (`depth`), in the same frame; and its angle to the entry face's normal, in degrees.
+   * Both absent for a hole along the axis.
+   */
+  exit?: readonly [number, number];
+  angle?: number;
   d?: number;
   thread?: string;
   depth?: number;

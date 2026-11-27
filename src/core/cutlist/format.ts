@@ -30,6 +30,15 @@ export function machiningText(m: Machining): string {
     const at = m.off_mm
       ? `at x ${mm(m.off_mm[0])}, y ${mm(m.off_mm[1])} from the centre`
       : "at the centre";
+    if (m.exit_mm && m.angle_deg !== undefined) {
+      // At an angle, following a screw (after acceptance run 4): where it comes out, or ends.
+      const [x, y] = m.exit_mm;
+      const out =
+        m.depth_mm === undefined
+          ? `exiting end ${m.from === "a" ? "b" : "a"} at x ${mm(x)}, y ${mm(y)}, through`
+          : `${mm(m.depth_mm)} deep, its bottom at x ${mm(x)}, y ${mm(y)}`;
+      return `${what} in end ${m.from} ${at}, ${m.angle_deg.toFixed(2)}° off square, ${out}`;
+    }
     const how = m.depth_mm === undefined ? "through" : `${mm(m.depth_mm)} deep`;
     return `${what} in end ${m.from} along the axis, ${at}, ${how}`;
   }

@@ -50,12 +50,25 @@ export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void 
     );
     const places = new Map<string, EndTap[]>();
     for (const t of taps) {
-      const k = JSON.stringify([t.from, ...(t.off ?? [0, 0]).map(q), t.op, t.thread]);
+      const tilt = t.op === "end-hole" && t.exit ? t.exit.map(q) : [];
+      const k = JSON.stringify([t.from, ...(t.off ?? [0, 0]).map(q), t.op, t.thread, ...tilt]);
       places.set(k, [...(places.get(k) ?? []), t]);
     }
     for (const group of places.values()) {
       const t = group[0] as EndTap;
       const [x, y] = t.off ?? [0, 0];
+      if (t.op === "end-hole" && t.exit) {
+        // A tapped hole at an angle to the bar's axis leaves any core it starts in: a core runs
+        // along the axis (after acceptance run 4).
+        const by = [...new Set(group.map((o) => o.by))].sort(compareIds);
+        ctx.d.error(
+          "machining",
+          id,
+          `${opText(b, t)} (${by.join(", ")}) runs across ${sectionId}'s cores, which lie along its axis: its thread is cut in no core`,
+          { refs: by },
+        );
+        continue;
+      }
       const far = cores.map(([cx, cy]) => Math.hypot(x - cx, y - cy));
       const least = Math.min(...far);
       if (least <= TOL.len) continue;

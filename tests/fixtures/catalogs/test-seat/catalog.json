@@ -1,0 +1,34 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-seat",
+  "name": "Joint geometry test catalog (synthetic)",
+  "vendor": "test-seat-vendor",
+  "currency": "BRL",
+  "prov": {
+    "src": "est",
+    "note": "synthetic test data for screws through a block's end, an end face on its receiving face and a head on its face, not a vendor's"
+  },
+  "items": {
+    "J2": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Two screws through a block's end into a 40x80's two cores, tapped M8 (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M8", "at_mm": [[0, -20], [0, 20]] },
+        { "op": "through-hole", "on": "through", "d_mm": 9, "at_mm": [[0, -20], [0, 20]] }
+      ]
+    },
+    "J2-H": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Two holes through a block's end at a 40x80's cores, with no tap in the 40x80 (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "requires": [
+        { "op": "through-hole", "on": "through", "d_mm": 9, "at_mm": [[0, -20], [0, 20]] }
+      ]
+    }
+  }
+}

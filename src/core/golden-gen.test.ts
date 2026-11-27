@@ -14,8 +14,9 @@ import { FIXTURES, mergePatch, readJson, shown, subdirs } from "./testing.ts";
  * document and the values the design's table gives for it, to 0.01 mm, and for G26 to the minor
  * unit. A row's variations ("factory: b", "at at_mm 470") are merge patches of the same document.
  * G29 (gap A3: a layer on an angle's inner leg face, `docs/notes/a3-face-contact.md`), G30–G32
- * (the other gaps the v1 acceptance found, `docs/notes/acceptance-gaps.md`) and G33–G34 (the gaps
- * its second run found, `docs/notes/acceptance-gaps-2.md`) each have a hand calculation beside
+ * (the other gaps the v1 acceptance found, `docs/notes/acceptance-gaps.md`), G33–G34 (the gaps
+ * its second run found, `docs/notes/acceptance-gaps-2.md`) and G35–G37 (the joint geometry its
+ * fourth run found, `docs/notes/f2-joint-geometry.md`) each have a hand calculation beside
  * them, `by_hand.py`, that imports nothing from AluKit.
  */
 
@@ -263,6 +264,7 @@ describe("golden generation cases (design §4.6)", () => {
       "G32",
       "G33",
       "G34",
+      "G35",
     ]);
   });
 

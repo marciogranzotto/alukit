@@ -76,7 +76,10 @@ export function serviceName(m: Machining): string {
   if (m.op === "end-tap") return `tap ${m.thread} in an end${depth}`;
   const what = m.thread ? `tapped hole ${m.thread}` : `hole Ø${mm(m.d_mm ?? 0)}`;
   if (m.op === "end-hole") {
-    return `${what} into an end, along the axis${m.depth_mm === undefined ? ", through" : depth}`;
+    // An angled one needs its own setup, so its angle is part of what is done.
+    const how =
+      m.angle_deg === undefined ? "along the axis" : `${m.angle_deg.toFixed(2)}° off square`;
+    return `${what} into an end, ${how}${m.depth_mm === undefined ? ", through" : depth}`;
   }
   const cbore = m.cbore ? `, counterbore Ø${mm(m.cbore.d_mm)} × ${mm(m.cbore.depth_mm)}` : "";
   const csk = m.csk ? `, countersink Ø${mm(m.csk.d_mm)} at ${m.csk.angle_deg.toFixed(2)}°` : "";
