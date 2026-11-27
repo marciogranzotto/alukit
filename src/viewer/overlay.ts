@@ -127,11 +127,14 @@ export class Overlay {
       fog: false,
     });
     this.group.name = "overlay";
+    // A glyph from the start, so the program the viewer links before its first frame is the one
+    // the marker draws with: a map added later would ask for another.
     this.markerMaterial = new PointsMaterial({
       size: MARKER_PX,
       sizeAttenuation: false,
       depthTest: false,
       transparent: true,
+      map: glyphs.get(GLYPH.point),
       fog: false,
     });
     this.marker = onTop(new Points(new BufferGeometry(), this.markerMaterial));

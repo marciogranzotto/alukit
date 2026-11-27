@@ -596,31 +596,36 @@ test("a revision draws with the shader programs it has: none is compiled again",
   served = await serve("cart");
   await openTab(page, served, 0);
   const links = () => page.evaluate(() => (window as unknown as { __links: number }).__links);
-  const frames = () => page.evaluate(() => window.__alukit?.frames()?.frames ?? 0);
-  // The first frames link what the model needs; then a revision with a new bar and new corners.
-  await expect.poll(frames).toBeGreaterThan(1);
+  const drawnAt = () => page.evaluate(() => window.__alukit?.frames()?.modelFrame ?? 0);
+  // The frame that first draws the model links what it needs; then a revision with a new bar
+  // and new corners.
+  await expect.poll(drawnAt).toBeGreaterThan(0);
   const before = await links();
   expect(before).toBeGreaterThan(0);
-  const idle = await frames();
+  const idle = await drawnAt();
   const r = await cli(["add", "bar", served.dir, "--a", "0,0,0", "--b", "0,-300,0"]);
   expect(r.code, r.err).toBe(0);
   await waitDrawn(page, 1);
-  // The revision's frame has drawn (the view draws on demand: nothing else asked for one).
-  await expect.poll(frames).toBeGreaterThan(idle);
+  // The revision's frame has drawn.
+  await expect.poll(drawnAt).toBeGreaterThan(idle);
   expect(await links()).toBe(before);
   // Undo, a second revision: the bar and its corners go, and still nothing is linked. The step
   // was the CLI's, so the tab asks first (D-UX-14).
-  const drawn = await frames();
+  const drawn = await drawnAt();
   await page.getByTestId("undo").click();
   await page.getByTestId("undo-confirm").click();
   await waitDrawn(page, 2);
-  await expect.poll(frames).toBeGreaterThan(drawn);
+  await expect.poll(drawnAt).toBeGreaterThan(drawn);
   expect(await links()).toBe(before);
 });
 
-test("a revision with a gizmo shown links no shader program either", async ({ page }) => {
-  // The gizmo (src/viewer/gizmo.ts, editing audit E0.6) is built once with its materials: a
-  // selected bar's end handles show it, and a revision moves them without making a material.
+test("selecting a bar shows its gizmo without linking a shader program, nor does a revision", async ({
+  page,
+}) => {
+  // The gizmo (src/viewer/gizmo.ts, editing audit E0.6) is built once with its materials, and the
+  // viewer links their programs, the selection x-ray's too, before its first frame: a selected
+  // bar's end handles show the gizmo without linking, and a revision moves them without making a
+  // material.
   await page.addInitScript(() => {
     const w = window as unknown as { __links: number };
     w.__links = 0;
@@ -633,22 +638,22 @@ test("a revision with a gizmo shown links no shader program either", async ({ pa
   served = await serve("cart");
   await openTab(page, served, 0);
   const links = () => page.evaluate(() => (window as unknown as { __links: number }).__links);
-  const frames = () => page.evaluate(() => window.__alukit?.frames()?.frames ?? 0);
-  await expect.poll(frames).toBeGreaterThan(1);
-  const loaded = await frames();
+  const drawnAt = () => page.evaluate(() => window.__alukit?.frames()?.modelFrame ?? 0);
+  // The frame that first draws the model links what it needs; nothing is selected yet.
+  await expect.poll(drawnAt).toBeGreaterThan(0);
+  const before = await links();
+  expect(before).toBeGreaterThan(0);
   await page.getByTestId("tree").locator('[data-id="b1"]').click();
   await expect
     .poll(() => page.evaluate(() => window.__alukit?.gizmo()))
     .toMatchObject({ handles: [{ key: "a" }, { key: "b" }] });
-  // The frame that first draws the handles links what they need; then a revision.
-  await expect.poll(frames).toBeGreaterThan(loaded);
-  const before = await links();
-  expect(before).toBeGreaterThan(0);
-  const idle = await frames();
+  expect(await links()).toBe(before);
+  // A revision, whose frame draws the handles (and the selection) wherever they now are.
+  const idle = await drawnAt();
   const r = await cli(["add", "bar", served.dir, "--a", "0,0,0", "--b", "0,-300,0"]);
   expect(r.code, r.err).toBe(0);
   await waitDrawn(page, 1);
-  await expect.poll(frames).toBeGreaterThan(idle);
+  await expect.poll(drawnAt).toBeGreaterThan(idle);
   expect(await page.evaluate(() => window.__alukit?.gizmo())).toMatchObject({
     handles: [{ key: "a" }, { key: "b" }],
   });

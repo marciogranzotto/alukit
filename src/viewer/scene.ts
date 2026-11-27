@@ -118,6 +118,11 @@ export interface RenderStats {
   renderMs: number;
   hovers: number;
   hoverMs: number;
+  /**
+   * The frame that first drew the model given last, 0 until one has: the model's programs are
+   * linked by then. (A revision is the app's as soon as `setModel` takes it, before it is drawn.)
+   */
+  modelFrame: number;
 }
 
 export type SelectMode = "replace" | "toggle" | "add";
@@ -353,6 +358,17 @@ function geometryOf(d: MeshData): BufferGeometry {
   return g;
 }
 
+/**
+ * A geometry with no points yet, for a lasting object filled later. It has its position
+ * attribute from the start: three keys a program by whether there is one, so the program the
+ * viewer links before its first frame is the one the object draws with.
+ */
+function emptyGeometry(): BufferGeometry {
+  const g = new BufferGeometry();
+  g.setAttribute("position", new Float32BufferAttribute([], 3));
+  return g;
+}
+
 /** A body's material: Lambert (cheapest on SwiftShader), pushed back so its edges always win. */
 function bodyMaterial(opts: ConstructorParameters<typeof MeshLambertMaterial>[0] = {}) {
   return new MeshLambertMaterial({
@@ -514,7 +530,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     depthWrite: false,
     fog: false,
   });
-  const xray = new LineSegments(new BufferGeometry(), xrayMaterial);
+  const xray = new LineSegments(emptyGeometry(), xrayMaterial);
   xray.name = "selection x-ray";
   xray.renderOrder = 800;
   xray.raycast = () => {};
@@ -552,7 +568,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   let fitted = false;
   /** The model's bounding sphere's radius (mm), cached per revision for the fog. */
   let radius = 1000;
-  const stats: RenderStats = { frames: 0, renderMs: 0, hovers: 0, hoverMs: 0 };
+  const stats: RenderStats = { frames: 0, renderMs: 0, hovers: 0, hoverMs: 0, modelFrame: 0 };
 
   const applyThemeMaterials = () => {
     capMaterial.color.setRGB(...theme.cut);
@@ -575,7 +591,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     opacity: 0.8,
     fog: false,
   });
-  const sectionLine = new LineLoop(new BufferGeometry(), sectionMaterial);
+  const sectionLine = new LineLoop(emptyGeometry(), sectionMaterial);
   sectionLine.name = "section outline";
   sectionLine.raycast = () => {};
   sectionLine.visible = false;
@@ -654,6 +670,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     } else release(owned);
     owned = [];
     ownedDrawn = false;
+    stats.modelFrame = 0;
     instanced = [];
     single = [];
     outline = undefined;
@@ -1646,6 +1663,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     stats.renderMs += performance.now() - t0;
     stats.frames++;
     // The model drawn has taken its programs; the generation it replaced can go.
+    if (!ownedDrawn && model) stats.modelFrame = stats.frames;
     ownedDrawn = true;
     if (retired.length > 0) {
       release(retired);
@@ -1683,6 +1701,12 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     }
     frame = requestAnimationFrame(tick);
   };
+  // Every lasting object is in the scene now, shown or not: link their programs before the first
+  // frame. three's compile prepares the material of every object, hidden ones too (it gathers
+  // only the lights from the visible ones), so what is first shown later (the gizmo's handles or
+  // axes, the selection's x-ray, the section's outline) draws with a program it has: selecting a
+  // bar links nothing (E-UX-19). The model's materials link on the frame that first draws it.
+  renderer.compile(scene, camera);
   frame = requestAnimationFrame(tick);
 
   return {
