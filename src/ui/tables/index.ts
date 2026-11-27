@@ -1,13 +1,11 @@
 /**
- * The tables and records S4 owns, each of which registers its sheet when imported (see
- * src/ui/sheets/registry.ts): the app imports this module once. Owner: S4.
+ * The sheets S4 owns, each of which registers itself when imported (see
+ * src/ui/sheets/registry.ts): the app imports this module once. Cut list, BOM, Machining, Order &
+ * costs, Problems and Records, in the rail's order. Owner: S4.
  */
 import "./CutList.tsx";
-import "./Machining.tsx";
 import "./Bom.tsx";
-import "./Order.tsx";
-import "./Costs.tsx";
-import "./Checks.tsx";
-import "./History.tsx";
-import "../records/OpenItems.tsx";
-import "../records/Decisions.tsx";
+import "./Machining.tsx";
+import "./OrderCosts.tsx";
+import "../problems/ProblemsSheet.tsx";
+import "../records/Records.tsx";

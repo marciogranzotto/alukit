@@ -48,7 +48,12 @@ const WASHES = ["sel-wash", "blocked-wash", "warn-wash", "ready-wash", "info-was
 export const PAIRS: readonly Pair[] = [
   { fg: "text-1", on: [...SURFACES, ...WASHES], min: 4.5, use: "values, names" },
   { fg: "text-2", on: [...SURFACES, ...WASHES], min: 4.5, use: "labels, column heads" },
-  { fg: "text-3", on: [...SURFACES, "sel-wash"], min: 4.5, use: "units, dimmed decimals, hints" },
+  {
+    fg: "text-3",
+    on: [...SURFACES, "sel-wash"],
+    min: 4.5,
+    use: "units, dimmed decimals, hints",
+  },
   { fg: "sel-text", on: [...SURFACES, "sel-wash"], min: 4.5, use: "the selection as text" },
   { fg: "sel-ink", on: ["sel"], min: 4.5, use: "text on a selection fill" },
   { fg: "act", on: SURFACES, min: 4.5, use: "links, primary actions" },

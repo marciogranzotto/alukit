@@ -5,14 +5,15 @@ import { EntityChips } from "../common/EntityChip.tsx";
 import { Errors } from "../Feedback.tsx";
 import { selection } from "../focus.ts";
 import type { Model } from "../model.ts";
-import { registerSheet } from "../sheets/registry.ts";
 import { busy, type CommandOutcome, sendCommands, summary } from "../store.ts";
+import { Clip, type Col, Row, SheetTable } from "../tables/common.tsx";
+import { ResolveForm } from "./ResolveForm.tsx";
 
 /**
  * The open items (design §8, §4.12): the document's list, each resolvable, and a form to add one;
  * edited through `addOpen` and `resolveOpen`, each edit one batch, so one step the top bar's undo
- * takes back (§7.1). What a command refuses is shown where it was asked, field by field. Owner:
- * S4, whose Problems sheet takes it in (S4.8).
+ * takes back (§7.1). What a command refuses is shown where it was asked, field by field. It is a
+ * section of the Problems sheet, since an open item that blocks the order is a problem. Owner: S4.
  */
 
 const isObject = (x: unknown): x is Record<string, unknown> =>
@@ -35,57 +36,20 @@ interface OpenItem {
   scope?: string[];
 }
 
-function openItems(m: Model): OpenItem[] {
+export function openItems(m: Model): OpenItem[] {
   const list = m.doc.open;
   return Array.isArray(list) ? (list.filter(isObject) as unknown as OpenItem[]) : [];
 }
 
-function ResolveForm({ item, done }: { item: OpenItem; done: () => void }) {
-  const [text, setText] = useState("");
-  const [why, setWhy] = useState("");
-  const [outcome, setOutcome] = useState<CommandOutcome>();
-  const resolve = async (e: Event) => {
-    e.preventDefault();
-    const args = {
-      id: item.id,
-      ...(text.trim() ? { text: text.trim() } : {}),
-      ...(why.trim() ? { why: why.trim() } : {}),
-    };
-    const r = await sendCommands([{ cmd: "resolveOpen", args }], `resolve ${item.id}`);
-    setOutcome(r);
-    if (r.ok) done();
-  };
-  return (
-    <form class="record-form" data-testid="resolve-form" onSubmit={(e) => void resolve(e)}>
-      <input
-        data-testid="resolve-text"
-        placeholder={`what was decided (default: resolved: ${item.text})`}
-        value={text}
-        onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
-      />
-      <input
-        data-testid="resolve-why"
-        placeholder="why (optional)"
-        value={why}
-        onInput={(e) => setWhy((e.currentTarget as HTMLInputElement).value)}
-      />
-      <button
-        type="submit"
-        class="tp-btn"
-        data-testid="resolve-apply"
-        disabled={busy.value || readOnly()}
-      >
-        Resolve
-      </button>
-      <button type="button" class="tp-btn" onClick={done}>
-        Cancel
-      </button>
-      <Errors outcome={outcome} />
-    </form>
-  );
-}
+const COLS: readonly Col[] = [
+  { id: "id", head: "Item", w: "64px" },
+  { id: "text", head: "Open question" },
+  { id: "blocks", head: "Holds", w: "132px" },
+  { id: "scope", head: "Scope", w: "230px" },
+  { id: "action", head: "", w: "112px", align: "right" },
+];
 
-export function OpenItemsSheet({ m }: { m: Model }) {
+export function OpenItemsSection({ m }: { m: Model }) {
   const items = openItems(m);
   const [resolving, setResolving] = useState<string | undefined>(undefined);
   const [text, setText] = useState("");
@@ -108,65 +72,66 @@ export function OpenItemsSheet({ m }: { m: Model }) {
     }
   };
   return (
-    <div data-testid="open-items">
+    <section class="block" data-testid="open-items">
+      <h4 class="block-head">
+        <span class="figure">Open items</span>
+        <span class="sub">Questions the project still has to answer</span>
+      </h4>
       {items.length === 0 ? (
-        <p class="sub">No open items.</p>
+        <p class="sub pad">No open items.</p>
       ) : (
-        <table class="grid">
-          <thead>
-            <tr>
-              <th>id</th>
-              <th>text</th>
-              <th>blocks</th>
-              <th>scope</th>
-              <th />
-            </tr>
-          </thead>
+        <SheetTable cols={COLS}>
           <tbody>
             {items.map((o) => (
               <Fragment key={o.id}>
-                <tr data-open={o.id}>
-                  <td>{o.id}</td>
-                  <td>{o.text}</td>
-                  <td>{o.blocks === "order" ? "the order" : ""}</td>
+                <Row data-open={o.id} {...(o.scope && o.scope.length > 0 ? { ids: o.scope } : {})}>
+                  <td>
+                    <b>{o.id}</b>
+                  </td>
+                  <td>
+                    <Clip text={o.text} />
+                  </td>
+                  <td>{o.blocks === "order" ? "The order" : "Nothing"}</td>
                   <td>
                     {o.scope && o.scope.length > 0 ? (
                       <EntityChips ids={o.scope} />
                     ) : o.blocks === "order" ? (
-                      "every supplier"
+                      <span class="sub">Every supplier</span>
                     ) : (
                       ""
                     )}
                   </td>
-                  <td>
+                  <td class="n">
                     <button
                       type="button"
-                      class="tp-btn"
+                      class="btn"
                       data-testid="resolve"
                       disabled={readOnly()}
+                      aria-expanded={resolving === o.id}
                       onClick={() => setResolving(resolving === o.id ? undefined : o.id)}
                     >
                       Resolve…
                     </button>
                   </td>
-                </tr>
+                </Row>
                 {resolving === o.id && (
-                  <tr>
+                  <tr class="detail">
                     <td />
-                    <td colSpan={4}>
-                      <ResolveForm item={o} done={() => setResolving(undefined)} />
+                    <td colSpan={COLS.length - 1}>
+                      <ResolveForm id={o.id} done={() => setResolving(undefined)} />
                     </td>
                   </tr>
                 )}
               </Fragment>
             ))}
           </tbody>
-        </table>
+        </SheetTable>
       )}
       <form class="record-form" data-testid="open-add" onSubmit={(e) => void add(e)}>
         <input
           class="wide"
           data-testid="open-text"
+          aria-label="An open item"
           placeholder="an open item, e.g. confirm the screw length"
           value={text}
           onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
@@ -178,25 +143,26 @@ export function OpenItemsSheet({ m }: { m: Model }) {
             checked={blocks}
             onChange={() => setBlocks(!blocks)}
           />{" "}
-          blocks the order
+          Holds the order
         </label>
         <input
           data-testid="open-scope"
+          aria-label="Scope"
           placeholder="scope: ids (all if empty)"
           value={scope}
           onInput={(e) => setScope((e.currentTarget as HTMLInputElement).value)}
         />
         <button
           type="button"
-          class="tp-btn"
+          class="btn"
           title="The selected entities"
           onClick={() => setScope([...selection.value].sort(compareIds).join(", "))}
         >
-          use selection
+          Use selection
         </button>
         <button
           type="submit"
-          class="tp-btn"
+          class="btn primary"
           data-testid="open-apply"
           disabled={busy.value || readOnly() || text.trim() === ""}
         >
@@ -204,8 +170,6 @@ export function OpenItemsSheet({ m }: { m: Model }) {
         </button>
         <Errors outcome={outcome} />
       </form>
-    </div>
+    </section>
   );
 }
-
-registerSheet({ id: "open-items", title: "Open items", order: 70, Body: OpenItemsSheet });

@@ -169,9 +169,47 @@ export function viewTheme(t: Theme): ViewTheme {
 
 /**
  * The colour of each catalog item the model uses, for colouring the view by item and the tables'
- * swatches (S4.3: hues by count, avoiding the selection's amber and the tool's cyan). Today
- * nothing is coloured by item: the map is empty.
+ * swatches (S4.3: hues by count, bars first, avoiding the selection's amber and the tool's cyan), as
+ * 0xRRGGBB for the theme given (dark when absent). Items are the BOM's, so a bar's item and a
+ * part's are one map.
  */
-export function itemSwatches(_m: Model): ReadonlyMap<string, number> {
-  return new Map();
+export function itemSwatches(m: Model, t: Theme = "dark"): ReadonlyMap<string, number> {
+  // Profiles first (the frame's bars are what the colours tell apart), then by how many are used.
+  const uses = new Map<string, { bar: boolean; n: number }>();
+  for (const g of m.bom.groups) {
+    for (const l of g.lines) {
+      const u = uses.get(l.item) ?? { bar: g.kind === "bar", n: 0 };
+      u.n += l.qty;
+      uses.set(l.item, u);
+    }
+  }
+  const ranked = [...uses].sort(
+    (a, b) =>
+      Number(b[1].bar) - Number(a[1].bar) ||
+      b[1].n - a[1].n ||
+      (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0),
+  );
+  const dim = t === "dark" ? 1 : LIGHT_SWATCH_SCALE;
+  return new Map(
+    ranked.map(([item], i) => [item, scale(ITEM_HUES[i] ?? ITEM_NEUTRAL, dim)] as const),
+  );
+}
+
+/**
+ * The item palette (visual-design.md §4.1), most used first: none in the selection's amber or the
+ * tool's cyan. Hues are assigned by count, so the commonest items get the clearest hues; every item
+ * past the eighth shares the neutral. The light theme draws the same hues darker.
+ */
+const ITEM_HUES = [0x86aee0, 0x93c47d, 0xe08f8f, 0xb39dda, 0xd8cf72, 0x6fc2b0, 0xe39ac7, 0xa9b46a];
+const ITEM_NEUTRAL = 0x9aa1a8;
+const LIGHT_SWATCH_SCALE = 0.55;
+
+function scale(rgb: number, k: number): number {
+  const c = (shift: number) => Math.round(((rgb >> shift) & 255) * k);
+  return (c(16) << 16) | (c(8) << 8) | c(0);
+}
+
+/** A swatch's colour as CSS, for a style attribute. */
+export function swatchCss(rgb: number): string {
+  return `#${rgb.toString(16).padStart(6, "0")}`;
 }

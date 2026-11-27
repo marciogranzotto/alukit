@@ -124,3 +124,51 @@ code {
   opacity: 0.45;
   cursor: default;
 }
+
+/* The button the sheets and their forms use; `.primary` is the one action that fixes or advances */
+.btn {
+  min-height: 24px;
+  padding: 0 var(--sp-5);
+  background: var(--bg-raised);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  font: 500 var(--fs-small) / var(--lh-small) var(--font-sans);
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--text-2);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn.primary {
+  background: var(--act-fill);
+  color: var(--act-ink);
+  border-color: var(--act-line);
+}
+
+kbd {
+  padding: 0 var(--sp-2);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: var(--fs-tiny);
+  opacity: 0.85;
+}
+
+/* An icon and its word: the word shows from 1440 px; below it the word and key are the tooltip */
+.icon {
+  flex: none;
+  vertical-align: middle;
+}
+
+@media (max-width: 1439px) {
+  .icon-word {
+    display: none;
+  }
+}

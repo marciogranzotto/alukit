@@ -85,3 +85,21 @@ export function qty(n: number, o: FormatOptions = {}): string {
 export function withUnit(text: string, unit: string): string {
   return `${text}${NBSP}${unit}`;
 }
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * A date in the interface: `27 Nov 2026`. Files and the CLI keep ISO (`2026-11-27`); anything
+ * that is not one is returned as it came.
+ */
+export function date(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (m === null) return iso;
+  const month = MONTHS[Number(m[2]) - 1];
+  return month === undefined ? iso : `${Number(m[3])} ${month} ${m[1]}`;
+}
+
+/** A count and what it counts, in words: `1 piece`, `47 pieces`. */
+export function plural(n: number, one: string, many = `${one}s`): string {
+  return `${group(String(n), { table: true })} ${n === 1 ? one : many}`;
+}
