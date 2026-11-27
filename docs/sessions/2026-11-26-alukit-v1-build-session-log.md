@@ -126,9 +126,9 @@ anything, and each has a default in place.
 | UX S2: app shell and IA | **done**, merged (07:36), pushed | `docs/ux/s2-decisions.md` |
 | X7 / X8 / F7: quick connectors | **done**, merged (06:59), pushed | G46–G48, calls 52–56; `docs/notes/x7-x8-f7.md` |
 | UX S5: tools, inspector, command bar | **done**, merged (09:18), pushed | `docs/ux/s5-decisions.md` |
-| UX integration pass (bundle split, one call for corner rules, built-in catalogs, README and guide, design §8) | running (Opus, worktree), launched 09:20 | `docs/ux/integration-decisions.md` |
+| UX integration pass (bundle split, one call for corner rules, built-in catalogs, README and guide, design §8) | **done**, merged (11:20), pushed | `docs/ux/integration-decisions.md` |
 | UX phase 4: designer review of the running app | **done**, merged (09:46), pushed | `docs/ux/review-phase4.md`: 1 blocker, 8 major, plus minor items |
-| UX polish pass on the review's findings | running (Opus, worktree), launched 09:47 | `docs/ux/polish-decisions.md` |
+| UX polish pass on the review's findings | **done**, merged (11:35), pushed | `docs/ux/polish-decisions.md`; the blocker and M1–M8 fixed; m7, m9, m10 partly done, with reasons |
 | X9 / F8 / F9: cross-hole faces, bearing on the hook, per-profile grooves | **done**, merged (10:24), pushed | G49, calls 57–62; `docs/notes/x9-f8-f9.md` | task flows and IA; heuristics and first run; visual design and 3D readability |
 | F2: end-hole axis, butt end-face coverage, head seats | **done**, merged (03:30), pushed | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
 | X1–X3, X5, X6 plus F2a/F2b: blind fasteners, a butt's stack of bodies, plain bars held by a drilled-hole screw, taps over groove openings, sleeves through both walls, head sizes from standards, butt screws seat-checked | **done**, merged (05:00), pushed | Goldens G39–G45; calls 45–51. Note: `docs/notes/x1-x3-f2ab.md`. |
@@ -229,6 +229,11 @@ anything, and each has a default in place.
   - Catalog search ranks a matching size first.
   - Catalog entries carry a `from` price.
   - Restore keeps what it overwrites in `.alukit/rejected/`.
+- **Polish decisions that went against the review (`docs/ux/polish-decisions.md`).**
+  - The `butt-no-connector` warning has no 3D badge: on the cart it covered 18 butts and hid a bar.
+  - Only blocks and errors outline bars in red.
+  - "Nothing" is offered as a joint only while the project has no default connector.
+  - Open for later: specific problem titles in core (m7, which would change the CLI's `problems` output), ghost bars for a pattern (m9).
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. Since 05:29 it exempts the licence texts shipped with bundled assets
   (`**/OFL.txt`, `**/LICENSE.txt`, `**/LICENSE.md`), since IBM Plex's licence must ship with the
@@ -848,3 +853,17 @@ anything, and each has a default in place.
   - All 36 cross holes per variant are on clear faces: the 8 that moved went to the one clear face the project's own rule finds for each core.
   - The 36 new head warnings are exactly the bearings below half.
   - No new AluKit gap. Both reference frames now pass, and design §13 says so.
+- **11:18**: The integration pass finished.
+  - **Bundle:** the 1,185 kB entry split into an app chunk plus two three.js chunks (930 kB at start, none over 500 kB), with sheets, settings and the corner inspector loaded on first use. The cart's first draw went from 1,593 to 1,351 ms. The size-warning limit was removed, not raised.
+  - **Corner rules:** `GET /api/arrangements` and `alukit arrangements` answer every corner rule in one derive. The corner inspector went from 670 to 244 ms on 1,018 bars.
+  - **Joint preview:** it no longer dry-runs while the stroke's ends touch nothing.
+  - **Built-in catalogs:** listed in Project settings, each with Add.
+  - **Docs:** the README and guide were run command by command, which fixed two broken examples; design §8 now states the redesigned app.
+  - **A real S5 bug:** the tools' model subscription ran before their handlers existed, so a second tab on a warm server lost its step notices. Fixed, with a test.
+- **11:20**: Integration merged; gate PASS (1,108 tests).
+- **11:26**: The polish pass finished.
+  - **The blocker:** the box frame asks how it is joined (fitting connectors first, or "Nothing"), and the choice becomes the project's default butt connector in the same step. A `butt-no-connector` problem with its Fix, and an order rule `no-connector` (warn by default). The pill reads "Ready, N warnings", never plain READY over such a warning.
+  - **M1–M8:** a profile step in the start card, "Which way?" for a length with no direction, the Problems badge counting its own list, one message lane, the command bar as a row under the view, the frame's options in one place, a length column in the outline, size chips without linear guides.
+- **11:35**: Polish merged; gate PASS (1,127 tests).
+  - Code conflicts with the integration pass: the badges had moved to their own file for lazy loading, so the polish changes were ported there. The start card's imports and the tools' imports were reconciled, and two imports left unused were dropped.
+- **11:36**: The decided frame's run 9 launched on the project's wall-fix head, with the new constructs written natively (walls as placeholder parts, named cross-hole faces).
