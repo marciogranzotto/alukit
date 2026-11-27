@@ -23,7 +23,7 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 110 in "An end a failing joint claims" and 105–107 in "3D editing, integration"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration" and 108 in "An end a failing joint claims"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
 groups below record, from "After acceptance run 2" to "3D editing, integration". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
@@ -742,7 +742,7 @@ value, fixture diagnostic or derived output moved; no command was added.
   derives: a failing butt's end needs `detach`, and the refusal says the joint fails; a failing
   miter's is refused. An end two butts claim is dropped from both, and the answer's `detached` is
   a list. `transform` already read the document's connections, so its follow and detach keep or
-  free such an end as a working one's (e4 23, 24). Call 110.
+  free such an end as a working one's (e4 23, 24). Call 108.
 - §8: the end handles and the length label read the same hold, so the handle of a failing joint's
   end is detachable and says "b13.a butts on b3 (c9), and the joint fails: dragging frees it"
   (e4 23).
@@ -2681,7 +2681,7 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   derive's claims list them), whether or not the joint derives: an end whose joint fails is held
   by it as by one that derives, and the refusal says the joint fails. An end two butts claim is
   dropped from both; one a fixing provider also claims is refused ([e4](ux/e4-decisions.md) 23,
-  24; call 110).
+  24; call 108).
   The app's end handles and length label send it followed by an `autoConnect` with `end`, so an
   end that lands on a bar joins it by the corner rule ([ends](ux/drag-ends-decisions.md) 9, 15).
 - **`transform`** (*2.3*, after the UX redesign; the editing audit's E-UX-3 to E-UX-5) moves
@@ -4008,7 +4008,6 @@ reasons. Marking the room is the run's own change, in its project.
     Measure and `G` for the box frame; the editing audit's Duplicate, Ctrl/Cmd+D, starts a Move on
     a copy, so the two share a letter). A part on a station moves only along its bar; off it,
     `transform` refuses it, saying so, rather than turn it into a part at a world pose (move 6, 11).
-
 72. *New in 2.3, 3D editing E1, open.* An end at a joined corner butts on the corner's through bar
     with a butt of its own, `through_end: "none"`, rather than joining the corner's butt, whose cover
     rule would then cut the post's end to the brace's face (measured). The corner's through bar is
@@ -4116,7 +4115,7 @@ reasons. Marking the room is the run's own change, in its project.
     without changing it; a failed claim is named with why it fails ("the joint fails, so it is
     square"; "two joints claim it"). `moveEnd`'s hold then still read the derived provider, so
     it treated such an end as free; *2.3*, after E4: the hold reads the claims too, so the joint
-    holds it (e4 1, 23; call 110).
+    holds it (e4 1, 23; call 108).
 96. *New in 2.3, 3D editing E4, open.* A plane chosen in an end's row replaces the joint that
     claims the end in the same step (an end has one provider) and declares `cut: "angle"` when it
     is angled and no cut is declared. The faces offered are those the end's line meets beyond the
@@ -4134,8 +4133,6 @@ reasons. Marking the room is the run's own change, in its project.
     `setBar`, not `moveEnd`, which refuses an end a joint holds; an expression is written only
     along a world axis, and from the middle as the centre ± half the expression. A node's fields
     send `moveNode`; a pivot's point is not edited (e4 16–18).
-
-
 100. *New in 2.3, 3D editing E5, open.* A face joint is edited in the Connect tool's own form, and
      the edit sends the difference between what that form writes for the joint as filled and as
      edited, as one merge patch, so a field the person did not touch, or one the form cannot hold
@@ -4171,7 +4168,7 @@ reasons. Marking the room is the run's own change, in its project.
      posted, read off its requests, with one `alukit do` per step: `alukit log` keeps each step's
      command names and words, not its arguments (§7.1), and this pass changes no product code to
      add them (ie).
-110. *New in 2.3, after 3D editing E4, open.* An end two providers claim is held by both: one that
+108. *New in 2.3, after 3D editing E4, open.* An end two providers claim is held by both: one that
      fixes it (its own plane, a miter, a pivot, a splice, a named `through_end`) wins and the move
      is refused; otherwise `detach` drops it from every butt that lists it, so none is left
      claiming it, and `moveEnd`'s `detached` became a list for it. A claim the hold cannot name
