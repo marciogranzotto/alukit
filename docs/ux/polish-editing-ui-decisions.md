@@ -27,15 +27,16 @@ and Pattern had no way to make its template) and pass after.
 A 40 × 80 standing up has its 80 along its section's y, world Y. A roll turns the section about
 the bar's line, and the anchor, a point of the section, stays on the line (design §4.4), so a
 roll alone swings the body round that point: a leg anchored on its outer corner and rolled a
-quarter turn leaves the corner it filled, by its whole width (**measured**, `roll.test.ts`: the
-front-left post's footprint goes from x 0 to 80 to x −80 to 0). Each leg then needed its anchor
+quarter turn leaves the corner it filled (**measured**, `roll.test.ts`: the front-left post's
+footprint goes from x 0 to 40, y 0 to 80, to x −80 to 0, y 0 to 40, outside the frame). Each leg
+then needed its anchor
 turned with it, a different corner per leg: one step for the roll, four for the anchors.
 
 **What others do (read).**
 
 | Tool | Orienting a rectangular member | What AluKit takes |
 |---|---|---|
-| Inventor's Frame Generator, [Change][inv-change] | One dialog sets the profile, a rotation angle and the placement (a grid of radio buttons over the profile's thumbnail); the rotation turns about the selected point, or about the source geometry, and Flip reverses the member | Orientation and placement are one decision, and one dialog sets both; but the placement is the same point for every member changed, so four legs at four corners are still four changes |
+| Inventor's Frame Generator, [Change][inv-change] | One dialog sets the profile, a rotation angle and the placement (a grid of radio buttons over the profile's thumbnail); the rotation turns about the selected point, or about the source geometry, and Flip reverses the member | Orientation and placement are one decision, and one dialog sets both; but one placement point for the members changed, so four legs at four corners would be four changes (**inferred**: the page lets several members be selected and does not say they may take different points) |
 | Revit's structural framing, [justification][rvt-just] | The cross-section rotation turns about the location line, and the y and z justification move with it; [a forum thread][rvt-forum] asks how to keep the position from changing, and the answer is to set the justification again after rotating | The pain is A4's: a rotation that moves the member off the place its justification gave it |
 | Tekla's [part position][tekla-plane] | "On plane" (left, middle, right) and "at depth" (front, middle, behind) say where the part lies relative to its reference line on the work plane, and [rotation][tekla-rot] is a separate property | A position stated relative to the line, which a rotation does not undo (whether Tekla re-applies it after a rotation is not stated on those pages: **inferred**) |
 
