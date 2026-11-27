@@ -1,5 +1,6 @@
 import { jsonText } from "#core/derive/output.ts";
 import { call, findServer } from "../server/client.ts";
+import { cliSource } from "../server/source.ts";
 import { parseOptions, usageError } from "./args.ts";
 import type { Io } from "./cli.ts";
 import { SERVER_USAGE_OF } from "./server-usage.ts";
@@ -16,6 +17,8 @@ interface LogEntry {
   rev: number;
   source: string;
   what: string;
+  /** The step in words (BE-4). */
+  text: string;
   of?: number;
 }
 
@@ -35,7 +38,8 @@ export async function historyCommand(
   const [dir, ...extra] = args.positionals;
   if (dir === undefined) return usageError(cmd, "a project folder is needed", USAGE, io);
   if (extra.length > 0) return usageError(cmd, `unexpected argument ${extra[0]}`, USAGE, io);
-  const as = (args.values as { as?: string }).as;
+  const who = cliSource((args.values as { as?: string }).as);
+  if ("error" in who) return usageError(cmd, who.error, USAGE, io);
 
   const link = await findServer(dir);
   if (!link) {
@@ -55,12 +59,12 @@ export async function historyCommand(
       if (args.values.json) io.out(jsonText({ schema: "alukit.log/1", ...body }).trimEnd());
       else {
         for (const e of body.entries)
-          io.out(`${String(e.rev).padStart(4)}  ${e.source.padEnd(12)} ${e.what}`);
+          io.out(`${String(e.rev).padStart(4)}  ${e.source.padEnd(12)} ${e.text}`);
         io.out(`rev ${body.rev}`);
       }
       return 0;
     }
-    const r = await call(link, "POST", `/api/${cmd}`, { source: as ? `cli:${as}` : "cli" });
+    const r = await call(link, "POST", `/api/${cmd}`, { source: who.source });
     const body = r.body as {
       ok: boolean;
       rev: number;

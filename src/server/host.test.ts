@@ -22,7 +22,9 @@ afterEach(async () => {
 
 async function host(
   project = "golden-ends/G27",
-  opts: { watch?: boolean; settleMs?: number; pollMs?: number } = { watch: false },
+  opts: { watch?: boolean; settleMs?: number; pollMs?: number; now?: () => Date } = {
+    watch: false,
+  },
 ) {
   const root = await scratchFixtures();
   scratch.push(root);
@@ -62,7 +64,7 @@ describe("steps", () => {
         source: "ui",
         what: "addNode",
         changes: { created: ["n2"], removed: [], changed: [] },
-        undo: { rev: 1, source: "ui", what: "addNode" },
+        undo: { rev: 1, source: "ui", what: "addNode", text: "add point n2" },
         redo: null,
       }),
     ]);
@@ -108,9 +110,9 @@ describe("steps", () => {
     expect(r).toMatchObject({ ok: true, rev: 3, redo: null });
     expect(await text(dir)).toBe(after);
     expect(h.log()).toEqual([
-      { rev: 1, source: "cli:a", what: "addNode" },
-      { rev: 2, source: "ui", what: "undo addNode", of: 1 },
-      { rev: 3, source: "agent:x", what: "redo addNode", of: 1 },
+      { rev: 1, source: "cli:a", what: "addNode", text: "add point n2" },
+      { rev: 2, source: "ui", what: "undo addNode", text: "undo add point n2", of: 1 },
+      { rev: 3, source: "agent:x", what: "redo addNode", text: "redo add point n2", of: 1 },
     ]);
     expect(await h.redo("ui")).toMatchObject({ ok: false, kind: "nothing", rev: 3 });
   });
@@ -156,7 +158,12 @@ describe("direct edits", () => {
     await writeFile(join(dir, DOCUMENT), JSON.stringify(doc));
     await h.checkFiles();
     expect(h.rev).toBe(2);
-    expect(h.log()[1]).toEqual({ rev: 2, source: "file", what: "file edit" });
+    expect(h.log()[1]).toEqual({
+      rev: 2,
+      source: "file",
+      what: "file edit",
+      text: "edit the files by hand",
+    });
     expect(events.at(-1)).toMatchObject({ type: "rev", rev: 2, source: "file" });
     // G27: with n1 at z = 100 the strut is 884.00 (golden case G27).
     expect(h.snapshot().derived.bars.get("b3")?.lengths.cut).toBeCloseTo(884, 9);
@@ -256,11 +263,48 @@ describe("direct edits", () => {
     await writeFile(join(dir, DOCUMENT), "not json");
     await h.checkFiles();
     expect(h.status.readOnly).toBe(true);
-    expect(await h.restore()).toEqual({ ok: true, rev: 1 });
+    expect(await h.restore()).toEqual({
+      ok: true,
+      rev: 1,
+      kept: [expect.stringMatching(/^\.alukit\/rejected\/[-0-9T]+Z\.json$/)],
+    });
     expect(h.status).toEqual({ readOnly: false });
     expect(await text(dir)).toBe(held);
     await h.checkFiles();
     expect(h.rev).toBe(1);
+  });
+
+  it("restore keeps the rejected files, named by the time, and says where (BE-9)", async () => {
+    const now = () => new Date("2026-11-27T05:30:12.345Z");
+    const { h, dir } = await host("golden-ends/G27", { watch: false, now });
+    const lock = await readFile(join(dir, LOCK_FILE), "utf8");
+    const typed = '{ "schema": "alukit.project/1", "bars": { "b1": 7 } ';
+    await writeFile(join(dir, DOCUMENT), typed);
+    await h.checkFiles();
+    expect(h.status.readOnly).toBe(true);
+    const first = ".alukit/rejected/2026-11-27T05-30-12Z.json";
+    expect(await h.restore()).toEqual({ ok: true, rev: 0, kept: [first] });
+    expect(await readFile(join(dir, first), "utf8")).toBe(typed);
+    // In the same second, the next is numbered; a lock that is not valid is kept beside it.
+    await writeFile(join(dir, DOCUMENT), "not json");
+    await writeFile(join(dir, LOCK_FILE), "neither");
+    await h.checkFiles();
+    const second = ".alukit/rejected/2026-11-27T05-30-12Z-2";
+    expect(await h.restore()).toEqual({
+      ok: true,
+      rev: 0,
+      kept: [`${second}.json`, `${second}.lock.json`],
+    });
+    expect(await readFile(join(dir, `${second}.lock.json`), "utf8")).toBe("neither");
+    expect(await readFile(join(dir, LOCK_FILE), "utf8")).toBe(lock);
+    // A lock alone, then a document alone, in that second: two restores, two stems.
+    await writeFile(join(dir, LOCK_FILE), "lock alone");
+    await h.checkFiles();
+    const third = ".alukit/rejected/2026-11-27T05-30-12Z-3";
+    expect((await h.restore()).kept).toEqual([`${third}.lock.json`]);
+    await writeFile(join(dir, DOCUMENT), "document alone");
+    await h.checkFiles();
+    expect((await h.restore()).kept).toEqual([".alukit/rejected/2026-11-27T05-30-12Z-4.json"]);
   });
 
   it("a failed write leaves no step and makes the project read-only until restored", async () => {

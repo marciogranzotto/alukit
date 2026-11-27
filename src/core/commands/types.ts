@@ -3,6 +3,7 @@ import type { CatalogSet } from "#catalog/link.ts";
 import type { Derived } from "../derive/derive.ts";
 import type { ItemSource } from "../items.ts";
 import type { Lock } from "../lock/schema.ts";
+import type { Phrase } from "./words.ts";
 
 /**
  * Commands (design §6): every edit is `{ "cmd": "addBar", "args": {…} }`, a pure function from
@@ -41,6 +42,11 @@ export interface Effect {
   changed: string[];
 }
 
+/** What a command did, as its answer gives it: by id, and its own facts. */
+export interface Did extends Effect {
+  info?: unknown;
+}
+
 /** The world a command runs in. Everything it reads besides the state comes from here. */
 export interface CommandEnv {
   /** Today's date, YYYY-MM-DD: records (decisions) are dated with it. */
@@ -51,6 +57,25 @@ export interface CommandEnv {
    * them. Without them, the lock is all a command sees.
    */
   live?: CatalogSet;
+  /**
+   * Where catalogs may come from, for a command that names new ones (`setProject`, BE-1): the
+   * built-in ids, and a check of a folder path against the project's folder. Without it a
+   * command accepts any built-in id and refuses every folder: it cannot confine a path it
+   * cannot resolve (§7.2).
+   */
+  catalogs?: CatalogPlaces;
+}
+
+/** Where a catalog the document newly names may come from (§3.1, §7.2). */
+export interface CatalogPlaces {
+  /** The ids of the built-in catalogs. */
+  builtin: readonly string[];
+  /**
+   * Why a folder, as the document writes it (relative to the project), may not be added: it
+   * resolves outside the project's folder (symbolic links followed), is missing, or holds no
+   * catalog. Undefined when it may.
+   */
+  folder(path: string): string | undefined;
 }
 
 /** What a command reads while it runs: the state, the env, and lazily derived views of them. */
@@ -80,6 +105,19 @@ export interface CommandDef<A = unknown> {
   summary: string;
   args: z.ZodType<A>;
   apply(ctx: CommandContext, args: A): Outcome;
+  /**
+   * What it did, in words (BE-4): a phrase for the log, the undo button and the history, from
+   * its arguments and what it did. Undefined when it did nothing worth saying (an
+   * `autoConnect` that found nothing to join).
+   */
+  describe(args: A, did: Did): Phrase | undefined;
+  /**
+   * For a command that changes the catalogs the document names: the list it leaves, from its
+   * arguments alone. A batch run with the catalogs at hand (`applyBatchLive`) opens that list
+   * before the command runs, so the command checks the items it names against it, and what it
+   * names is pinned from it (§4.13).
+   */
+  catalogsAfter?(args: A, doc: RawDoc): readonly string[] | undefined;
 }
 
 export function refuse(code: string, message: string, extra: Partial<CommandError> = {}): Outcome {

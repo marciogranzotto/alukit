@@ -52,6 +52,18 @@ describe("alukit new", () => {
     expect(existsSync(join(root, "y", "alukit.json"))).toBe(false);
   });
 
+  it("says when no catalog it names sells T-slot profile, and which built-in one does (D-UX-7)", async () => {
+    const root = await scratchFixtures();
+    const plain = await capture(["new", join(root, "plain")]);
+    expect(plain.code).toBe(0);
+    expect(plain.out).toMatch(/^created .*alukit\.json and .*alukit\.lock\.json \(catalogs: std\)/);
+    expect(plain.err).toBe(
+      "notice: no catalog here sells T-slot profile; forseti does: name it with --catalog forseti, or add it later with setProject",
+    );
+    const tslot = await capture(["new", join(root, "tslot"), "--catalog", "forseti"]);
+    expect(tslot.err).toBe("");
+  });
+
   it("names the built-in std catalog by default, and keeps a .gitignore that has the line", async () => {
     const root = await scratchFixtures();
     const dir = join(root, "p");
@@ -60,6 +72,73 @@ describe("alukit new", () => {
     expect((await capture(["new", dir])).code).toBe(0);
     expect(JSON.parse(read(join(dir, "alukit.json"))).catalogs).toEqual(["std"]);
     expect(read(join(dir, ".gitignore"))).toBe("node_modules/\n.alukit/\n");
+  });
+
+  it("says which finishes a profile is sold in when a bar names none (U2, U10)", async () => {
+    // The README's first frame: a fresh forseti project and a bar with no finish.
+    const root = await scratchFixtures();
+    const dir = join(root, "first");
+    expect((await capture(["new", dir, "--catalog", "forseti"])).code).toBe(0);
+    const add = ["add", "bar", dir, "--item", "forseti:PF40-01", "--a", "0,0,0", "--b", "600,0,0"];
+    expect((await capture(add)).code).toBe(0);
+    const order = await capture(["order", dir, "--as-of", "2026-11-26"]);
+    expect(order.code).toBe(1);
+    expect(order.err).toContain(
+      "option-not-sold: forseti:PF40-01: sold only with finish anodised or black; choose one",
+    );
+    const check = await capture(["check", dir]);
+    expect(check.out).toContain(
+      "warn no-offer forseti:PF40-01: forseti:PF40-01 has no offer that sells it by length; it is sold only with finish anodised or black",
+    );
+    expect(check.out).not.toContain("[]");
+  });
+});
+
+describe("setProject through alukit do (BE-1)", () => {
+  it("names a catalog and a default bar from it in one step, pinning the bar", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "first");
+    expect((await capture(["new", dir])).code).toBe(0);
+    const set = {
+      cmd: "setProject",
+      args: {
+        catalogs: ["std", "forseti"],
+        currency: "BRL",
+        defaults: { bar: { item: "forseti:PF40-01", opt: { finish: "anodised" } } },
+      },
+    };
+    const r = await capture(["do", dir, JSON.stringify(set), "--json"]);
+    expect(r.code, r.err).toBe(0);
+    expect(JSON.parse(r.out).results).toEqual([
+      {
+        cmd: "setProject",
+        created: [],
+        removed: [],
+        changed: ["catalogs", "currency", "defaults"],
+      },
+    ]);
+    const lock = JSON.parse(read(join(dir, "alukit.lock.json")));
+    expect(Object.keys(lock.items)).toEqual(["forseti:PF40-01"]);
+    // A bar drawn with no item takes the default, finish and all: nothing holds the order.
+    expect((await capture(["add", "bar", dir, "--a", "0,0,0", "--b", "600,0,0"])).code).toBe(0);
+    const order = await capture(["order", dir, "--as-of", "2026-11-26", "--format", "json"]);
+    expect(JSON.parse(order.out).status).toBe("READY");
+  });
+
+  it("refuses a catalog folder outside the project, and changes nothing", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "golden-ends", "G01");
+    const before = read(join(dir, "alukit.json"));
+    const was = JSON.parse(before).catalogs as string[];
+    const add = (c: string) =>
+      capture(["do", dir, JSON.stringify({ cmd: "setProject", args: { catalogs: [...was, c] } })]);
+    const out = await add("../../catalogs/test-gen");
+    expect(out.code).toBe(1);
+    expect(out.err).toContain(
+      "catalog catalogs: ../../catalogs/test-gen is outside the project's folder",
+    );
+    expect((await add("./nowhere")).err).toContain("there is no folder ./nowhere in the project");
+    expect(read(join(dir, "alukit.json"))).toBe(before);
   });
 });
 
@@ -243,6 +322,128 @@ describe("alukit add", () => {
       a: { on: { bar: "b1", at_mm: "max(100, 200)" } },
       b: { len_mm: 300, dir: "+z" },
     });
+  });
+
+  it("adds a box frame: the skill's work table, the same cut list as drawn bar by bar (BE-6)", async () => {
+    // The skill's worked example draws four legs and four top rails butted between them, with
+    // brackets, sized by W, D and H. `add frame` with only a top ring is that table.
+    const root = await scratchFixtures();
+    const byHand = join(root, "by-hand");
+    const framed = join(root, "framed");
+    for (const dir of [byHand, framed]) {
+      expect((await capture(["new", dir, "--catalog", "forseti", "--currency", "BRL"])).code).toBe(
+        0,
+      );
+    }
+    const bar = { item: "forseti:PF40-01", opt: { finish: "anodised" } };
+    const legs = [
+      [0, 0, "-x-y"],
+      ["W", 0, "+x-y"],
+      [0, "D", "-x+y"],
+      ["W", "D", "+x+y"],
+    ].map(([x, y, anchor]) => ({
+      cmd: "addBar",
+      args: { ...bar, a: [x, y, 0], b: [x, y, "H"], anchor, tags: ["leg"] },
+    }));
+    const rails = [
+      [[0, 0, "H"], ["W", 0, "H"], "-x+y"],
+      [[0, "D", "H"], ["W", "D", "H"], "+x+y"],
+      [[0, 0, "H"], [0, "D", "H"], "+x+y"],
+      [["W", 0, "H"], ["W", "D", "H"], "-x+y"],
+    ].map(([a, b, anchor]) => ({ cmd: "addBar", args: { ...bar, a, b, anchor } }));
+    const brackets = [
+      ["b1", "b5.a", "b7.a"],
+      ["b2", "b5.b", "b8.a"],
+      ["b3", "b6.a", "b7.b"],
+      ["b4", "b6.b", "b8.b"],
+    ].map(([through, ...ends]) => ({
+      cmd: "addConnection",
+      args: { type: "butt", through, ends, connector: "forseti:CT75-06", qty: 2 },
+    }));
+    const sizes = Object.entries({ W: 1000, D: 600, H: 750 }).map(([name, value]) => ({
+      cmd: "setParam",
+      args: { name, value },
+    }));
+    const hand = await capture([
+      "do",
+      byHand,
+      JSON.stringify([...sizes, ...legs, ...rails, ...brackets]),
+    ]);
+    expect(hand.code, hand.err).toBe(0);
+
+    const add = await capture([
+      "add",
+      "frame",
+      framed,
+      "--size",
+      "1000,600,750",
+      "--rings",
+      "top",
+      "--item",
+      "forseti:PF40-01",
+      "--opt",
+      "finish=anodised",
+      "--connector",
+      "forseti:CT75-06",
+      "--qty",
+      "2",
+      "--params",
+      "--json",
+    ]);
+    expect(add.code, add.err).toBe(0);
+    const answer = JSON.parse(add.out);
+    expect(answer.results[0]).toMatchObject({
+      cmd: "addFrame",
+      created: ["b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "c1", "c2", "c3", "c4"],
+    });
+    expect(
+      answer.diagnostics.new.filter((d: { code: string }) => d.code === "unconnected"),
+    ).toEqual([]);
+    for (const out of ["cutlist", "bom", "machining"]) {
+      const [a, b] = await Promise.all(
+        [byHand, framed].map((d) => capture([out, d, "--format", "json"])),
+      );
+      expect(b?.out, out).toBe(a?.out);
+    }
+
+    // The box frame: 12 bars and 8 butts, nothing open; the shelf and the corner rule.
+    const box = join(root, "box");
+    expect((await capture(["new", box, "--catalog", "forseti"])).code).toBe(0);
+    const r = await capture([
+      "add",
+      "frame",
+      box,
+      "--at",
+      "0,0,0",
+      "--size",
+      "1000,600,800",
+      "--item",
+      "forseti:PF40-01",
+      "--opt",
+      "finish=anodised",
+      "--corner",
+      "x",
+      "--rings",
+      "base,top",
+      "--shelf",
+      "300",
+      "--json",
+    ]);
+    expect(r.code, r.err).toBe(0);
+    const created = JSON.parse(r.out).results[0].created as string[];
+    expect([
+      created.filter((id) => id[0] === "b").length,
+      created.filter((id) => id[0] === "c").length,
+    ]).toEqual([16, 12]);
+    const check = await capture(["check", box, "--json"]);
+    const codes = JSON.parse(check.out).diagnostics.map((d: { code: string }) => d.code);
+    expect(codes).not.toContain("unconnected");
+    expect((await capture(["add", "frame", box, "--size", "1000,600"])).err).toContain(
+      "--size: give three comma-separated values, W,D,H",
+    );
+    expect(
+      (await capture(["add", "frame", box, "--size", "1,2,3", "--opt", "finish"])).err,
+    ).toContain("--opt takes <name>=<value>");
   });
 
   it("explains its options, and refuses what a kind does not take", async () => {

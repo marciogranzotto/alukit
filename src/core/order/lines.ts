@@ -24,6 +24,7 @@ import {
   optKey,
   type PiecesOut,
   type ServiceOut,
+  soldOptionsText,
   sortedOpt,
   UNSOURCED,
   type Work,
@@ -293,6 +294,7 @@ export function orderLines(ctx: LineContext): Work[] {
     works.push({
       key: missing === "option" ? keyOf((offers[0] as OfferInfo).supplier) : UNSOURCED,
       missing,
+      ...(missing === "option" ? { sold: soldOptionsText(offers) } : {}),
       sources: sourcesOf(all),
       line: {
         ...base,
@@ -464,6 +466,7 @@ export function orderLines(ctx: LineContext): Work[] {
       works.push({
         key: option ? keyOf((offers[0] as OfferInfo).supplier) : UNSOURCED,
         missing: option ? "option" : "no-offer",
+        ...(option ? { sold: soldOptionsText(offers) } : {}),
         sources: new Set(n.sources),
         line: { ...unitBase(n), qty: n.remaining, unit: "unit", bom: bomOf(n, n.remaining) },
       });

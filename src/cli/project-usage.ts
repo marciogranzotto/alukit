@@ -42,13 +42,20 @@ export const USAGE = {
     "alukit check <dir> [--json] [--variant v] [--frozen]",
     "    validate, derive and run the checks; exit 1 on an error",
   ],
+  problems: [
+    "alukit problems <dir> [--json] [--variant v] [--as-of YYYY-MM-DD]",
+    "    the check and the order's reasons as one list in words, grouped by what they hold up,",
+    "    each with its fixes (alukit.problems/1); exit 1 when one blocks the order or is an error",
+  ],
   do: [
-    "alukit do <dir> '<json>' | -f <file> | -  [--json] [--as <name>]",
-    "    apply a batch of commands atomically, from an argument, a file or stdin",
+    "alukit do <dir> '<json>' | -f <file> | -  [--json] [--as <name>|agent:<name>] [--dry-run]",
+    "    apply a batch of commands atomically, from an argument, a file or stdin; --dry-run",
+    "    writes nothing and says what the step would do: diagnostics, ids, cut lengths that move",
   ],
   add: [
-    "alukit add bar|point|connection|part <dir> [options] [--json]",
-    "    add one entity, as sugar over `do`; `alukit add <what> --help` lists the options",
+    "alukit add bar|point|connection|part|frame <dir> [options] [--json]",
+    "    add one entity, or a box frame in one step, as sugar over `do`; `alukit add <what> --help`",
+    "    lists the options",
   ],
   query: [
     "alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]",

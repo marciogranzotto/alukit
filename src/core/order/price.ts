@@ -38,6 +38,50 @@ export function barPrice(o: OfferInfo, len_mm: number, basis: Basis): number {
   return amount(basisPrice(o.price, basis).v, o.price.per, len_mm);
 }
 
+/** The lowest regular price an item is sold at, as a list row shows it (BE-12). */
+export interface FromPrice {
+  /** Minor units of `currency`. */
+  minor: number;
+  currency?: string;
+  /** Per metre for an item sold by length, else per unit. */
+  per: "m" | "unit";
+}
+
+/**
+ * The lowest regular price of an item's offers ("from R$ 126.50/m"), for a list row: per metre
+ * when it is sold by length (cut, or in stock lengths, whose bar price is over its length), else
+ * per unit (a pack's price over its count). A kit is left out, its price being the kit's, and so
+ * is an offer whose price cannot be put that way (a length priced per unit). The likely value of
+ * a quoted range. Undefined with no such offer, or when the offers are in several currencies,
+ * which no rate here compares.
+ */
+export function fromPrice(offers: readonly OfferInfo[]): FromPrice | undefined {
+  const byLength = offers.some((o) => o.sale !== undefined);
+  let best: FromPrice | undefined;
+  const currencies = new Set<string | undefined>();
+  for (const o of offers) {
+    if (o.kit) continue;
+    const v = o.price.regular.v;
+    let minor: number | undefined;
+    if (!byLength) minor = o.price.per === "unit" ? roundHalfAway(v / o.pack) : undefined;
+    else if (o.price.per === "m") minor = v;
+    else if (o.sale?.mode === "stock" && o.sale.length_mm !== undefined) {
+      const metres = (o.sale.length_mm * (o.price.per === "unit" ? o.pack : 1)) / 1000;
+      minor = roundHalfAway(v / metres);
+    }
+    if (minor === undefined) continue;
+    currencies.add(o.currency);
+    if (!best || minor < best.minor) {
+      best = {
+        minor,
+        ...(o.currency ? { currency: o.currency } : {}),
+        per: byLength ? "m" : "unit",
+      };
+    }
+  }
+  return currencies.size > 1 ? undefined : best;
+}
+
 /** Low, likely and high, in minor units. */
 export interface Money {
   low: number;

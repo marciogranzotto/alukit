@@ -6,6 +6,7 @@ import { compareIds } from "../ids.ts";
 import { sortedJson } from "../lock/pin.ts";
 import {
   BarId,
+  CornerRule,
   type Expr,
   type Face,
   ItemRef,
@@ -30,6 +31,7 @@ import {
   refuse,
 } from "./types.ts";
 import { checkEntity } from "./validate.ts";
+import { idList } from "./words.ts";
 
 /**
  * The commands that move geometry (design §6): reverseBar, splitBar and autoConnect. They read
@@ -147,6 +149,7 @@ export const reverseBar: CommandDef<z.infer<typeof ReverseBar>> = {
   summary:
     "swap a bar's ends and rewrite anchor, offset, roll and every reference, so the body stays",
   args: ReverseBar,
+  describe: (a) => `reverse ${a.id}`,
   apply: (ctx, a) => guard(() => reverse(ctx, a.id)),
 };
 
@@ -375,6 +378,7 @@ export const splitBar: CommandDef<z.infer<typeof SplitBar>> = {
   group: "Structure",
   summary: "split a bar in two at a distance from end a, optionally adding a splice and the run",
   args: SplitBar,
+  describe: (a, d) => `split ${a.id} at ${a.at_mm} mm, making ${idList(d.created)}`,
   apply: (ctx, a) => guard(() => split(ctx, a)),
 };
 
@@ -587,6 +591,9 @@ const AutoConnect = z
       .describe("or a bar end, at its design point"),
     connector: ItemRef.optional().describe("defaults.butt.connector when absent"),
     qty: z.int().min(1).optional(),
+    prefer: CornerRule.optional().describe(
+      "which bar runs through, when none passes the point: vertical, x, y or first; defaults.corner when absent, else vertical",
+    ),
     optional: z
       .boolean()
       .optional()
@@ -600,10 +607,22 @@ export const autoConnect: CommandDef<z.infer<typeof AutoConnect>> = {
   name: "autoConnect",
   group: "Connections",
   summary:
-    "add the default butt where bar ends meet: through the bar passing the point, else a vertical, else the lowest id",
+    "add the default butt where bar ends meet: through the bar passing the point, else as prefer says (a vertical, else the lowest id, by default)",
   args: AutoConnect,
+  describe(_a, d) {
+    if (d.created.length === 0) return undefined;
+    const { through, ends } = d.info as { through: string; ends: string[] };
+    return `join ${idList(ends)} to ${through}`;
+  },
   apply: (ctx, a) => guard(() => connectAt(ctx, a)),
 };
+
+/** The project's corner rule, `defaults.corner`, when the document gives a valid one. */
+function cornerDefault(doc: RawDoc): CornerRule | undefined {
+  const c = isObject(doc.defaults) ? doc.defaults.corner : undefined;
+  const r = CornerRule.safeParse(c);
+  return r.success ? r.data : undefined;
+}
 
 function connectAt(ctx: CommandContext, a: z.infer<typeof AutoConnect>): Outcome {
   const d = ctx.derived();
@@ -639,11 +658,20 @@ function connectAt(ctx: CommandContext, a: z.infer<typeof AutoConnect>): Outcome
     if (s > TOL.len && s < b.lengths.len - TOL.len && dist(foot, P) <= TOL.len) passing.push(id);
   }
   const atEnds = [...new Set(ends.map((e) => e.split(".")[0] as string))];
-  const vertical = (id: string) => {
+  // Along a world axis: the other two components of the bar's direction vanish.
+  const along = (axis: 0 | 1 | 2) => (id: string) => {
     const t = d.bars.get(id)?.placed.frame.t as V3;
-    return Math.hypot(t[0], t[1]) < TOL.vert;
+    return Math.hypot(...t.filter((_, i) => i !== axis)) < TOL.vert;
   };
-  const through = passing[0] ?? atEnds.find(vertical) ?? atEnds[0];
+  const prefer = a.prefer ?? cornerDefault(ctx.state.doc) ?? "vertical";
+  // A bar passing the point runs through; else the bar the rule prefers; else today's rule.
+  const preferred = {
+    vertical: undefined,
+    first: atEnds[0],
+    x: atEnds.find(along(0)),
+    y: atEnds.find(along(1)),
+  };
+  const through = passing[0] ?? preferred[prefer] ?? atEnds.find(along(2)) ?? atEnds[0];
   const butting = through ? ends.filter((e) => !e.startsWith(`${through}.`)) : [];
   if (!through || butting.length === 0) {
     const why = through

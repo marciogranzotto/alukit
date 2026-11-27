@@ -20,6 +20,7 @@ import { plus } from "./numbers.ts";
 import { referrers } from "./refs.ts";
 import { type Rewriter, refusal, rewriteEntity } from "./rewrite.ts";
 import { type CommandContext, type CommandDef, done, type RawDoc, refuse } from "./types.ts";
+import { idList } from "./words.ts";
 
 /**
  * Patterns made ordinary (design §4.7, §6): `explodePattern` turns a pattern's copies into
@@ -196,6 +197,7 @@ export const explodePattern: CommandDef<z.infer<typeof ExplodePattern>> = {
   group: "Parts and patterns",
   summary: "turn a pattern's copies into ordinary entities, so one can be edited on its own",
   args: ExplodePattern,
+  describe: (a, d) => `explode ${a.id} into ${idList(d.created)}`,
   apply: (ctx, a) =>
     guard(() => {
       const doc = ctx.state.doc;
@@ -242,6 +244,7 @@ export const array: CommandDef<z.infer<typeof ArrayArgs>> = {
   group: "Parts and patterns",
   summary: "copy entities at a pitch along a bar, run or direction, as ordinary entities (§4.7)",
   args: ArrayArgs,
+  describe: (a, d) => `copy ${idList(a.ids)}, making ${idList(d.created)}`,
   apply: (ctx, a) =>
     guard(() => {
       const doc = ctx.state.doc;

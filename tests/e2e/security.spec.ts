@@ -1,5 +1,7 @@
+import { readFile, symlink } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { raw, type Served, serve } from "./helpers.ts";
 
@@ -88,6 +90,28 @@ test("requests without the token, or with a foreign Origin or Host, get 403", as
   expect((await raw(port, "/api/project", { headers: auth })).status).toBe(200);
   const session = JSON.parse((await raw(port, "/api/session", { headers: auth })).body);
   expect(session.rev).toBe(0);
+});
+
+test("setProject names no catalog folder outside the project, a symbolic link out included", async () => {
+  // §7.2: every path a request names resolves inside the project folder, or is refused (BE-1).
+  const auth = { authorization: `Bearer ${served.token}`, "content-type": "application/json" };
+  const was = JSON.parse(await readFile(join(served.dir, "alukit.json"), "utf8")).catalogs;
+  await symlink(join(served.dir, "..", "..", "catalogs", "test-gen"), join(served.dir, "linked"));
+  for (const c of ["../../catalogs/test-gen", "./linked", "/etc", "./missing"]) {
+    const r = await raw(served.port, "/api/commands", {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({
+        commands: [{ cmd: "setProject", args: { catalogs: [...was, c] } }],
+        source: "ui",
+      }),
+    });
+    expect(r.status, c).toBe(422);
+    expect(JSON.parse(r.body).failed.errors[0]).toMatchObject({ code: "catalog", refs: [c] });
+  }
+  const session = await raw(served.port, "/api/session", { headers: auth });
+  expect(JSON.parse(session.body).rev).toBe(0);
+  expect(JSON.parse(await readFile(join(served.dir, "alukit.json"), "utf8")).catalogs).toEqual(was);
 });
 
 test("a foreign page cannot call the API, even holding the token", async ({ page }) => {

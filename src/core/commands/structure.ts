@@ -7,6 +7,7 @@ import { plus } from "./numbers.ts";
 import { type Ref, references, referrers } from "./refs.ts";
 import { type CommandDef, done, type RawDoc, refuse } from "./types.ts";
 import { checkEntity } from "./validate.ts";
+import { changed, idList, over } from "./words.ts";
 
 /** Structure (design §6): nodes, bars, runs, and removing any entity. */
 
@@ -49,6 +50,7 @@ export const addNode: CommandDef<z.infer<typeof AddNode>> = {
   group: "Structure",
   summary: "add a named point that several entities share",
   args: AddNode,
+  describe: (_a, d) => over("add", "point", d.created),
   apply(ctx, a) {
     const { at, on, pivot, ...rest } = a;
     const pos = at !== undefined ? { at } : on !== undefined ? { on } : { pivot };
@@ -76,6 +78,7 @@ export const moveNode: CommandDef<z.infer<typeof MoveNode>> = {
   group: "Structure",
   summary: "move a node to a point, onto a bar, or by an offset; what uses it follows",
   args: MoveNode,
+  describe: (a) => over("move", "point", [a.id]),
   apply(ctx, a) {
     const doc = ctx.state.doc;
     const missing = requireEntity(doc, a.id, "nodes");
@@ -104,6 +107,7 @@ export const addBar: CommandDef<z.infer<typeof Bar>> = {
   group: "Structure",
   summary: "add a bar of any bar item between two points (§4.4)",
   args: Bar,
+  describe: (_a, d) => over("add", "bar", d.created),
   apply: (ctx, a) => create(ctx, "b", a),
 };
 
@@ -112,6 +116,7 @@ export const setBar: CommandDef<z.infer<typeof SetArgs>> = {
   group: "Structure",
   summary: "change a bar's fields (item, points, anchor, roll, ends, ops, …)",
   args: SetArgs,
+  describe: (a) => changed(a.id, a.set),
   apply: (ctx, a) => patch(ctx, a.id, a.set, "bars"),
 };
 
@@ -134,6 +139,7 @@ export const addRun: CommandDef<z.infer<typeof AddRun>> = {
   group: "Structure",
   summary: "name a line of spliced bars, so stations and patterns can span its joints",
   args: AddRun,
+  describe: (_a, d) => over("add", "run", d.created),
   apply: (ctx, a) => create(ctx, "r", runValue(a)),
 };
 
@@ -142,6 +148,7 @@ export const setRun: CommandDef<z.infer<typeof SetArgs>> = {
   group: "Structure",
   summary: "change a run's bars, label or tags",
   args: SetArgs,
+  describe: (a) => changed(a.id, a.set),
   apply(ctx, a) {
     const missing = requireEntity(ctx.state.doc, a.id, "runs");
     if (missing.length > 0) return failed(missing);
@@ -196,6 +203,7 @@ export const removeEntity: CommandDef<z.infer<typeof RemoveEntity>> = {
   group: "Structure",
   summary: "remove an entity; refused while anything refers to it, unless cascade",
   args: RemoveEntity,
+  describe: (_a, d) => `remove ${idList(d.removed)}`,
   apply(ctx, a) {
     let doc: RawDoc = ctx.state.doc;
     if (a.id.includes("@")) {

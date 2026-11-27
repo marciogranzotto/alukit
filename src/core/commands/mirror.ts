@@ -22,6 +22,7 @@ import { ang, minus, negate, reflect } from "./numbers.ts";
 import { type Rewriter, refusal, rewriteEntity } from "./rewrite.ts";
 import { flipsU, hasSymmetry, type Map2, mapFace, type Sym, symmetries } from "./sections.ts";
 import { type CommandContext, type CommandDef, done, type Outcome } from "./types.ts";
+import { idList } from "./words.ts";
 
 /**
  * `mirror` (design §4.7, §6, call 21): copies entities as their mirror image in a plane square to
@@ -72,6 +73,7 @@ export const mirror: CommandDef<z.infer<typeof Mirror>> = {
   summary:
     "copy entities as their mirror image in a plane square to a world axis, as ordinary entities",
   args: Mirror,
+  describe: (a, d) => `mirror ${idList(a.ids)}, making ${idList(d.created)}`,
   apply: (ctx, a) => guard(() => mirrorSet(ctx, a)),
 };
 

@@ -22,6 +22,7 @@ import { create, failed, patch, replace, requireEntity, SetArgs, withDoc } from 
 import { paramReaders } from "./refs.ts";
 import { type CommandDef, type CommandError, done, refuse } from "./types.ts";
 import { checkEntity, exprErrors, itemResolves, schemaErrors } from "./validate.ts";
+import { changed, idList, over } from "./words.ts";
 
 /**
  * Items, params and costs, organising, records, views and the lock (design §6). Costs, price
@@ -45,6 +46,7 @@ export const addItem: CommandDef<z.infer<typeof AddItem>> = {
   group: "Items",
   summary: "define an item that exists only in this project, as project:<id>",
   args: AddItem,
+  describe: (_a, d) => over("add", "project item", d.created),
   apply(ctx, a) {
     const id = `${PROJECT_ITEM}${a.id}`;
     if (hasEntity(ctx.state.doc, id))
@@ -65,6 +67,7 @@ export const setItem: CommandDef<z.infer<typeof SetItem>> = {
   group: "Items",
   summary: "change a project item",
   args: SetItem,
+  describe: (a) => changed(a.id, a.set),
   apply: (ctx, a) => patch(ctx, a.id, a.set, "items"),
 };
 
@@ -83,6 +86,11 @@ export const setParam: CommandDef<z.infer<typeof SetParam>> = {
   group: "Params and costs",
   summary: "set a param (a number, an expression or a valued field), or remove an unused one",
   args: SetParam,
+  describe(a) {
+    if (a.value === null) return `remove param ${a.name}`;
+    const v = typeof a.value === "object" ? a.value.v : a.value;
+    return `set ${a.name} to ${v}`;
+  },
   apply(ctx, a) {
     const doc = ctx.state.doc;
     const params = isObject(doc.params) ? doc.params : {};
@@ -122,6 +130,7 @@ export const addCost: CommandDef<z.infer<typeof AddCost>> = {
   group: "Params and costs",
   summary: "add a cost line that is not a part (machining, labour, freight, …); its id is K<n>",
   args: AddCost,
+  describe: (_a, d) => over("add", "cost line", d.created),
   apply: (ctx, a) => create(ctx, "K", withoutId(a.cost)),
 };
 
@@ -130,6 +139,7 @@ export const setCost: CommandDef<z.infer<typeof SetArgs>> = {
   group: "Params and costs",
   summary: "change a cost line",
   args: SetArgs,
+  describe: (a) => changed(a.id, a.set),
   apply: (ctx, a) => patch(ctx, a.id, a.set, "costs"),
 };
 
@@ -142,6 +152,7 @@ export const setPriceBands: CommandDef<z.infer<typeof SetPriceBands>> = {
   group: "Params and costs",
   summary: "replace the project's price bands",
   args: SetPriceBands,
+  describe: (a) => (a.bands.length > 0 ? "set the price bands" : "remove the price bands"),
   apply(ctx, a) {
     const errors = schemaErrors(fieldSchema("price_bands"), a.bands, undefined, "price_bands");
     if (errors.length > 0) return failed(errors);
@@ -168,6 +179,11 @@ export const chooseOffer: CommandDef<z.infer<typeof ChooseOffer>> = {
   group: "Params and costs",
   summary: "choose the offer, cut-list mode, kerf or trim for an item (§5.3, §5.4)",
   args: ChooseOffer,
+  describe(a) {
+    if (typeof a.offer === "string") return `choose ${a.offer} for ${a.item}`;
+    if (a.offer === null) return `forget the offer chosen for ${a.item}`;
+    return `change how ${a.item} is ordered`;
+  },
   apply(ctx, a) {
     const doc = ctx.state.doc;
     if (!itemResolves(ctx, doc, a.item))
@@ -243,6 +259,13 @@ export const tag: CommandDef<z.infer<typeof Tag>> = {
   group: "Organising",
   summary: "add tags to entities, or remove them",
   args: Tag,
+  describe(a) {
+    const add = a.add ?? [];
+    const remove = a.remove ?? [];
+    if (remove.length === 0) return `tag ${idList(a.ids)} ${add.join(", ")}`;
+    if (add.length === 0) return `untag ${idList(a.ids)} ${remove.join(", ")}`;
+    return `retag ${idList(a.ids)}`;
+  },
   apply(ctx, a) {
     let doc = ctx.state.doc;
     const changed: string[] = [];
@@ -274,6 +297,7 @@ export const label: CommandDef<z.infer<typeof Label>> = {
   group: "Organising",
   summary: "give an entity a label, or remove it",
   args: Label,
+  describe: (a) => (a.label === null ? `unlabel ${a.id}` : `label ${a.id} "${a.label}"`),
   apply(ctx, a) {
     const missing = requireEntity(ctx.state.doc, a.id, ...TAGGABLE);
     if (missing.length > 0) return failed(missing);
@@ -353,6 +377,7 @@ export const addVariant: CommandDef<z.infer<typeof AddVariant>> = {
   group: "Records",
   summary: "add a variant: params it overrides and items it swaps",
   args: AddVariant,
+  describe: (a) => `add variant ${a.name}`,
   apply(ctx, a) {
     const { all, list } = variantsOf(ctx.state.doc);
     if (Object.hasOwn(list, a.name)) return refuse("exists", `variant ${a.name} already exists`);
@@ -375,6 +400,10 @@ export const setVariant: CommandDef<z.infer<typeof SetVariant>> = {
   group: "Records",
   summary: "change a variant, or make it the default",
   args: SetVariant,
+  describe: (a) =>
+    a.set === undefined && a.default
+      ? `make ${a.name} the default variant`
+      : `change variant ${a.name}`,
   apply(ctx, a) {
     const { all, list } = variantsOf(ctx.state.doc);
     if (!Object.hasOwn(list, a.name)) return refuse("missing", `there is no variant ${a.name}`);
@@ -398,6 +427,7 @@ export const addCheck: CommandDef<z.infer<typeof AddCheck>> = {
   group: "Records",
   summary: "add a project check, with its margin (§4.9); its id is C<n>",
   args: AddCheck,
+  describe: (_a, d) => over("add", "check", d.created),
   apply: (ctx, a) => create(ctx, "C", withoutId(a.check)),
 };
 
@@ -412,6 +442,7 @@ export const addOpen: CommandDef<z.infer<typeof AddOpen>> = {
   group: "Records",
   summary: "record an open item, which may block the order; its id is O<n>",
   args: AddOpen,
+  describe: (_a, d) => over("add", "open item", d.created),
   apply: (ctx, a) => create(ctx, "O", withoutId(a.open)),
 };
 
@@ -427,6 +458,7 @@ export const resolveOpen: CommandDef<z.infer<typeof ResolveOpen>> = {
   summary:
     "close an open item: it leaves the list and a dated decision records how it was resolved",
   args: ResolveOpen,
+  describe: (a) => `resolve ${a.id}`,
   apply(ctx, a) {
     const missing = requireEntity(ctx.state.doc, a.id, "open");
     if (missing.length > 0) return failed(missing);
@@ -457,6 +489,7 @@ export const addDecision: CommandDef<z.infer<typeof AddDecision>> = {
   group: "Records",
   summary: "record a decision with its date and reason (§4.12); its id is D<n>",
   args: AddDecision,
+  describe: (_a, d) => over("record", "decision", d.created),
   apply: (ctx, a) =>
     create(ctx, "D", {
       date: a.date ?? ctx.env.today,
@@ -478,6 +511,7 @@ export const saveView: CommandDef<z.infer<typeof SaveView>> = {
   group: "Views",
   summary: "save a named camera view (snapshots render named views, §7.3)",
   args: SaveView,
+  describe: (a) => (a.view === null ? `remove view ${a.name}` : `save view ${a.name}`),
   apply(ctx, a) {
     const doc = ctx.state.doc;
     const views = { ...(isObject(doc.views) ? doc.views : {}) };
@@ -504,6 +538,7 @@ export const lockUpdate: CommandDef<z.infer<typeof LockUpdate>> = {
   group: "Lock",
   summary: "refresh the lock from the live catalogs, as one step of the log (§4.13)",
   args: LockUpdate,
+  describe: (a) => (a.items ? `update the lock for ${idList(a.items)}` : "update the lock"),
   apply(ctx, a) {
     if (!ctx.env.live)
       return refuse("catalogs", "the live catalogs are not open, so the lock cannot be refreshed");
