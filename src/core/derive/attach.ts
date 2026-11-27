@@ -25,6 +25,7 @@ export interface Attached {
   fastenings: Map<string, FaceResult>;
   pieces: StockPiece[];
   hardware: HardwareUse[];
+  recipes: HardwareUse[];
 }
 
 export function attach(
@@ -34,7 +35,7 @@ export function attach(
 ): Attached {
   layoutRails(ctx, bars);
   const parts = placeParts(ctx, bars, runs);
-  const out: GenOut = { fastenings: new Map(), pieces: [], hardware: [] };
+  const out: GenOut = { fastenings: new Map(), pieces: [], hardware: [], recipes: [] };
   generateFaces(ctx, bars, runs, parts, out);
   connectorHardware(ctx, bars, out);
   return {
@@ -42,5 +43,6 @@ export function attach(
     fastenings: out.fastenings,
     pieces: [...out.pieces].sort((a, b) => compareIds(a.source, b.source)),
     hardware: out.hardware,
+    recipes: out.recipes,
   };
 }

@@ -31,6 +31,8 @@ interface Expect {
   lines?: Record<string, { count: number; cut_mm: number }[]>;
   /** Per item: its count among the connections' hardware. */
   hardware?: Record<string, number>;
+  /** Per joint recipe (a connector with no body, §3.4): its count; none when absent. */
+  recipes?: Record<string, number>;
   /** Generated holes: how many, their diameters, and how many per bar. */
   holes?: { total: number; d_mm: number[]; per_bar: Record<string, number> };
   /** The order list: per item, its one line's low, likely and high; and the total. */
@@ -114,6 +116,9 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
     const n = d.hardware.filter((h) => h.item === item).reduce((s, h) => s + h.qty, 0);
     expect(n, `${label}: ${item}`).toBe(qty);
   }
+  const recipes: Record<string, number> = {};
+  for (const r of d.recipes) recipes[r.item] = (recipes[r.item] ?? 0) + r.qty;
+  expect(recipes, `${label}: recipes`).toEqual(want.recipes ?? {});
   if (want.holes) {
     const holes = [...d.bars.values()].flatMap((b) =>
       b.ops.flatMap((o) => (o.op === "hole" && o.by ? [{ bar: b.placed.id, d: o.d }] : [])),

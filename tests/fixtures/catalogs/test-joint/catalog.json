@@ -36,6 +36,26 @@
         }
       ]
     },
+    "BUSH-JOINT": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Bush joint: a bush in the core and a sleeve in the bore, no body (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "test:s40-c8": [
+              { "item": "BUSH-M8", "qty": 1 },
+              { "item": "test-geo:TUBE-18x2", "inside": "through", "len_mm": "bore" }
+            ]
+          }
+        }
+      ],
+      "requires": [{ "op": "through-hole", "on": "through", "d_mm": 9 }]
+    },
     "BUSH-END-L": {
       "kind": "connector",
       "subtype": "end-connector",

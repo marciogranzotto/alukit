@@ -34,6 +34,12 @@ CONNECTORS = {
     "test-joint:BUSH-END": {"fits": ["test:s40-c8"], "sets": {"test:s40-c8": (["test-joint:BUSH-M8"], "bore")}},
     "test-joint:BUSH-END-L": {"fits": ["test:s40-c8"], "sets": {"test:s40-c8": (["test-joint:BUSH-M8"], 40.0)}},
     "test-joint:BRK-T": {"fits": ["test:s40-c8"], "sets": {"test:s40-c8": (["test:SCR-M8x16", "test:TNUT-M8"], None)}},
+    # A joint recipe (acceptance gap A2): the same bush and sleeve, and no body of its own.
+    "test-joint:BUSH-JOINT": {
+        "fits": ["test:s40-c8"],
+        "sets": {"test:s40-c8": (["test-joint:BUSH-M8"], "bore")},
+        "recipe": True,
+    },
 }
 DESIGN_LEN = 600.0  # each butting bar, from the X axis to its far end
 
@@ -65,13 +71,16 @@ def case(through_item, butting_items, connector):
     # Each butting end stops on the through bar's near face: half its width from the axis.
     cut = DESIGN_LEN - t["width"] / 2
     units = len(butting_items)
-    hardware = {connector: units}
+    # One connector per butting end; a recipe is not bought, so it is listed apart.
+    recipe = c.get("recipe", False)
+    hardware = {connector: 0 if recipe else units}
     for f in chosen[0] if chosen else []:
         hardware[f] = hardware.get(f, 0) + units
     return {
         "cut": cut,
         "sleeves": [sleeve] * units if sleeve is not None else [],
         "hardware": hardware,
+        "recipes": {connector: units} if recipe else {},
         "errors": errors,
     }
 
@@ -108,6 +117,12 @@ results["the bush end on a flat bar of no system"] = (r, {FB: lines([r["cut"]])}
 r = case(RHS, [("b2", TS)], "test-joint:BUSH-END-L")
 results["a sleeve of a fixed length"] = (r, {"test-geo:TUBE-18x2": lines(r["sleeves"])})
 
+r = case(RHS, [("b2", TS)], "test-joint:BUSH-JOINT")
+results["a joint recipe: the same bush and sleeve, and no body of its own"] = (
+    r,
+    {"test-geo:TUBE-18x2": lines(r["sleeves"])},
+)
+
 r = case(TS, [("b2", TS)], "test-joint:BUSH-END-L")
 results["a sleeve of a fixed length, through a T-slot bar"] = (r, {TS: lines([1000.0, r["cut"]])})
 
@@ -136,6 +151,8 @@ for name, (r, ls) in results.items():
     for item, n in want.get("hardware", {}).items():
         if r["hardware"].get(item, 0) != n:
             mismatches.append(f"{name} {item}: hand {r['hardware'].get(item, 0)}, expected.json {n}")
+    if r["recipes"] != want.get("recipes", {}):
+        mismatches.append(f"{name} recipes: hand {r['recipes']}, expected.json {want.get('recipes', {})}")
 
 if mismatches:
     print("\nMISMATCH")

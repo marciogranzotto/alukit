@@ -37,6 +37,7 @@ export function viewModel(snap: Snapshot) {
   for (const b of derived.bars.values()) used.add(b.placed.item.id);
   for (const p of derived.parts.values()) used.add(p.item);
   for (const h of derived.hardware) used.add(h.item);
+  for (const r of derived.recipes) used.add(r.item);
   for (const p of derived.pieces) used.add(p.item);
   const catalogItems: Record<string, unknown> = {};
   for (const id of [...used].sort()) {

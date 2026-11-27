@@ -42,6 +42,8 @@ export interface GenOut {
   fastenings: Map<string, FaceResult>;
   pieces: StockPiece[];
   hardware: HardwareUse[];
+  /** Joint recipes the connections use (§3.4): not bought, so not hardware. */
+  recipes: HardwareUse[];
 }
 
 interface BodyFace {

@@ -367,6 +367,26 @@ describe("offers (design §3.2)", () => {
     ]);
   });
 
+  it("refuses an offer or a kit that sells a joint recipe (acceptance gap A2)", async () => {
+    const root = await fixtureCopy();
+    await patchJson(join(root, "test/catalog.json"), (d) => {
+      const brk = at(d, "items", "BRK-40");
+      brk.recipe = true;
+      delete brk.mass_kg;
+      delete brk.bbox_mm;
+    });
+    const { report } = await checkTest(root);
+    expect(
+      report.diagnostics
+        .filter((d) => d.severity === "error")
+        .map((d) => [d.code, d.entity, d.field]),
+    ).toEqual([
+      ["offer-recipe", "test:offers/BRK-40", "item"],
+      ["offer-recipe", "test:offers/BRK-40-K10", "item"],
+      ["offer-recipe", "test:offers/BRK-40-K10", "kit/0/item"],
+    ]);
+  });
+
   it("warns about an option no offer sells", async () => {
     const root = await fixtureCopy();
     await patchJson(join(root, "test/offers.json"), (d) => {

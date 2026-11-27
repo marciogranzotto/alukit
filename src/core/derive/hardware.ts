@@ -94,9 +94,11 @@ function rolesOf(
         const b = bars.get(bar);
         if (b) through = { bar: b, ...(end ? { end } : {}) };
       } else {
-        // A body as the through member is counted with the connection (§4.5).
+        // A body as the through member is counted with the connection (§4.5). A joint recipe
+        // has no box to bear on; stage 3 reports it, and it is not counted.
         const found = ctx.items.item(spec.through.body);
-        if (found.ok) out.hardware.push({ item: found.id, opt: {}, qty: 1, source: id });
+        const recipe = found.ok && found.item.kind === "connector" && found.item.recipe === true;
+        if (found.ok && !recipe) out.hardware.push({ item: found.id, opt: {}, qty: 1, source: id });
       }
       let spacer = 0;
       if (spec.spacer_mm !== undefined) spacer = ctx.num(id, "spacer_mm", spec.spacer_mm) ?? 0;
@@ -180,7 +182,14 @@ class ConnectorGen {
       this.error("item", found.message, { field: "connector" });
       return;
     }
-    this.out.hardware.push({ item: found.id, opt: {}, qty: roles.units, source: id });
+    // A joint recipe has no body: it is listed, not bought; what it brings is (§3.4).
+    const recipe = found.item.kind === "connector" && found.item.recipe === true;
+    (recipe ? this.out.recipes : this.out.hardware).push({
+      item: found.id,
+      opt: {},
+      qty: roles.units,
+      source: id,
+    });
     if (found.item.kind !== "connector") return;
     const item = found.item;
     const home = found.id.slice(0, found.id.indexOf(":"));

@@ -196,6 +196,7 @@ export function derivedJson(d: Derived): Record<string, unknown> {
       len_mm: len(p.len),
     })),
     hardware: hardwareJson(d.hardware),
+    ...(d.recipes.length > 0 ? { recipes: hardwareJson(d.recipes) } : {}),
     diagnostics: d.diagnostics,
   };
 }

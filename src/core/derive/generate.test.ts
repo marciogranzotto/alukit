@@ -4,6 +4,7 @@ import { bom } from "../bom/bom.ts";
 import { bomCsv, bomMarkdown } from "../bom/format.ts";
 import { cutList } from "../cutlist/cutlist.ts";
 import type { ItemSource } from "../items.ts";
+import { order } from "../order/order.ts";
 import { openProject } from "../project/open.ts";
 import { FIXTURES, mergePatch } from "../testing.ts";
 import { type Derived, derive } from "./derive.ts";
@@ -384,5 +385,76 @@ describe("the BOM's formats (§5.4)", () => {
     expect(md).toContain("## Bars");
     expect(md).toContain("## Fasteners");
     expect(md).toContain("Total mass: 1.509 kg.");
+  });
+});
+
+describe("joint recipes (§3.4, acceptance gap A2)", () => {
+  // G30's bush joint: a T-slot bar butting into an RHS of no system, held by a bush in its core
+  // and a sleeve in the RHS's bore, with a Ø9 hole through the RHS. The joint has no body.
+  async function g30(patch: unknown) {
+    const p = await openProject(join(FIXTURES, "golden-gen", "G30"));
+    const d = derive(mergePatch(p.raw, patch), p.items);
+    return { d, items: p.items };
+  }
+  const recipe = { connections: { c1: { connector: "test-joint:BUSH-JOINT" } } };
+  const name = "Bush joint: a bush in the core and a sleeve in the bore, no body (synthetic)";
+
+  it("bills what the recipe brings, lists the recipe apart, and weighs and buys nothing for it", async () => {
+    const { d, items: its } = await g30(recipe);
+    expect(diags(d)).toEqual([]);
+    expect(d.recipes).toEqual([{ item: "test-joint:BUSH-JOINT", opt: {}, qty: 1, source: "c1" }]);
+    expect(hardware(d)).toEqual({ "test-joint:BUSH-M8": 1 });
+    // Its machining still lands on the bars: the Ø9 hole through the RHS where b2 meets it.
+    expect(ops(d, "b1")).toEqual([{ op: "hole", face: "+x", at: 500, d: 9, by: "c1" }]);
+
+    const cl = cutList({ derived: d, items: its });
+    const b = bom({ derived: d, items: its });
+    expect(b.recipes).toEqual([{ item: "test-joint:BUSH-JOINT", name, qty: 1, sources: ["c1"] }]);
+    const lines = b.groups.flatMap((g) => g.lines.map((l) => l.item));
+    expect(lines).not.toContain("test-joint:BUSH-JOINT");
+    expect(lines).toContain("test-joint:BUSH-M8");
+    expect(b.mass_unknown).not.toContain("test-joint:BUSH-JOINT");
+    expect(b.diagnostics.map((x) => x.entity)).not.toContain("test-joint:BUSH-JOINT");
+    expect(bomMarkdown(b)).toContain(`| test-joint:BUSH-JOINT | ${name} | 1 | c1 |`);
+    expect(bomCsv(b).trimEnd().split("\n").at(-1)).toBe(
+      `recipe,test-joint:BUSH-JOINT,"${name}",,1,,,,,c1,`,
+    );
+
+    const o = order({
+      derived: d,
+      items: its,
+      bom: b,
+      cutList: cl,
+      diagnostics: [...d.diagnostics, ...cl.diagnostics, ...b.diagnostics],
+      asOf: "2026-11-26",
+    });
+    const ordered = o.suppliers.flatMap((s) => s.lines.map((l) => l.item));
+    expect(ordered).not.toContain("test-joint:BUSH-JOINT");
+    expect(ordered).toContain("test-joint:BUSH-M8");
+  });
+
+  it("is a connector with a body otherwise: counted, weighed and bought", async () => {
+    const { d, items: its } = await g30({});
+    expect(d.recipes).toEqual([]);
+    expect(hardware(d)).toEqual({ "test-joint:BUSH-END": 1, "test-joint:BUSH-M8": 1 });
+    const b = bom({ derived: d, items: its });
+    expect(b.recipes).toBeUndefined();
+    expect(b.groups.find((g) => g.kind === "connector")?.lines.map((l) => l.item)).toEqual([
+      "test-joint:BUSH-END",
+    ]);
+  });
+
+  it("cannot be placed or counted as a part, having no body", async () => {
+    const { d } = await g30({
+      parts: {
+        p1: { item: "test-joint:BUSH-JOINT", on: { bar: "b1", at_mm: 100, face: "+y" } },
+        p2: { item: "test-joint:BUSH-JOINT", qty: 2, unplaced: true, why: "spares" },
+      },
+    });
+    expect(diags(d)).toEqual([
+      ["part", "p1"],
+      ["part", "p2"],
+    ]);
+    expect(d.parts.size).toBe(0);
   });
 });

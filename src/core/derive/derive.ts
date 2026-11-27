@@ -94,6 +94,11 @@ export interface Derived {
   pieces: readonly StockPiece[];
   /** Every counted item that is not a bar or a part: connectors, fastener sets, stacks (§5.4). */
   hardware: readonly HardwareUse[];
+  /**
+   * The joint recipes the connections use (§3.4, acceptance gap A2): connectors with no body,
+   * whose fasteners and machining are in `hardware`, `pieces` and the bars' ops. Not bought.
+   */
+  recipes: readonly HardwareUse[];
   diagnostics: Diagnostic[];
 }
 
@@ -169,6 +174,7 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
     fastenings: gen.fastenings,
     pieces: gen.pieces,
     hardware: gen.hardware,
+    recipes: gen.recipes,
     diagnostics: ctx.d.sorted(),
   };
 }
