@@ -180,6 +180,9 @@ into, or its end face. A hole in the butting bar's side takes none. A position o
 hole misses the face, is a `connection` error. A splice taps one core per stud in both ends: at its
 `at_mm`, else each at the centre."
 
+*Superseded in part, 2026-11-27*: a hole in the butting bar's side now takes positions, drilled over
+each from the face nearest it (gap X7; [`x7-x8-f7.md`](x7-x8-f7.md) 1–4, design §3.4).
+
 **§4.5, butt row, Takes.** Add "`held_by`: a butt whose through-fastener holds these ends too".
 
 **§4.5, after "A butt's connector".** "**A through-fastener for two ends** (gap A9). A butt may be

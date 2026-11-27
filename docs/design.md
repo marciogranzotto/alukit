@@ -304,6 +304,39 @@ golden case worked by an independent hand script
   the nut-side wall at the bolt's clearance (x1 36–38). The in-bore sleeve (A1, G32) is unchanged.
   Call 51.
 
+### After the round-3 acceptance
+
+The round-3 acceptance (§13) found that a quick connector's cross hole could not be placed (X7), and
+two gaps beside it in F2b's head seats (X8, F7). Each is fixed at its root with failing tests
+written first and a golden case worked by an independent hand script
+([`notes/x7-x8-f7.md`](notes/x7-x8-f7.md), cited as "x7").
+
+- §3.4, §5.5: **an access hole at its connector's core** (X7; G46). A hole in the butting bar's
+  side takes positions: over each, `from_end_mm` from the end, square to the face nearest the
+  position and offset across it; a blind one that does not reach its position is a `connection`
+  error. Draft 2.3 refused positions on it and drilled `+y` on the centre line, so a two-core end
+  put both holes in one place (x7 1–5). Call 52.
+- §3.4: **a connector in a fastener set** (X7; G46, G47). A recipe holds bought connectors in a
+  mount's set, each at every hole of the mount, bringing its own machining and head there, so a
+  connector's data lives once, in its item; one with fastener sets of its own, or under a mount off
+  the joint's plane, is a `connection` error (x7 6–9). Call 53.
+- §3.4, §4.5: **a connector's own head** (X8; G47). A connector whose `dims` give a head diameter
+  has a head, seated under the lips by F2b's rules at its place; a headed connector counted by
+  `qty` above one is a `connection` error that points to a recipe. Draft 2.3 found heads only
+  through a screw into a tap (x7 10–13). Call 54.
+- §4.5: **a domed head** (X8; G47). A head that gives `rf_mm` is a spherical cap over a rim, checked
+  against the chamber at every depth exactly; derive reports the room left to the floor and the
+  wall. Draft 2.3 took every head as a cylinder, so the quick connector's pin, written as Ø18 x 4.6,
+  was refused against a 17.52 chamber at its top edge, where its dome clears the chamber by 2.01 a
+  side (x7 14–17). Call 55.
+- §4.5: **a far-face head on the hole F2 makes** (F7; G48). Seated only where F2 made the hole, on
+  its axis; draft 2.3 seated one, along the end's normal, where F2 had refused the hole (x7 18–20).
+  Call 56.
+- §11: **the quick connector's data** in the Forseti catalog, a layer-2 family file with each
+  field's source, and the importer's table that names it (x7 21–24).
+- §12, §13: the round's gaps row and its result. No golden value or fixture diagnostic moved; G43's
+  head under the lips reports its room besides (x7 25).
+
 ## Draft 2.2 — what changed (2026-11-26)
 
 - **A shoe mitred square to a strut (gap G-A; §4.5, §16).** A plane's `normal` may name a bar:
@@ -616,7 +649,7 @@ Fields marked † are needed only by later phases (D5), but the schema has them 
 | Kind | Fields beyond the envelope |
 |---|---|
 | **bar** | `shape`: `tslot`, `tube`, `rhs`, `rod`, `threaded-rod`, `flat`, `angle`, `channel`, `beam` or `rail`. `section` (a section id, §3.5); `system` (T-slot and rail bars); published `area_mm2`, `Ix_mm4`, `Iy_mm4`, `J_mm4`†, `Wx_mm3`†, `Wy_mm3`†; `core` (bore, tap size); tolerances† (straightness, twist; DIN EN 12020-2 / ABNT NBR 8116); `thread` (threaded rod); `rail` { `pitch_mm`, `E_min_mm`, `E_max_mm`, hole spec } (rails) |
-| **connector** | `subtype` (bracket, plate, end-connector, cube, gusset, hinge, splice); `fits` [systems]; `frame` (the connector's own axes, which give the rating directions their meaning; review m7); `mounts` [{ plane, holes, `fasteners` keyed by system: `{ "forseti:s40-c8": [{ item, qty }], "forseti:s45-c10": [ … ] }` }] (review B3); a fastener set may list a sleeve cut from bar stock, `{ "item", "inside": "through", "len_mm": "bore" \| <number> }`, set in the through bar's bore on the mount hole's axis (*2.1*, §4.5); a fastener set is used once per hole of its mount, so its `qty` counts per hole (*2.3*); `requires` [machining on the joined bars, e.g. an end tap M8 plus an access hole: `{ op, on, thread?, d_mm?, depth_mm?, from_end_mm?, at_mm?, at_holes? }`, `on` naming the butting bar, the through bar or each; `at_mm` or `at_holes` its positions (*2.3*, below)]; `spacer_mm`; `overhang_mm`, how far a butting end face may reach past the face it bears on before a warning (*2.3*, §4.5); `body` (a cube's box); `pivot` { `height_mm`, `end_mm`, `range_deg` } (hinges); `splice` { the stud or plates, the tap it needs, `at_mm`: each stud's core (*2.3*) }; `recipe: true` for a joint recipe (*2.3*, below) |
+| **connector** | `subtype` (bracket, plate, end-connector, cube, gusset, hinge, splice); `fits` [systems]; `frame` (the connector's own axes, which give the rating directions their meaning; review m7); `mounts` [{ plane, holes, `fasteners` keyed by system: `{ "forseti:s40-c8": [{ item, qty }], "forseti:s45-c10": [ … ] }` }] (review B3); a fastener set may list a sleeve cut from bar stock, `{ "item", "inside": "through", "len_mm": "bore" \| <number> }`, set in the through bar's bore on the mount hole's axis (*2.1*, §4.5); a fastener set is used once per hole of its mount, so its `qty` counts per hole (*2.3*), and may hold a bought connector, which then sits at each of those holes (*2.3*, after the round-3 acceptance, below); `dims` (published dimensions under the standard's letters; one that gives a head diameter, `dk_mm` or `dw_mm`, gives the connector a head of its own, with `d_mm` the shank under it, `k_mm` its height and `rf_mm` a domed top's radius: *2.3*, after the round-3 acceptance, §4.5); `requires` [machining on the joined bars, e.g. an end tap M8 plus an access hole: `{ op, on, thread?, d_mm?, depth_mm?, from_end_mm?, at_mm?, at_holes? }`, `on` naming the butting bar, the through bar or each; `at_mm` or `at_holes` its positions (*2.3*, below)]; `spacer_mm`; `overhang_mm`, how far a butting end face may reach past the face it bears on before a warning (*2.3*, §4.5); `body` (a cube's box); `pivot` { `height_mm`, `end_mm`, `range_deg` } (hinges); `splice` { the stud or plates, the tap it needs, `at_mm`: each stud's core (*2.3*) }; `recipe: true` for a joint recipe (*2.3*, below) |
 | **fastener** | `subtype` (screw, bolt, nut, washer, t-nut, hammer-screw, insert, stud, …; *2.3*), `thread`, `length_mm`, `head` (DIN/ISO), `class`, `material`, `torque_Nm`, `dims` (published dimensions under the standard's letters; *2.3*); T-nuts and hammer screws add `fits` (the systems whose grooves they fit; *2.3*), `groove` and `insertion` (`drop-in` or `slide-in`); `standard` `{ id, src, ref, note }`, the standard it is made to and how that is known (`src`: its maker names it; `est`: read from its type), whose row fills the dimensions it does not state (*2.3*, §3.3, F2a); a blind fastener adds `hole_mm`, the hole its maker states, and `grip_min_mm` and `grip_max_mm`, the thickness it grips (*2.3*, §4.5) |
 | **carriage** | `rail_system`; `dims`; the datum `run` (*2.1*): the point that sits on the rail's running-face centre line (§4.7); usually `clone_of` an item in a reference catalog (§3.2) |
 | **accessory** | feet, casters, handles: a free-text `subtype`, `thread`, `fits`, `dims` |
@@ -650,7 +683,8 @@ sets, sleeves, splice parts and machining are generated and billed as any connec
 itself is not bought (§5.4). It cannot be a part or a butt's through body, having no box.
 
 **Where `requires` machines** (*2.3*). Once per butting end. An end tap goes in the butting end, an
-access hole on the butting bar's `+y` face `from_end_mm` in from that end. A hole on the through
+access hole on the butting bar's `+y` face `from_end_mm` in from that end (*2.3*: with positions,
+over each, below). A hole on the through
 bar goes where the butting bar's centre line, moved by the spacer, meets the face it butts into;
 for a butt through the through bar's **end** (§4.5), into that end face at that point: an **end
 hole**, listed with its offset from the section's centre (gap A4; G31). A hole with no
@@ -679,8 +713,13 @@ box centre, at either end: the frame the cut list states an end tap's or an end 
 (§5.3); a connector is not turned to suit the end. Positions lie in the joint's plane: an end tap
 stands at its position, in the butting end or in the through bar's end; a hole in the through bar
 stands where the line along the butting bar's axis at that position, carried by the spacer, meets
-the face it butts into, or the end face. A hole in the butting bar's side takes none (it stands
-`from_end_mm` in from the end), nor does a pivot's base. A position off the butting end's section,
+the face it butts into, or the end face. *2.3* A hole in the butting bar's side (an access hole
+over the core a connector sits in) stands `from_end_mm` in from the end, over its position: drilled
+square to the face of the butting bar's box nearest the position, ties going to the first of `+y`,
+`-y`, `+x`, `-x`, and offset across that face by the position's coordinate along it. A blind one
+that does not reach its position is no use to it, so it is not made, a `connection` error (after
+the round-3 acceptance; gap X7, G46; call 52). Draft 2.3 took no positions for it, so a two-core end
+put both holes in one place on `+y`. A pivot's base takes none. A position off the butting end's section,
 or whose hole misses the face, makes no op and is a `connection` error. A **splice** taps one core
 per stud in both spliced ends: at the positions of its `at_mm`, else each at the centre, where
 several coincide (§5.5). `catalog check` warns about a splice whose studs have no positions and
@@ -688,6 +727,17 @@ refuses one whose positions do not number them. Every tap into a bar's end, a re
 tap or tapped end hole or a splice's tap, is then checked against the cores of its bar's section
 (§3.5): one on none of them is a `machining` error naming the nearest, and so is one on a core its
 thread does not fit (*2.3*, §5.5).
+
+**A connector in a fastener set** (*2.3*, after the round-3 acceptance; gap X7, G46, G47; call 53).
+A recipe places bought connectors by holding them in a mount's fastener set, as a two-core end
+holds a quick connector in each core: each sits at every hole of that mount, so its own `requires`
+are made there, their positions moved by the hole's x and y (one with none at the hole itself), and
+its own head is seated there (§4.5). It is billed with the set. The mount's plane must be square to
+the connector's z, as for `at_holes`, else its holes are no place in the joint's plane: a
+`connection` error, and neither its machining nor its head is placed. v1 does not bring a nested
+connector's own fastener sets, so one that has some is a `connection` error rather than parts left
+off the order. What the connector requires comes once, with it: a recipe that restates it makes the
+hole twice, a `machining` error (§5.5).
 
 **The ratings bag** (review m7, m16). Instead of fixed schemas for drive, damper and anchor, which
 nothing reads in v1, every item has `ratings`: a map whose keys come from one vocabulary file in
@@ -1014,7 +1064,9 @@ overhang a butt whose connector gives none allows (below). Its fastener sets, sl
 **v1 limit**: a butt's connector is counted, not placed, so it is not drawn, its mount's frame is
 read in the butting bar's section and not turned to suit the end (§3.4, positions; *2.3*), and a
 mount sleeve has no position along the joint's axis: it is cut to its length and drills no wall
-(v1.1 or later, with a rule that places it).
+(v1.1 or later, with a rule that places it). *2.3*: a connector a recipe holds in a mount's fastener
+set is placed in the joint's plane, at each of the mount's holes, for its machining and its head
+(§3.4, after the round-3 acceptance).
 
 **A through-fastener for two ends** (*2.3*; gap A9, G33). One stud through a bar, in one sleeve,
 into a bush in a butting bar on each side is two butts, a connector each: the holder, whose
@@ -1223,14 +1275,32 @@ connections. A **butt connector's screws** are seated too (*2.3*, after the alte
 acceptance; gap F2b, G43): the chosen sets' first screw or bolt, one into each tap the connector
 makes in a butting end. Where the connector drills a `through-hole` in the through bar at the tap's
 place (call 40's pairing), the screw comes through the bar and its head, or the sets' first washer
-under it, bears on the far face round that hole, checked as above. Where it drills none there,
+under it, bears on the far face round that hole, checked as above: *2.3* round the hole F2 made,
+where that hole's axis leaves the bar, and only where F2 made it; where F2 refuses the hole (a
+screw off square to a side), no screw passes and no head is seated, F2's error standing alone
+(after the round-3 acceptance; gap F7, G48; call 56). Where it drills none there,
 the head sits under the lips of the near face's groove that lies under the joint, on the lips or
 on a T-nut from the sets (drilled out, the head's seat): the shank must pass the opening, and the
 lip, the T-nut's body (`k_mm`) and the head (`k_mm`) the groove's depth, with the head no wider
 than the chamber where it reaches (its undercut, narrowed where it tapers), each else a `fit`
-error; with no T-nut, the head's seat on the lips is the face's material at the joint, as the
+error; *2.3* a head whose `dims` give `rf_mm` is domed (ISO 7045's letter): its bearing diameter
+up to a rim, and above it a spherical cap of that radius rising rf − √(rf² − R²) to `k_mm` at the
+centre. Its room is the least, over its height, of the chamber's half-width less its own, found
+exactly at the rim's top edge, the taper's start, the cap's tangent point to the taper and the apex;
+a head with no `rf_mm` is a cylinder (after the round-3 acceptance; gap X8, G47; call 55). With no
+T-nut, the head's seat on the lips is the face's material at the joint, as the
 opening leaves it. With neither a hole nor a groove, the screw has no way through the bar, a `fit`
-error. The seats are reported with the butt's (`heads`). **v1 limit**: a butt through a bar's end
+error. The seats are reported with the butt's (`heads`), *2.3* with the room a head under the lips
+leaves, to the groove's floor (`depth_room_mm`) and per side to the chamber's wall
+(`side_room_mm`). A **connector's own head** is seated the same way (*2.3*, after the round-3
+acceptance; gap X8, G47; call 54): a connector whose `dims` give a head diameter (`dk_mm` or
+`dw_mm`), as a quick connector's pin, which sits in the butting bar's core with its head under the
+through bar's lips, is seated at its place, the butt's own connector at the end's centre and one in
+a recipe's fastener set at each hole of its mount (§3.4). Its shank is `d_mm`, its bearing annulus
+runs from the shank out, and where it requires a `through-hole` at its place it comes through the
+bar and bears on the far face instead. A headed connector counted by `qty` above one is a
+`connection` error and its head is not seated: a butt's connector is counted, not placed, so every
+one would stand in one place; a recipe places them. **v1 limit**: a butt through a bar's end
 is not seat-checked, since an end face's material is its section, which no seat reads yet (call
 49).
 
@@ -1309,7 +1379,11 @@ not move with the built-in catalogs; so does G38 (*2.3*, `test-span`: a 40 x 40 
 length at R$ 126.50/m in 10 mm steps, 40–3000 mm, and in stock bars of 3000 and 6000), and
 G39–G45 (*2.3*, after the alternative frame's acceptance: `test-x`: flat bars, a plain block, a
 thin tube, blind fasteners, J1's screw-and-bush butt connectors and their variants, screws and
-seats for a groove's lips, and two standards' rows; G44 taps the test catalog's 40x40, and G45 is G32's joint).
+seats for a groove's lips, and two standards' rows; G44 taps the test catalog's 40x40, and G45 is G32's joint),
+and G46–G48 (*2.3*, after the round-3 acceptance: `test-qc`: 40x40, 40x80 and 80x80 sections with a
+base-40 canal-8 groove's numbers, a flat block, a quick connector with a domed head and its
+cylinder twin, recipes holding it at one, two or four cores, positioned access holes, and screws
+with domed, flat and socket heads).
 
 | # | Setup | Rule exercised | Expected |
 |---|---|---|---|
@@ -1335,6 +1409,9 @@ seats for a groove's lips, and two standards' rows; G44 taps the test catalog's 
 | G43 | 40x40 rail b1 (0,0,0)→(600,0,0); 40x40 post b2 (300,0,20)→(300,0,520), its core for M16; `butt` through b1 with J1-SLOT: an M16 `end-tap` in the post, no hole at the tap in b1, a bush and an M8x20 screw (dk 13, k 8) | a butt connector's screw heads (*2.3*, gap F2b) | the head under the lips of b1's top groove (c8: opening 8.2, lip 2.2, depth 12.25, chamber 14.5) bears 45.87 %, a `fit` warning, and reaches 10.20. On a T-nut seat 5.5 high: 15.70, 3.45 past the depth, a `fit` error; on one 2 high: 12.20, no error. A Ø16 head: wider than the chamber, a `fit` error. The post 3 off the groove's centre: the shank misses the opening; 10 off: no groove, no way through; each a `fit` error. J1 through b1: the head on its bottom face, 45.87 %, a warning; on a washer d2 16: 53.74 % |
 | G44 | G42's 40x40 b1 (0,0,0)→(400,0,0) under a 50 x 10 flat b2 (100,0,25)→(300,0,25); `face` [b2, b1], `screw` M8x20, `tap_depth_mm` 10, `at_mm: [100]`, `across_mm: [12]` | a tap over a groove's opening (*2.3*, gap X5) | the M8 tap at 200, 12 across: its Ø6.75 tap drill wholly on the wall, no error. On the centre line: 100 % in the c8's 8.2 opening, a `machining` error; 3 across: 70.38 %, an error; 6 across: 16.16 %, none; -12: none. A T-nut 10 across: no groove, a `fit` error (X5b, as before) |
 | G45 | G32's joint with the sleeve `{inside: b3, walls: "both", len_mm: "bore + 2 * sec(b3).t_mm"}` | a sleeve through both walls (*2.3*, gap X6) | 4 × 50.00 sleeve, from the RHS's nut-side outer face to its head-side one; both walls' 8 holes Ø20 (ISO 273 medium for 18), the other 16 Ø11, no counterbore. With `clearance_mm: 0.5`: Ø18.5. 4 longer: 54, the flat below counterbored Ø20 × 4. In the bore at the same length (draft 2.3's mode): the nut-side wall Ø11 and the flat below counterbored Ø20 × 4 |
+| G46 | 80x80 sill b1 (0,0,0)→(600,0,0); 80x80 post b2 (300,0,40)→(300,0,1000), cores (±20, ±20); `butt` through b1, a recipe requiring a Ø18 x 28 access hole 25 from the end at `at_mm` (-20, -20) and (20, 20) | an access hole at its connector's core (*2.3*, gap X7) | on face -y, -20.00 across, and on face +y, 20.00 across, each 20 in from its face and 8 past its core. The same from a recipe holding a quick connector (whose own hole has no position) at each of its two holes, 2 billed. One as sold in a 40x40's core: +y on the centre line. A 40x80's cores (0, ±20): faces -y and +y. A hole 15 deep: 5 short of its core, a `connection` error, no hole; a position (50, 0) off the end, a mount off the joint's plane: an error each |
+| G47 | 40x40 rail b1 (0,0,0)→(600,0,0); 40x40 post b2 (300,0,20)→(300,0,520); `butt` through b1 with a quick connector: dk 18, d 7.8, k 4.48, rf 17.5, no tap and no hole in b1 | a connector's own head under the lips, domed (*2.3*, gap X8) | under the top groove (opening 8.18, lip 3.79, depth 9.99, undercut 22.01 tapering from 7.03 to 12.24): bears 54.41 %, no warning; its top at 8.27 leaves 1.72 to the floor; the rim's edge 5.78 deep, 2.01 from the wall, the least. As a cylinder Ø18 x 4.48: its top edge meets the taper where the chamber is 17.92, a `fit` error. 3 off the centre: the shank misses the opening; 10 off: no groove; each a `fit` error. Two in an 80x80's diagonal cores: the same at each. A screw into a tap with the same domed head: 57.84 %, 1.72 and 2.01; as a cylinder, the error |
+| G48 | a flat 80 x 80 block b1 (0,0,0)→(200,0,0); 40x40 post b2 (100,0,40)→(100,0,540); `butt` with J1: an M16 bush tap in the post, a Ø9 through-hole in b1 at it, an M8 x 110 (dk 13) | a far-face head on the hole F2 makes (*2.3*, gap F7) | the hole through the block at 100, the head on its bottom face, 100 %. A brace square to the side: the hole through the side, the head on the opposite side, 100 %. A brace rising 30° onto the side: F2 refuses the hole, a `connection` error, and no head (draft 2.3 seated one at 100 % on the far side). Through a 40x40 rail: 46.05 % on its bottom face's lips, a `fit` warning |
 
 ### 4.7 Parts, rails and patterns (D14)
 
@@ -1782,13 +1859,13 @@ along the box's centre line from each end face (*2.3*).
 | Check | What it catches | Default severity |
 |---|---|---|
 | Schema and references | invalid documents, missing items, cycles; two equally specific price bands; a line covered twice (§4.11) | error |
-| Ends and connections | the validation column of §4.5, two providers, an undeclared angled cut, a chain of end providers, a station on a run's joint, a run not spliced in order; a `held_by` that does not hold, a connector position that falls off its end or face (*2.3*); an end hole whose screw leaves the block by a side, or whose wall breaks out of one; a screw into a butting end that meets a side face at an angle; a butting bar that goes into the body it bears on beyond the face (*2.3*, after acceptance run 4) | error |
+| Ends and connections | the validation column of §4.5, two providers, an undeclared angled cut, a chain of end providers, a station on a run's joint, a run not spliced in order; a `held_by` that does not hold, a connector position that falls off its end or face (*2.3*); an end hole whose screw leaves the block by a side, or whose wall breaks out of one; a screw into a butting end that meets a side face at an angle; a butting bar that goes into the body it bears on beyond the face (*2.3*, after acceptance run 4); a blind hole in the butting bar's side that does not reach its position; a connector in a fastener set whose mount's plane is not the joint's, or that has fastener sets of its own; a headed connector counted by `qty` above one (*2.3*, after the round-3 acceptance, X7, X8) | error |
 | Ends and connections (*2.3*) | a butting end face that reaches past the face it bears on by more than the connector's `overhang_mm`, else `defaults.butt.overhang_mm`, else 0 (§4.5) | warn |
 | Unconnected ends | a point shared by two or more bar ends with no connection | warn |
 | Fit | a connector that holds a joined bar in no way it may (§3.4, by role; *2.3*); a T-nut that does not fit its groove; a carriage on another rail system; a `face` with no contact; a head, nut or washer that bears on none of its face's material (*2.3*); a blind fastener whose grip lies outside its maker's range (*2.3*, §4.5) | error |
 | Fit (*2.3*) | a head, nut or washer that bears on less than half of its annulus (§4.5, its seat) | warn |
 | Fit (*2.3*) | a head, nut or washer whose item gives no bearing diameter, so its seats are not checked | info |
-| Fit (*2.3*, F2b) | a butt connector's screw with no clearance hole and no groove to pass the through bar; under a groove's lips, a shank the opening does not pass, a head (and its T-nut seat) past the groove's depth, or a head wider than the chamber where it reaches (§4.5) | error |
+| Fit (*2.3*, F2b) | a butt connector's screw with no clearance hole and no groove to pass the through bar; under a groove's lips, a shank the opening does not pass, a head (and its T-nut seat) past the groove's depth, or a head wider than the chamber where it reaches (§4.5); *2.3* the same for a connector's own head, and a domed head (`rf_mm`) checked as its dome, not as a cylinder (after the round-3 acceptance, X8) | error |
 | Fit (*2.3*, F2b) | a butt connector's screw whose item gives no bearing diameter, or no head height where it sits under a groove's lips (nor its T-nut seat a body height), so it is not checked | info |
 | Machining (*2.3*, X5) | a tapped hole in a bar's face whose tap drill's circle lies more than half in a groove's opening: its thread has less than half its circle of wall (§4.5) | error |
 | Machining (*2.3*) | two ops of one bar of the same kind and size at one place, one op made twice (§5.1): a requirement written once per screw, a splice whose studs have no positions, two ends that each pass a hole through one axis. Places compare as the cut list's identity does, a through hole by its axis. A tap into a bar's end on none of its section's cores (its centre more than `tol.len` from every core's): an end tap, a connector's in a butting or a through bar's end or a splice's, or a tapped end hole (a drilled one is not checked); the error names the bar, the end, the place and the nearest cores (*2.3*). A tap on a core its thread does not fit (the tap rule below): an M16 in an 80x80's Ø5 corner hole (*2.3*); a tapped end hole at an angle to the bar's axis, which runs across its cores (*2.3*) | error |
@@ -2268,7 +2345,12 @@ Vite's HMR socket into every user's runtime, a second surface to secure, so it i
    - **v1 state** (*2.3*): the first families are modelled and reviewed once. The other
      connectors carry the systems they fit, read from their names, and say in their provenance
      that they have no mounting model yet: no frame, mounts or fastener sets. The rest is later
-     layer-2 work.
+     layer-2 work. *2.3*, after the round-3 acceptance: the base-40 quick connector CN40-01 is
+     modelled in `families/quick-connectors.json`, its cross hole (Ø18 x 28, 25 from the end, from
+     the shop page and the machining article) and its pin's head (A and B from p. 24's table, its
+     height and dome measured on the drawing as estimates; call 55), each field with its source. The
+     importer's reviewed table `MODELLED_CONNECTORS` names it, so the build lists its catalogue page
+     and drops the "no mounting model yet" note there; its other bases are not modelled.
 5. **Services.** The machining services guide (56 pages, outside the API: mitre 1–60°, threads,
    connector holes, access holes, parallel holes) goes into `services.json` by hand, with page
    references. Not in v1 (*2.3*; §3.1): v1 prices machining by covering cost lines.
@@ -2295,9 +2377,10 @@ needs:
   synthetic catalog per milestone that needed items `test/` does not hold, so no milestone moved
   another's oracle: `ref-test/` (clone ratings), `test-geo/` (M3a), `test-gen/` (M3b),
   `test-order/` and `test-order-eu/` (the order rules), `test-joint/` and `test-open/` (the
-  acceptance gaps), `test-stud/` (the second run's), `test-span/` (gap X4).
+  acceptance gaps), `test-stud/` (the second run's), `test-seat/` (the fourth run's), `test-span/`
+  (gap X4), `test-x/` (the alternative frame's gaps), `test-qc/` (the round-3 acceptance's gaps).
 - `golden-ends/`: the end cases of §4.6 (G1–G21; G27 and G28 since 2.2 and 2.3).
-- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26; G29–G34, G38 and G39–G45 since 2.3).
+- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26; G29–G34, G35–G37, G38, G39–G45 and G46–G48 since 2.3).
 - `order/` (*2.3*): two suppliers, both READY as written, for the order rules: each test patches
   one condition in, so each rule has a case that blocks and one that does not.
 - `base-frame/` (*2.3*): the cart's base frame built by the CLI from an empty project, the oracle
@@ -2333,6 +2416,7 @@ says so.
 | Gaps (*2.3*) | The model gaps the acceptance found (§13): fit by role (A1), joint recipes (A2), face contact on a section's inner faces (A3), end holes (A4), cost lines in variants (A5), `services_on` lists (A6), a sleeve's hole clearance (A7) | each is closed at its root, with a failing test written first; G29–G32 (§4.6) pass against independent hand scripts; G1–G28 and the cart's outputs do not move. **Done** ([acceptance gaps](notes/acceptance-gaps.md), [A3](notes/a3-face-contact.md)) |
 | Gaps, run 2 (*2.3*) | The gaps the acceptance's second run found (§13): a through-fastener for two ends (A9), a connector's machining at positions (A8) | each is closed at its root, with failing tests written first; G33–G34 (§4.6) pass against independent hand scripts; G1–G32, the cart's and the base frame's outputs do not move. **Done** ([acceptance gaps, second run](notes/acceptance-gaps-2.md)) |
 | Gaps, run 4 (*2.3*) | The joint geometry the acceptance's fourth run found (§13, F2): an end hole along its fastener's axis, a butt's end face on its face, a head on material | each is closed at its root, with failing tests written first; G35–G37 (§4.6) pass against independent hand scripts; no earlier value moves, and the new checks' diagnostics on earlier fixtures are listed in §4.6 and the cart's hand script. **Done** ([f2](notes/f2-joint-geometry.md)) |
+| Gaps, round 3 (*2.3*) | The gaps the round-3 acceptance found (§13): an access hole at its connector's core and connectors placed by a recipe (X7), a connector's own head and a domed head under the lips (X8), a far-face head only on the hole F2 makes (F7); the quick connector's data in the Forseti catalog | each is closed at its root, with failing tests written first; G46–G48 (§4.6) pass against independent hand scripts; no earlier diagnostic moves. **Done** ([x7](notes/x7-x8-f7.md)) |
 | **Acceptance** | §13 | §13. **Passed on run 3.** Runs 1 and 2 passed tests 1–4 and failed on model gaps, which were fixed at their root (G29–G34) |
 
 ## 13. Acceptance (review B2, M9)
@@ -2399,6 +2483,14 @@ written with no position on a section with no centre core passes silently (a v1 
 record says only "the profile's tapped core" on sections with no centre core (an open item in the
 third run), are `machining` errors that hold the order until the record names the core. No
 compared number moves: the check is right, and the question is the record's.
+
+**Round 3, 2026-11-27** (*2.3*): the decided frame's sixth run passed all four tests; the alternative
+frame's third run passed its four tests and failed on gap X7 alone, now closed. A quick connector's
+cross hole could not be placed over its core, so a two-core end drilled both holes in one place.
+Two smaller gaps moved no test: a connector's own head was not seated, and a domed head was checked
+as a cylinder (X8); and a far-face head was seated where F2 had refused its hole, along the end's
+normal (F7). All three are fixed at their root (§3.4, §4.5, §5.5), with golden cases G46–G48 (§4.6;
+[notes](notes/x7-x8-f7.md)).
 
 ## 14. Calls made without asking (veto any)
 
@@ -2524,6 +2616,31 @@ compared number moves: the check is right, and the question is the record's.
     stated mode (`walls: "both"`), not inferred from its length: a sleeve of `bore + 2t` written
     without it keeps its draft 2.3 meaning, so no project moves. Its length stays the author's
     expression; a mode that set it would hide a sleeve cut short or long.
+52. *New in 2.3, after the round-3 acceptance, open.* A hole in the butting bar's side at a
+    position goes in from the face of the box nearest the position, ties to the first of `+y`, `-y`,
+    `+x`, `-x`, and must reach it: the vendor states the hole's size and its distance from the end,
+    not the face, and a hole that stops short of its core holds no bush. A requirement cannot name
+    its face in v1; a 40x40's centre core keeps the draft's `+y`, and an 80x80's diagonal cores go
+    in from opposite faces.
+53. *New in 2.3, after the round-3 acceptance, open.* A connector in a recipe's fastener set is
+    placed, the recipe being the one place v1 states where connectors sit: at each hole of its
+    mount, with its own machining and head. Its own fastener sets are not brought, an error rather
+    than parts silently left off. A butt's connector counted by `qty` is still counted, not
+    placed: a headed one above one is an error that points to a recipe, rather than a guess that
+    spreads the copies over the end's cores.
+54. *New in 2.3, after the round-3 acceptance, open.* A connector has a head of its own when its
+    `dims` give `dk_mm` or `dw_mm`, read as a screw's are (`d_mm` its shank, `k_mm` its height);
+    the head is seated by F2b's rules at the connector's place. What holds the pin in its core (the
+    cross bush and its set screw) is not checked.
+55. *New in 2.3, after the round-3 acceptance, open.* A domed head is a cylinder up to its rim and a
+    spherical cap of radius `rf_mm` above it, ISO 7045's model, for any fastener or connector that
+    gives `rf_mm`. Forseti's quick connector's `k_mm` 4.48 and `rf_mm` 17.5 are estimates read off
+    the vector drawing on p. 24, scaled by its printed ØA, and checked by a second reading; the
+    table prints neither. The drawing's other diameters stand up to 0.22 off their printed values,
+    so the height is taken as ±0.2.
+56. *New in 2.3, after the round-3 acceptance, open.* A far-face head is seated only where F2 made
+    the hole, on that hole's axis, which F2 drills square to the face. It is checked after F2, not
+    beside it: a screw off square to a side gets F2's error alone, since it has no hole to pass.
 
 ## 15. Review 1 resolution
 
