@@ -15,7 +15,7 @@ contract changes only by adding.*
 | The theme | `src/ui/theme/theme.ts` | S4 | `theme` signal (dark only today), kept on `<html data-theme>` by `applyTheme()`; the viewport hands `viewTheme(theme)` to the viewer |
 | What the viewer draws with | `src/viewer/theme.ts` | S3 | `ViewTheme`: background, fog, lights, bodies by tone, edges, selection, hover, tool, status, grid, overlay. The viewer reads no other colour |
 | The export's palette | `src/mesh/style.ts` | S3, frozen (D-UX-24) | The GLB's colours. `finishTone` and `partTone` decide a body's tone for both palettes |
-| Selection, hover, Show | `src/ui/focus.ts` | S2 | `selection`, `select`, `hover`, `shown`, `show(req)`, `clearShow()`, type `Ref`. `show` selects what the refs stand for and records the request; each region reacts to the signals (S3 frames and pulses, S2 reveals the row, S5 points at `field`) |
+| Selection, hover, Show | `src/ui/focus.ts` | S2 | `selection`, `select`, `hover`, `shown`, `show(req)`, `clearShow()`, type `Ref`. `show` selects what the refs stand for and records the request; each region reacts to the signals (S3 frames and pulses, S2 reveals the targets' rows, S5 points at `field`) |
 | Targets | `src/ui/targets.ts` | S3 | `resolveTargets(model, refs)`: ids, points, box. Today: entities and their parts, as the order's reason links did; S3.6 adds ends' points, connections, items, suppliers, open items |
 | Corners | `src/ui/corners.ts` | S3 | `Corner` (extends the viewer's `CornerMarker`), `cornersOf(model)` (no corners yet: S3.4), `cornerRef(key)` |
 | Viewer additions | `src/viewer/scene.ts` | S3 | `setHover`, `onHover`, `setGhost`, `pulse`, `fitBox`, `setCorners`, `setProblemBadges`, `setColourBy`, `setTheme`, `onRender`, `setLabel`: no-ops, each naming the S3 task that builds it. `createViewer(container, theme)` |
@@ -209,6 +209,10 @@ S3 ([s3-decisions.md](s3-decisions.md)) changed these contracts. Each adds, exce
 - **Tests**: `tests/e2e/png.ts`'s `coverage` counts the pixels off their row's commonest colour,
   since the background is a gradient; snapshot.spec is otherwise unchanged. view.spec checks the
   projection by `aria-pressed` (§5.10).
+- **Show in the outline** (after merging S2): the outline reveals every target's row, not only
+  the first's (`placesOf` in `outline/rows.ts`). With S3's corners a connection's row is inside
+  its corner's group, closed by default, and Show selects every target, so revealing one left
+  the others selected out of sight (s3-decisions.md, decision 30).
 
 ## What S1 added
 

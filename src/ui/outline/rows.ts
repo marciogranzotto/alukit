@@ -221,6 +221,33 @@ export function groupsOf(
   return out;
 }
 
+/** Where a ref sits in the outline: the groups to open, outermost first, and its item's key. */
+export interface Place {
+  trail: Group[];
+  /** The tree item that shows it: `r:<group>:<id>` for a row, `g:<group>` for a corner's head. */
+  key: string;
+}
+
+/**
+ * Every place in the outline of the refs wanted, in the tree's order (a group's head, its
+ * subgroups, then its rows). Show reveals all of them, since it selects all of them: a problem at
+ * c21 names c21 and the bars it joins, and c21's row is in its corner's group, closed by default.
+ */
+export function placesOf(groups: readonly Group[], want: ReadonlySet<string>): Place[] {
+  const out: Place[] = [];
+  const walk = (gs: readonly Group[], trail: Group[]) => {
+    for (const g of gs) {
+      if (g.ref && want.has(g.ref)) out.push({ trail, key: `g:${g.key}` });
+      const inside = [...trail, g];
+      if (g.groups) walk(g.groups, inside);
+      for (const r of g.rows)
+        if (want.has(r.id)) out.push({ trail: inside, key: `r:${g.key}:${r.id}` });
+    }
+  };
+  walk(groups, []);
+  return out;
+}
+
 /** The worst group of the problems about each entity: what a row's problem mark shows. */
 export function problemsByEntity(problems: readonly Problem[]): Map<string, ProblemGroup> {
   const rank: Readonly<Record<ProblemGroup, number>> = {

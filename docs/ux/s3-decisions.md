@@ -258,6 +258,22 @@ and C's [rendering spec](visual-design.md#5-the-3d-view-rendering-spec). Labels 
 All eight runs passed. Under 20 ms is less than a frame (inferred: the server tells the tabs
 before the CLI process exits, so they often have the revision drawn by the time it does).
 
+## After merging S2
+
+30. **Show reveals every target in the outline, not only the first (measured).** S2 built its
+    outline's Joints group against the `cornersOf` stub, which found no corners, so every
+    connection was a row of an open group. With S3's corners each connection sits in its
+    corner's group, closed by default, and Show opened only the groups of the first target in
+    the tree's order. A problem at c21 names c21, b18 and b9; Enter selects all three (S2), the
+    bars come first, so c21 stayed in its closed corner and problems.spec found no row for it.
+    The outline now opens the groups of every target shown (`placesOf` in rows.ts) and scrolls
+    to the first. Both decisions stand: Enter selects all of a problem's targets, and Show
+    selects what the refs name (decision 16).
+31. **view.spec's shader test confirms its undo.** The undo there undoes the CLI's step, and S2
+    asks before undoing another source's step (D-UX-14), so no revision came until the dialog
+    was answered. The revision itself drew; the test now clicks `undo-confirm`, as live.spec
+    does.
+
 ## Tests
 
 - view.spec adds eight tests: hover (b2 sets `hovered()`, tints, names its cut, clears), x-ray,
@@ -297,6 +313,8 @@ before the CLI process exits, so they often have the revision drawn by the time 
   export's; `theme.test.ts` holds the export's palette instead.
 - `src/ui/icons/Icons.tsx` (S4): adds `joints`.
 - `tests/e2e/png.ts` (shared): `coverage` by row.
+- `src/ui/outline/Outline.tsx`, `rows.ts`, `rows.test.ts` (S2): Show reveals every target
+  (decision 30).
 
 ## Screenshots
 

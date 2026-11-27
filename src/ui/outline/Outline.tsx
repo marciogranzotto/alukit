@@ -9,7 +9,7 @@ import { problemList } from "../problems/source.ts";
 import { marks } from "../shell/presence.ts";
 import { model } from "../store.ts";
 import { resolveTargets } from "../targets.ts";
-import { type Group, groupsOf, problemsByEntity, type Row } from "./rows.ts";
+import { type Group, groupsOf, placesOf, problemsByEntity, type Row } from "./rows.ts";
 
 /**
  * The model outline (docs/ux/plan.md S2.5; design §8, left): every entity in words, by kind or by
@@ -96,37 +96,21 @@ export function Outline() {
     }
   };
 
-  // Show: open the groups that hold the first target shown, and scroll its row into view.
+  // Show: open the groups that hold every target shown, since Show selects them all, and scroll
+  // the first one's row into view.
   const shownNow = shown.value;
   useEffect(() => {
     if (!shownNow || !m) return;
     const want = new Set([...shownNow.refs, ...resolveTargets(m, shownNow.refs).ids]);
-    const all = groupsOf(m, { byTag, filter: "", corners });
-    const path = (
-      gs: readonly Group[],
-      trail: Group[],
-    ): { trail: Group[]; row: Row } | undefined => {
-      for (const g of gs) {
-        const hit = g.rows.find((r) => want.has(r.id));
-        if (hit) return { trail: [...trail, g], row: hit };
-        if (g.ref && want.has(g.ref))
-          return { trail, row: { id: g.ref, kind: "corner", text: "", tags: [], copy: false } };
-        const deeper = g.groups ? path(g.groups, [...trail, g]) : undefined;
-        if (deeper) return deeper;
-      }
-      return undefined;
-    };
-    const found = path(all, []);
-    if (!found) return;
+    const places = placesOf(groupsOf(m, { byTag, filter: "", corners }), want);
+    const first = places[0];
+    if (!first) return;
     if (filter !== "") setFilter("");
-    const top = found.trail[0];
-    if (top) setClosed((c) => new Set([...c].filter((k) => k !== top.key)));
-    setOpened((o) => new Set([...o, ...found.trail.slice(1).map((g) => g.key)]));
-    const last = found.trail[found.trail.length - 1];
-    const key =
-      found.row.kind === "corner" ? `g:${found.row.id}` : `r:${last?.key}:${found.row.id}`;
-    setFocusKey(key);
-    setRevealed(key);
+    const tops = new Set(places.flatMap((p) => p.trail.slice(0, 1).map((g) => g.key)));
+    setClosed((c) => new Set([...c].filter((k) => !tops.has(k))));
+    setOpened((o) => new Set([...o, ...places.flatMap((p) => p.trail.slice(1).map((g) => g.key))]));
+    setFocusKey(first.key);
+    setRevealed(first.key);
   }, [shownNow?.n]);
   useEffect(() => {
     if (!revealed) return;
