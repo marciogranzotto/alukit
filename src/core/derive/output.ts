@@ -114,7 +114,8 @@ function sortedOpt(opt: Readonly<Record<string, string>>): Record<string, string
   return Object.fromEntries(Object.entries(opt).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)));
 }
 
-function partJson(p: DerivedPart) {
+/** A part as `alukit.derived/1` reports it: where the viewer, the GLB and `bbox()` place it. */
+export function partJson(p: DerivedPart) {
   const head = { item: p.item, kind: p.kind, opt: sortedOpt(p.opt) };
   if (!p.placed) return { ...head, unplaced: true, qty: p.qty, why: p.why };
   return {

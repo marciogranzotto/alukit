@@ -105,8 +105,10 @@ function shapeOf(r: ResolvedProjectItem): ViewShape | undefined {
   return undefined;
 }
 
+/** Items as derive reads them: the catalogs' and the project's own (§4.8). */
+type OwnItems = ReturnType<typeof projectItems>;
+
 export function meshDisplay(derived: Derived, items: ItemSource): MeshInput["display"] {
-  // Items as derive reads them: the catalogs' and the project's own (§4.8).
   const own = projectItems(items, derived.doc);
   const sections: Record<string, ViewSection> = {};
   const bars: Record<string, ViewBar> = {};
@@ -120,7 +122,19 @@ export function meshDisplay(derived: Derived, items: ItemSource): MeshInput["dis
       ...(pm ? { mass_kg: mass((b.lengths.centre * pm.v) / 1000), mass_src: pm.src } : {}),
     };
   }
+  return {
+    bars,
+    sections,
+    parts: displayParts(derived, own),
+    fasteners: displayFasteners(derived, own),
+  };
+}
 
+/**
+ * Each placed part as drawn (§8): its item's box, or a project item's shape, its datums, and
+ * whether it is a placeholder or a marker for an item with no box.
+ */
+export function displayParts(derived: Derived, own: OwnItems): Record<string, ViewPart> {
   const parts: Record<string, ViewPart> = {};
   for (const [id, p] of derived.parts) {
     if (!p.placed) continue;
@@ -146,7 +160,14 @@ export function meshDisplay(derived: Derived, items: ItemSource): MeshInput["dis
       ...(Object.keys(datums).length > 0 ? { datums } : {}),
     };
   }
+  return parts;
+}
 
+/**
+ * Each face connection's fasteners as drawn (§8): a rod from its head along its axis through the
+ * layers, as thick as its thread (6 mm for a fastener that names none).
+ */
+export function displayFasteners(derived: Derived, own: OwnItems): ViewFastener[] {
   const fasteners: ViewFastener[] = [];
   for (const [id, f] of derived.fastenings) {
     if (!f.fastener) continue;
@@ -173,5 +194,5 @@ export function meshDisplay(derived: Derived, items: ItemSource): MeshInput["dis
       });
     }
   }
-  return { bars, sections, parts, fasteners };
+  return fasteners;
 }

@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { compareIds, isIntegerLike } from "./ids.ts";
 import { QUANTUM, quantize, roundHalfAway, snapCeil, snapFloor } from "./quantum.ts";
@@ -133,5 +136,45 @@ describe("id order (design §2)", () => {
     expect(isIntegerLike("0")).toBe(true);
     expect(isIntegerLike("012")).toBe(false);
     expect(isIntegerLike("b12")).toBe(false);
+  });
+});
+
+describe("the layout's import rules (design §10)", () => {
+  const SRC = fileURLToPath(new URL("..", import.meta.url));
+
+  /** The modules a source file imports, resolved to files; bare package names as they are. */
+  function imports(file: string): string[] {
+    const text = readFileSync(file, "utf8");
+    const out: string[] = [];
+    for (const m of text.matchAll(/^\s*(?:import|export)\b[^"']*?from\s+["']([^"']+)["']/gm)) {
+      const spec = m[1] as string;
+      if (spec.startsWith("#core/")) out.push(join(SRC, "core", spec.slice(6)));
+      else if (spec.startsWith("#catalog/")) out.push(join(SRC, "catalog", spec.slice(9)));
+      else if (spec.startsWith(".")) out.push(resolve(dirname(file), spec));
+      else out.push(spec);
+    }
+    return out;
+  }
+
+  it("keeps three.js and .tsx out of everything src/core and src/catalog reach", () => {
+    const roots = (dir: string): string[] =>
+      readdirSync(dir, { recursive: true, encoding: "utf8" })
+        .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts") && f !== "testing.ts")
+        .map((f) => join(dir, f));
+    const seen = new Set<string>();
+    const bad: string[] = [];
+    const walk = (file: string, from: string) => {
+      if (seen.has(file)) return;
+      seen.add(file);
+      for (const dep of imports(file)) {
+        if (dep === "three" || dep.startsWith("three/") || dep.endsWith(".tsx")) {
+          bad.push(`${relative(SRC, from)} reaches ${dep} through ${relative(SRC, file)}`);
+        } else if (dep.endsWith(".ts")) walk(dep, from);
+      }
+    };
+    for (const f of [...roots(join(SRC, "core")), ...roots(join(SRC, "catalog"))]) walk(f, f);
+    expect(bad).toEqual([]);
+    // bbox() reads the bodies from src/mesh's three-free modules: the walk went there.
+    expect([...seen].some((f) => f.endsWith(join("mesh", "extent.ts")))).toBe(true);
   });
 });

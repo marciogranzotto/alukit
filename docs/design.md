@@ -63,8 +63,8 @@ name and decision number ("m4a 13" is decision 13 of
   v1; project items hold numbers, default to supplier `local`, and take the hole and price rules
   as built (m6 1–15; dvb 17).
 - §4.9: `cost(high)`, not `cost("high")`, since the language has no strings; accessors are for
-  checks only; `bbox()` holds bars only, a v1 limit; margins per operator (m3a 7, 8; m3b-doc 34,
-  37, 39; dvb 13).
+  checks only; `bbox()` holds bars only, a v1 limit, *closed after acceptance run 3*; margins per
+  operator (m3a 7, 8; m3b-doc 34, 37, 39; dvb 13).
 - §4.10: cost lines take `only_in` and `not_in` (A5); `only_in` leaves an entity out of the
   document derived with no variant; what a swap replaces and what it leaves (acceptance-gaps A5;
   m5 3–6; dvb 15, 21).
@@ -172,6 +172,10 @@ moved.
   and the costs state the oldest price read date beside the basis, and the order's and the costs'
   CSV the basis and the date as `stamp` rows; the server answers as the CLI, byte for byte;
   `revision verify` does not count a stamp a stored output lacks as drift (v1-limits 1–9).
+- §4.9: **`bbox()` covers every body** the viewer draws and the GLB holds: bars, placed parts
+  (project shapes, placeholders and catalog boxes) and face fasteners, from the same shapes and
+  placement in `src/mesh/`; a placed part whose item gives no box makes the check that reads it an
+  error (v1-limits 10–15).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1163,8 +1167,15 @@ A small, safe language; no JS `eval`.
   name, not draft 2's `cost("high")`). A total that leaves something out (an item with no mass, a
   line with no price, a cost line with no rate) makes the check one that cannot be evaluated, an
   error naming what is missing, never a pass on a partial sum.
-- `bbox()` is the extent of the bar bodies, each swept between its end planes. **v1 limit**
-  (*2.3*): parts are not in it yet (v1.1).
+- `bbox()` is the extent of every body the viewer draws and the GLB holds (*2.3*): the bars, each
+  its section's box swept between its end planes; the placed parts, a project plate or bent
+  angle by its shape, a placeholder and any other part by its item's box, each in its frame on its
+  station; and the face connections' fasteners, as the rods drawn through their layers. It reads
+  the same shapes and the same placement as the viewer and the GLB (`src/mesh/`), so the three
+  agree: to the output quantum for a bar, which they place from `derive --json`, and exactly for
+  the rest. A part's hole markers stand proud of it to show and are not bodies. A placed part
+  whose item gives no box is drawn as a marker, which is not its extent, so a check that reads
+  `bbox()` then cannot be evaluated, an error naming the part, never a pass on a partial box.
 - `^` is right-associative and binds tighter than unary minus (`-2^2` is −4); comparisons do not
   chain; `if` evaluates one branch (*2.3*).
 - `sec(b3)` reads the bar's section, after swaps (*2.1*): `sec(b3).t_mm` and the other parameters
@@ -1808,7 +1819,9 @@ docs/
 ```
 
 `src/core/` and `src/catalog/` import no three.js and nothing from `src/ui/`; the CLI imports
-nothing that reaches `.tsx`.
+nothing that reaches `.tsx`. The checks' `bbox()` reads the bodies from `src/mesh/`'s three-free
+modules (`extent.ts` and what it imports), so it measures what is drawn (*2.3*); a test walks
+the imports of `src/core/` and `src/catalog/` and fails on any that reaches three.js.
 
 **`alukit serve`** serves the built app (`dist/`, rebuilt by the CLI when its source hash
 changes) from `node:http`. **v1 limit** (*2.3*): `serve` does not rebuild `dist/`; it refuses to

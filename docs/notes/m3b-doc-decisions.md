@@ -63,7 +63,7 @@ parts and are not here.*
 | # | Decision | Why |
 |---|---|---|
 | 33 | Unconnected ends: two or more bar ends meeting within `tol.len`, where an end has no provider and is not the through member of a butt at that point (a through bar, or a bar end a butt bears on, `through: "b31.b"`) | §5.5's warning, without flagging a deliberate end plate or `through_end: "none"` |
-| 34 | `bbox()` is the extent of the bar bodies along each world axis, each body swept between its end planes (exact for every planar cut). Parts are not in it yet: derive places them since M3b's generation part, and adding them is open | Derive placed bars only when this was built |
+| 34 | `bbox()` is the extent of the bar bodies along each world axis, each body swept between its end planes (exact for every planar cut). Parts are not in it yet: derive places them since M3b's generation part, and adding them is open. *Since the third acceptance run it covers the parts and the face fasteners too ([v1-limits-closed](v1-limits-closed.md) 10–15)* | Derive placed bars only when this was built |
 | 35 | `count(tag:t)` counts nodes, bars, connections, parts and runs carrying the tag after pattern expansion, through derive's own expansion | A copy is as real as its template |
 | 36 | `mass()` and `cost()` read the bill of materials and prices; until a caller supplies them (an accessor table), a check that uses them is `check-pending` info, not an error. *Supplied since the merge with part 3 (decision 39); a caller that passes no table still gets pending* | Prices are M3b's other part; a pending check is not a failed one |
 | 37 | Margin: limit − value for `<` and `<=`, value − limit for `>` and `>=`, −\|value − limit\| for `==`, none for `!=` and for a plain `expr`. Pass or fail is the expression language's own comparison, within `tol.snap`. A check that cannot be evaluated is an error; a failing check reports at its own severity | §4.9; one comparison rule everywhere |
@@ -79,7 +79,8 @@ parts and are not here.*
   too, every fixture project has a current lock and a canonical document, and a test derives each
   one from its lock and from the live catalogs and compares the derived model, cut list and BOM.
   Still open: `mass()` from the BOM's total, and parts in `bbox()`. *`mass()` is done (decision
-  39); parts in `bbox()` are still open.*
+  39); parts in `bbox()` since the third acceptance run ([v1-limits-closed](v1-limits-closed.md)
+  10–15).*
 - Done in the merge with part 3 (2026-11-26): `order` and `costs` parse options like the other
   project commands and derive from the lock (`--frozen` too). `fixtureProjects()` takes in
   `tests/fixtures/order`; every fixture lock was refreshed (part 3 changed the synthetic catalogs'

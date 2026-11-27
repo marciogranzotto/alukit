@@ -51,7 +51,8 @@ correction in the design):
 - §4.5: a butt's connector is counted, not placed or drawn, so a mount sleeve drills no wall
   ([m4a](m4a-decisions.md) 35; [acceptance-gaps](acceptance-gaps.md) A4 decision 12, A7 decision
   22); `faces` names bounding faces only ([a3-face-contact](a3-face-contact.md) 7).
-- §4.9: `bbox()` holds the bars, not the parts ([m3b-doc](m3b-doc-decisions.md) 34).
+- §4.9: `bbox()` holds the bars, not the parts ([m3b-doc](m3b-doc-decisions.md) 34). *Closed
+  after the third acceptance run ([v1-limits-closed](v1-limits-closed.md) 10–15).*
 - §5.2: CI runs on Linux only; macOS runs in the merge gate (per the repository's CI configuration).
 - §5.4, §9: the cut list, the BOM and the machining sheet do not state the lock's hash
   ([m3b-order](m3b-order-decisions.md), "Not built"; per the code). *Closed after the third

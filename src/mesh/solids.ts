@@ -54,19 +54,27 @@ export function boxMesh(lo: V3, hi: V3): MeshData {
   };
 }
 
+/** Sides of a fastener's rod. */
+export const ROD_SEGMENTS = 12;
+
+/** The rod's ring: (sin θ, cos θ) at each of its sides' angles, the first repeated at the end. */
+export function rodRing(segments = ROD_SEGMENTS): (readonly [number, number])[] {
+  return Array.from({ length: segments + 1 }, (_, i) => {
+    const deg = (360 * i) / segments;
+    return [sinDeg(deg), cosDeg(deg)] as const;
+  });
+}
+
 /**
  * A rod: a cylinder of diameter 1 and length 1 along y, from y = −½ to ½, with `segments` flat
  * sides around it (smooth normals) and two caps. Scaled by a matrix to a fastener's diameter and
  * length. Its vertex at angle θ sits at (½ sin θ, y, ½ cos θ), as three's `CylinderGeometry`.
  */
-export function rodMesh(segments = 12): MeshData {
+export function rodMesh(segments = ROD_SEGMENTS): MeshData {
   const positions: number[] = [];
   const normals: number[] = [];
   const indices: number[] = [];
-  const ring = Array.from({ length: segments + 1 }, (_, i) => {
-    const deg = (360 * i) / segments;
-    return [sinDeg(deg), cosDeg(deg)] as const;
-  });
+  const ring = rodRing(segments);
   // The side: a top and a bottom ring, the seam vertex repeated.
   for (const y of [0.5, -0.5]) {
     for (const [s, c] of ring) {
