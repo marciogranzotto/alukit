@@ -837,3 +837,9 @@ anything, and each has a default in place.
   - Golden case G49; no golden value or fixture diagnostic moved across 167 cases.
   - It also corrected an earlier reading: a printed "4,5" beside a profile's opening is a corner hole's inset, not its lip.
 - **10:24**: Merged; gate PASS (1,098 tests). The alternative frame's run 5 launched on the same project head.
+- **10:38**: Mutation check of X9 / F8 / F9 on `main` (each fix's core reverted alone in a scratch worktree; the derive, X7/X8 and golden test files run).
+  - Control: 162 of 162 pass.
+  - **X9 mutant** (the cover test always clear): G49's covered-face cases and the cover unit tests fail.
+  - **F8 mutant** (bearing on the face, not the lips' underside): G49's bearing cases and the quick connector's end-to-end test fail.
+  - **F9 mutant** (each profile's own groove ignored): 6 fail, among them the per-profile Forseti grooves and the unread-lip case.
+  - Each fix is held by tests on today's code, not only by the failing-first tests written on the base commit.
