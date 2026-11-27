@@ -117,6 +117,7 @@ anything, and each has a default in place.
 | Forseti sections: secondary cores, and the tap's thread against the core | **done**, merged (01:56), pushed | Note: `docs/notes/section-cores.md`. |
 | Acceptance re-runs on the reference project's new heads (internal) | **ran** (01:26, 01:53) | Decided frame, run 4: **pass**. Alternative frame, first run: **fail** on AluKit gaps X1–X4, though one variant passes every numeric test. |
 | X4: stock length of parallel-cut bars | running (Opus, worktree), launched 01:57 | golden G38 |
+| UX redesign, phase 1: three designer reviews | running (3 × Opus, worktrees), launched 02:27 | task flows and IA; heuristics and first run; visual design and 3D readability |
 | F2: end-hole axis, butt end-face coverage, head seats | running (Opus, worktree), launched 01:30 | goldens G35–G37 |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
@@ -540,3 +541,18 @@ anything, and each has a default in place.
   - Five record findings went to that project's session; it took them into its fix round.
 - **01:56**: The sections branch merged (gate PASS, 737 tests). X4 launched alone, since it doesn't
   touch fastenings; X1–X3 wait for F2 to merge, which works in the same code.
+- **02:25**: Marcio, back briefly: "continue your work, but have some designer agents rethink the
+  UI/UX so it's more user friendly. I'll be afk."
+- **02:27**: A UX redesign track, in four phases.
+  1. Three designer agents (Opus, worktrees), each using the running app on a copy of the fixtures
+     through Playwright, and on an empty project for the first run:
+     - **A**, task flows and information architecture (walk the core jobs; compare Fusion,
+       SketchUp, Onshape, item MXen, configurators);
+     - **B**, usability heuristics, first run and feedback (Nielsen, WCAG 2.2, onboarding research);
+     - **C**, visual design and 3D readability (tokens, rendering specs, tables; the
+       frontend-design skill).
+
+     Each commits a proposal under `docs/ux/` and no product code.
+  2. The coordinator merges the three into one plan and decides, logging each call for Marcio.
+  3. Implementation in parallel streams.
+  4. A designer review of the result.
