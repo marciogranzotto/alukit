@@ -384,7 +384,21 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   }
   let instanced: Instanced[] = [];
   let single: Single[] = [];
+  /**
+   * What the model in the scene owns on the GPU, and whether a frame has drawn it yet. A
+   * revision's build does not dispose the generation it replaces: that generation's materials
+   * hold their shader programs, and three.js deletes a program when the last material using it
+   * goes. The new generation's materials, alike, find their programs in the cache on its first
+   * frame; only then is the old one disposed (`retired`). Disposing first made every revision
+   * compile its programs again (six on the cart): on SwiftShader that blocks the revision's frame
+   * for up to a second, waiting on the links.
+   */
   let owned: { dispose(): void }[] = [];
+  let ownedDrawn = false;
+  let retired: { dispose(): void }[] = [];
+  const release = (list: readonly { dispose(): void }[]) => {
+    for (const o of list) o.dispose();
+  };
   let outline: EdgeBuffer | undefined;
   let detail: EdgeBuffer | undefined;
   /** Each bar's own colour, as painted last (its edges follow its lightness). */
@@ -532,8 +546,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
 
   function clear(): void {
     for (const c of [...content.children]) content.remove(c);
-    for (const o of owned) o.dispose();
+    // A drawn generation waits for the next frame (it holds the programs); one never drawn holds
+    // none, so it goes now, and at most one generation waits.
+    if (ownedDrawn) {
+      release(retired);
+      retired = owned;
+    } else release(owned);
     owned = [];
+    ownedDrawn = false;
     instanced = [];
     single = [];
     outline = undefined;
@@ -1375,6 +1395,12 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     renderer.render(scene, camera);
     stats.renderMs += performance.now() - t0;
     stats.frames++;
+    // The model drawn has taken its programs; the generation it replaced can go.
+    ownedDrawn = true;
+    if (retired.length > 0) {
+      release(retired);
+      retired = [];
+    }
     labels.update();
     for (const cb of renderCbs) cb();
   }
@@ -1574,6 +1600,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointerleave", onLeave);
       clear();
+      release(owned);
+      release(retired);
       overlay.dispose();
       joints.dispose();
       badges.dispose();

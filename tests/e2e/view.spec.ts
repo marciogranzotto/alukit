@@ -578,3 +578,40 @@ test("the gizmo's ends turn the view to look along their axis", async ({ page })
   // At rest, still looking from the front.
   expect(await lookingFrom(page)).toEqual([0, -1, 0]);
 });
+
+test("a revision draws with the shader programs it has: none is compiled again", async ({
+  page,
+}) => {
+  // Count the WebGL program links. A revision that released its materials' programs and linked
+  // them again cost the live update up to a second on SwiftShader.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __links: number };
+    w.__links = 0;
+    const link = WebGL2RenderingContext.prototype.linkProgram;
+    WebGL2RenderingContext.prototype.linkProgram = function (p) {
+      w.__links++;
+      link.call(this, p);
+    };
+  });
+  served = await serve("cart");
+  await openTab(page, served, 0);
+  const links = () => page.evaluate(() => (window as unknown as { __links: number }).__links);
+  const frames = () => page.evaluate(() => window.__alukit?.frames()?.frames ?? 0);
+  // The first frames link what the model needs; then a revision with a new bar and new corners.
+  await expect.poll(frames).toBeGreaterThan(1);
+  const before = await links();
+  expect(before).toBeGreaterThan(0);
+  const idle = await frames();
+  const r = await cli(["add", "bar", served.dir, "--a", "0,0,0", "--b", "0,-300,0"]);
+  expect(r.code, r.err).toBe(0);
+  await waitDrawn(page, 1);
+  // The revision's frame has drawn (the view draws on demand: nothing else asked for one).
+  await expect.poll(frames).toBeGreaterThan(idle);
+  expect(await links()).toBe(before);
+  // Undo, a second revision: the bar and its corners go, and still nothing is linked.
+  const drawn = await frames();
+  await page.getByTestId("undo").click();
+  await waitDrawn(page, 2);
+  await expect.poll(frames).toBeGreaterThan(drawn);
+  expect(await links()).toBe(before);
+});

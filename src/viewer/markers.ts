@@ -71,6 +71,9 @@ interface Layer {
   geometry: BufferGeometry;
 }
 
+/** How a glyph's points are drawn: faint on top, lifted in front, or emphasised on top. */
+type Variant = "behind" | "front" | "emphasis";
+
 export class MarkerLayer {
   readonly group = new Group();
   private layers: Layer[] = [];
@@ -81,6 +84,11 @@ export class MarkerLayer {
   private keys: ReadonlySet<string> = new Set();
   /** The markers' opacity, while the model around them is ghosted (Show's isolate). */
   private fade = 1;
+  /**
+   * One material per glyph and variant, for the layer's life: a revision, a hover or a fade
+   * replaces the points, not the materials, so no shader program is released and compiled again.
+   */
+  private readonly materials = new Map<string, PointsMaterial>();
   private readonly glyphs: Glyphs;
   private readonly sizePx: number;
   private readonly pixelRatio: () => number;
@@ -134,9 +142,7 @@ export class MarkerLayer {
   /** The section plane clips markers as it clips the model, or no longer does. */
   setClipping(planes: Plane[] | null): void {
     this.clip = planes;
-    for (const l of [...this.layers, ...this.emphasised]) {
-      for (const o of l.objects) (o.material as PointsMaterial).clippingPlanes = planes;
-    }
+    for (const m of this.materials.values()) m.clippingPlanes = planes;
   }
 
   /** The marker nearest the pointer, within reach; `hidden` drops points the section hides. */
@@ -178,25 +184,8 @@ export class MarkerLayer {
     }
     geometry.setAttribute("color", new Float32BufferAttribute(colours, 3));
     geometry.computeBoundingSphere();
-    const base = {
-      size: this.sizePx * (emphasis ? EMPHASIS : 1) * this.pixelRatio(),
-      sizeAttenuation: false,
-      vertexColors: true,
-      transparent: true,
-      depthWrite: false,
-      map: this.glyphs.get(glyph),
-      fog: false,
-      clippingPlanes: this.clip,
-    };
-    const objects = emphasis
-      ? [new Points(geometry, new PointsMaterial({ ...base, depthTest: false }))]
-      : [
-          new Points(
-            geometry,
-            new PointsMaterial({ ...base, depthTest: false, opacity: BEHIND * this.fade }),
-          ),
-          new Points(geometry, lifted(this.lift, { ...base, opacity: this.fade })),
-        ];
+    const variants: Variant[] = emphasis ? ["emphasis"] : ["behind", "front"];
+    const objects = variants.map((v) => new Points(geometry, this.material(glyph, v)));
     objects.forEach((o, i) => {
       o.renderOrder = this.order + (emphasis ? 2 : i);
       o.raycast = () => {};
@@ -206,11 +195,31 @@ export class MarkerLayer {
     return { objects, geometry };
   }
 
-  private drop(l: Layer): void {
-    for (const o of l.objects) {
-      this.group.remove(o);
-      (o.material as PointsMaterial).dispose();
+  /** A glyph's material for a variant, made once, brought up to date (size, glyph, fade). */
+  private material(glyph: Glyph, v: Variant): PointsMaterial {
+    const key = `${glyph}:${v}`;
+    let m = this.materials.get(key);
+    if (!m) {
+      const base = {
+        sizeAttenuation: false,
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        fog: false,
+        clippingPlanes: this.clip,
+      };
+      m =
+        v === "front" ? lifted(this.lift, base) : new PointsMaterial({ ...base, depthTest: false });
+      this.materials.set(key, m);
     }
+    m.size = this.sizePx * (v === "emphasis" ? EMPHASIS : 1) * this.pixelRatio();
+    m.map = this.glyphs.get(glyph);
+    m.opacity = v === "behind" ? BEHIND * this.fade : v === "front" ? this.fade : 1;
+    return m;
+  }
+
+  private drop(l: Layer): void {
+    for (const o of l.objects) this.group.remove(o);
     l.geometry.dispose();
   }
 
@@ -218,5 +227,7 @@ export class MarkerLayer {
     for (const l of [...this.layers, ...this.emphasised]) this.drop(l);
     this.layers = [];
     this.emphasised = [];
+    for (const m of this.materials.values()) m.dispose();
+    this.materials.clear();
   }
 }
