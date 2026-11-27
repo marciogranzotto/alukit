@@ -1,0 +1,358 @@
+<!doctype html>
+<!--
+  AluKit visual-design proposal: the drawer's tables, the order's status and the empty states,
+  drawn with the proposed tokens (docs/ux/visual-design.md §4) and the cart fixture's real numbers.
+  A static mockup, not product code. Open it in a browser; add ?theme=light for the light theme.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AluKit drawer mockup</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; src: url("https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-sans@5.1.1/files/ibm-plex-sans-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; src: url("https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-sans@5.1.1/files/ibm-plex-sans-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; src: url("https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-sans@5.1.1/files/ibm-plex-sans-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 400; src: url("https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5.1.1/files/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); }
+
+:root {
+  /* Surfaces: graphite, a hair cool, like anodised stock in shade */
+  --bg-app: #181b20;
+  --bg-panel: #1f2329;
+  --bg-raised: #272c33;
+  --bg-well: #14171b;
+  --line: #343a42;
+  --line-strong: #4b545e;
+  --text-1: #e8ecf0;
+  --text-2: #aeb7c1;
+  --text-3: #8c96a1;
+  /* One meaning each */
+  --sel: #ffa133;
+  --sel-ink: #201304;
+  --sel-wash: rgb(255 161 51 / 0.13);
+  --hover-wash: rgb(255 255 255 / 0.04);
+  --act: #74b4ff;
+  --act-fill: #2e6bc6;
+  --ready: #4fcb8d;
+  --ready-wash: rgb(79 203 141 / 0.12);
+  --blocked: #ff7a6e;
+  --blocked-wash: rgb(255 122 110 / 0.12);
+  --warn: #ebc84a;
+  --warn-wash: rgb(235 200 74 / 0.12);
+  --info: #8db8f2;
+  --tool: #3cc8e6;
+  /* Item swatches (the 3D view's "colour by item", in BOM order) */
+  --i1: #86aee0; --i2: #93c47d; --i3: #e08f8f; --i4: #b39ddb; --i5: #d8cf72; --i6: #6fc2b0; --i7: #e39ac7; --i8: #a9b46a; --i0: #9aa1a8;
+  --r-ctl: 3px;
+  --r-card: 6px;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg-app: #edf0f3; --bg-panel: #ffffff; --bg-raised: #f3f5f8; --bg-well: #ffffff;
+  --line: #dadfe5; --line-strong: #b4bdc7;
+  --text-1: #1a1f26; --text-2: #48515c; --text-3: #626c77;
+  --sel: #e08417; --sel-ink: #201304; --sel-wash: rgb(224 132 23 / 0.12); --hover-wash: rgb(0 0 0 / 0.035);
+  --act: #1f63c6; --act-fill: #1f63c6;
+  --ready: #1b7a4b; --ready-wash: rgb(27 122 75 / 0.09);
+  --blocked: #c2362b; --blocked-wash: rgb(194 54 43 / 0.08);
+  --warn: #8a6200; --warn-wash: rgb(138 98 0 / 0.09);
+  --info: #2a62b5; --tool: #0b7f9a;
+  --i1: #4f7fc0; --i2: #5e9a49; --i3: #c05e5e; --i4: #8a6fc0; --i5: #a99c2c; --i6: #3a9a86; --i7: #bb5f98; --i8: #7f8a3c; --i0: #8a929b;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg-app); color: var(--text-1); }
+body { font: 400 13px/18px "IBM Plex Sans", system-ui, sans-serif; padding: 24px; }
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+.n { text-align: right; white-space: nowrap; }
+.dec { color: var(--text-3); }
+.unit { color: var(--text-3); font-size: 12px; margin-left: 2px; }
+.t2 { color: var(--text-2); }
+.t3 { color: var(--text-3); }
+.frame { width: 1552px; background: var(--bg-panel); border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; margin-bottom: 28px; }
+.caption { font-size: 12px; color: var(--text-3); margin: 0 0 8px 2px; }
+
+/* Glyphs: status is shape + word + colour, never colour alone */
+.g { width: 16px; height: 16px; flex: none; display: inline-block; vertical-align: -3px; }
+.g.ready { color: var(--ready); } .g.blocked { color: var(--blocked); } .g.warn { color: var(--warn); } .g.info { color: var(--info); }
+
+/* Tab bar */
+.tabs { display: flex; align-items: stretch; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--bg-app); }
+.tab { display: flex; align-items: center; gap: 6px; padding: 9px 12px 8px; color: var(--text-2); border-bottom: 2px solid transparent; font-weight: 500; }
+.tab .count { color: var(--text-3); font-weight: 400; }
+.tab.on { color: var(--text-1); border-bottom-color: var(--text-1); }
+.tab .flag { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
+.tab .flag.blocked { color: var(--blocked); } .tab .flag.ready { color: var(--ready); }
+.tabs .spacer { flex: 1; }
+.tabs .meta { align-self: center; color: var(--text-3); font-size: 12px; }
+
+/* Cut sheet */
+.sheet { padding: 4px 0 12px; }
+table.cut { width: 100%; border-collapse: collapse; table-layout: fixed; }
+table.cut col.c-qty { width: 72px; } table.cut col.c-len { width: 150px; } table.cut col.c-ends { width: 290px; }
+table.cut col.c-mach { width: auto; } table.cut col.c-bars { width: 360px; }
+table.cut thead th { position: sticky; top: 0; background: var(--bg-raised); color: var(--text-2); font-weight: 500; font-size: 12px; text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--line); }
+table.cut thead th.n { text-align: right; }
+tr.group td { padding: 14px 12px 6px; border-bottom: 1px solid var(--line); }
+.ghead { display: flex; align-items: baseline; gap: 10px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; align-self: center; }
+.ghead .code { font-weight: 600; font-size: 15px; }
+.ghead .name { color: var(--text-2); }
+.ghead .opt { color: var(--text-2); }
+.stats { display: flex; gap: 22px; margin-left: auto; color: var(--text-2); }
+.stats b { color: var(--text-1); font-weight: 500; }
+.stats .lbl { color: var(--text-3); margin-right: 6px; }
+tr.line td { padding: 0 12px; height: 32px; border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent); vertical-align: middle; }
+tr.line:hover td { background: var(--hover-wash); }
+tr.line.sel td { background: var(--sel-wash); }
+tr.line.sel td:first-child { box-shadow: inset 2px 0 0 var(--sel); }
+td.qty { color: var(--text-2); }
+td.qty b { color: var(--text-1); font-weight: 500; }
+td.len { font-size: 15px; font-weight: 600; letter-spacing: 0.01em; }
+td.len .sub2 { display: block; font-size: 11px; line-height: 12px; font-weight: 400; color: var(--text-3); margin-top: -2px; }
+.ends { display: flex; align-items: center; gap: 10px; color: var(--text-2); }
+.ends svg { flex: none; }
+.ends .ang { color: var(--text-1); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: var(--r-ctl); background: var(--bg-raised); color: var(--text-1); font-size: 12px; font-weight: 500; border: 1px solid transparent; }
+.chip.more { color: var(--text-2); font-weight: 400; background: transparent; border-color: var(--line); }
+.chip.sel { background: var(--sel); color: var(--sel-ink); }
+.op { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px 0 6px; border-radius: 10px; border: 1px solid var(--line-strong); color: var(--text-1); font-size: 12px; }
+.op .x { color: var(--text-3); }
+/* biome-ignore lint/style/noDescendingSpecificity: a static mockup; the order reads top to bottom */
+.stockrow td { padding: 6px 12px 10px; border-bottom: 1px solid var(--line); }
+.stock { display: flex; align-items: center; gap: 14px; color: var(--text-2); font-size: 12px; }
+.bar6000 { display: flex; height: 14px; width: 640px; border: 1px solid var(--line-strong); border-radius: 2px; overflow: hidden; background: var(--bg-well); }
+.bar6000 .pc { height: 100%; border-right: 1px solid var(--bg-panel); }
+.bar6000 .off { height: 100%; background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--text-3) 45%, transparent) 4px 5px); }
+
+/* Order */
+.summary { display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 0 36px; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.verdict { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 10px; border-radius: var(--r-card); background: var(--blocked-wash); color: var(--blocked); font-weight: 600; font-size: 15px; }
+.verdict .g { width: 20px; height: 20px; }
+.why { color: var(--text-2); }
+/* biome-ignore lint/style/noDescendingSpecificity: a static mockup; the order reads top to bottom */
+.why b { color: var(--text-1); font-weight: 500; }
+.fig .lbl { display: block; color: var(--text-3); font-size: 12px; }
+.fig .val { font-size: 24px; line-height: 28px; font-weight: 600; }
+.fig .val .cur { font-size: 13px; font-weight: 500; color: var(--text-2); margin-left: 4px; }
+.fig .rng { font-size: 15px; line-height: 28px; color: var(--text-2); }
+.asof { display: flex; flex-direction: column; color: var(--text-3); font-size: 12px; }
+.asof input { margin-top: 2px; font: inherit; color: var(--text-1); background: var(--bg-well); border: 1px solid var(--line-strong); border-radius: var(--r-ctl); padding: 2px 6px; width: 130px; }
+
+.supplier { border-bottom: 1px solid var(--line); }
+.shead { display: grid; grid-template-columns: 20px 260px 1fr 200px 220px; gap: 12px; align-items: center; padding: 10px 20px; }
+.shead .who { font-weight: 600; font-size: 15px; }
+.state { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+.state.blocked { color: var(--blocked); } .state.ready { color: var(--ready); }
+.shead .tot { text-align: right; font-size: 15px; font-weight: 600; }
+.shead .tot .cur { font-size: 12px; color: var(--text-3); font-weight: 400; margin-left: 4px; }
+.shead .rangebar { display: flex; align-items: center; gap: 8px; justify-content: flex-end; color: var(--text-3); font-size: 12px; }
+.whisker { position: relative; width: 84px; height: 10px; }
+.whisker::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: var(--line-strong); }
+.whisker i { position: absolute; top: 0; width: 2px; height: 10px; background: var(--text-1); }
+.caret { color: var(--text-3); }
+.supplier.blocked .shead { box-shadow: inset 3px 0 0 var(--blocked); }
+.supplier.ready .shead { box-shadow: inset 3px 0 0 var(--ready); }
+.todo { margin: 0 20px 10px 52px; padding: 8px 0 4px; display: grid; gap: 6px; }
+.todo .item { display: grid; grid-template-columns: 18px 150px 1fr auto; gap: 8px; align-items: center; }
+.todo .rule { color: var(--text-3); font-size: 12px; }
+.todo .act { color: var(--act); font-weight: 500; }
+table.ord { width: calc(100% - 72px); margin: 0 20px 12px 52px; border-collapse: collapse; table-layout: fixed; }
+/* biome-ignore lint/style/noDescendingSpecificity: a static mockup; the order reads top to bottom */
+table.ord th { color: var(--text-2); font-weight: 500; font-size: 12px; text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--bg-raised); }
+/* biome-ignore lint/style/noDescendingSpecificity: a static mockup; the order reads top to bottom */
+table.ord th.n { text-align: right; }
+/* biome-ignore lint/style/noDescendingSpecificity: a static mockup; the order reads top to bottom */
+table.ord td { padding: 0 10px; height: 30px; border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent); vertical-align: middle; }
+table.ord td .sub2 { color: var(--text-3); font-size: 12px; margin-left: 6px; }
+.prov { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--warn); }
+.prov.src { color: var(--text-3); }
+.morelines { margin: -4px 20px 14px 62px; color: var(--act); font-weight: 500; }
+.warnline { margin: 0 20px 10px 52px; display: flex; gap: 8px; align-items: center; color: var(--text-2); }
+
+/* States */
+.states { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; width: 1552px; }
+.panel { background: var(--bg-panel); border: 1px solid var(--line); border-radius: var(--r-card); padding: 18px 20px; min-height: 250px; }
+.panel h3 { margin: 0 0 4px; font-size: 15px; line-height: 20px; font-weight: 600; }
+.panel p { margin: 0 0 10px; color: var(--text-2); max-width: 46ch; }
+.empty { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 8px; }
+.empty .big { width: 28px; height: 28px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: var(--r-ctl); border: 1px solid var(--line-strong); color: var(--text-1); background: var(--bg-raised); font-weight: 500; }
+.btn.primary { background: var(--act-fill); border-color: var(--act-fill); color: #fff; }
+.btn .k { color: var(--text-3); font-weight: 400; margin-left: 4px; }
+.btn.primary .k { color: rgb(255 255 255 / 0.75); }
+.row { display: flex; gap: 8px; margin-top: 6px; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; margin-top: 12px; }
+/* biome-ignore lint/style/noDescendingSpecificity: a static mockup; the order reads top to bottom */
+.kv .k { color: var(--text-2); }
+.kv .v { text-align: right; font-weight: 500; }
+.kv .v.big { font-size: 18px; line-height: 24px; font-weight: 600; }
+.mini { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.skeleton { display: grid; gap: 8px; margin-top: 12px; }
+.skeleton i { display: block; height: 12px; border-radius: 2px; background: linear-gradient(90deg, var(--bg-raised), color-mix(in srgb, var(--bg-raised) 60%, var(--line-strong)), var(--bg-raised)); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="g-ready" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.3l2 2 4-4.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="g-blocked" viewBox="0 0 16 16"><path d="M5.3 1.5h5.4l3.8 3.8v5.4l-3.8 3.8H5.3l-3.8-3.8V5.3z" fill="currentColor"/><rect x="4.4" y="7.1" width="7.2" height="1.8" rx=".4" fill="var(--bg-panel)"/></symbol>
+  <symbol id="g-warn" viewBox="0 0 16 16"><path d="M8 1.8l6.6 11.6H1.4z" fill="currentColor"/><rect x="7.15" y="5.6" width="1.7" height="4.2" rx=".5" fill="var(--bg-panel)"/><circle cx="8" cy="11.5" r=".95" fill="var(--bg-panel)"/></symbol>
+  <symbol id="g-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="7" width="1.6" height="4.6" rx=".5" fill="currentColor"/><circle cx="8" cy="4.9" r=".95" fill="currentColor"/></symbol>
+  <symbol id="g-drill" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v8M4 8h8" stroke="currentColor" stroke-width="1"/></symbol>
+  <symbol id="g-tap" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="1.6 1.2"/></symbol>
+</svg>
+
+<p class="caption">Cut list: one fixed column grid for every group; the cut length is the row's figure; ends drawn, not only written; machining as counted operations; bars as chips that select and hover-highlight in the 3D view.</p>
+<section class="frame" id="cut">
+  <div class="tabs">
+    <span class="tab on">Cut list <span class="count">47 pieces</span></span>
+    <span class="tab">Machining <span class="count">3</span></span>
+    <span class="tab">BOM <span class="count">24 lines</span></span>
+    <span class="tab">Order <span class="flag blocked"><svg aria-hidden="true" class="g blocked"><use href="#g-blocked"/></svg>6 to resolve</span></span>
+    <span class="tab">Costs <span class="count">6&#8239;155 BRL</span></span>
+    <span class="tab">Checks <span class="flag ready"><svg aria-hidden="true" class="g ready"><use href="#g-ready"/></svg>pass</span></span>
+    <span class="tab">Open items <span class="count">2</span></span>
+    <span class="tab">Params</span>
+    <span class="tab">Decisions</span>
+    <span class="tab">Log</span>
+    <span class="spacer"></span>
+    <span class="meta">Revision 0, unsaved</span>
+  </div>
+  <div class="sheet">
+    <table class="cut">
+      <colgroup><col class="c-qty"><col class="c-len"><col class="c-ends"><col class="c-mach"><col class="c-bars"></colgroup>
+      <thead><tr><th class="n">Qty</th><th class="n">Cut length, mm</th><th>Ends a, b</th><th>Machining</th><th>Bars</th></tr></thead>
+      <tbody>
+        <tr class="group"><td colspan="5"><div class="ghead">
+          <span class="sw" style="background:var(--i1)"></span><span class="code">TS40</span><span class="name">Profile 40×40</span><span class="opt">anodised</span>
+          <div class="stats"><span><span class="lbl">Pieces</span><b>27</b></span><span><span class="lbl">Total</span><b>14&#8239;433.61</b><span class="unit">mm</span></span><span><span class="lbl">Supply</span><b>cut to order</b> by test-vendor</span></div>
+        </div></td></tr>
+        <tr class="line"><td class="n qty"><b>2</b> ×</td><td class="n len">1&#8239;120<span class="dec">.00</span></td><td><div class="ends"><svg aria-hidden="true" width="64" height="14" viewBox="0 0 64 14"><rect x="1" y="2" width="62" height="10" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>square, square</div></td><td></td><td><div class="chips"><span class="chip">b9</span><span class="chip">b10</span></div></td></tr>
+        <tr class="line"><td class="n qty"><b>4</b> ×</td><td class="n len">860<span class="dec">.00</span></td><td><div class="ends"><svg aria-hidden="true" width="64" height="14" viewBox="0 0 64 14"><rect x="1" y="2" width="62" height="10" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>square, square</div></td><td></td><td><div class="chips"><span class="chip">b1</span><span class="chip">b2</span><span class="chip">b3</span><span class="chip">b4</span></div></td></tr>
+        <tr class="line"><td class="n qty"><b>1</b> ×</td><td class="n len">660<span class="dec">.00</span></td><td><div class="ends"><svg aria-hidden="true" width="64" height="14" viewBox="0 0 64 14"><rect x="1" y="2" width="62" height="10" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="1" cy="7" r="2.4" fill="var(--text-1)"/></svg>square, square</div></td><td><span class="op"><svg aria-hidden="true" class="g"><use href="#g-tap"/></svg>tap M8 × 20 deep <span class="x">in end a</span></span></td><td><div class="chips"><span class="chip">b11</span></div></td></tr>
+        <tr class="line sel"><td class="n qty"><b>4</b> ×</td><td class="n len">569.88<span class="sub2">ordered 570</span></td><td><div class="ends"><svg aria-hidden="true" width="64" height="14" viewBox="0 0 64 14"><rect x="1" y="2" width="62" height="10" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>square, square</div></td><td></td><td><div class="chips"><span class="chip sel">b14</span><span class="chip">b15</span><span class="chip">b16</span><span class="chip">b17</span></div></td></tr>
+        <tr class="line"><td class="n qty"><b>6</b> ×</td><td class="n len">520<span class="dec">.00</span></td><td><div class="ends"><svg aria-hidden="true" width="64" height="14" viewBox="0 0 64 14"><rect x="1" y="2" width="62" height="10" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>square, square</div></td><td></td><td><div class="chips"><span class="chip">b26</span><span class="chip">b26@1</span><span class="chip">b26@2</span><span class="chip">b26@4</span><span class="chip more">+2</span></div></td></tr>
+        <tr class="line"><td class="n qty"><b>1</b> ×</td><td class="n len">460<span class="dec">.00</span></td><td><div class="ends"><svg aria-hidden="true" width="64" height="14" viewBox="0 0 64 14"><rect x="1" y="2" width="62" height="10" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="1" cy="7" r="2.4" fill="var(--text-1)"/></svg>square, square</div></td><td><span class="op"><svg aria-hidden="true" class="g"><use href="#g-tap"/></svg>tap M8 × 20 deep <span class="x">in end a</span></span></td><td><div class="chips"><span class="chip">b12</span></div></td></tr>
+        <tr class="line"><td class="n qty"><b>1</b> ×</td><td class="n len">291.53<span class="sub2">centre 271.53</span></td><td><div class="ends"><svg aria-hidden="true" width="64" height="14" viewBox="0 0 64 14"><path d="M1 2h52l10 10H1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="0"/><path d="M53 2l10 10" stroke="var(--text-1)" stroke-width="2.4" stroke-dasharray="2 1.5"/></svg><span>square, <span class="ang">45° bevel</span></span></div></td><td></td><td><div class="chips"><span class="chip">b32</span></div></td></tr>
+        <tr class="line"><td class="n qty"><b>4</b> ×</td><td class="n len">153.14<span class="sub2">centre 113.14</span></td><td><div class="ends"><svg aria-hidden="true" width="64" height="14" viewBox="0 0 64 14"><path d="M11 2h42l10 10H1z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M1 12l10-10M53 2l10 10" stroke="var(--text-1)" stroke-width="2.4"/></svg><span><span class="ang">45° mitre</span>, <span class="ang">45° mitre</span></span></div></td><td></td><td><div class="chips"><span class="chip">b27</span><span class="chip">b28</span><span class="chip">b29</span><span class="chip">b30</span></div></td></tr>
+        <tr class="group"><td colspan="5"><div class="ghead">
+          <span class="sw" style="background:var(--i2)"></span><span class="code">FB-50x10</span><span class="name">Flat bar 50×10</span><span class="opt">steel</span>
+          <div class="stats"><span><span class="lbl">Pieces</span><b>5</b></span><span><span class="lbl">Total</span><b>3&#8239;360.00</b><span class="unit">mm</span></span><span><span class="lbl">Supply</span><b>1 stock bar</b> from test-steel</span></div>
+        </div></td></tr>
+        <tr class="line"><td class="n qty"><b>2</b> ×</td><td class="n len">1&#8239;120<span class="dec">.00</span></td><td><div class="ends"><svg aria-hidden="true" width="64" height="14" viewBox="0 0 64 14"><rect x="1" y="2" width="62" height="10" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>square, square</div></td><td></td><td><div class="chips"><span class="chip">b24</span><span class="chip">b25</span></div></td></tr>
+        <tr class="line"><td class="n qty"><b>2</b> ×</td><td class="n len">300<span class="dec">.00</span></td><td><div class="ends"><svg aria-hidden="true" width="64" height="14" viewBox="0 0 64 14"><rect x="1" y="2" width="62" height="10" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="22" cy="5" r="1.6" fill="currentColor"/><circle cx="22" cy="9" r="1.6" fill="currentColor"/><circle cx="43" cy="5" r="1.6" fill="currentColor"/><circle cx="43" cy="9" r="1.6" fill="currentColor"/></svg>square, square</div></td><td><span class="op"><svg aria-hidden="true" class="g"><use href="#g-drill"/></svg>4 × Ø11 <span class="x">face −y, at 100 and 200 from a</span></span></td><td><div class="chips"><span class="chip">b20</span><span class="chip">b23</span></div></td></tr>
+        <tr class="stockrow"><td></td><td colspan="4"><div class="stock">
+          <span>Stock bar 6&#8239;000</span>
+          <div class="bar6000" title="pieces in cutting order, kerf 3 mm">
+            <span class="pc" style="width:18.7%;background:color-mix(in srgb,var(--i2) 70%,transparent)"></span>
+            <span class="pc" style="width:18.7%;background:color-mix(in srgb,var(--i2) 70%,transparent)"></span>
+            <span class="pc" style="width:8.7%;background:color-mix(in srgb,var(--i2) 70%,transparent)"></span>
+            <span class="pc" style="width:5%;background:color-mix(in srgb,var(--i2) 70%,transparent)"></span>
+            <span class="pc" style="width:5%;background:color-mix(in srgb,var(--i2) 70%,transparent)"></span>
+            <span class="off" style="width:43.9%"></span>
+          </div>
+          <span>used 3&#8239;382, offcut 2&#8239;618 mm</span>
+        </div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<p class="caption">Order: the verdict first, in words and a shape; what blocks it, with a way to act; READY suppliers fold to one line; the likely price is the figure, the range a whisker.</p>
+<section class="frame" id="order">
+  <div class="tabs">
+    <span class="tab">Cut list <span class="count">47 pieces</span></span>
+    <span class="tab">Machining <span class="count">3</span></span>
+    <span class="tab">BOM <span class="count">24 lines</span></span>
+    <span class="tab on">Order <span class="flag blocked"><svg aria-hidden="true" class="g blocked"><use href="#g-blocked"/></svg>6 to resolve</span></span>
+    <span class="tab">Costs <span class="count">6&#8239;155 BRL</span></span>
+    <span class="tab">Checks <span class="flag ready"><svg aria-hidden="true" class="g ready"><use href="#g-ready"/></svg>pass</span></span>
+    <span class="tab">Open items <span class="count">2</span></span>
+    <span class="tab">Params</span>
+    <span class="tab">Decisions</span>
+    <span class="tab">Log</span>
+    <span class="spacer"></span>
+    <span class="meta">Revision 0, unsaved</span>
+  </div>
+  <div class="summary">
+    <div class="verdict"><svg aria-hidden="true" class="g"><use href="#g-blocked"/></svg>Not ready to order</div>
+    <div class="why"><b>4 of 7 suppliers</b> are blocked by <b>6 things to resolve</b>. 3 suppliers are ready.</div>
+    <div class="fig"><span class="lbl">Order lines, likely</span><span class="val">4&#8239;600.77<span class="cur">BRL</span></span></div>
+    <div class="fig"><span class="lbl">Range</span><span class="rng">4&#8239;226.90 to 5&#8239;412.42</span></div>
+    <label class="asof">Prices as of<input value="27 Nov 2026"></label>
+  </div>
+
+  <div class="supplier blocked">
+    <div class="shead"><span class="caret">▾</span><span class="who">test-vendor</span><span class="state blocked"><svg aria-hidden="true" class="g blocked"><use href="#g-blocked"/></svg>Blocked, 1 to resolve</span><span class="tot">3&#8239;369.77<span class="cur">BRL</span></span><span class="rangebar">3&#8239;167.00<span class="whisker"><i style="left:27%"></i></span>3&#8239;868.67</span></div>
+    <div class="todo">
+      <div class="item"><svg aria-hidden="true" class="g blocked"><use href="#g-blocked"/></svg><span class="rule">Estimated price</span><span>Power supply 24 V (PSU-24V) has an estimated price, not a quote.</span><span class="act">Add the quoted price</span></div>
+    </div>
+    <table class="ord">
+      <colgroup><col style="width:34px"><col style="width:230px"><col><col style="width:150px"><col style="width:130px"><col style="width:120px"><col style="width:150px"><col style="width:230px"></colgroup>
+      <thead><tr><th></th><th>Item</th><th>Supplied as</th><th class="n">Quantity</th><th class="n">Unit price</th><th class="n">Likely, BRL</th><th>Price source</th><th>For</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sw" style="background:var(--i1)"></span></td><td><b style="font-weight:500">TS40</b><span class="sub2">anodised</span></td><td class="t2">cut to 860 mm, SKU TS40-c7</td><td class="n">4 pieces</td><td class="n">108.79</td><td class="n" style="font-weight:600">435.16</td><td><span class="prov src">quoted 26 Nov</span></td><td><div class="chips"><span class="chip">b1</span><span class="chip">b2</span><span class="chip">b3</span><span class="chip">b4</span></div></td></tr>
+        <tr><td><span class="sw" style="background:var(--i6)"></span></td><td><b style="font-weight:500">TS4080</b><span class="sub2">anodised</span></td><td class="t2">cut to 1&#8239;200 mm, SKU TS4080-c7</td><td class="n">2 pieces</td><td class="n">277.20</td><td class="n" style="font-weight:600">554.40</td><td><span class="prov src">quoted 26 Nov</span></td><td><div class="chips"><span class="chip">b5</span><span class="chip">b6</span></div></td></tr>
+        <tr><td><span class="sw" style="background:var(--i3)"></span></td><td><b style="font-weight:500">CAR20</b><span class="sub2">flanged</span></td><td class="t2">SKU CAR20-1</td><td class="n">3 units</td><td class="n">102.13</td><td class="n" style="font-weight:600">306.39</td><td><span class="prov src">quoted 26 Nov</span></td><td><div class="chips"><span class="chip">p1</span><span class="chip">p1@1</span><span class="chip">p1@2</span></div></td></tr>
+        <tr><td><span class="sw" style="background:var(--i0)"></span></td><td><b style="font-weight:500">PSU-24V</b></td><td class="t2">SKU PSU-24V</td><td class="n">1 unit</td><td class="n">99.00</td><td class="n" style="font-weight:600">99.00</td><td><span class="prov"><svg aria-hidden="true" class="g warn"><use href="#g-warn"/></svg>estimate</span></td><td><div class="chips"><span class="chip">p5</span></div></td></tr>
+      </tbody>
+    </table>
+    <div class="morelines">Show the other 15 lines</div>
+  </div>
+
+  <div class="supplier blocked">
+    <div class="shead"><span class="caret">▾</span><span class="who">local</span><span class="state blocked"><svg aria-hidden="true" class="g blocked"><use href="#g-blocked"/></svg>Blocked, 2 to resolve</span><span class="tot t3" style="font-weight:400">no price yet</span><span class="rangebar"></span></div>
+    <div class="todo">
+      <div class="item"><svg aria-hidden="true" class="g blocked"><use href="#g-blocked"/></svg><span class="rule">Open item O2</span><span>Price the sensor bracket with the local shop.</span><span class="act">Open O2</span></div>
+      <div class="item"><svg aria-hidden="true" class="g blocked"><use href="#g-blocked"/></svg><span class="rule">No price</span><span>Sensor bracket (angle-a) has no price.</span><span class="act">Add a price</span></div>
+    </div>
+  </div>
+
+  <div class="supplier ready">
+    <div class="shead"><span class="caret">▸</span><span class="who">test-geo-vendor</span><span class="state ready"><svg aria-hidden="true" class="g ready"><use href="#g-ready"/></svg>Ready</span><span class="tot">325.00<span class="cur">BRL</span></span><span class="rangebar"></span></div>
+    <div class="warnline"><svg aria-hidden="true" class="g warn"><use href="#g-warn"/></svg>The M10 nut price was read 57 days ago (1 Oct 2026).</div>
+  </div>
+  <div class="supplier ready">
+    <div class="shead"><span class="caret">▸</span><span class="who">test-steel</span><span class="state ready"><svg aria-hidden="true" class="g ready"><use href="#g-ready"/></svg>Ready</span><span class="tot">411.00<span class="cur">BRL</span></span><span class="rangebar">369.90<span class="whisker"><i style="left:29%"></i></span>513.75</span></div>
+  </div>
+</section>
+
+<p class="caption">Empty and quiet states: a passing check is good news, not a blank tab; no selection shows the project; a slow answer shows its shape.</p>
+<section class="states" id="states">
+  <div class="panel">
+    <h3>Checks</h3>
+    <div class="empty">
+      <svg aria-hidden="true" class="g ready big"><use href="#g-ready"/></svg>
+      <h3>Every check passes</h3>
+      <p>39 bars, 10 parts and 33 connections derive without an error or a warning at revision 0.</p>
+      <div class="row"><span class="btn">Add a check</span></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Cart (synthetic)</h3>
+    <p>Nothing selected. Click a bar, Shift-drag a box, or pick one in the tree.</p>
+    <div class="kv">
+      <span class="k">Bars</span><span class="v">39</span>
+      <span class="k">Parts</span><span class="v">10</span>
+      <span class="k">Mass</span><span class="v">60.642<span class="unit">kg</span></span>
+      <span class="k">Likely cost with labour</span><span class="v big">6&#8239;155.35<span class="unit">BRL</span></span>
+      <span class="k">Order</span><span class="v"><span class="state blocked"><svg aria-hidden="true" class="g blocked"><use href="#g-blocked"/></svg>6 to resolve</span></span>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Cut list</h3>
+    <div class="empty">
+      <p>Nothing to cut yet. Draw a bar, or set a profile from the catalog as the palette.</p>
+      <div class="row"><span class="btn primary">Draw a bar <span class="k">B</span></span><span class="btn">Open the catalog</span></div>
+    </div>
+    <h3 style="margin-top:22px">Order <span class="t3" style="font-weight:400;font-size:13px">pricing revision 4</span></h3>
+    <div class="skeleton"><i style="width:62%"></i><i style="width:88%"></i><i style="width:74%"></i></div>
+  </div>
+</section>
+<script>
+  if (new URLSearchParams(location.search).get("theme") === "light") document.documentElement.dataset.theme = "light";
+</script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!doctype html>
+<!--
+  AluKit visual-design proposal: the token sheet (colour with contrast ratios, type, spacing,
+  status glyphs, the 3D palette, the tool icons). Values are the ones docs/ux/visual-design.md §4
+  specifies. A static mockup, not product code.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AluKit tokens</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; src: url("https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-sans@5.1.1/files/ibm-plex-sans-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; src: url("https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-sans@5.1.1/files/ibm-plex-sans-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; src: url("https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-sans@5.1.1/files/ibm-plex-sans-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 400; src: url("https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5.1.1/files/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); }
+:root {
+  --bg-app: #181b20; --bg-panel: #1f2329; --bg-raised: #272c33; --line: #343a42; --line-strong: #4b545e;
+  --text-1: #e8ecf0; --text-2: #aeb7c1; --text-3: #8c96a1;
+  --sel: #ffa133; --act: #74b4ff; --ready: #4fcb8d; --blocked: #ff7a6e; --warn: #ebc84a; --info: #8db8f2; --tool: #3cc8e6;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg-app); color: var(--text-1); }
+body { font: 400 13px/18px "IBM Plex Sans", system-ui, sans-serif; padding: 28px; width: 1600px; }
+h2 { font-size: 18px; line-height: 24px; font-weight: 600; margin: 0 0 12px; }
+h3 { font-size: 13px; font-weight: 600; margin: 0 0 8px; color: var(--text-2); }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.card { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; }
+.light { background: #ffffff; border-color: #dadfe5; color: #1a1f26; }
+.light h3 { color: #48515c; }
+table { border-collapse: collapse; width: 100%; }
+td, th { padding: 5px 8px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-weight: 500; font-size: 12px; color: var(--text-2); }
+.light td, .light th { border-bottom-color: #dadfe5; }
+.light th { color: #48515c; }
+td.n, th.n { text-align: right; }
+.sw { display: inline-block; width: 28px; height: 18px; border-radius: 3px; vertical-align: middle; border: 1px solid rgb(127 127 127 / 0.35); }
+.hex { font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+.ok { color: var(--ready); } .light .ok { color: #1b7a4b; }
+.dim { color: var(--text-3); } .light .dim { color: #626c77; }
+.g { width: 16px; height: 16px; display: inline-block; vertical-align: -3px; }
+.status { display: inline-flex; gap: 6px; align-items: center; font-weight: 500; margin-right: 18px; }
+.scale td { border: none; padding: 4px 8px; }
+.spec { color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.space { display: flex; gap: 14px; align-items: flex-end; }
+.space div { background: var(--act); opacity: .75; height: 14px; }
+.space span { display: block; font-size: 12px; color: var(--text-3); margin-top: 4px; }
+.toolbar { display: flex; gap: 10px; align-items: center; padding: 6px; background: rgb(31 35 41 / 0.94); border: 1px solid var(--line); border-radius: 6px; width: max-content; }
+.seg { display: flex; gap: 2px; padding: 2px; background: var(--bg-app); border-radius: 5px; }
+.tb { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 8px; border-radius: 4px; color: var(--text-2); font-weight: 500; }
+.tb svg { width: 16px; height: 16px; color: var(--text-1); }
+.tb.on { background: var(--bg-raised); color: var(--text-1); box-shadow: inset 0 -2px 0 var(--text-1); }
+.tb .k { color: var(--text-3); font-weight: 400; font-size: 12px; }
+.tb.icon { padding: 0 6px; }
+.chip3d { display: inline-flex; align-items: center; gap: 8px; margin: 0 16px 8px 0; }
+.chip3d i { width: 22px; height: 22px; border-radius: 3px; display: inline-block; }
+.note { color: var(--text-3); font-size: 12px; margin: 8px 0 0; max-width: 90ch; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="g-ready" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.3l2 2 4-4.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="g-blocked" viewBox="0 0 16 16"><path d="M5.3 1.5h5.4l3.8 3.8v5.4l-3.8 3.8H5.3l-3.8-3.8V5.3z" fill="currentColor"/><rect x="4.4" y="7.1" width="7.2" height="1.8" rx=".4" fill="#1f2329"/></symbol>
+  <symbol id="g-warn" viewBox="0 0 16 16"><path d="M8 1.8l6.6 11.6H1.4z" fill="currentColor"/><rect x="7.15" y="5.6" width="1.7" height="4.2" rx=".5" fill="#1f2329"/><circle cx="8" cy="11.5" r=".95" fill="#1f2329"/></symbol>
+  <symbol id="g-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7.2" y="7" width="1.6" height="4.6" rx=".5" fill="currentColor"/><circle cx="8" cy="4.9" r=".95" fill="currentColor"/></symbol>
+  <!-- Tool icons: 16 px grid, 1.5 px strokes, square caps, drawn from the domain -->
+  <symbol id="i-select" viewBox="0 0 16 16"><path d="M3 2l9.5 6.2-4.2.9 2.4 4.6-1.6.8-2.4-4.6L3.5 13z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-draw" viewBox="0 0 16 16"><path d="M2.5 13.5l9-9" stroke="currentColor" stroke-width="3.2"/><rect x="1" y="12" width="3" height="3" fill="currentColor"/><path d="M11 2h3v3" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="i-connect" viewBox="0 0 16 16"><path d="M1.5 4.5h13" stroke="currentColor" stroke-width="3"/><path d="M8 6.5v8" stroke="currentColor" stroke-width="3"/><path d="M5 9.5h6" stroke="currentColor" stroke-width="1" opacity=".6"/></symbol>
+  <symbol id="i-place" viewBox="0 0 16 16"><path d="M1.5 12.5h13" stroke="currentColor" stroke-width="2.6"/><path d="M5 10.5V4.5h1.6v4.4H11v1.6z" fill="currentColor"/></symbol>
+  <symbol id="i-pattern" viewBox="0 0 16 16"><path d="M1.5 12.5h13" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="6" width="3" height="5" fill="currentColor"/><rect x="6.5" y="6" width="3" height="5" fill="currentColor" opacity=".7"/><rect x="11" y="6" width="3" height="5" fill="currentColor" opacity=".45"/></symbol>
+  <symbol id="i-measure" viewBox="0 0 16 16"><path d="M2 4v8M14 4v8" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 8h11" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 8l2.5-2M2.5 8l2.5 2M13.5 8l-2.5-2M13.5 8l-2.5 2" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="i-iso" viewBox="0 0 16 16"><path d="M8 1.8l5.6 3.1v6.2L8 14.2l-5.6-3.1V4.9z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 8l5.6-3.1M8 8v6.2M8 8L2.4 4.9" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.8l5.6 3.1L8 8 2.4 4.9z" fill="currentColor" opacity=".45"/></symbol>
+  <symbol id="i-top" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" fill="currentColor" opacity=".45" stroke="currentColor" stroke-width="1.2"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1"/></symbol>
+  <symbol id="i-front" viewBox="0 0 16 16"><rect x="2.5" y="5.5" width="11" height="8" fill="currentColor" opacity=".45" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 5.5l2-3h11l-2 3M13.5 13.5l2-3v-8" fill="none" stroke="currentColor" stroke-width="1"/></symbol>
+  <symbol id="i-side" viewBox="0 0 16 16"><path d="M9 3.5l4.5-2v11L9 14.5z" fill="currentColor" opacity=".45" stroke="currentColor" stroke-width="1.2"/><path d="M9 3.5H1.5v11H9" fill="none" stroke="currentColor" stroke-width="1"/></symbol>
+  <symbol id="i-ortho" viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M3 8h10M8 3v10" stroke="currentColor" stroke-width="0.8" opacity=".6"/></symbol>
+  <symbol id="i-fit" viewBox="0 0 16 16"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="6" y="6" width="4" height="4" fill="currentColor"/></symbol>
+  <symbol id="i-section" viewBox="0 0 16 16"><path d="M2 5l6-3 6 3v6l-6 3-6-3z" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3.3v9.2L10.5 15V5.8z" fill="currentColor" opacity=".55"/></symbol>
+  <symbol id="i-item" viewBox="0 0 16 16"><rect x="1.5" y="2" width="4" height="12" fill="#86aee0"/><rect x="6" y="2" width="4" height="12" fill="#93c47d"/><rect x="10.5" y="2" width="4" height="12" fill="#e08f8f"/></symbol>
+</svg>
+
+<div class="grid">
+  <section class="card">
+    <h2>Colour, dark (default)</h2>
+    <table>
+      <thead><tr><th></th><th>Token</th><th>Hex</th><th>Used for</th><th class="n">On panel</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sw" style="background:#181b20"></span></td><td>bg-app</td><td class="hex">#181B20</td><td>top bar, tab rails, behind panels</td><td class="n dim">surface</td></tr>
+        <tr><td><span class="sw" style="background:#1f2329"></span></td><td>bg-panel</td><td class="hex">#1F2329</td><td>tree, properties, drawer</td><td class="n dim">surface</td></tr>
+        <tr><td><span class="sw" style="background:#272c33"></span></td><td>bg-raised</td><td class="hex">#272C33</td><td>table heads, chips, popovers</td><td class="n dim">surface</td></tr>
+        <tr><td><span class="sw" style="background:#343a42"></span></td><td>line</td><td class="hex">#343A42</td><td>hairlines between rows</td><td class="n dim">1.4 decor</td></tr>
+        <tr><td><span class="sw" style="background:#e8ecf0"></span></td><td>text-1</td><td class="hex">#E8ECF0</td><td>values, names</td><td class="n ok">13.3 AAA</td></tr>
+        <tr><td><span class="sw" style="background:#aeb7c1"></span></td><td>text-2</td><td class="hex">#AEB7C1</td><td>labels, headers</td><td class="n ok">7.8 AAA</td></tr>
+        <tr><td><span class="sw" style="background:#8c96a1"></span></td><td>text-3</td><td class="hex">#8C96A1</td><td>units, decimals, hints</td><td class="n ok">5.3 AA</td></tr>
+        <tr><td><span class="sw" style="background:#ffa133"></span></td><td>sel</td><td class="hex">#FFA133</td><td>the selection, everywhere, and nothing else</td><td class="n ok">7.8 AAA</td></tr>
+        <tr><td><span class="sw" style="background:#74b4ff"></span></td><td>act</td><td class="hex">#74B4FF</td><td>links, focus ring; fill #2E6BC6 with white 5.2</td><td class="n ok">7.3 AAA</td></tr>
+        <tr><td><span class="sw" style="background:#3cc8e6"></span></td><td>tool</td><td class="hex">#3CC8E6</td><td>what a tool is building: preview, picks, guides</td><td class="n ok">8.0 AAA</td></tr>
+        <tr><td><span class="sw" style="background:#4fcb8d"></span></td><td>ready</td><td class="hex">#4FCB8D</td><td>READY, checks pass</td><td class="n ok">7.7 AAA</td></tr>
+        <tr><td><span class="sw" style="background:#ff7a6e"></span></td><td>blocked</td><td class="hex">#FF7A6E</td><td>BLOCKED, errors</td><td class="n ok">6.2 AA</td></tr>
+        <tr><td><span class="sw" style="background:#ebc84a"></span></td><td>warn</td><td class="hex">#EBC84A</td><td>warnings, estimates, stale prices</td><td class="n ok">9.7 AAA</td></tr>
+        <tr><td><span class="sw" style="background:#8db8f2"></span></td><td>info</td><td class="hex">#8DB8F2</td><td>notes</td><td class="n ok">7.7 AAA</td></tr>
+      </tbody>
+    </table>
+    <p style="margin:14px 0 0">
+      <span class="status" style="color:var(--ready)"><svg aria-hidden="true" class="g"><use href="#g-ready"/></svg>Ready</span>
+      <span class="status" style="color:var(--blocked)"><svg aria-hidden="true" class="g"><use href="#g-blocked"/></svg>Blocked</span>
+      <span class="status" style="color:var(--warn)"><svg aria-hidden="true" class="g"><use href="#g-warn"/></svg>Warning</span>
+      <span class="status" style="color:var(--info)"><svg aria-hidden="true" class="g"><use href="#g-info"/></svg>Note</span>
+    </p>
+    <p class="note">Each status has its own shape (circle and tick, octagon, triangle, circle and i) and its word, so it reads in greyscale and to people with a red-green colour-vision deficiency. The selection's amber and the warning's yellow differ in hue and never share a shape.</p>
+  </section>
+
+  <section class="card light">
+    <h2>Colour, light</h2>
+    <table>
+      <thead><tr><th></th><th>Token</th><th>Hex</th><th>Used for</th><th class="n">On white</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sw" style="background:#edf0f3"></span></td><td>bg-app</td><td class="hex">#EDF0F3</td><td>top bar, tab rails</td><td class="n dim">surface</td></tr>
+        <tr><td><span class="sw" style="background:#ffffff"></span></td><td>bg-panel</td><td class="hex">#FFFFFF</td><td>panels</td><td class="n dim">surface</td></tr>
+        <tr><td><span class="sw" style="background:#f3f5f8"></span></td><td>bg-raised</td><td class="hex">#F3F5F8</td><td>table heads, chips</td><td class="n dim">surface</td></tr>
+        <tr><td><span class="sw" style="background:#1a1f26"></span></td><td>text-1</td><td class="hex">#1A1F26</td><td>values</td><td class="n ok">16.6 AAA</td></tr>
+        <tr><td><span class="sw" style="background:#48515c"></span></td><td>text-2</td><td class="hex">#48515C</td><td>labels</td><td class="n ok">8.1 AAA</td></tr>
+        <tr><td><span class="sw" style="background:#626c77"></span></td><td>text-3</td><td class="hex">#626C77</td><td>units, hints</td><td class="n ok">5.3 AA</td></tr>
+        <tr><td><span class="sw" style="background:#e08417"></span></td><td>sel / sel-text</td><td class="hex">#E08417 / #9A4F00</td><td>fill / text and borders</td><td class="n ok">2.8 fill, 6.0 AA</td></tr>
+        <tr><td><span class="sw" style="background:#1f63c6"></span></td><td>act</td><td class="hex">#1F63C6</td><td>links, focus, primary</td><td class="n ok">5.7 AA</td></tr>
+        <tr><td><span class="sw" style="background:#0b7f9a"></span></td><td>tool</td><td class="hex">#0B7F9A</td><td>tool feedback</td><td class="n ok">4.7 AA</td></tr>
+        <tr><td><span class="sw" style="background:#1b7a4b"></span></td><td>ready</td><td class="hex">#1B7A4B</td><td>READY</td><td class="n ok">5.3 AA</td></tr>
+        <tr><td><span class="sw" style="background:#c2362b"></span></td><td>blocked</td><td class="hex">#C2362B</td><td>BLOCKED</td><td class="n ok">5.5 AA</td></tr>
+        <tr><td><span class="sw" style="background:#8a6200"></span></td><td>warn</td><td class="hex">#8A6200</td><td>warnings</td><td class="n ok">5.5 AA</td></tr>
+        <tr><td><span class="sw" style="background:#2a62b5"></span></td><td>info</td><td class="hex">#2A62B5</td><td>notes</td><td class="n ok">6.0 AA</td></tr>
+      </tbody>
+    </table>
+    <p class="note" style="color:#626c77">Contrast is WCAG 2 relative luminance against the panel colour, computed for every pair (script in the proposal). The light selection amber is a fill only; its text and borders use sel-text.</p>
+  </section>
+
+  <section class="card">
+    <h2>Type: IBM Plex Sans, figures tabular by default</h2>
+    <table class="scale">
+      <tr><td class="spec">24 / 28, 600</td><td style="font:600 24px/28px 'IBM Plex Sans', sans-serif">4&#8239;600.77 <span style="font-size:13px;font-weight:500;color:var(--text-2)">BRL</span></td><td class="spec">summary figures</td></tr>
+      <tr><td class="spec">18 / 24, 600</td><td style="font:600 18px/24px 'IBM Plex Sans', sans-serif">Cart (synthetic)</td><td class="spec">panel titles, totals</td></tr>
+      <tr><td class="spec">15 / 20, 600</td><td style="font:600 15px/20px 'IBM Plex Sans', sans-serif">1&#8239;120<span style="color:var(--text-3)">.00</span> &nbsp; 569.88 &nbsp; 153.14</td><td class="spec">the row's figure (cut length), group heads</td></tr>
+      <tr><td class="spec">13 / 18, 400 and 500</td><td>Profile 40×40, anodised. <b style="font-weight:500">27 pieces</b></td><td class="spec">body, table cells</td></tr>
+      <tr><td class="spec">12 / 16, 500</td><td style="font:500 12px/16px 'IBM Plex Sans', sans-serif;color:var(--text-2)">Cut length, mm &nbsp; Ends a, b &nbsp; Machining</td><td class="spec">column heads, chips, units</td></tr>
+      <tr><td class="spec">12 / 16 Mono</td><td style="font:400 12px/16px 'IBM Plex Mono', monospace">[0, 0, "H"] &nbsp; W - 2*40</td><td class="spec">document literals only</td></tr>
+    </table>
+    <p class="note">Measured: every digit of Plex Sans, Plex Sans Condensed and Plex Mono has the same advance (600, 540, 600 units), so columns of figures align with no feature switched on. Sentence case everywhere; no letter-spaced capitals. Thousands grouped by a narrow no-break space, the decimal point as the CLI prints it.</p>
+  </section>
+
+  <section class="card">
+    <h2>Spacing, radius, the 3D palette</h2>
+    <div class="space">
+      <div style="width:2px"></div><div style="width:4px"></div><div style="width:6px"></div><div style="width:8px"></div><div style="width:12px"></div><div style="width:16px"></div><div style="width:24px"></div><div style="width:32px"></div>
+    </div>
+    <p class="note" style="margin-top:6px">2, 4, 6, 8, 12, 16, 24, 32 px. Rows 32 px (cut list), 30 px (order), 28 px compact. Radius 3 px on controls and chips, 6 px on cards and popovers, 0 on rows.</p>
+    <h3 style="margin-top:18px">Bodies</h3>
+    <span class="chip3d"><i style="background:#c4cbd2"></i>anodised #C4CBD2</span>
+    <span class="chip3d"><i style="background:#4a5058;outline:1px solid #9aa3ad"></i>black #4A5058, light edges</span>
+    <span class="chip3d"><i style="background:#9aa1a8"></i>steel #9AA1A8</span>
+    <span class="chip3d"><i style="background:#7f9fc2"></i>bought part #7F9FC2</span>
+    <span class="chip3d"><i style="background:#c9a27a"></i>project part #C9A27A</span>
+    <span class="chip3d"><i style="background:#c9a227"></i>fastener #C9A227</span>
+    <h3 style="margin-top:8px">States</h3>
+    <span class="chip3d"><i style="background:#ffa133"></i>selected: tint 78 %, edges, x-ray</span>
+    <span class="chip3d"><i style="background:#ffd29a"></i>hover: tint 45 %</span>
+    <span class="chip3d"><i style="background:#3cc8e6"></i>tool pick, preview</span>
+    <span class="chip3d"><i style="background:#4a4f57"></i>ghost: 72 % to the fog</span>
+    <h3 style="margin-top:8px">Items (colour by item; table swatches)</h3>
+    <span class="chip3d"><i style="background:#86aee0"></i>1</span><span class="chip3d"><i style="background:#93c47d"></i>2</span><span class="chip3d"><i style="background:#e08f8f"></i>3</span><span class="chip3d"><i style="background:#b39ddb"></i>4</span><span class="chip3d"><i style="background:#d8cf72"></i>5</span><span class="chip3d"><i style="background:#6fc2b0"></i>6</span><span class="chip3d"><i style="background:#e39ac7"></i>7</span><span class="chip3d"><i style="background:#a9b46a"></i>8</span><span class="chip3d"><i style="background:#9aa1a8"></i>others</span>
+  </section>
+</div>
+
+<section class="card" style="margin-top:24px">
+  <h2>Tools: icon and word at 1440 px and wider, icon alone below, the key in the tooltip</h2>
+  <div class="toolbar">
+    <div class="seg">
+      <span class="tb on"><svg aria-hidden="true"><use href="#i-select"/></svg>Select <span class="k">V</span></span>
+      <span class="tb"><svg aria-hidden="true"><use href="#i-draw"/></svg>Draw bar <span class="k">B</span></span>
+      <span class="tb"><svg aria-hidden="true"><use href="#i-connect"/></svg>Connect <span class="k">C</span></span>
+      <span class="tb"><svg aria-hidden="true"><use href="#i-place"/></svg>Place part <span class="k">P</span></span>
+      <span class="tb"><svg aria-hidden="true"><use href="#i-pattern"/></svg>Pattern</span>
+      <span class="tb"><svg aria-hidden="true"><use href="#i-measure"/></svg>Measure <span class="k">M</span></span>
+    </div>
+    <div class="seg">
+      <span class="tb icon" title="Iso"><svg aria-hidden="true"><use href="#i-iso"/></svg></span>
+      <span class="tb icon" title="Top"><svg aria-hidden="true"><use href="#i-top"/></svg></span>
+      <span class="tb icon" title="Front"><svg aria-hidden="true"><use href="#i-front"/></svg></span>
+      <span class="tb icon" title="Side"><svg aria-hidden="true"><use href="#i-side"/></svg></span>
+      <span class="tb"><svg aria-hidden="true"><use href="#i-ortho"/></svg>Ortho <span class="k">O</span></span>
+      <span class="tb"><svg aria-hidden="true"><use href="#i-fit"/></svg>Fit <span class="k">F</span></span>
+    </div>
+    <div class="seg">
+      <span class="tb"><svg aria-hidden="true"><use href="#i-section"/></svg>Section</span>
+      <span class="tb"><svg aria-hidden="true"><use href="#i-item"/></svg>Colour: finish</span>
+    </div>
+  </div>
+  <div class="toolbar" style="margin-top:12px">
+    <div class="seg">
+      <span class="tb icon on"><svg aria-hidden="true"><use href="#i-select"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-draw"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-connect"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-place"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-pattern"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-measure"/></svg></span>
+    </div>
+    <div class="seg"><span class="tb icon"><svg aria-hidden="true"><use href="#i-iso"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-top"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-front"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-side"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-ortho"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-fit"/></svg></span></div>
+    <div class="seg"><span class="tb icon"><svg aria-hidden="true"><use href="#i-section"/></svg></span><span class="tb icon"><svg aria-hidden="true"><use href="#i-item"/></svg></span></div>
+    <span class="dim" style="font-size:12px;margin-left:6px">1280 px: one row, under 450 px; today's wraps to two</span>
+  </div>
+</section>
+</body>
+</html>
