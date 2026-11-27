@@ -44,6 +44,24 @@ describe("settingsPatch", () => {
     });
   });
 
+  // docs/ux/review-phase4.md B1: the default butt connector, which every butt naming none takes.
+  it("sets, changes and removes the default butt connector and its quantity", () => {
+    const was = formOf(DOC);
+    expect(was).toMatchObject({ buttConnector: "", buttQty: "" });
+    expect(settingsPatch(DOC, was, { ...was, buttConnector: "test:BRK-40", buttQty: "2" })).toEqual(
+      { patch: { defaults: { butt: { connector: "test:BRK-40", qty: 2 } } } },
+    );
+    const doc = { ...DOC, defaults: { ...DOC.defaults, butt: { connector: "test:BRK-40" } } };
+    const set = formOf(doc);
+    expect(set.buttConnector).toBe("test:BRK-40");
+    expect(settingsPatch(doc, set, { ...set, buttConnector: "" })).toEqual({
+      patch: { defaults: { butt: { connector: null } } },
+    });
+    expect(settingsPatch(doc, set, { ...set, buttQty: "0" })).toEqual({
+      error: "connectors per end: a whole number, 1 or more",
+    });
+  });
+
   it("refuses a length or a rate that is not a number, before sending anything", () => {
     const was = formOf(DOC);
     expect(settingsPatch(DOC, was, { ...was, trim: "five" })).toEqual({

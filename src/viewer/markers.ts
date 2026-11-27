@@ -82,6 +82,11 @@ export class MarkerLayer {
   private readonly lift = { value: 60 };
   private clip: Plane[] | null = null;
   private keys: ReadonlySet<string> = new Set();
+  /**
+   * Glyphs drawn only while emphasised (hovered or selected), still picked where they are: the
+   * joined corners of a busy frame, which would drown its open ones and its badges (review m8).
+   */
+  private quiet: ReadonlySet<Glyph> = new Set();
   /** The markers' opacity, while the model around them is ghosted (Show's isolate). */
   private fade = 1;
   /**
@@ -118,9 +123,19 @@ export class MarkerLayer {
     for (const l of this.layers) this.drop(l);
     this.layers = [];
     const byGlyph = new Map<Glyph, MarkerPoint[]>();
-    for (const p of this.points) byGlyph.set(p.glyph, [...(byGlyph.get(p.glyph) ?? []), p]);
+    for (const p of this.points) {
+      if (this.quiet.has(p.glyph)) continue;
+      byGlyph.set(p.glyph, [...(byGlyph.get(p.glyph) ?? []), p]);
+    }
     for (const [g, pts] of byGlyph) this.layers.push(this.make(g, pts, false));
     this.emphasise(this.keys);
+  }
+
+  /** Draws these glyphs only while emphasised, or every glyph again with none. */
+  setQuiet(glyphs: ReadonlySet<Glyph>): void {
+    if (glyphs.size === this.quiet.size && [...glyphs].every((g) => this.quiet.has(g))) return;
+    this.quiet = glyphs;
+    this.set(this.points);
   }
 
   /** Draws these keys larger and solid on top (the hovered marker, a selected corner). */

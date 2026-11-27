@@ -152,6 +152,14 @@ code {
   border-color: var(--act-line);
 }
 
+/* Disabled, it is a neutral button, not a dimmed accent that still reads as one (review p2) */
+.btn.primary:disabled {
+  background: var(--bg-well);
+  color: var(--text-3);
+  border-color: var(--line);
+  opacity: 1;
+}
+
 kbd {
   padding: 0 var(--sp-2);
   border: 1px solid currentColor;

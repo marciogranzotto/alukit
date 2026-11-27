@@ -310,6 +310,7 @@ drilling it, say) replaces the item's price. The rules, and what each blocks:
 | `out-of-stock` | yes | the offer was read as out of stock |
 | `option-not-sold` | yes | the option (a finish) is not sold |
 | `stale-price` | warns | the price was read more than 30 days before `--as-of` (today by default) |
+| `no-connector` | warns | butts name no connector and the project names no default butt connector, so nothing is bought to join them |
 
 Set a rule to `block`, `warn` or `off` in the document's `order_rules`. `alukit order` exits 1
 while any supplier is blocked, which is what you want in a script. The cart is blocked, on

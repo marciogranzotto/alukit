@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import type { Fix, Problem } from "#core/problems/types.ts";
+import { ConnectorSelect } from "../common/ConnectorSelect.tsx";
 import { Errors } from "../Feedback.tsx";
 import { pointParam } from "../records/Params.tsx";
 import { ResolveForm } from "../records/ResolveForm.tsx";
@@ -81,6 +82,77 @@ function SetPriceForm({ item, done }: { item: string; done: () => void }) {
 }
 
 /**
+ * Choosing a connector for butts that name none (docs/ux/review-phase4.md B1): the same picker
+ * as the box frame's, fit to the joined bars, and one step: the project's default butt connector,
+ * which every one of them takes, and the butts made later too.
+ */
+function ConnectorForm({
+  fix,
+  done,
+}: {
+  fix: Extract<Fix, { kind: "connector" }>;
+  done: () => void;
+}) {
+  const [connector, setConnector] = useState("");
+  const [qty, setQty] = useState("");
+  const [outcome, setOutcome] = useState<CommandOutcome>();
+  const n = Number(qty.trim() === "" ? "1" : qty);
+  const valid = connector !== "" && Number.isInteger(n) && n >= 1;
+  const apply = async (e: Event) => {
+    e.preventDefault();
+    const butt = { connector, ...(n > 1 ? { qty: n } : {}) };
+    const r = await sendCommands(
+      [{ cmd: "setProject", args: { defaults: { butt } } }],
+      `join ${fix.butts.length === 1 ? fix.butts[0] : `${fix.butts.length} butts`} with ${connector}`,
+    );
+    setOutcome(r);
+    if (r.ok) done();
+  };
+  return (
+    <form class="record-form fix-form" data-testid="connector-form" onSubmit={(e) => void apply(e)}>
+      <label for="connector-fix">
+        Connector, for {fix.butts.length === 1 ? fix.butts[0] : `all ${fix.butts.length}`}
+      </label>
+      <span>
+        <ConnectorSelect
+          id="connector-fix"
+          testid="connector-fix"
+          label="The connector every butt that names none takes"
+          value={connector}
+          systems={fix.systems}
+          lead={[{ value: "", label: "Choose a connector…" }]}
+          others
+          onChange={setConnector}
+        />
+      </span>
+      <label>
+        Per end
+        <input
+          data-testid="connector-fix-qty"
+          inputMode="numeric"
+          size={3}
+          placeholder="1"
+          value={qty}
+          onInput={(e) => setQty((e.currentTarget as HTMLInputElement).value)}
+        />
+      </label>
+      <button
+        type="submit"
+        class="btn primary"
+        data-testid="connector-apply"
+        disabled={busy.value || readOnly() || !valid}
+      >
+        Make it the default butt connector
+      </button>
+      <button type="button" class="btn" onClick={done}>
+        Cancel
+      </button>
+      <Errors outcome={outcome} />
+    </form>
+  );
+}
+
+/**
  * A problem's actions: what the row passes (its Show), the buttons of its fixes, and under the
  * row the form of the fix that opened one, or what a command refused.
  */
@@ -137,6 +209,11 @@ export function FixControls({ p, children }: { p: Problem; children?: preact.Com
       {form?.kind === "set-price" && (
         <div class="fix-panel">
           <SetPriceForm item={form.item} done={() => setOpen(undefined)} />
+        </div>
+      )}
+      {form?.kind === "connector" && (
+        <div class="fix-panel">
+          <ConnectorForm fix={form} done={() => setOpen(undefined)} />
         </div>
       )}
       {outcome && !outcome.ok && (

@@ -83,6 +83,15 @@ async function keyUntil(page: Page, key: "a" | "r", want: string | number): Prom
   throw new Error(`${key} never reached ${want}`);
 }
 
+/** Join ends is in the command bar's Options (review M5): open them, set it, close them. */
+async function joinEnds(page: Page, on: boolean): Promise<void> {
+  const options = page.getByTestId("draw-options");
+  await options.click();
+  await page.getByTestId("draw-autoconnect").setChecked(on);
+  await options.click();
+  await expect(page.getByTestId("draw-autoconnect")).toBeHidden();
+}
+
 async function setPalette(page: Page, code: string): Promise<void> {
   await page.getByTestId("left-catalog").click();
   await page.getByTestId("catalog-search").fill(code);
@@ -158,7 +167,7 @@ test("draws the cart's base frame with the mouse; its cut list and BOM equal the
   // The front and back top rails: 40x80 rolled flat, on the posts, flush outside and on top.
   // Their ends close on the posts' tops; the connect tool joins them after.
   await setPalette(page, "TS4080");
-  await page.getByTestId("draw-autoconnect").uncheck();
+  await joinEnds(page, false);
   await keyUntil(page, "r", 90);
   await keyUntil(page, "a", "+x+y");
   await pointBar([0, 0, 900], "end b1.b", [1200, 0, 900], "end b2.b");
@@ -195,7 +204,7 @@ test("draws the cart's base frame with the mouse; its cut list and BOM equal the
   // The base rails: 100 above the ground on the posts' lines, typed 1200 along X; auto-connect
   // butts each end through the post it lands on.
   await page.getByTestId("tool-draw").click();
-  await page.getByTestId("draw-autoconnect").check();
+  await joinEnds(page, true);
   await keyUntil(page, "a", "-x");
   await typedBar([0, 0, 100], "on b1 at 100", [600, 0, 100], /^\+x /, "1200");
   await keyUntil(page, "a", "+x");

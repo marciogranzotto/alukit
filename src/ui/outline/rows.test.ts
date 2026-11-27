@@ -27,7 +27,18 @@ const M = {
     parts: { p1: { item: "test:BRK", bar: "b1", s_mm: 300 } },
     runs: {},
   },
-  items: { "forseti:PF40-01": { name: "40×40 Básico" } },
+  items: { "forseti:PF40-01": { name: "Perfil 40×40 Básico", code: "PF40-01" } },
+  display: {
+    bars: { b1: { section: "s40" }, b2: { section: "s40" }, "b2@1": { section: "s40" } },
+    sections: {
+      s40: {
+        bbox: [
+          [-20, -20],
+          [20, 20],
+        ],
+      },
+    },
+  },
   bom: { groups: [{ kind: "part", lines: [{ item: "test:BRK", name: "Bracket" }] }] },
 } as unknown as Model;
 
@@ -42,12 +53,14 @@ const corner = (key: string, connections: string[]): Corner => ({
 });
 
 describe("rowsOf", () => {
-  it("reads label · item name · cut length, and marks copies (U19)", () => {
+  // docs/ux/review-phase4.md M7: the cut length in a column of its own, never cut off; the label,
+  // else the item's code and size, before it; the item's full name in the row's title.
+  it("reads the label or the item's code and size, then its cut length; marks copies (U19)", () => {
     const rows = rowsOf(M, "bars");
-    expect(rows.map((r) => [r.id, r.text, r.copy])).toEqual([
-      ["b1", "post · 40×40 Básico · 820.00 mm", false],
-      ["b2", "rail · 40×40 Básico · 580.00 mm", false],
-      ["b2@1", "40×40 Básico · 580.00 mm", true],
+    expect(rows.map((r) => [r.id, r.text, r.figure, r.title, r.copy])).toEqual([
+      ["b1", "post", "820.00 mm", "post · Perfil 40×40 Básico · 820.00 mm", false],
+      ["b2", "rail", "580.00 mm", "rail · Perfil 40×40 Básico · 580.00 mm", false],
+      ["b2@1", "PF40-01 40×40", "580.00 mm", "Perfil 40×40 Básico · 580.00 mm", true],
     ]);
     expect(rowsOf(M, "parts")[0]?.text).toBe("Bracket · on b1 at 300.00");
     expect(rowsOf(M, "connections").map((r) => r.text)).toEqual([

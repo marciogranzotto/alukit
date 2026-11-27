@@ -17,7 +17,7 @@ import { CornerInspector } from "./CornerInspector.tsx";
 import { DeleteButton, DeleteFlow } from "./Delete.tsx";
 import { BarDerived, Item, OtherDerived, ProjectItem } from "./Derived.tsx";
 import { PointedField, pointedFor } from "./Fields.tsx";
-import { ConnectionFields, PartFields, PlainFields } from "./OtherFields.tsx";
+import { ButtConnector, ConnectionFields, PartFields, PlainFields } from "./OtherFields.tsx";
 import { copyMembers } from "./remove.ts";
 import { copyOf, entityName, labelOf, NOUN, patternOf, type RefKind, refKind } from "./words.ts";
 
@@ -216,6 +216,11 @@ function Many({ m, ids }: { m: Model; ids: string[] }) {
   }
   const bars = ids.filter((id) => refKind(m, id) === "bar");
   const item = bars.length === ids.length ? m.derived.bars[bars[0] as string]?.item : undefined;
+  // Several butts share one Connector field, one step for all (review B1).
+  const conns = (m.doc.connections ?? {}) as Record<string, { type?: unknown }>;
+  const butts = ids.every((id) => refKind(m, id) === "connection" && conns[id]?.type === "butt")
+    ? ids
+    : [];
   return (
     <div class="props" data-testid="properties">
       <div class="insp-head">
@@ -232,6 +237,16 @@ function Many({ m, ids }: { m: Model; ids: string[] }) {
       </p>
       <SelectionProblems m={m} ids={ids} />
       {item && <ReplaceMany m={m} bars={bars} item={item} />}
+      {butts.length > 0 && (
+        <section>
+          <h3>Butts</h3>
+          <table class="kv fields" data-testid="fields">
+            <tbody>
+              <ButtConnector m={m} butts={butts} />
+            </tbody>
+          </table>
+        </section>
+      )}
     </div>
   );
 }

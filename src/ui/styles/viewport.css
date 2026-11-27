@@ -330,11 +330,11 @@
   color: var(--text-2);
 }
 
-/* The orientation gizmo: bottom left, above the help line; its ends are buttons */
+/* The orientation gizmo: bottom left (the help line is the command row's now); its ends are buttons */
 .gizmo {
   position: absolute;
   left: 6px;
-  bottom: 24px;
+  bottom: 6px;
   width: 72px;
   height: 72px;
   z-index: 2;
@@ -377,6 +377,18 @@
   top: -5px;
   width: 10px;
   height: 10px;
+}
+
+/* A 24 px target around each end, however small it is drawn (review p1; WCAG 2.5.8) */
+.gizmo-end::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
 }
 
 .gizmo-end:hover {

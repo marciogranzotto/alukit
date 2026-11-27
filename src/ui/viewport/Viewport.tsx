@@ -23,7 +23,15 @@ import { theme } from "../theme/theme.ts";
 import { viewTheme } from "../theme/tokens.ts";
 import { Callout, Gizmo, HoverLabel, Legend, SelectionLabel, usePointer } from "./Overlays.tsx";
 import { ViewControls } from "./ViewControls.tsx";
-import { colourBy, drawnCorners, ghostsRest, showJoints, showProblems, viewer } from "./viewer.ts";
+import {
+  colourBy,
+  drawnCorners,
+  ghostsRest,
+  jointMarkers,
+  showJoints,
+  showProblems,
+  viewer,
+} from "./viewer.ts";
 import { badgesOf } from "./words.ts";
 
 /**
@@ -159,6 +167,7 @@ export function Viewport({
           const corners = m ? cornersOf(m) : [];
           drawnCorners.value = corners;
           v.setCorners(showJoints.value ? corners : []);
+          v.setJoinedShown(jointMarkers.value === "all");
         }),
         // What a row, a chip or the pointer is over: the bodies its refs stand for, tinted.
         effect(() => {

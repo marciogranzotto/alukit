@@ -74,7 +74,16 @@ test("G, a click at the origin, 1000,600 Enter, 800 Enter: a closed frame, as al
 
   await page.keyboard.press("g");
   expect(await tool(page)).toMatchObject({ name: "frame", stage: "corner" });
-  await expect(page.getByTestId("panel-frame")).toBeVisible();
+  const panel = page.getByTestId("panel-frame");
+  await expect(panel).toBeVisible();
+  // The command bar holds the prompt, the value and its result; the options are the panel's
+  // alone (review M6).
+  await expect(page.getByTestId("command-bar").locator("select, input[type=checkbox]")).toHaveCount(
+    0,
+  );
+  // The project names no butt connector, so the frame asks how its corners are joined (review
+  // B1): nothing here, as `alukit add frame` without --connector.
+  await panel.getByTestId("frame-joint").selectOption("-");
   const p: V3 = [0, 0, 0];
   const at = await page.evaluate((q) => window.__alukit?.screen(q), p);
   if (!at) throw new Error("the origin is not on the screen");
@@ -115,8 +124,12 @@ test("the start card's box frame makes the same frame, with its numbers from a d
   await form.getByTestId("frame-w").fill("1000");
   await form.getByTestId("frame-d").fill("600");
   await form.getByTestId("frame-h").fill("W - 400");
-  // The numbers come from the dry run: 800 posts, 1000 and 520 rails (40 lost at each butt).
+  // Until the corners' joint is chosen, the frame says so rather than being made (review B1).
   const numbers = form.getByTestId("frame-numbers");
+  await expect(numbers).toContainText("Joined with");
+  await expect(form.getByTestId("frame-create")).toBeDisabled();
+  await form.getByTestId("frame-joint").selectOption("-");
+  // The numbers come from the dry run: 800 posts, 1000 and 520 rails (40 lost at each butt).
   await expect(numbers).toContainText("posts 4 × 800");
   await expect(numbers).toContainText("8 butts");
   await form.getByTestId("frame-create").click();

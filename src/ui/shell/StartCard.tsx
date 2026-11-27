@@ -154,7 +154,9 @@ export function bySize(
 
 /**
  * The profiles of one size, the commonest first (review M8): the system the most connectors fit
- * (what most fittings are made for), then exact sections before parametric ones, then by code.
+ * (what most fittings are made for), then exact sections before parametric ones, then the one
+ * sold in the most ways (Forseti's 40 × 40 Básico in two finishes before the Leve in one: the
+ * review's two keys do not tell them apart), then by code.
  */
 export function profileOrder(
   items: readonly ListedEntry[],
@@ -165,6 +167,7 @@ export function profileOrder(
     (a, b) =>
       n(b) - n(a) ||
       Number(b.fidelity === "exact") - Number(a.fidelity === "exact") ||
+      (b.offers ?? 0) - (a.offers ?? 0) ||
       (a.code ?? a.id).localeCompare(b.code ?? b.id),
   );
 }
@@ -226,13 +229,23 @@ function useProfileChoice(m: Model, catalogsKey: string): ProfileChoice {
   }, [catalogsKey]);
   const sizes = bySize(list ?? []).map((g) => ({ ...g, items: profileOrder(g.items, fits) }));
   const ofSize = sizes.find((g) => g.size === size)?.items ?? [];
+  const docBar = (m.doc.defaults as { bar?: { item?: unknown; opt?: Record<string, string> } })
+    ?.bar;
+  const def = typeof docBar?.item === "string" ? docBar.item : undefined;
   const chooseSize = (s: string) => {
     setSize(s);
     const items = sizes.find((g) => g.size === s)?.items ?? [];
     // The project's default bar when it is this size, else the commonest profile.
-    const def = (m.defaults.bar as { item?: unknown } | undefined)?.item;
     setChosen(items.find((e) => e.id === def)?.id ?? items[0]?.id);
   };
+  // A project with a default bar starts on it: its size and itself, its options as written.
+  const defSize = sizes.find((g) => g.items.some((e) => e.id === def))?.size;
+  useEffect(() => {
+    if (size === undefined && defSize !== undefined) {
+      setSize(defSize);
+      setChosen(def);
+    }
+  }, [defSize]);
   useEffect(() => {
     setCard(undefined);
     setPicked({});
@@ -249,22 +262,38 @@ function useProfileChoice(m: Model, catalogsKey: string): ProfileChoice {
   // Each option is required, and preselected to a value an offer sells (U2): no project default
   // is offered, since the choice becomes the default.
   const fields = card ? optionFields(card.options, card.offers, undefined) : [];
-  const values = Object.fromEntries(fields.map((f) => [f.name, picked[f.name] ?? f.chosen]));
+  // The default bar's options as written, where they are among the choices; else the first sold.
+  const written = (name: string) => {
+    const v = chosen === def ? docBar?.opt?.[name] : undefined;
+    const f = fields.find((x) => x.name === name);
+    return v !== undefined && f?.choices.some((c) => c.value === v) ? v : undefined;
+  };
+  const values = Object.fromEntries(
+    fields.map((f) => [f.name, picked[f.name] ?? written(f.name) ?? f.chosen]),
+  );
   let profile: FrameProfile | null = null;
   if (card && card.entry.id === chosen) {
     const opt = pickedOptions(values);
+    const docOpt = docBar?.opt ?? {};
+    const same =
+      card.entry.id === def &&
+      Object.keys(opt).length === Object.keys(docOpt).length &&
+      Object.entries(opt).every(([k, v]) => docOpt[k] === v);
     // A merge patch: the document's options the new item does not take are removed (null).
-    const doc = (m.doc.defaults as { bar?: { opt?: Record<string, string> } } | undefined)?.bar;
     const optPatch: Record<string, string | null> = { ...opt };
-    for (const k of Object.keys(doc?.opt ?? {})) if (!(k in opt)) optPatch[k] = null;
+    for (const k of Object.keys(docOpt)) if (!(k in opt)) optPatch[k] = null;
     profile = {
       item: card.entry.id,
       opt,
       name: card.entry.name,
-      patch: {
-        item: card.entry.id,
-        ...(Object.keys(optPatch).length > 0 ? { opt: optPatch } : {}),
-      },
+      ...(same
+        ? {}
+        : {
+            patch: {
+              item: card.entry.id,
+              ...(Object.keys(optPatch).length > 0 ? { opt: optPatch } : {}),
+            },
+          }),
     };
   }
   return {
@@ -352,13 +381,16 @@ function FirstBar({ m, c }: { m: Model; c: ProfileChoice }) {
   const [outcome, setOutcome] = useState<CommandOutcome>();
   const start = async () => {
     if (!c.profile || !c.card) return;
-    const r = await sendCommands(
-      [{ cmd: "setProject", args: { defaults: { bar: c.profile.patch } } }],
-      "make it the default bar",
-      { inline: true },
-    );
-    setOutcome(r);
-    if (!r.ok) return;
+    // The project's default bar already: nothing to write.
+    if (c.profile.patch) {
+      const r = await sendCommands(
+        [{ cmd: "setProject", args: { defaults: { bar: c.profile.patch } } }],
+        "make it the default bar",
+        { inline: true },
+      );
+      setOutcome(r);
+      if (!r.ok) return;
+    }
     // Armed with no options of its own: the bars drawn take the default just written.
     arm(c.card, {});
     coachFrom.value = count(m.doc.bars);

@@ -664,10 +664,25 @@
   box-shadow: inset 3px 0 var(--sel);
 }
 
+/* Columns (review M7): the id, the words (cut short), then the figure, right-aligned and whole */
 .tree .row .id {
   flex: none;
+  min-width: 3.5ch;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+
+/* A new row whose group head carries the mark (review p3): an edge, not a word */
+.tree .row.new {
+  box-shadow: inset 2px 0 0 var(--info);
+}
+
+.tree .row .figure {
+  flex: none;
+  margin-left: auto;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
 }
 
 .tree .row.copy .id {

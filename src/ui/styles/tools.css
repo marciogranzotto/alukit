@@ -11,16 +11,66 @@
  */
 .command-row {
   flex: none;
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--sp-2) var(--sp-5);
-  min-height: 34px;
+  gap: var(--sp-2) var(--sp-4);
+  /* The anchor picker's pad (34 px) and the padding: one row, the same in Select and in a tool. */
+  min-height: 44px;
   padding: var(--sp-2) var(--sp-4);
   background: var(--bg-panel);
   border-top: 1px solid var(--line);
   font-size: var(--fs-small);
   line-height: var(--lh-small);
+}
+
+/*
+ * From 1280 px, one row whatever the tool (review M5): the prompt and the armed profile's name
+ * give way, cut short with their words in their titles; below it the row wraps.
+ */
+@media (min-width: 1280px) {
+  .command-row {
+    flex-wrap: nowrap;
+    height: 44px;
+  }
+
+  .command-row > * {
+    flex: none;
+  }
+
+  .command-row > .cb-prompt {
+    flex: 1 1 10em;
+  }
+
+  .command-row > .cb-armed {
+    flex: 0 1 auto;
+    min-width: 4em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .command-row .cb-field {
+    width: 9em;
+  }
+
+  .command-row > .cb-chip,
+  .command-row > .cb-eval {
+    flex: 0 1 auto;
+    min-width: 6em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .command-row.viewport-help {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    line-height: 28px;
+  }
 }
 
 .viewport-help {

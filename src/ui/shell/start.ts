@@ -77,7 +77,11 @@ export interface FrameProfile {
   item: string;
   opt: Readonly<Record<string, string>>;
   name: string;
-  patch: Record<string, unknown>;
+  /**
+   * The merge patch that makes it `defaults.bar`; absent when it is the project's default bar
+   * already, options and all, so nothing is written again.
+   */
+  patch?: Record<string, unknown>;
 }
 
 /**

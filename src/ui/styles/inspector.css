@@ -278,3 +278,10 @@ table.kv .btn {
 .delete-list li + li {
   margin-top: var(--sp-1);
 }
+
+/* A connector picker (review B1, m6): as wide as its column allows, never as its longest name */
+.connector-select {
+  width: 16em;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}

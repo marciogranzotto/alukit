@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { anchorPoint } from "#core/derive/frame.ts";
 import type { CornerRule } from "#core/project/schema.ts";
 import { GROUND } from "../../viewer/workplane.ts";
@@ -178,6 +178,16 @@ const CORNER_SHORT: Readonly<Record<CornerRule, string>> = {
 function DrawOptions() {
   const o = drawOptions.value;
   const bar = palette.value.bar;
+  // The options' panel closes on a press anywhere else, so it never stays over the view.
+  const more = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const close = (e: PointerEvent) => {
+      const d = more.current;
+      if (d?.open && !d.contains(e.target as Node)) d.open = false;
+    };
+    document.addEventListener("pointerdown", close, true);
+    return () => document.removeEventListener("pointerdown", close, true);
+  }, []);
   return (
     <>
       <Armed which="bar" />
@@ -200,7 +210,7 @@ function DrawOptions() {
         </span>
       )}
       {/* The less frequent options, so the bar keeps to one row (review M5). */}
-      <details class="cb-more">
+      <details class="cb-more" ref={more}>
         <summary data-testid="draw-options" title="The work plane, joining ends, the corner rule">
           Options{workPlane.value !== GROUND || !o.autoConnect ? " •" : ""}
         </summary>
@@ -332,14 +342,14 @@ function Result() {
   if (!r) return null;
   if (r.error)
     return (
-      <output class="cb-chip error" data-testid="tool-result" data-error="true">
+      <output class="cb-chip error" data-testid="tool-result" data-error="true" title={r.error}>
         {r.error}
       </output>
     );
   const step = heard.value.find((s) => s.rev === r.rev);
   const text = step?.text ?? (r.created.length > 0 ? `made ${r.created.join(", ")}` : "done");
   return (
-    <output class="cb-chip" data-testid="tool-result">
+    <output class="cb-chip" data-testid="tool-result" title={text}>
       {text}
     </output>
   );
@@ -409,6 +419,7 @@ function ValueField({ tool }: { tool: ToolName }) {
         id="command-result"
         class={words?.error ? "cb-eval error" : "cb-eval"}
         data-testid="command-result"
+        title={words?.text}
       >
         {words?.text ?? ""}
       </output>
