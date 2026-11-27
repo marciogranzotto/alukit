@@ -84,7 +84,9 @@ function projected(cl: CutList) {
     lines: g.lines.map((l) => ({
       count: l.count,
       cut_mm: l.cut_mm,
-      ...(l.centre_mm !== undefined ? { centre_mm: l.centre_mm, short_mm: l.short_mm } : {}),
+      ...(l.centre_mm !== undefined
+        ? { centre_mm: l.centre_mm, short_mm: l.short_mm, span_mm: l.span_mm }
+        : {}),
       ends: l.ends,
       ...(l.machining.length > 0 ? { machining: l.machining } : {}),
       ...(l.rail ? { rail: l.rail } : {}),
