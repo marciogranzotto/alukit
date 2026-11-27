@@ -1,0 +1,9 @@
+{
+  "schema": "alukit.section/1",
+  "id": "L-76.2x6.35",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "note": "the built-in std angle's params: legs 76.2, thickness 6.35, root radius 9.525, toe radius 4.76",
+  "generator": "angle",
+  "params": { "a_mm": 76.2, "b_mm": 76.2, "t_mm": 6.35, "r1_mm": 9.525, "r2_mm": 4.76 }
+}
