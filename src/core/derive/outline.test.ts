@@ -4,7 +4,7 @@ import { rhs } from "#catalog/sections/generators/rhs.ts";
 import { NO_CONTEXT } from "#catalog/sections/generators/types.ts";
 import type { Face } from "../project/schema.ts";
 import type { Vec2 } from "../section-properties.ts";
-import { materialAlong, sectionOutlineFaces } from "./outline.ts";
+import { innerFacing, materialAlong, sectionOutlineFaces } from "./outline.ts";
 
 /** A section's inner faces and the material on a line (gap A3, design §4.5). */
 
@@ -101,6 +101,31 @@ describe("inner faces", () => {
   it("keeps an excursion from an ungrooved side: a channel's open side stays open", () => {
     // A groove declared on −x does not touch the +x side's opening.
     expect(faces(channel, ["-x"]).length).toBe(3);
+  });
+});
+
+describe("inner faces by direction", () => {
+  const of = sectionOutlineFaces({ draw: { outline: channel }, grooves: [] });
+  it("finds the faces whose normal is near a direction, in face order", () => {
+    expect(innerFacing(of, [0, 1])).toEqual([0]);
+    expect(innerFacing(of, [0, -1])).toEqual([2]);
+    expect(innerFacing(of, [1, 0])).toEqual([1]);
+    expect(innerFacing(of, [-1, 0])).toEqual([]);
+    // Across the diamond angle's wrap at +x: just below and just above.
+    expect(innerFacing(of, [Math.sqrt(1 - 1e-8), -1e-4])).toEqual([1]);
+    expect(innerFacing(of, [Math.sqrt(1 - 1e-8), 1e-4])).toEqual([1]);
+    // Outside the window.
+    expect(innerFacing(of, [Math.sqrt(1 - 1e-4), 1e-2])).toEqual([]);
+  });
+
+  it("finds an angle's leg face among its radii's hundreds of chords", () => {
+    const g = angle.generate(
+      angle.params.parse({ a_mm: 76.2, b_mm: 76.2, t_mm: 6.35, r1_mm: 9.525, r2_mm: 4.76 }),
+      NO_CONTEXT,
+    );
+    const f = sectionOutlineFaces({ draw: { outline: g.outline }, grooves: [] });
+    expect(f.inner.length).toBeGreaterThan(500);
+    expect(innerFacing(f, [1, 0]).map((k) => f.inner[k]?.name)).toEqual(["+x@-31.75"]);
   });
 });
 

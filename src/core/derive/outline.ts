@@ -45,6 +45,8 @@ export interface OutlineFaces {
   ring: Vec2[];
   /** The inner faces, in ring order. */
   inner: OutlineFace[];
+  /** The inner faces' indices by their normal's diamond angle, for `innerFacing`. */
+  byNormal: readonly { p: number; k: number }[];
 }
 
 interface Side {
@@ -182,7 +184,48 @@ export function sectionOutlineFaces(s: {
     );
     if (!onSide) inner.push({ n: nrm, a, b, name: faceName(nrm, a, b) });
   }
-  return { ring, inner };
+  const byNormal = inner
+    .map((f, k) => ({ p: diamond(f.n), k }))
+    .sort((x, y) => x.p - y.p || x.k - y.k);
+  return { ring, inner, byNormal };
+}
+
+/**
+ * A direction's diamond angle, in [0, 4): it grows with the direction's true angle, never faster
+ * than one per radian, and takes only arithmetic (§5.2).
+ */
+function diamond([x, y]: Vec2): number {
+  if (y >= 0) return x >= 0 ? y / (x + y) : 1 - x / (-x + y);
+  return x < 0 ? 2 - y / (-x - y) : 3 + x / (x - y);
+}
+
+/**
+ * The inner faces whose outward normal lies within `window` radians of the unit direction `n`,
+ * by index in face order: a superset of those within tol.ang, which the caller's angle test
+ * decides. A section with radii has hundreds of faces, nearly all arc chords.
+ */
+export function innerFacing(f: OutlineFaces, n: Vec2, window = 1e-3): number[] {
+  const p = diamond(n);
+  const idx = f.byNormal;
+  const first = (v: number) => {
+    let lo = 0;
+    let hi = idx.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if ((idx[mid] as { p: number }).p < v) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  };
+  const out: number[] = [];
+  const take = (lo: number, hi: number) => {
+    for (let i = first(lo); i < idx.length && (idx[i] as { p: number }).p <= hi; i++)
+      out.push((idx[i] as { k: number }).k);
+  };
+  take(p - window, p + window);
+  if (p - window < 0) take(p - window + 4, 4);
+  if (p + window >= 4) take(0, p + window - 4);
+  return out.sort((a, b) => a - b);
 }
 
 const cache = new WeakMap<BuiltSection, OutlineFaces>();
