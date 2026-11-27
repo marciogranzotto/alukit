@@ -12,10 +12,11 @@ import { pointParam } from "../records/Params.tsx";
 import { busy } from "../store.ts";
 import { typedValue } from "../tools/typed.ts";
 import { useReplaceAsked } from "./actions.ts";
+import { EndRows } from "./Ends.tsx";
 import { CommitInput, Row, RowErrors, readOnly, useSend, WordsRow } from "./Fields.tsx";
 import { lengthMode, lengthPatch } from "./length.ts";
 import { barsLike, chosenOption, replaceBatch } from "./replace.ts";
-import { endWords, isObject, written } from "./words.ts";
+import { isObject, written } from "./words.ts";
 
 /**
  * A bar's fields, edited in place (docs/ux/plan.md S5.3, F5, U3): its length (or what drives
@@ -26,7 +27,7 @@ import { endWords, isObject, written } from "./words.ts";
 type O = Record<string, unknown>;
 
 /** The fields a bar's rows show, so the rest are listed as words below them. */
-const SHOWN = new Set(["item", "opt", "a", "b", "anchor", "roll_deg", "label", "tags"]);
+const SHOWN = new Set(["item", "opt", "a", "b", "anchor", "roll_deg", "ends", "label", "tags"]);
 
 /** An item's card, fetched once per item; undefined while it loads or when it cannot be had. */
 export function useCard(id: string | undefined): ItemCard | undefined {
@@ -429,40 +430,6 @@ function RollRow({ m, id }: { m: Model; id: string }) {
         />{" "}
         °
       </Row>
-      <RowErrors outcome={outcome} />
-    </>
-  );
-}
-
-function EndRows({ m, id }: { m: Model; id: string }) {
-  const { outcome, send } = useSend();
-  return (
-    <>
-      {(["a", "b"] as const).map((e) => {
-        const w = endWords(m, id, e);
-        return (
-          <Row key={e} label={`End ${e}`} fields={[`ends.${e}`, e]} testid={`row-end-${e}`}>
-            {w.text} {w.refs.length > 0 && <EntityChips ids={w.refs} />}
-            {w.open && (
-              <button
-                type="button"
-                class="btn"
-                data-testid={`join-end-${e}`}
-                disabled={readOnly() || busy.value}
-                title="Butt it into what meets it there, by the project's corner rule, as one step"
-                onClick={() =>
-                  void send(
-                    [{ cmd: "autoConnect", args: { end: `${id}.${e}` } }],
-                    `join ${id}.${e}`,
-                  )
-                }
-              >
-                Join
-              </button>
-            )}
-          </Row>
-        );
-      })}
       <RowErrors outcome={outcome} />
     </>
   );

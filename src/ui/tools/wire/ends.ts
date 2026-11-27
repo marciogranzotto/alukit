@@ -7,10 +7,12 @@ import type { Grab, ToolPointer, Viewer } from "../../../viewer/scene.ts";
 import { rayLineParams } from "../../../viewer/snap.ts";
 import type { DryRun } from "../../client/dryrun.ts";
 import { endBatch } from "../../edit/batches.ts";
-import { selection } from "../../focus.ts";
+import { hidden, selection } from "../../focus.ts";
 import { extendHook } from "../../hook.ts";
+import { type EndPick, pickedPlane, planeBatch } from "../../inspector/endEdits.ts";
+import { onKey } from "../../keys.ts";
 import type { Model } from "../../model.ts";
-import { model, summary } from "../../store.ts";
+import { model, sendCommands, summary } from "../../store.ts";
 import type { GestureSpec, Gestures } from "../drag.ts";
 import {
   draggable,
@@ -52,6 +54,14 @@ export interface EndNote {
   params: string[];
 }
 export const endNote = signal<EndNote | undefined>(undefined);
+
+/**
+ * A plane being picked in the view for an end (docs/ux/e4-decisions.md): the end's row armed it
+ * ("stop at a face", "flush with an end"), and the next press in Select on a bar gives the plane,
+ * as one step; `why` says why the last press could not, and the pick stays armed. Esc, a press on
+ * nothing, another selection or another tool drops it.
+ */
+export const endPick = signal<(EndPick & { why?: string }) | undefined>(undefined);
 
 /** A length as the words say it: two decimals only when needed. */
 const num = (x: number) => {
@@ -313,9 +323,56 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
     };
   }
 
+  /** A press while a plane is being picked: the plane from the bar under the pointer, one step. */
+  function pickPress(e: ToolPointer, pick: EndPick): boolean {
+    const m = model.peek();
+    if (!m) return false;
+    const hit = viewer.pickAt(e.clientX, e.clientY, hidden.peek());
+    if (!hit) {
+      endPick.value = undefined;
+      hint.value = undefined;
+      return true;
+    }
+    const got = pickedPlane(m, pick, hit);
+    if ("why" in got) {
+      endPick.value = { ...pick, why: got.why };
+      return true;
+    }
+    endPick.value = undefined;
+    hint.value = undefined;
+    const ref = `${pick.bar}.${pick.end}`;
+    void sendCommands(
+      planeBatch(m, pick.bar, pick.end, got.plane, got.angled),
+      `${ref} ${got.words}`,
+    );
+    return true;
+  }
+
+  // A pick is for the bar it was armed on, in Select: another selection or tool drops it.
+  const offPick = effect(() => {
+    const p = endPick.value;
+    if (!p) return;
+    const ids = [...selection.value];
+    if (activeTool.value !== "select" || ids.length !== 1 || ids[0] !== p.bar) {
+      endPick.value = undefined;
+    }
+  });
+  const offPickKey = onKey(
+    "tool",
+    (e) => {
+      if (e.key !== "Escape" || !endPick.peek()) return false;
+      endPick.value = undefined;
+      hint.value = undefined;
+      return true;
+    },
+    60,
+  );
+
   const grab: Grab = {
     press(e) {
       if (gestures.live()) return gestures.press(e);
+      const pick = endPick.peek();
+      if (pick) return pickPress(e, pick);
       const i = handleAt(e);
       const m = model.peek();
       const h = i !== undefined ? handles[i] : undefined;
@@ -340,6 +397,20 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
         gestures.pointer(e, held);
         return;
       }
+      const pick = endPick.peek();
+      if (pick) {
+        viewer.canvas.style.cursor = "crosshair";
+        const ref = `${pick.bar}.${pick.end}`;
+        hint.value = {
+          x: e.clientX,
+          y: e.clientY,
+          text:
+            pick.kind === "face"
+              ? `click the face ${ref} stops at · Esc cancels`
+              : `click the end ${ref} is flush with · Esc cancels`,
+        };
+        return;
+      }
       const i = handleAt(e);
       if (i !== hot) {
         hot = i;
@@ -362,6 +433,9 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
     grab,
     dispose() {
       offHandles();
+      offPick();
+      offPickKey();
+      endPick.value = undefined;
       preview.reset();
       if (showing) viewer.setGizmo(undefined);
       showing = false;

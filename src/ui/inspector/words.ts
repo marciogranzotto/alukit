@@ -241,7 +241,10 @@ function claimWords(m: Model, ref: string, name: string): Words {
       const seat = buttsOf(m)[name]?.ends.find((x) => x.end === ref);
       const on = seat ? (seat.on.split(" ")[0] as string) : w.through;
       if (typeof on !== "string") return { text: `butts on a body (${name})`, refs: [name] };
-      return { text: `butts on ${placeWords(on)} (${name})`, refs: [name, on.split(".")[0] as string] };
+      return {
+        text: `butts on ${placeWords(on)} (${name})`,
+        refs: [name, on.split(".")[0] as string],
+      };
     }
     // The through bar's own end at a corner: the butting ends bear on it.
     return {

@@ -123,6 +123,23 @@ table.kv .btn {
   margin-left: var(--sp-2);
 }
 
+/* An end's row (E4.1): its words, then its cut, extension and plane, each a line that wraps */
+.end-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  margin-top: var(--sp-1);
+}
+
+.end-edit .btn {
+  margin-left: 0;
+}
+
+.end-pick {
+  margin-top: var(--sp-1);
+}
+
 .props .link {
   background: none;
   border: none;
