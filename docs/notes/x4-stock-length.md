@@ -17,7 +17,7 @@ defined as the longest of the four edges: L. *Measured* on G38's brace (a 40 x 4
 1000 apart, 1 across for 2 up): `cut_mm` 1118.03, but it spans 1138.03 of bar; ordered 1118 and
 billed 1120 where 1138 and 1140 were due (R$ 141.68 against R$ 144.21 at R$ 126.50/m); nested at
 5676.15 in a 6000 bar where it uses 5696.15. On the alternative frame a diagonal was ordered at
-4926 where its record, correctly, orders 4960 (*read* from the acceptance report; not re-measured
+4926 where its record, correctly, orders 4960 (as the acceptance run reported it; not re-measured
 here).
 
 For a trapezoid, two cuts closing toward each other, both long points are on the same edge, so the
@@ -29,9 +29,9 @@ A cut list orders a member at the length of the straight blank it is cut from, i
 its own axis, and that blank must contain the farthest point of each end cut.
 
 - *Read*, Autodesk Inventor's help: a Frame Generator member is authored as an extrusion "From To"
-  between a Start Plane and an End Plane square to its axis, the planes offset by
-  `G_OFFSET_START` and `B_L + G_OFFSET_END`, and `G_L` is "the base length", the export parameter
-  the parts list reads ([structural shape authoring](https://help.autodesk.com/cloudhelp/2014/ENU/Inventor/files/GUID-ECBD0CEB-6130-4980-9BE7-E908F660A231.htm));
+  between a Start Plane and an End Plane square to its axis, at `−G_OFFSET_START` and
+  `B_L + G_OFFSET_END`, and `G_L` is "the base length", set as the export parameter
+  ([structural shape authoring](https://help.autodesk.com/cloudhelp/2014/ENU/Inventor/files/GUID-ECBD0CEB-6130-4980-9BE7-E908F660A231.htm));
   its end treatments then cut that body. And "for a straight frame member with a miter on each
   end, such as an angled beam between two opposite inside corners … the correct frame length
   computes automatically"
@@ -55,7 +55,7 @@ its own axis, and that blank must contain the farthest point of each end cut.
 | 1 | A piece's **span** is its extent along the axis, from end a's long point to end b's: the farthest each end face reaches outward over the four corners of the placed **bounding box**. Derive reports it per bar (`lengths.span`, with the long points `la` and `lb`) | §4.5: the bounding box, not the outline, sets every cut, so `cut_mm` and the span use the same corners. For a cut tilted about one section axis (a mitre or a bevel alone, every case so far) the extreme over the outline is on the box's side, or within the small inset of an outline from its nominal box, so the two agree; a compound cut on a section with rounded corners differs more, the box overstating by part of the corner radius, on the safe side. It keeps span ≥ `cut_mm` always, and equal to it for trapezoids. The brief said "over the section outline"; this is the deviation, for those reasons |
 | 2 | The rule is the span, not "parallel cuts": the long points fall on opposite edges whenever the two cuts lean the same way about a section axis, parallel or not. G38's case "ends leaning the same way, not parallel": long point 1125.18, span 1130.89 | A "parallel" test would miss the same error on two same-leaning cuts at different angles. Opposite-leaning cuts (a trapezoid) and one square end keep span = `cut_mm` |
 | 3 | Named `span_mm`, not `stock_mm` | `stock_mm` already names a rail piece's required stock length and a stock bar's length (§4.7, §5.3); one name for two different lengths on the same line would mislead |
-| 4 | Reported where `centre_mm` and `short_mm` are, with an angled end: derive's bars (`span_mm`), the cut list's lines and the stock bars' pieces; the Markdown gains a Span column, the CSV a `span_mm` column; the viewer's cut-list tab and properties show it. A square-cut piece states none: it spans its `cut_mm` | The design's pattern for the other angled-end lengths. A document with no angled end gives the same bytes as before, so its stored revisions do not drift |
+| 4 | Reported where `centre_mm` and `short_mm` are, with an angled end: derive's bars (`span_mm`), the cut list's lines and the stock bars' pieces; the Markdown gains a Span column, the CSV a `span_mm` column; the viewer's cut-list tab and properties show it. A square-cut piece states none: it spans its `cut_mm` | The design's pattern for the other angled-end lengths. A document with no angled end gives the same JSON outputs as before, which is what a revision stores, so its revisions do not drift; the Markdown and CSV gain the column for every document. The cost: `derive --select bars.*.span_mm` reports each square bar as lacking the member, as it does for `ops` on a bar with none; the cut list gives every line's ordered length |
 | 5 | The span is what is **ordered and billed** (`ordered_mm` is the span rounded to `res_mm`, then `step_mm` steps), what chooses the cheapest cut offer, and what `min_mm`/`max_mm` bound; an error states both lengths when they differ ("is 3016.33 mm of stock (2996.33 at its long point), longer than …") | The supplier cuts, and charges for, the length of bar the piece takes |
 | 6 | **Nesting** takes each piece at its span: `used_mm`, `offcut_mm` and `waste_mm` follow, and an unplaced piece's error names both lengths | Same reason. Waste stays "everything outside the pieces' blanks", as for a trapezoid's corner offcuts before |
 | 7 | The BOM's `length_mm` and the cut list's group total add the spans | They state how much bar the pieces take, which is what is bought. Mass stays the centre-line length (§5.4): a parallelogram's volume is its section times its centre line |
