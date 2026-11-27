@@ -284,6 +284,8 @@ export interface Viewer {
   setView(name: string, views?: Readonly<Record<string, DocView>>, animate?: boolean): boolean;
   setProjection(p: Projection): void;
   projection(): Projection;
+  /** How the camera takes a wheel: Mouse (it zooms) or Trackpad (it pans); a pinch zooms in both. */
+  setNavigation(n: Navigation): void;
   fitView(): void;
   /** Fits the camera to the given entities, or to the whole model when there are none. */
   fitSelection(ids: ReadonlySet<string>): void;
@@ -341,6 +343,15 @@ export interface Viewer {
   renderStats(): RenderStats;
   dispose(): void;
 }
+
+/**
+ * How the camera takes a wheel (E-UX-17): `mouse`, the wheel zooms; `trackpad`, a two-finger
+ * scroll pans. A pinch zooms in both.
+ */
+export type Navigation = "mouse" | "trackpad";
+
+/** A Mac, whose wheel steps camera-controls scales as it does here (its own test, read). */
+const MAC = /Mac/.test(globalThis.navigator?.platform ?? "");
 
 /** What a standard view fits when the model is empty: a metre cube on the ground (three's frame). */
 const EMPTY_BOX = new Box3(new Vector3(0, 0, -1000), new Vector3(1000, 1000, 0));
@@ -1331,18 +1342,55 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       ortho.updateProjectionMatrix();
       camera = ortho;
       controls.camera = ortho;
-      controls.mouseButtons.wheel = CameraControls.ACTION.ZOOM;
+      applyNavigation();
       void controls.setLookAt(pos.x, pos.y, pos.z, target.x, target.y, target.z, false);
     } else {
       const d = h / (2 * ortho.zoom * tanHalf);
       const at = pos.clone().sub(target).normalize().multiplyScalar(d).add(target);
       camera = persp;
       controls.camera = persp;
-      controls.mouseButtons.wheel = CameraControls.ACTION.DOLLY;
+      applyNavigation();
       void controls.setLookAt(at.x, at.y, at.z, target.x, target.y, target.z, false);
     }
     invalidate();
   }
+
+  // ---------------------------------------------------------------------------------------------
+  // Navigation (E-UX-17): Mouse or Trackpad
+
+  let navigation: Navigation = "mouse";
+
+  /**
+   * What the wheel does: with a mouse, what the view calls zoom, a dolly in perspective (the field
+   * of view stays as fits and the gizmo's size read it) and the zoom in orthographic; with a
+   * trackpad, a two-finger scroll, which the browser sends as a wheel, pans.
+   */
+  function applyNavigation(): void {
+    controls.mouseButtons.wheel =
+      navigation === "trackpad"
+        ? CameraControls.ACTION.TRUCK
+        : camera === ortho
+          ? CameraControls.ACTION.ZOOM
+          : CameraControls.ACTION.DOLLY;
+  }
+
+  /**
+   * A pinch, which the browser sends as a wheel with Ctrl (and a mouse's Ctrl + wheel), zooms in
+   * either mode. camera-controls zooms the lens on one, in perspective too (**read**: its wheel
+   * handler takes ZOOM whenever `ctrlKey` is set), which would leave the field of view that fits,
+   * the gizmo's size and the projection switch read behind. In perspective the pinch is taken here
+   * first and dollies, by camera-controls' own wheel step and scale (`_dollyInternal`), so a
+   * pinch and a wheel move alike; in orthographic its zoom is the view's zoom, and stays its own.
+   */
+  const onPinch = (e: WheelEvent) => {
+    if (!e.ctrlKey || camera === ortho || !controls.enabled) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const step = e.deltaY / ((MAC ? -1 : -3) * 10);
+    const r = controls.getSpherical(new Spherical(), true).radius;
+    void controls.dollyTo(r * 0.95 ** (step * controls.dollySpeed), true);
+  };
+  renderer.domElement.addEventListener("wheel", onPinch, { capture: true, passive: false });
 
   // ---------------------------------------------------------------------------------------------
   // Picking: click, hover, and box select with Shift held
@@ -1912,6 +1960,10 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     setView,
     setProjection,
     projection: () => (camera === ortho ? "orthographic" : "perspective"),
+    setNavigation(n) {
+      navigation = n;
+      applyNavigation();
+    },
     fitView,
     fitSelection(ids) {
       const box = ids.size > 0 ? boxOf(ids) : shownBox();
@@ -2061,6 +2113,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointerleave", onLeave);
+      el.removeEventListener("wheel", onPinch, { capture: true });
       clear();
       release(owned);
       release(retired);

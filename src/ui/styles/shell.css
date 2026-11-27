@@ -1623,6 +1623,23 @@
   color: var(--text-2);
 }
 
+/* How the view takes a wheel (E-UX-17): Mouse or Trackpad */
+.help-nav {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.help-nav legend {
+  padding: 0;
+  margin-bottom: var(--sp-2);
+  color: var(--text-1);
+}
+
+.help-nav label {
+  display: block;
+}
+
 .help-grid a {
   color: var(--act);
 }
