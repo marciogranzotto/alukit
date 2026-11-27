@@ -234,6 +234,9 @@ export const Butt = z.strictObject({
   ends: z.array(EndRef).min(1),
   spacer_mm: Expr.optional().describe("along the through face's outward normal"),
   through_end: ThroughEnd.optional(),
+  held_by: ConnId.optional().describe(
+    "a butt through the same bar whose through-fastener holds these ends too: c<number>",
+  ),
   ...ConnCommon,
 });
 
