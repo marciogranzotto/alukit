@@ -454,7 +454,7 @@ describe("connections", () => {
     expect(none.state).toBe(s);
     expect(none.results[0]).toMatchObject({
       created: [],
-      info: { skipped: "no bar end meets at that point" },
+      info: { skipped: "every bar end at that point is joined already" },
     });
     const alone = ok(s, { cmd: "autoConnect", args: { at: [0, 0, 0], optional: true } });
     expect(alone.results[0]?.info).toEqual({
@@ -472,6 +472,95 @@ describe("connections", () => {
       { through: "b1", ends: ["b2.a"] },
       { through: "b2", ends: ["b3.a"] },
     ]);
+  });
+
+  // The box frame of the audit's brace (tests/fixtures/brace, src/core/brace.test.ts).
+  const frame = () => stateOf(join(FIXTURES, "brace"));
+  const brace = (a: unknown[], b: unknown[], extra: object = {}) => ({
+    cmd: "addBar",
+    args: { a, b, anchor: "+x", ...extra },
+  });
+  const barSpec = (s: State, id: string) =>
+    (s.doc.bars as Record<string, Record<string, unknown>>)[id];
+  const connSpec = (s: State, id: string) =>
+    (s.doc.connections as Record<string, Record<string, unknown>>)[id];
+
+  it("autoConnect declares an angled end's cut in the same step, and nothing on a square one (E-UX-11)", () => {
+    // A brace in the back plane from 100 above the bottom-left corner to 100 below the top
+    // right: each end lies on a post, which runs through; the end meets its face at an angle.
+    const drawn = ok(frame(), brace([0, 600, 100], [1000, 600, 650]));
+    const a = ok(drawn.state, { cmd: "autoConnect", args: { at: [0, 600, 100] } });
+    expect(a.results[0]).toMatchObject({
+      created: ["c9"],
+      changed: ["b13"],
+      info: { through: "b3", ends: ["b13.a"] },
+    });
+    expect(barSpec(a.state, "b13")?.ends).toEqual({ a: { cut: "angle" } });
+    // A post that runs on past the point has no end there to leave alone.
+    expect(connSpec(a.state, "c9")).toEqual({ type: "butt", through: "b3", ends: ["b13.a"] });
+    expect(errorsOf(derived(a.state))).toEqual([]);
+    expect(derived(a.state).bars.get("b13")?.ends.a).toMatchObject({ by: "c9", cut: "angle" });
+
+    // A rail butting square declares nothing, and the step changes no bar.
+    const rail = ok(frame(), brace([0, 600, 300], [1000, 600, 300]));
+    const r = ok(
+      rail.state,
+      { cmd: "autoConnect", args: { at: [0, 600, 300] } },
+      { cmd: "autoConnect", args: { at: [1000, 600, 300] } },
+    );
+    expect(r.results.map((x) => x.changed)).toEqual([[], []]);
+    expect(barSpec(r.state, "b13")?.ends).toBeUndefined();
+    expect(errorsOf(derived(r.state))).toEqual([]);
+
+    // A cut the end declares already is the end's own: autoConnect leaves it.
+    const square = ok(
+      frame(),
+      brace([0, 600, 100], [1000, 600, 650], { ends: { a: { cut: "square" } } }),
+    );
+    const s = ok(square.state, { cmd: "autoConnect", args: { at: [0, 600, 100] } });
+    expect(s.results[0]?.changed).toEqual([]);
+    expect(barSpec(s.state, "b13")?.ends).toEqual({ a: { cut: "square" } });
+  });
+
+  it("autoConnect joins an end on a joined corner into the corner's through bar (E-UX-12)", () => {
+    const drawn = ok(frame(), brace([0, 600, 0], [1000, 600, 750]));
+    const a = ok(drawn.state, { cmd: "autoConnect", args: { end: "b13.a" } });
+    expect(a.results[0]).toMatchObject({
+      created: ["c9"],
+      info: { through: "b3", ends: ["b13.a"] },
+    });
+    // Its own butt, leaving the post's end to the corner's butt c3, which is unchanged.
+    expect(connSpec(a.state, "c9")).toEqual({
+      type: "butt",
+      through: "b3",
+      ends: ["b13.a"],
+      through_end: "none",
+    });
+    expect(connSpec(a.state, "c3")).toEqual(connSpec(frame(), "c3"));
+    expect(derived(a.state).bars.get("b3")?.ends.a.by).toBe("c3");
+    expect(errorsOf(derived(a.state))).toEqual([]);
+
+    // A corner joined by a miter has no bar running through: nothing for the end to butt on.
+    const mitred = ok(
+      g("G01"),
+      { cmd: "removeEntity", args: { id: "c1" } },
+      { cmd: "addConnection", args: { type: "miter", ends: ["b1.b", "b2.a"] } },
+      { cmd: "addBar", args: { a: [1000, 0, 0], b: [500, 300, 0] } },
+    );
+    expect(no(mitred.state, { cmd: "autoConnect", args: { end: "b3.a" } })[0]).toMatchObject({
+      code: "geometry",
+      message: expect.stringContaining("nothing butts on it"),
+    });
+  });
+
+  it("autoConnect leaves an end a connection names, though its plane failed", () => {
+    // G11: c1 and c2 both name b2.a, which falls back to its default (two providers). It is
+    // claimed: joining it again would make a third.
+    const r = no(g("G11"), { cmd: "autoConnect", args: { at: [1000, 0, 0] } });
+    expect(r[0]).toMatchObject({
+      code: "geometry",
+      message: "every bar end at that point is joined already",
+    });
   });
 });
 

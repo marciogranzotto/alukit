@@ -149,10 +149,47 @@ function faceName(prism: Prism, c: Crossing): string {
   return (prism.slabs[c.slab] as Prism["slabs"][number]).faces[c.side];
 }
 
+/**
+ * Where a butting end bears on the prism it butts on (§4.5): its bar's centre line crosses the
+ * prism, leaving it at end a, entering it at end b, and the face it crosses there; `miss` when
+ * the line misses the prism, `edge` when it crosses within tol.len of the face's edge. The butt's
+ * end plane and `autoConnect`'s angled-cut declaration (E-UX-11) both read it.
+ */
+function buttCrossing(
+  K: PlacedBar,
+  end: End,
+  prism: Prism,
+): { face: PlaneN; cr: Crossing } | "miss" | "edge" {
+  const { C, t } = centreLine(K);
+  const hit = lineThrough(C, t, prism);
+  if (!hit) return "miss";
+  const cr = end === "a" ? hit.exit : hit.enter;
+  const face = crossingFace(C, t, prism, cr);
+  return clearOfEdges(face.p, prism, cr.slab) ? { face, cr } : "edge";
+}
+
+/**
+ * The angle, in degrees, at which a butt through bar `T` cuts end `end` of bar `K` (§4.5): between
+ * the face the end bears on and the end's own direction, 0 for a square end. Undefined where the
+ * end would not bear on `T` (its centre line misses it, or crosses it at an edge): that butt is a
+ * `butt-miss` error, and its end has no plane to declare.
+ */
+export function buttEndAngle(K: PlacedBar, end: "a" | "b", T: PlacedBar): number | undefined {
+  const c = buttCrossing(K, end, barPrism(T));
+  if (typeof c === "string") return undefined;
+  return angleDeg(outward(c.face.n, K, end), endDir(K, end));
+}
+
 // ---------------------------------------------------------------------------------------------
 
 export interface Stage3 {
   faces: Map<string, EndFace>;
+  /**
+   * Per bar end, the names of every provider that claims it, in id order, whether or not its plane
+   * resolved: an end with two providers, or an angled end with no cut declared, falls back to its
+   * default plane and is still claimed.
+   */
+  claims: Map<string, string[]>;
   /** The derived per-bar lengths and end reports, for bars whose ends resolved. */
   lengths: Map<string, { lengths: BarLengths; ends: { a: EndReport; b: EndReport } }>;
   /** Per butt connection, the face each of its butting ends bears on, by end. */
@@ -224,7 +261,12 @@ class Ends {
       if (!fa || !fb) continue;
       lengths.set(bar.id, this.lengths(bar, fa, fb));
     }
-    return { faces: this.faces, lengths, seats: this.seats, stacks: this.stacks };
+    const claims = new Map(
+      [...this.claims]
+        .sort(([x], [y]) => compareIds(x, y))
+        .map(([k, cs]) => [k, cs.map((c) => c.name).sort(compareIds)] as [string, string[]]),
+    );
+    return { faces: this.faces, claims, lengths, seats: this.seats, stacks: this.stacks };
   }
 
   // -------------------------------------------------------------------------------------------
@@ -444,9 +486,8 @@ class Ends {
       }
       const K = this.placed.get(bar);
       if (!K) continue;
-      const { C, t } = centreLine(K);
-      const hit = lineThrough(C, t, prism);
-      if (!hit) {
+      const crossing = buttCrossing(K, end, prism);
+      if (crossing === "miss") {
         ctx.d.error(
           "butt-miss",
           id,
@@ -455,9 +496,7 @@ class Ends {
         );
         continue;
       }
-      const cr = end === "a" ? hit.exit : hit.enter;
-      const face = crossingFace(C, t, prism, cr);
-      if (!clearOfEdges(face.p, prism, cr.slab)) {
+      if (crossing === "edge") {
         ctx.d.error(
           "butt-miss",
           id,
@@ -466,6 +505,7 @@ class Ends {
         );
         continue;
       }
+      const { face, cr } = crossing;
       const stack = this.stackOn(
         id,
         spec,

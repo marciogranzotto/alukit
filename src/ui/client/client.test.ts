@@ -24,6 +24,7 @@ describe("the clients", () => {
     const effects = {
       cuts: { b1: [1000, 980] as [number, number] },
       added: {},
+      parts: {},
       removed: [],
       claimed: [],
     };

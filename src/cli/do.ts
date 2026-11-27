@@ -5,7 +5,7 @@ import { parseJson } from "#catalog/json.ts";
 import { checkModel } from "#core/check/check.ts";
 import { modelOutputs, outputAccessors } from "#core/check/outputs.ts";
 import { applyBatchLive, batchOf, type CommandResult } from "#core/commands/apply.ts";
-import { type DryEffects, effectsOf } from "#core/commands/dry.ts";
+import { type DryEffects, effectsOf, type PartEffect } from "#core/commands/dry.ts";
 import type { CommandError, State } from "#core/commands/types.ts";
 import { localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
@@ -91,10 +91,18 @@ function resultLine(r: CommandResult, dry: boolean): string {
 }
 
 /** What a dry run says the step would do to what is derived, a line each. */
+/** Where a part a step adds lands: on a bar at a distance, at a point, or counted. */
+function partWhere(p: PartEffect): string {
+  if ("qty" in p) return `${p.item}, ${p.qty} counted, not placed`;
+  if (p.bar !== undefined && p.s_mm !== undefined) return `${p.item} on ${p.bar} at ${p.s_mm}`;
+  return `${p.item} at (${p.origin.join(", ")})`;
+}
+
 function effectLines(e: DryEffects): string[] {
   return [
     ...Object.entries(e.cuts).map(([id, [a, b]]) => `cut ${id}: ${a} → ${b}`),
     ...Object.entries(e.added).map(([id, cut]) => `new ${id}: cut ${cut}`),
+    ...Object.entries(e.parts).map(([id, p]) => `new ${id}: ${partWhere(p)}`),
     ...(e.claimed.length > 0 ? [`claims ${e.claimed.join(", ")}`] : []),
   ];
 }

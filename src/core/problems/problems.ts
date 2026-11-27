@@ -1,6 +1,7 @@
 import type { CheckOutput } from "../check/check.ts";
 import { buttSystems } from "../check/joints.ts";
 import { checkedOrder, type ModelOutputs } from "../check/outputs.ts";
+import { type JoinAnswer, planJoin } from "../commands/join.ts";
 import { idList } from "../commands/words.ts";
 import { offerMatches } from "../cutlist/cutlist.ts";
 import type { Derived } from "../derive/derive.ts";
@@ -241,13 +242,20 @@ function fromDiagnostic(d: Diagnostic, ctx: Ctx): Draft {
   if (d.code === "unconnected" && d.entity) {
     const others = (d.refs ?? []).filter((r) => r !== d.entity);
     p.title = `Open corner: ${d.entity} meets ${idList(others)} with no connection`;
-    p.detail = "The ends meet with nothing to join them: add a connection there.";
-    p.fixes.push({
-      label: "Join with the default butt",
-      kind: "commands",
-      commands: [{ cmd: "autoConnect", args: { end: d.entity } }],
-    });
+    // The fix is offered only where autoConnect would make it: the same rule decides (E-UX-12).
+    const join = joinAtEnd(d.entity, ctx);
+    if (join.ok) {
+      p.detail = "The ends meet with nothing to join them: add a connection there.";
+      p.fixes.push({
+        label: "Join with the default butt",
+        kind: "commands",
+        commands: [{ cmd: "autoConnect", args: { end: d.entity } }],
+      });
+    } else {
+      p.detail = `The ends meet with nothing to join them, and the default butt cannot join them here (${join.why}): add a connection there.`;
+    }
   }
+  if (d.code === "angled-end" && d.entity) Object.assign(p, angledWords(d, d.entity));
   if (d.code === "butt-no-connector") Object.assign(p, connectorWords(names, ctx));
   if (d.code === "no-offer" && d.entity) {
     const asked = askedOf(d.refs ?? [], d.entity, ctx);
@@ -261,6 +269,37 @@ function fromDiagnostic(d: Diagnostic, ctx: Ctx): Draft {
     }
   }
   return p;
+}
+
+/** What `autoConnect { end }` would do at an end: the shared plan, or why it would refuse. */
+function joinAtEnd(end: string, ctx: Ctx): JoinAnswer {
+  const [bar, e] = end.split(".") as [string, "a" | "b"];
+  const b = ctx.derived.bars.get(bar)?.placed;
+  const P = e === "a" ? b?.A : b?.B;
+  if (!P) return { ok: false, why: `${bar} does not derive` };
+  return planJoin(ctx.derived, P, ctx.derived.doc.defaults.corner ?? "vertical");
+}
+
+/**
+ * An end its provider cuts at an angle, with no cut declared (§4.5, D3): which joint cuts it and
+ * at what angle, and the two cuts it may declare, each one step on the bar that owns the end (a
+ * pattern copy's template).
+ */
+function angledWords(d: Diagnostic, end: string): Pick<Problem, "title" | "detail" | "fixes"> {
+  const [ref, e] = end.split(".") as [string, string];
+  const bar = ref.split("@")[0] as string;
+  const angle = / is cut at ([\d.]+)° by /.exec(d.message)?.[1];
+  const by = d.refs?.[0];
+  const cut = (label: string, value: "angle" | "square"): Fix => ({
+    label,
+    kind: "commands",
+    commands: [{ cmd: "setBar", args: { id: bar, set: { ends: { [e]: { cut: value } } } } }],
+  });
+  return {
+    title: `${end} is cut at an angle it does not declare`,
+    detail: `${by ?? "Its joint"} cuts it${angle ? ` at ${angle}°` : " at an angle"}: say how it is cut, on the face at that angle or square across the bar. Until then it is drawn square at its design point.`,
+    fixes: [cut("Cut it on the face", "angle"), cut("Cut it square", "square")],
+  };
 }
 
 // ---------------------------------------------------------------------------------------------

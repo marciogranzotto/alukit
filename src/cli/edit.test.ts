@@ -633,6 +633,71 @@ describe("alukit query", () => {
     expect(summary.out).toBe("34 matches for bars\n  34 bars: b1–b34");
   });
 
+  it("selects what is like an entity and what is joined to it (E1.5)", async () => {
+    const dir = await cart();
+    const ids = async (selector: string) => {
+      const r = await capture(["query", dir, selector, "--json", "--limit", "100"]);
+      expect(r.code, r.err).toBe(0);
+      return JSON.parse(r.out).entities.map((e: { id: string }) => e.id);
+    };
+    // The 80 × 40 top rails, by the item they name; the posts take the default bar's.
+    expect(await ids("like:b5")).toEqual(["b5", "b6"]);
+    expect(await ids("like:b1")).toHaveLength(22);
+    expect(await ids("connected:b9")).toEqual(["b1", "b2", "b9", "b14", "b15", "b18", "b26"]);
+    expect(await ids("connected*:b9")).toHaveLength(33);
+    expect((await capture(["query", dir, "connected:c13,r1", "--summary"])).out).toBe(
+      "6 matches for connected:c13,r1\n  4 bars: b1, b11, b12, b14\n  1 connection: c13\n  1 run: r1",
+    );
+    const missing = await capture(["query", dir, "like:b99"]);
+    expect([missing.code, missing.err]).toEqual([1, "alukit query: there is no entity b99"]);
+    expect((await capture(["query", dir, "connected:"])).err).toContain("connected: needs ids");
+  });
+
+  it("prints a corner's miter and splice, and applies the miter's batch as it was shown (E1.4)", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "golden-ends", "G01");
+    const shown = await capture([
+      "arrangements",
+      dir,
+      "--at",
+      "1000,0,0",
+      "--rule",
+      "miter",
+      "--rule",
+      "splice",
+    ]);
+    expect(shown.code, shown.err).toBe(0);
+    expect(shown.out).toBe(
+      [
+        "corner (1000, 0, 0): ends b1.b, b2.a; butt c1",
+        "miter: (1000, 0, 0) b1.b and b2.a",
+        "  cut b2 580 → 620",
+        "splice: refused: c2: b1 and b2 are not collinear (90.00°)",
+        "arrangements on rev 0: 0 distinct of 0 rules, 1 of 2 joints; nothing was written",
+      ].join("\n"),
+    );
+    const json = await capture(["arrangements", dir, "--at", "1000,0,0", "--json"]);
+    const miter = JSON.parse(json.out).joints[0];
+    expect(miter).toMatchObject({ kind: "miter", ok: true });
+    const done = await capture(["do", dir, JSON.stringify(miter.commands)]);
+    expect(done.code, done.err).toBe(0);
+    const bars = await capture(["query", dir, "bars", "--fields", "cut", "--json"]);
+    expect(
+      JSON.parse(bars.out).entities.map((e: { fields: { cut: number } }) => e.fields.cut),
+    ).toEqual([1020, 620]);
+    // Arranged again, the corner names its miter, and the miter's arrangement moves nothing.
+    const again = JSON.parse(
+      (await capture(["arrangements", dir, "--at", "1000,0,0", "--json"])).out,
+    );
+    expect(again.corners).toEqual([
+      { at: [1000, 0, 0], ends: ["b1.b", "b2.a"], butts: [], joints: ["c2"] },
+    ]);
+    expect(again.joints[0].effects.cuts).toEqual({});
+    expect(
+      (await capture(["arrangements", dir, "--at", "1000,0,0", "--rule", "mitre"])).err,
+    ).toContain("--rule mitre: one of vertical, x, y, first, miter, splice");
+  });
+
   it("reads derived fields on request", async () => {
     const root = await scratchFixtures();
     const dir = join(root, "golden-ends", "G01");
@@ -785,5 +850,90 @@ describe("alukit check", () => {
     const made = await capture(["check", d2]);
     expect(made.code).toBe(0);
     expect(made.err).toContain("notice: alukit.lock.json created");
+  });
+});
+
+describe("what a dry run of mirror, array, splitBar and explodePattern adds (E1.6)", () => {
+  type Effects = {
+    cuts: Record<string, [number, number]>;
+    added: Record<string, number>;
+    parts: Record<string, { item: string; bar?: string; s_mm?: number; origin?: number[] }>;
+  };
+  const cases: [string, object, Partial<Effects>][] = [
+    // The motor plate on the back base rail at 900, mirrored across x = 600: at 300 on it.
+    [
+      "mirror",
+      { cmd: "mirror", args: { ids: ["p6"], plane: { axis: "x", at_mm: 600 } } },
+      { cuts: {}, added: {}, parts: { p9: { item: "project:plate-a", bar: "b10", s_mm: 300 } } },
+    ],
+    // A slat and its two butts, once more 100 along b9: a slat's cut.
+    [
+      "array",
+      { cmd: "array", args: { ids: ["b26", "c26", "c27"], along: "b9", pitch_mm: 100, count: 2 } },
+      { cuts: {}, added: { b35: 520 }, parts: {} },
+    ],
+    // b9, 1120 between its butts, split 400 from its design point A: 360 and 760.
+    [
+      "splitBar",
+      { cmd: "splitBar", args: { id: "b9", at_mm: 400 } },
+      { cuts: { b9: [1120, 360] }, added: { b35: 760 }, parts: {} },
+    ],
+    // The carriages at 400 on b33 and 230 on b34, the copies the pattern drew already.
+    [
+      "explodePattern",
+      { cmd: "explodePattern", args: { id: "pt2" } },
+      {
+        cuts: {},
+        added: {},
+        parts: {
+          p9: { item: "test:CAR20", bar: "b33", s_mm: 400 },
+          p10: { item: "test:CAR20", bar: "b34", s_mm: 230 },
+        },
+      },
+    ],
+  ];
+
+  it.each(cases)("%s: the numbers applying it gives", async (_, command, expected) => {
+    const dir = join(await scratchFixtures(), "cart");
+    const batch = JSON.stringify([command]);
+    const dry = await capture(["do", dir, batch, "--dry-run", "--json"]);
+    expect(dry.code, dry.err).toBe(0);
+    const effects = JSON.parse(dry.out).effects as Effects;
+    expect(effects).toMatchObject(expected);
+    expect(Object.keys(effects.parts)).toEqual(Object.keys(expected.parts ?? {}));
+    // Applied, the model holds what the dry run said, to the 0.01 mm the effects keep.
+    const applied = await capture(["do", dir, batch]);
+    expect(applied.code, applied.err).toBe(0);
+    for (const [id, cut] of Object.entries(effects.added)) {
+      const q = JSON.parse((await capture(["query", dir, id, "--fields", "cut", "--json"])).out);
+      expect(q.entities[0].fields.cut, id).toBe(cut);
+    }
+    for (const [id, p] of Object.entries(effects.parts)) {
+      const d = await capture(["derive", dir, "--select", `parts.${id}`, "--json"]);
+      const got = JSON.parse(d.out).parts[id];
+      expect({ item: got.item, bar: got.bar, s_mm: got.s_mm }, id).toEqual({
+        item: p.item,
+        bar: p.bar,
+        s_mm: p.s_mm,
+      });
+      got.origin.forEach((x: number, i: number) => {
+        expect(x).toBeCloseTo(p.origin?.[i] as number, 2);
+      });
+    }
+  });
+
+  it("explodePattern names which drawn copy each new entity is", async () => {
+    const dir = join(await scratchFixtures(), "cart");
+    const batch = JSON.stringify([{ cmd: "explodePattern", args: { id: "pt1" } }]);
+    const dry = JSON.parse((await capture(["do", dir, batch, "--dry-run", "--json"])).out);
+    // pt1 makes copies 1, 2, 4, 5 and 6 of the slat b26 and its butts c26 and c27 (3 is skipped).
+    expect(dry.results[0].info.copies).toMatchObject({
+      "b26@1": "b35",
+      "c26@1": "c36",
+      "c27@1": "c37",
+      "b26@6": "b39",
+    });
+    expect(Object.keys(dry.results[0].info.copies)).toHaveLength(15);
+    expect(dry.effects.added).toEqual({ b35: 520, b36: 520, b37: 520, b38: 520, b39: 520 });
   });
 });

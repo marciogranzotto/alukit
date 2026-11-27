@@ -426,3 +426,35 @@ tool"). Each adds.*
 - **Core**: `src/core/commands/transform.ts` (`transform`, `TransformInfo`); `move.ts` exports
   `axisMeetsLine`, which `moveEnd` and `transform` share. **CLI**: `src/cli/move.ts` (`alukit
   move`, `alukit rotate`); `add.ts` exports `vec3` and `numbers3` for it.
+
+## Editing round: E1 changes
+
+*Stream E1 of the [editing audit](editing-audit.md) ([e1-decisions.md](e1-decisions.md)). Owner of
+everything below: E1; other streams add to it only.*
+
+- **`src/core/query.ts`**: `similarTo(doc, derived, id, by: "item" | "tag"): string[]` and
+  `connectedTo(doc, ids, opts?: { transitive?: boolean }): string[]`, each in id order with the
+  given entities included, document entities only (no pattern copies). `connectedTo` takes no
+  derived model, unlike the audit's §7.3 sketch (e1 11). `select(doc, selector, derived?)` takes
+  `like:<id>` (it needs `derived`) and `connected:<ids>`, `connected*:<ids>`.
+- **`autoConnect`'s `info`** gains `angled: string[]`, the ends it declared `cut: "angle"`, only
+  when there are some; `through` and `ends` are unchanged, and its result's `changed` names the
+  bars whose cut it declared (e1 5).
+- **`src/core/commands/join.ts`**: `planJoin(derived, point, rule)`, the rule `autoConnect` applies
+  and the `unconnected` problem asks (e1 1).
+- **`Derived.claims`**: every provider that claims each bar end, whether or not its plane resolved
+  (e1 2). Not in `alukit.derived/1`.
+- **`DIAGNOSTIC_CODES`** and `DiagnosticCode` (`src/core/diagnostics.ts`): a diagnostic's code is
+  one of the list, and each has a problem title (e1 7).
+- **`Arrangements.joints`** (`src/core/corners/arrange.ts`, `alukit.arrangements/1`): a
+  `JointArrangement` per kind, `{ kind: "miter" | "splice", ok: true, commands, plans: { at, ends
+  }[], effects }` or `{ kind, ok: false, why }`, after the rules; `ArrangedCorner.joints?`, the
+  corner's written miter or splice. `rules` is unchanged and holds only corner rules, so the
+  inspector's `arrangementsOf` reads what it read. `arrangeQuery` and `?rule=` take `miter` and
+  `splice`; naming any rule or joint answers only those named. In `batch.ts`: `JOINT_KINDS`,
+  `jointsAt`, `jointAdds`, `jointBatch`; `takeOut` also removes a corner's miter or splice (e1
+  13–15). For E5.5.
+- **`DryEffects.parts`** (`src/core/commands/dry.ts`): each part a step adds, `{ item, bar?, s_mm?,
+  origin }` for a placed part or `{ item, qty }` for a counted one, by id; always present, `{}` when
+  none. `explodePattern`'s `info.copies` maps each copy (`b26@2`) to the entity it became (e1 16,
+  17).

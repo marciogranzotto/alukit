@@ -3,7 +3,7 @@ import type { Diagnostic } from "./diagnostics.ts";
 import { type LoadedCatalog, type LoadedItem, type LoadedSection, splitRef } from "./load.ts";
 import type { Source } from "./merge.ts";
 import { factoryE } from "./rails.ts";
-import { type Face, isValuedObject, num } from "./schema/common.ts";
+import { type Face, isValuedObject, num, type Src } from "./schema/common.ts";
 import type { GrooveType, Material, Standard, System } from "./schema/files.ts";
 import { type GrooveGeometry, type OwnGroove, ownGroove } from "./schema/groove.ts";
 import type { FastenerItem, Item } from "./schema/items.ts";
@@ -386,6 +386,15 @@ function withStandardDims(
     });
   }
   return { ...li, item: { ...item, dims } as Item, sources };
+}
+
+/**
+ * The provenance of a value computed from a section (§3.5's fidelity table, *2.3*): `est` from a
+ * traced outline, which carries the trace's uncertainty; `calc` from an exact outline or a
+ * generator's closed form. A box has no computed properties to tag.
+ */
+export function computedSrc(fidelity: BuiltSection["fidelity"]): Src {
+  return fidelity === "traced" ? "est" : "calc";
 }
 
 /** A section's geometry, built: drawn for every fidelity, with properties where they mean something. */

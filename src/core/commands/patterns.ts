@@ -94,13 +94,17 @@ function axisOf(ctx: CommandContext, bar: string): V3 | undefined {
   return bar.startsWith("r") ? d.runs.get(bar)?.t : d.bars.get(bar)?.placed.frame.t;
 }
 
-/** Makes the copies of a template into entities; returns the document and the ids made. */
+/**
+ * Makes the copies of a template into entities; returns the document, the ids made, and which
+ * copy each one is (`b26@2` → `b37`: the template's id and the copy's number, as derive names a
+ * pattern's copies).
+ */
 function makeCopies(
   ctx: CommandContext,
   doc0: RawDoc,
   spec: Spec,
   where: string,
-): { doc: RawDoc; created: string[] } {
+): { doc: RawDoc; created: string[]; copies: Record<string, string> } {
   if (spec.rail_holes !== undefined) {
     throw refusal(
       "geometry",
@@ -112,7 +116,8 @@ function makeCopies(
   const { t, along, steps } = plan(ctx, spec, where);
   let doc = doc0;
   const created: string[] = [];
-  for (const [, step] of steps) {
+  const copies: Record<string, string> = {};
+  for (const [k, step] of steps) {
     const ids = new Map<string, string>();
     for (const id of template) {
       const n = nextId(doc, KIND_PREFIX[kindOf(id) as MapKind]);
@@ -185,9 +190,10 @@ function makeCopies(
       const value = rewriteEntity(kindOf(id) as Kind, id, getEntity(doc0, id), rw);
       doc = withEntity(doc, ids.get(id) as string, value);
       created.push(ids.get(id) as string);
+      copies[`${id}@${k}`] = ids.get(id) as string;
     }
   }
-  return { doc, created };
+  return { doc, created, copies };
 }
 
 const ExplodePattern = z.strictObject({ id: PatternId });
@@ -217,7 +223,13 @@ export const explodePattern: CommandDef<z.infer<typeof ExplodePattern>> = {
       const spec = getEntity(doc, a.id) as Spec;
       const r = makeCopies(ctx, withoutEntity(doc, a.id), spec, a.id);
       checkAll(ctx, r.doc, r.created);
-      return done(withDoc(ctx, r.doc), { created: r.created, removed: [a.id] });
+      // Which entity each copy became (E1.6): the copies were derived already, so a preview
+      // names them, rather than new bars and parts.
+      return done(
+        withDoc(ctx, r.doc),
+        { created: r.created, removed: [a.id] },
+        { copies: r.copies },
+      );
     }),
 };
 

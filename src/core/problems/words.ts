@@ -1,55 +1,81 @@
 import { idList } from "../commands/words.ts";
+import type { DiagnosticCode } from "../diagnostics.ts";
 
 /**
  * The plain words of a problem (D-UX-12, BE-3; B §5.1's principle 5): a title that says what is
  * wrong and where, and a detail that says what follows and what to do, keyed by the diagnostic's
- * code or the order rule. The CLI's message stays beside them as `raw`, for parity. A code with
- * no words of its own reads as its kind of problem and where it is, the message as its detail.
+ * code or the order rule. The CLI's message stays beside them as `raw`, for parity.
  */
 
-/** How a problem of a check's code reads in a title, before where it is. */
-const CHECK_TITLE: Readonly<Record<string, string>> = {
+/**
+ * How a problem of a check's code reads in a title, before where it is: what is wrong, in a
+ * person's words, never the code itself ("A miter problem"). Every code has its words (E1.3): the
+ * type takes them all, so a code cannot be added without them.
+ */
+const CHECK_TITLE: Readonly<Record<DiagnosticCode, string>> = {
   anchor: "An anchor that does not fit",
+  "angled-end": "An end cut at an angle it does not declare",
+  bend: "A bend that cannot be made",
   "butt-miss": "A butt that misses its face",
+  "butt-no-connector": "A butt with no connector",
   catalog: "A problem in a catalog",
+  chain: "An end that reads another end's plane",
   check: "A project check",
   "check-pending": "A project check that cannot run yet",
   connection: "A joint problem",
+  "cover-none": "A through end with nothing to cover",
   covers: "A cost line's cover",
+  currency: "Prices in a currency the project does not name",
   cycle: "A loop of references",
-  derive: "Something that does not derive",
+  "end-far": "An end far from its face",
   expr: "An expression that does not evaluate",
+  face: "A face joint that is not complete",
   fit: "A fit to check",
-  geometry: "A geometry problem",
+  format: "A file not in canonical form",
+  hole: "A hole that cannot be made",
   item: "An item that does not resolve",
+  joint: "A station on a run's joint",
   json: "A file that is not JSON",
-  length: "A length problem",
-  machining: "A machining problem",
+  length: "A length that cannot be cut",
+  lock: "A lock file that cannot be read",
+  "lock-behind": "A lock file behind its catalogs",
+  machining: "Machining to check",
   mass: "A mass that is unknown",
-  miter: "A miter problem",
+  miter: "A mitre that cannot be cut",
   "near-vertical": "A bar that is nearly vertical",
+  "no-offer": "An item nothing sells by length",
   option: "An option the item does not have",
   order: "An order choice",
-  part: "A part problem",
-  pattern: "A pattern problem",
-  pivot: "A pivot problem",
-  "pivot-plane": "A pivot's plane",
+  outline: "An outline that encloses nothing",
+  part: "A part line that cannot be counted",
+  pattern: "A pattern that cannot repeat",
+  pivot: "A hinge that cannot be placed",
+  "pivot-plane": "A hinge's plane",
+  "pivot-range": "A hinge outside its range",
   plane: "An end plane problem",
-  "price-band": "A price band problem",
-  rail: "A rail problem",
+  "price-band": "A price band that selects nothing",
+  rail: "A rail's hole layout that does not fit",
   ref: "A reference to nothing",
-  run: "A run problem",
+  run: "A run whose bars do not join",
   schema: "A field the format does not allow",
-  splice: "A splice problem",
+  splice: "A splice that cannot join",
+  station: "A station measured from where it cannot be",
+  "two-providers": "An end joined twice",
+  unconnected: "An open corner",
   "up-parallel": "A bar whose up runs along it",
-  variant: "A variant problem",
+  variant: "A variant that does not apply",
   write: "The files cannot be written",
   "zero-length": "A bar of no length",
 };
 
-/** "A joint problem at c21", or "A problem with the project" with nothing to name. */
+/**
+ * "A joint problem at c21". A code AluKit does not know (a newer project's, read by an older
+ * build) reads as its kind of problem.
+ */
 export function checkTitle(code: string, where: readonly string[]): string {
-  const what = CHECK_TITLE[code] ?? `A ${code.replaceAll("-", " ")} problem`;
+  const what =
+    (CHECK_TITLE as Readonly<Record<string, string>>)[code] ??
+    `A ${code.replaceAll("-", " ")} problem`;
   return where.length > 0 ? `${what} at ${idList(where)}` : what;
 }
 
