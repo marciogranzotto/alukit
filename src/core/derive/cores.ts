@@ -65,7 +65,7 @@ export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void 
       const by = [...new Set(group.map((o) => o.by))].sort(compareIds);
       if (least <= TOL.len) {
         const core = section.cores[far.indexOf(least)] as SectionCore;
-        tapFits(ctx, id, sectionId, opText(b, t), by, t.thread, core.d_mm);
+        tapFits(ctx, id, sectionId, opText(b, t), by, t.thread, core);
         continue;
       }
       const nearest = cores
@@ -87,10 +87,11 @@ export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void 
 }
 
 /**
- * A tap on a core must fit it (`tapFit`): a core wider than the thread's largest minor diameter
- * (6H) leaves a shallow thread, and a tap drill more than one pitch over the core drills away wall
- * the section does not state. Either is a `machining` error; a thread with no tap drill or 6H
- * tolerance here is an info, its place checked and its fit not.
+ * A tap on a core must fit it (`tapFit`): a thread the vendor labels the core with does; any other
+ * is judged as a cut thread, and a core wider than its largest minor diameter (6H) leaves a shallow
+ * thread, a tap drill more than one pitch over the core drills away wall the section does not
+ * state. Either is a `machining` error, which names the core's labels; a thread with no tap drill
+ * or 6H tolerance here is an info, its place checked and its fit not.
  */
 function tapFits(
   ctx: Ctx,
@@ -99,10 +100,12 @@ function tapFits(
   what: string,
   by: string[],
   thread: string,
-  d: number,
+  c: SectionCore,
 ): void {
-  const f = tapFit(thread, d);
-  const core = `the Ø${mm(d)} core of ${sectionId}`;
+  const f = tapFit(thread, c);
+  const d = c.d_mm;
+  const labels = c.threads?.length ? ` (labelled ${c.threads.join(", ")})` : "";
+  const core = `the Ø${mm(d)} core of ${sectionId}${labels}`;
   if (f === undefined) {
     ctx.d.info(
       "machining",

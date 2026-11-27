@@ -203,25 +203,45 @@ export type TapFit =
   | { fits: false; why: "core-wide" | "core-narrow"; limit_mm: number };
 
 /**
- * Whether a tap fits a core of diameter `d_mm` (design §5.5). A core is a bore sized for a thread,
- * and tapping it may first drill it up to the tap drill. The tap fits when both hold:
- *
- * - **the core is no wider than the thread's largest minor diameter** (`minorDiameterMax`, 6H).
- *   The tap drill, `tapDrill`'s major-minus-pitch, is one size inside that tolerance, and a shop
- *   rounds it to the drills it stocks: an M8's 6.75 is drilled 6.8, the core of every 40x40 with
- *   an M8 centre, and 6.8 is within M8's 6.912. A wider core leaves a shallow thread: "core-wide",
- *   with that diameter as `limit_mm`;
- * - **its tap drill takes at most one pitch off the core's diameter**: half a pitch of wall on each
- *   side, a little less than the thread's own depth (5H/8, 0.54 P). More, and the core was made
- *   for a smaller thread, and the wall around it, which no section states, decides: "core-narrow",
- *   with the narrowest core it fits, tap drill less pitch, as `limit_mm`.
- *
- * So an M16 fits a Ø13.7 core (drilled up 0.30 to 14.00) and not a Ø5 corner hole (14.00 is 9.00
- * over); an M6 fits the Ø5 (its tap drill is 5.00) and an M8 does not (1.75 over its 1.25 pitch).
- * Undefined when the thread has no tap drill or no 6H tolerance here: not metric, or a pitch past
- * the table's 2.5 mm.
+ * Whether two thread designations name one thread: two metric threads of one diameter and pitch
+ * (`M8` and `M8x1.25`), or the same text otherwise.
  */
-export function tapFit(thread: string, d_mm: number): TapFit | undefined {
+export function sameThread(a: string, b: string): boolean {
+  const [da, db] = [threadDiameter(a), threadDiameter(b)];
+  if (da === undefined || db === undefined) return a.trim() === b.trim();
+  return da === db && threadPitch(a) === threadPitch(b);
+}
+
+/**
+ * Whether a tap fits a core (design §5.5). A core is a bore sized for a thread, and tapping it may
+ * first drill it up to the tap drill. In this order:
+ *
+ * 1. **A thread the vendor labels the core with fits it** (`threads`, the drawing's "Ø13,7 (M16)"
+ *    or the shop's "Centro permite rosca: M5"): the vendor sanctions it, cut or formed. Forseti
+ *    labels its 20-series Ø4.6 cores M5, a forming tap's pre-hole, wider than a cut M5 allows.
+ * 2. **Any other thread is judged as a cut thread**, and fits when both hold:
+ *
+ *    - **the core is no wider than the thread's largest minor diameter** (`minorDiameterMax`,
+ *      6H). The tap drill, `tapDrill`'s major-minus-pitch, lies inside that tolerance, and a shop
+ *      rounds it to the drills it stocks: an M8's 6.75 is drilled 6.8, the core of every 40x40
+ *      with an M8 centre, and 6.8 is within M8's 6.912. A wider core leaves a shallow thread:
+ *      "core-wide", with that diameter as `limit_mm`;
+ *    - **its tap drill takes at most one pitch off the core's diameter**: half a pitch of wall on
+ *      each side, a little less than the thread's own depth (5H/8, 0.54 P). More, and the core
+ *      was made for a smaller thread, and the wall around it, which no section states, decides:
+ *      "core-narrow", with the narrowest core it fits, tap drill less pitch, as `limit_mm`.
+ *
+ * So an M16 fits a Ø13.7 core (drilled up 0.30 to 14.00) and not a Ø5 corner hole labelled M6
+ * (14.00 is 9.00 over); an M6 fits the Ø5 (its tap drill is 5.00) and an M8 does not (1.75 over its
+ * 1.25 pitch). Undefined when the thread is not a label and has no tap drill or no 6H tolerance
+ * here: not metric, or a pitch past the table's 2.5 mm.
+ */
+export function tapFit(
+  thread: string,
+  core: { d_mm: number; threads?: readonly string[] },
+): TapFit | undefined {
+  if (core.threads?.some((t) => sameThread(t, thread))) return { fits: true };
+  const d_mm = core.d_mm;
   const max = minorDiameterMax(thread);
   const drill = tapDrill(thread);
   const p = threadPitch(thread);

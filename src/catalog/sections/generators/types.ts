@@ -33,6 +33,8 @@ export interface SectionCore {
   /** Its centre, in section coordinates. */
   at_mm: Vec2;
   d_mm: number;
+  /** The threads the vendor labels it with ("Ø13,7 (M16)"): each fits it (§5.5). */
+  threads?: readonly string[];
 }
 
 /** A parametric section, in mm, about its nominal centre (design §3.5). */
