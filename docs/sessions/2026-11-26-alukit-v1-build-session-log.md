@@ -114,8 +114,9 @@ anything, and each has a default in place.
 | Gaps A9 (one through-fastener shared by two butting ends) and A8 (positions for a connector's machining) | **done**, merged (22:52), pushed | Goldens G33, G34. Note: `docs/notes/acceptance-gaps-2.md`; design 2.3, "After acceptance run 2". |
 | Acceptance run 3, internal | **PASS** (23:09) | Tests 1–4 pass with no exceptions; no AluKit failures. Design §13 records the verdict. |
 | v1 limits: the stamp on every output, `bbox()` over parts, end taps on cores | **done**, merged (00:17), pushed | Note: `docs/notes/v1-limits-closed.md`. |
-| Forseti sections: secondary cores, and the tap's thread against the core | **built** (01:07); merge held until the acceptance re-runs finish | Note: `docs/notes/section-cores.md`. |
-| Acceptance re-runs on the reference project's new heads (internal) | running (2 × Opus), launched 01:05 | its decided frame (run 4) and, for the first time, its alternative all-extrusion frame |
+| Forseti sections: secondary cores, and the tap's thread against the core | **done**, merged (01:56), pushed | Note: `docs/notes/section-cores.md`. |
+| Acceptance re-runs on the reference project's new heads (internal) | **ran** (01:26, 01:53) | Decided frame, run 4: **pass**. Alternative frame, first run: **fail** on AluKit gaps X1–X4, though one variant passes every numeric test. |
+| X4: stock length of parallel-cut bars | running (Opus, worktree), launched 01:57 | golden G38 |
 | F2: end-hole axis, butt end-face coverage, head seats | running (Opus, worktree), launched 01:30 | goldens G35–G37 |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
@@ -525,3 +526,17 @@ anything, and each has a default in place.
   - The end-hole axis follows the fastener (G35).
   - New checks for end-face overhang and overlap (G36) and head seats on material (G37).
   - Geometric only: no load ratings, which are v2.
+- **01:53**: First acceptance of the reference project's alternative frame (two variants; internal).
+  - Every owner claim verified.
+  - Variant B1 passes all four numeric tests; B2 passes cut list and mass but fails cost and counts
+    on X4.
+  - Both fail on AluKit model gaps:
+    - **X1:** a blind fastener (a hole in a tube's near wall only);
+    - **X2:** a butt's screw through two bodies (an end plate plus a block);
+    - **X3:** a plain bar held by a screw in a drilled hole;
+    - **X4:** a bar cut on two parallel angled planes is ordered at its edge length, though a
+      single piece uses its full span along the axis. The record's 4960 is right, AluKit's 4926
+      wrong.
+  - Five record findings went to that project's session; it took them into its fix round.
+- **01:56**: The sections branch merged (gate PASS, 737 tests). X4 launched alone, since it doesn't
+  touch fastenings; X1–X3 wait for F2 to merge, which works in the same code.
