@@ -924,3 +924,11 @@ anything, and each has a default in place.
   - **Dry runs:** the effects list the parts a step adds.
   - **Mass:** a traced section's computed mass is tagged `est`.
   - **What moved:** G10 and G11 lose a false `unconnected` warning and its broken Join fix, and four golden cases' problem titles changed. No golden value or cut list moved.
+- **15:15**: E0's merge gate failed on E0's own new shader-link test with the gizmo shown (10 expected, 12 linked).
+  - Measured: alone it passes 4/4. A diagnostic run, 16 runs on 8 workers, showed the count normally settles before the revision.
+  - **Cause:** the test sampled before the handles' first render, since three compiles programs lazily. That is a race in the test, and also a shader-compile stall on the first selection.
+  - The merge was taken off main before any push. E0 was sent back to precompile the gizmo and assert that a selection links nothing, proven on 8 workers.
+- **15:27**: The reference project's alternative frame passed acceptance run 6 on its next revision, both variants, with tests 1–4 identical to run 5.
+  - With the room's walls and floor as covers, 29 of 36 cross holes take the record's face. The other 7 are ties between equally good faces, broken in a different order. Named on the connections (F12), all 36 are accepted.
+  - The new traced PF40-02 outline moves the bearing under its lips from 41.69 % to 40.79 / 42.26 % by side.
+  - **New gap X11:** a modelling aid (the room's walls and floor) entered the BOM, the order and the bounding box. An agent is closing it, with G51.
