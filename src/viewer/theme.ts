@@ -38,7 +38,8 @@ export interface ViewTheme {
   /**
    * Bodies: a bar by its finish's tone (src/mesh/style.ts's `finishTone`), a part by its tone
    * (`partTone`), the holes marked on the project's plates, the fasteners of face connections,
-   * and `neutral`, an item's colour when the view is coloured by item and it has no swatch.
+   * `neutral`, an item's colour when the view is coloured by item and it has no swatch, and
+   * `context`, a member that is context, not part of the build (X11), drawn translucent.
    */
   body: {
     anodised: Hex;
@@ -49,6 +50,7 @@ export interface ViewTheme {
     hole: Hex;
     fastener: Hex;
     neutral: Hex;
+    context: Hex;
   };
   /** A bar's cut faces (its ends), as factors on its side colour: a shade brighter, like sawn metal. */
   cut: readonly [number, number, number];

@@ -11,7 +11,8 @@ import { compareIds } from "../ids.ts";
  * words, so `alukit check`, `alukit order` and `alukit problems` say one thing.
  *
  * A butt is left out when something else holds its ends: another butt's through-fastener
- * (`held_by`, acceptance gap A9), or a body it bears on, which is counted with it (§4.5).
+ * (`held_by`, acceptance gap A9), or a body it bears on, which is counted with it (§4.5). So is a
+ * butt whose every member is context (gap X11): the context's own joint, which buys nothing.
  */
 
 /** The document's butts that name no connector, with no project default, in id order. */
@@ -22,6 +23,7 @@ export function unjoinedButts(derived: Derived): string[] {
   for (const [id, c] of Object.entries(doc.connections)) {
     if (c.type !== "butt" || c.connector !== undefined || c.held_by !== undefined) continue;
     if (typeof c.through !== "string") continue;
+    if (derived.context.has(id)) continue;
     butts.push(id);
   }
   return butts.sort(compareIds);

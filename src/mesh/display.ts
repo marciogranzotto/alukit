@@ -132,7 +132,7 @@ export function meshDisplay(derived: Derived, items: ItemSource): MeshInput["dis
 
 /**
  * Each placed part as drawn (§8): its item's box, or a project item's shape, its datums, and
- * whether it is a placeholder or a marker for an item with no box.
+ * whether it is a placeholder, context (X11) or a marker for an item with no box.
  */
 export function displayParts(derived: Derived, own: OwnItems): Record<string, ViewPart> {
   const parts: Record<string, ViewPart> = {};
@@ -153,8 +153,9 @@ export function displayParts(derived: Derived, own: OwnItems): Record<string, Vi
     }
     parts[id] = {
       ...(box ? { box } : {}),
-      translucent: !box || p.kind === "placeholder",
+      translucent: !box || p.kind === "placeholder" || p.context === true,
       ...(p.kind === "placeholder" ? { placeholder: true } : {}),
+      ...(p.context ? { context: true } : {}),
       ...(shape ? { shape } : {}),
       ...(m ? { mass_kg: mass(m.v), mass_src: m.src } : {}),
       ...(Object.keys(datums).length > 0 ? { datums } : {}),
@@ -191,6 +192,7 @@ export function displayFasteners(derived: Derived, own: OwnItems): ViewFastener[
         axis: st.axis,
         len: len(last.to),
         d,
+        ...(f.context ? { context: true } : {}),
       });
     }
   }

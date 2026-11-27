@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, and 72–77 in "3D editing, E1"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "3D editing, E1". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", and 80–84 in "Gap X11"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "Gap X11". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -566,6 +566,36 @@ worked by hand in its test.
 - §3.5: **a mass computed from a traced section's area is `est`**, as the fidelity table says; it
   was tagged `calc`. A computed value's provenance follows its section's fidelity. No mass moved:
   each of the eight traced Forseti profiles publishes its mass (e1 18).
+
+### Gap X11
+
+An acceptance run modelled the room its frame stands in (the walls and the floor) as placeholder
+parts, so that X9's cover test and F11's `after_assembly` could read them, and measured what that
+cost: the room entered the BOM, the order (placeholder lines that block it, "a placeholder, not a
+part to order") and `bbox()`, and a floor slab 30 thick under z = 0 moved a size check from 2230 to
+2260. Nothing could say a member is context, not part of the build. Fixed at its root, with failing
+tests written first and a golden case worked by an independent hand script
+([`notes/x11.md`](notes/x11.md), cited as "x11").
+
+- §4.4, §4.5, §4.7: **context** (G51). A bar, a placed part or a butt's through body takes
+  `"context": true` (a wall, the floor, a bench the frame is fixed to, a clearance envelope): it is
+  drawn and checked against, as before, but not cut, counted, bought or weighed, and not in
+  `bbox()`. A connection whose every member is context is the context's own and brings nothing; one
+  with a built member is the build's. A part on a context bar is bought unless it says so too.
+  CAD and BIM tools mark such geometry per occurrence and leave it out of the BOM, the quantities and
+  the mass (x11, sources and 1–7). Calls 80, 82, 83.
+- §4.9, §5.3, §5.4, §5.5: **what each output does with it**. The cut list cuts no context bar; the
+  BOM counts and weighs none and lists it apart, as joint recipes are; the order, the costs and
+  `mass()` follow; the machining sheet lists what the build machines on a context bar as made in
+  place; `bbox()` is the build's extent; a butt between context members asks for no connector
+  (x11 8–14). Calls 81, 82, 84.
+- §8, §9: **the view and the GLB** draw context translucent in its own tone, with materials made
+  once, and the GLB keeps it, flagged, in a material of its own and with no SKU or cut length
+  (x11 15, 16). Call 84.
+- §4.6, §12, §13: G51, the gap's row and the run's frame measured with its room marked. No golden
+  value or fixture output moved (x11, what moved).
+- §4.5, a correction: a butt's through body is counted and **not drawn**, a v1 limit; the text said
+  "drawn and counted" (x11, not done here).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1292,6 +1322,20 @@ the frame's joints are made (a brace or a guard rail added last, a wall modelled
 made before it is tightened, only afterwards, and its own joints are made after assembly, with
 every member there (§3.4). Nothing else reads it.
 
+**Context** (*2.3*, gap X11; G51; calls 80–84). What the build stands in or against but is not
+part of it (a wall, the floor, a bench the frame is fixed to, a clearance envelope) is modelled
+as any member and marked `"context": true`, on a bar, a placed part (§4.7) or a butt's through
+body (§4.5); `true` only, and an unplaced line takes none. Derive treats it as any member: it is
+placed, its ends resolve, butts bear on it, it covers a cross hole's mouth (§3.4) and may arrive
+after assembly, face connections touch it, and the accessors read it. What it changes is what the
+build is: a context member is **not cut, counted, bought or weighed**, and not in `bbox()`
+(§4.9, §5.3–§5.5). The BOM lists it apart; the view draws it translucent in its own tone (§8);
+the GLB keeps it, flagged (§9). A context bar's own machining, and what a built connection makes
+in it, is made in place (§5.4). It is a fact about the occurrence, as CAD tools mark reference
+geometry, because one item is built in one place and context in another (an existing frame
+extended with new bars of its profile); a placeholder (§4.8) is a part still to choose and buy,
+which context is not.
+
 ### 4.5 Ends and connections (review B1, D14)
 
 **The rule.** Every bar end resolves to **exactly one end plane** (a point and an outward normal)
@@ -1424,11 +1468,24 @@ stage 4, after the cuts it would set) is call 45. `stack` entries are whole refe
 
 **A butt through a body** (*2.1*): the body is any item with a bounding box (a connector, a
 placeholder, a generic or a plate), at a point or at a pose `{ "pos", "rot_deg" }` as parts take
-(§4.7). Its box's faces act as the through prism's (G5). The body is drawn and counted with the
-connection; it is not also a part. A project placeholder serves (*2.3*; gap G-B): its `bbox_mm`
+(§4.7). Its box's faces act as the through prism's (G5). The body is counted with the
+connection; it is not also a part. **v1 limit** (*2.3*, a correction found with gap X11: this said
+"drawn and counted"): the body is **not drawn**, nor in the GLB or `bbox()`, since `src/mesh/`
+places bars, parts and fasteners and a through body is none of them (**verified** on G28: its
+`derive --json` holds no part for the motor's body). A project placeholder serves (*2.3*; gap G-B): its `bbox_mm`
 is read as a catalog cube's, from its `mount` datum when it has one, so bars bearing on a motor
 not yet chosen follow its box (G28). An item with no box is an `item` error, and the ends stay at
-their design points.
+their design points. *2.3* (gap X11): `{ "body", "at", "context": true }` marks the body context
+(§4.4): it is still the through prism, and not counted (the BOM lists it apart).
+
+**A context connection** (*2.3*, gap X11; G51; call 82). A connection whose every member is context
+(§4.4) is the context's own joint, already made: a butt's through bar, the bar whose end it names
+or its body, its butting ends' bars and its stack; a miter's or splice's two ends; a pivot's base
+and ends; a face connection's layers, a run standing for all its bars. What it brings (connectors,
+fastener sets, stacks, pieces cut from stock, recipes) is not counted and its machining is not
+listed, and a butt of it naming no connector asks for none (§5.5). A connection with a built member
+is the build's, whatever else it joins: the frame fixed to a wall buys its fixings, and what it
+machines in a context bar is made in place (§5.4).
 
 **Bearing on an end** (*2.1*). A strut that bears at an angle on a block's end face names that end
 as `through` (G17). A connector's hole in the through bar is then an end hole, into that end face
@@ -1732,7 +1789,8 @@ with domed, flat and socket heads), and G49 (*2.3*, after the round-4 acceptance
 own groove and one whose drawing leaves its lips' undersides out, a quick connector whose cross hole
 is named, given a tool's room or left to derive, recipes naming a mount hole's face, and a plate),
 and G50 (*2.3*, after the decided frame's ninth run: `test-cover` again, with a project placeholder
-for a wall).
+for a wall), and G51 (*2.3*, gap X11: the `test` catalog, a frame beside a bench, a floor and a wall
+marked context).
 
 | # | Setup | Rule exercised | Expected |
 |---|---|---|---|
@@ -1763,6 +1821,7 @@ for a wall).
 | G48 | a flat 80 x 80 block b1 (0,0,0)→(200,0,0); 40x40 post b2 (100,0,40)→(100,0,540); `butt` with J1: an M16 bush tap in the post, a Ø9 through-hole in b1 at it, an M8 x 110 (dk 13) | a far-face head on the hole F2 makes (*2.3*, gap F7) | the hole through the block at 100, the head on its bottom face, 100 %. A brace square to the side: the hole through the side, the head on the opposite side, 100 %. A brace rising 30° onto the side: F2 refuses the hole, a `connection` error, and no head (draft 2.3 seated one at 100 % on the far side). Through a 40x40 rail: 46.05 % on its bottom face's lips, a `fit` warning |
 | G49 | 40x40 rail b1 (0,0,0)→(600,0,0), hooked lips (opening 8.18, lip 3.79, hooks 13.6); 40x40 post b2 (300,0,20)→(300,0,520), `butt` through b1 with a quick connector (dk 18, d 7.8, k 4.48, rf 17.5, a Ø18 cross hole 28 deep 25 up); a 40x40 b3 (200,40,45)→(400,40,45) against the post's +y face | a cross hole's mouth clear of the other members; a head on the lips' underside; a profile's own groove (*2.3*, gaps X9, F8, F9) | +y is covered (100 %): the hole on −y, the next in tie order, "Ø18.00 hole 25.00 mm from end a on face -y, 28.00 deep"; the head on the lips' underside from 4.09 to 6.80 off the centre line: 37.22 % (54.41 % on the face), a `fit` warning; room 1.72 and 2.01. +y named by the requirement: kept, a `connection` error naming b3. b3 2 mm off: −y; with `access_mm: 1`, +y. All four faces covered: +y, an error naming b3–b6. A mount's hole naming −x: −x. A rail whose own groove gives opening 8.1, lip 4, hooks 14.3: 41.69 %, 1.51 deep. One whose drawing leaves the hooks out: no seat, an info |
 | G50 | 80x80 sill b1 (0,0,0)→(340,0,0); 80x80 post b2 (300,0,40)→(300,0,640), `butt` through b1 with a recipe holding a quick connector at (−20, −20) and (20, 20) (each a Ø18 cross hole 28 deep 25 up); a 40x40 b3 (320,62,40)→(320,62,300) 2 off the post's +y face; a wall placeholder p1 24.5 off its +x face, `after_assembly: true` | a member placed after assembly; a cross hole's face named on the connection (*2.3*, gaps F11, F12) | at (−20, −20): −y, clear, "Ø18.00 hole 25.00 mm from end a on face -y, -20.00 across, 28.00 deep"; at (20, 20): +y under b3 (100 %), +x under the wall alone: +x, a `connection` warning naming p1. The wall placed with the frame: no face clear, +y, an error naming b3 and p1. `hole_faces` +x at (20, 20): the warning; with the wall placed with the frame, an error naming p1. +y named: an error naming b3. −x named for the end: −x at (−20, −20); at (20, 20) 60 from the core, deeper than the hole: an error, no hole. The wall turned to stand 24.5 off +y, b3 gone: +x, clear for good, over +y. A 40x40 fitted last 2 off +x for the wall: the warning names it. The post fitted after assembly: its joint is made then, an error naming b3 and p1. Each head 37.22 % under the sill's lips, a `fit` warning |
+| G51 | 40x40 posts b1 (0,0,0)→(0,0,1000) and b2 (400,0,0)→(400,0,1000), a bracket p1 on b1 +x at 500; context: a bench post b3 (−300,0,0)→(−300,0,1200) with a Ø8.5 hole on +x 500 from end a, its rail b4 (−1000,500,900)→(−500,500,900) and b5 on to (0,500,900) spliced by c1 (SPL-40), a floor placeholder p2 3000 × 3000 × 30 at (−1000,−1000,−30) and a wall placeholder p3 at (−1000,600,0) | context: drawn and checked against, not cut, counted, bought or weighed, nor in `bbox()`; a context connection; machining made in place (*2.3*, gap X11) | cut list 2 × 1000; BOM TS40 2 × 1000, 2.986 kg, and BRK-40, 0.15 kg: 3.136 kg; b3, b4, b5, p2, p3 listed apart; order TS40-c7 253.00 + BRK-40 8.90 = 261.90, READY; `bbox()` 440 × 40 × 1000; in place: b3 "Ø8.50 hole 500.00 mm from end a on face +x". Nothing marked: 6 BOM lines, 6.486 kg, `bbox()` 3000 × 3000 × 2530, blocked. Only the floor unmarked: `bbox()` 3000 × 3000 × 1030, blocked by its line. b4 built: c1 the build's, SPL-40 and its stud bought, TS40 3 pieces, 2500 mm, 3.948 kg, `bbox()` 1420 × 540 × 1000, b5's tap in place. b1 marked: TS40 1 × 1000, the bracket still bought, 1.643 kg, `bbox()` 400 × 40 × 1000, 135.40, READY |
 
 ### 4.7 Parts, rails and patterns (D14)
 
@@ -1797,6 +1856,14 @@ stand in front of a cross hole's mouth when a joint made before it is tightened,
 warning (§3.4). A part on a station of a bar placed after assembly (§4.4) arrives with that bar,
 whether or not it says so. An unplaced line has no box, so takes none. It changes nothing else: the
 part is drawn, counted and priced as before.
+
+**Context** (*2.3*, gap X11; G51; calls 80, 83). A placed part may give `"context": true` (§4.4):
+the floor the frame stands on, a wall, a machine it is fixed to, modelled as a placeholder, a
+generic or any catalog item. It is drawn and checked against, and not counted, bought or weighed,
+nor in `bbox()`. A part on a station of a context bar is **not** context unless it says so: a
+bracket screwed to an existing beam is bought (unlike `after_assembly`, since nothing stops a new
+part standing on an old bar). A pattern's copy takes its template's field, as every field. An
+unplaced line is counted and never drawn, so it takes none (the schema refuses it).
 
 **Rails** are bars, and their holes come from the cut. The layout follows how the rail is sold
 (*2.1*):
@@ -1844,7 +1911,7 @@ G22–G24 (§4.6) are the worked cases.
 | `plate` | `material` (a catalog material), `thickness_mm`, `outline`, `holes` |
 | `bent-angle` | two legs, `legs_mm`, each measured to the outside of the other; thickness; the inside `bend_radius_mm`; `k_factor`, required, 0 < K ≤ 0.5 (*2.3*); holes per leg. One 90° bend in v1 |
 | `generic` | as the catalog kind, with a price and a supplier (*2.3*: packs and offers belong in a project-local catalog) |
-| `placeholder` | name, mass, bounding box, an estimated price. Drawn translucent (hatching is a v1 limit, §8); holds its own order group (§5.5) |
+| `placeholder` | name, mass, bounding box, an estimated price. Drawn translucent (hatching is a v1 limit, §8); holds its own order group (§5.5). A part still to choose and buy; what is not to be bought at all (a wall, the floor) is a part marked context (§4.4, *2.3*, gap X11), which holds nothing |
 
 A project item holds **numbers, not expressions** (*2.3*): it is item data, resolved before derive
 like a catalog item's, so a parametric plate is a catalog item. Plates and bent angles default to
@@ -1904,6 +1971,11 @@ A small, safe language; no JS `eval`.
   the rest. A part's hole markers stand proud of it to show and are not bodies. A placed part
   whose item gives no box is drawn as a marker, which is not its extent, so a check that reads
   `bbox()` then cannot be evaluated, an error naming the part, never a pass on a partial box.
+  *2.3* (gap X11; call 84): `bbox()` is the **build's** extent. Context (§4.4) is drawn and left out:
+  a context bar or part, and a context connection's fasteners; a context part with no box no longer
+  makes it unmeasurable. A floor slab under z = 0 does not move a check on the frame's height.
+  `mass()` is the build's too, since the BOM weighs no context; `count(tag:…)` counts what is
+  tagged, context or not.
 - `^` is right-associative and binds tighter than unary minus (`-2^2` is −4); comparisons do not
   chain; `if` evaluates one branch (*2.3*).
 - `sec(b3)` reads the bar's section, after swaps (*2.1*): `sec(b3).t_mm` and the other parameters
@@ -2167,6 +2239,10 @@ where it physically is, whichever end or side it is named from (*2.3*). Rails al
 end: a rail's holes are one record on the piece, its hole count, pitch and E at each end, E measured
 along the box's centre line from each end face (*2.3*).
 
+**Context is not cut** (*2.3*, gap X11; §4.4). A context bar gives no piece, so no line, no nesting,
+no offer and no length check; nor does a context connection's piece cut from stock (a stud, a
+sleeve). What the build machines on a context bar is on the machining sheet, made in place (§5.4).
+
 ### 5.4 BOM and order list (review B3, M7)
 
 - **BOM**: every item and option with its quantity (bars: count and total length, each piece's
@@ -2177,12 +2253,23 @@ along the box's centre line from each end face (*2.3*).
   warning, listed and left out of the totals.
 - **Joint recipes** (§3.4; *2.3*) are listed apart, with their uses and connections, in no group
   and no total, with no mass; the order buys only what they bring.
+- **Context** (§4.4; *2.3*, gap X11; call 81) is listed apart too, `context: [{ id, kind, item,
+  name, opt }]` in id order (a bar, a part, or a butt's through body under its connection's id),
+  and in Markdown and CSV, so a reader sees what was left out: in no group and no total, with no
+  mass and so no `mass` warning. A context connection's hardware and recipes are not listed at
+  all, since they are no member. The order list and the costs follow the BOM and the cut list, so
+  context has no line, no price and no `placeholder` reason, and `cost()` and `mass()` leave it out.
 - **Machining sheet** (*2.3*; M6): `alukit machining` lists every plate and bent angle the BOM
   counts, with its supplier, material, thickness, datum, outline or legs, blank and bend, and each
   hole from the datum and on the blank; bars are cross-referenced by their cut-list lines, *2.3*
   each with its machining in the cut list's words, where a hole in a bar's side names the face it
   is drilled from: the shop reads the sheet (after the round-4 acceptance; gap X9, call 59).
-  Markdown or JSON; a flat CSV would repeat the part on every row.
+  Markdown or JSON; a flat CSV would repeat the part on every row. *2.3* (gap X11; call 82): what
+  the build machines on a context bar (§4.4) is listed **in place**, `in_place: [{ bar, item, opt,
+  ops, machining }]`, in the cut list's words from the bar's own ends (it is not cut, so not turned
+  end for end): the ops written on it and those a built connection makes in it, a hole drilled in
+  an existing beam to fix the frame to it. A context connection's own machining is there already,
+  and not listed. In-place machining is no supplier's service, so it asks for no price.
 - **Order list**, per supplier. Offers are chosen in this order:
   1. an explicit choice in the project's `order` map;
   2. otherwise the **cheapest cover**: for packs, the combination of pack sizes with the lowest
@@ -2290,7 +2377,13 @@ so a failing check holds the order through `check-error`.
   from, so the same project gives the same order on any day it is replayed with that date.
 - **A placeholder** (*2.3*) holds only its own group, not every supplier, and an unpriced one adds
   no `missing-price` besides: draft 2's "its own line, under unsourced" missed a placeholder
-  bought from a named supplier.
+  bought from a named supplier. A placeholder marked context (§4.4; *2.3*, gap X11) is not a part
+  to buy, so it has no line and holds nothing.
+- **Context** (*2.3*, gap X11; call 82) brings no order rule: it is in no line. A butt between
+  context members (a context connection, §4.5) naming no connector is not a `butt-no-connector`
+  note nor part of the `no-connector` warning, since nothing is to be bought to join an existing
+  bench; a butt with a built member still is. The checks that read geometry read context as any
+  member (covers, contacts, seats, a butt's face).
 - **The cover does not avoid an out-of-stock offer**: the cheapest wins, and `out-of-stock` blocks
   until the project chooses another offer or switches the rule, since silently buying a dearer
   one would hide the cost (*2.3*).
@@ -2782,6 +2875,14 @@ selection; fitting keeps the view's direction, since `fitToBox` turns it to the 
 - Placeholders render translucent and hatched; `parametric` and `box` sections show their
   fidelity on hover. **v1 limit** (*2.3*): placeholders are translucent and outlined, without
   hatching, which waits for a texture (v1.1).
+- *2.3* (gap X11; call 84): **context** (§4.4) is translucent in its own neutral tone
+  (`ViewTheme.body.context`), outlined, whatever its item: a context placeholder draws as context,
+  and colouring by item keeps context's tone, since it is no item of the build. Square context bars
+  and a context connection's fasteners share one translucent pair of materials, made with the
+  scene and kept as the opaque pair is; an angled context bar and a context part take materials
+  whose parameters the translucent parts already use. So marking or unmarking context links no
+  shader program (`view.spec.ts`). The camera fits everything drawn, context included, so a frame
+  shows in its room.
 - The scene renders on demand (a camera move, a model, a selection, a resize), and fits the
   camera to the first model only (*2.3*). *2.3*: a revision's old model is disposed after the
   frame that draws the new one, so no shader program is released and linked again; on
@@ -2813,6 +2914,11 @@ are *not verified* (review 1 §9).
     children, `<part>.<hole> <rod>` (*2.3*). It is not the render scene. What does not derive is
     not in the file.
   - `extras`: kind, id, item, SKU, options, cut length; a fastener's connection (*2.3*).
+  - Context (§4.4; *2.3*, gap X11; call 84) is kept where it stands, so the frame exports in its
+    room: its nodes carry `extras.context: true` and no SKU or cut length (it is not bought or
+    cut), in one material of their own, `context, translucent`. A reader that wants the build
+    alone drops the flagged nodes. `derive --json` flags context on its bars, parts, face
+    connections, pieces, hardware and recipes.
   - `asset.extras` stamp: AluKit version, the content hash of document + lock + tool version,
     revision, variant, and the git commit and dirty flag as a second field (review M5). This
     answers the "published page traced to no commit" lesson.
@@ -3044,6 +3150,7 @@ says so.
 | Gaps, run 4 (*2.3*) | The joint geometry the acceptance's fourth run found (§13, F2): an end hole along its fastener's axis, a butt's end face on its face, a head on material | each is closed at its root, with failing tests written first; G35–G37 (§4.6) pass against independent hand scripts; no earlier value moves, and the new checks' diagnostics on earlier fixtures are listed in §4.6 and the cart's hand script. **Done** ([f2](notes/f2-joint-geometry.md)) |
 | Gaps, round 4 (*2.3*) | The gaps the round-4 acceptance found: a cross hole drilled into a face another member covers (X9), a head under the lips credited with the face beside the opening (F8), the 40x80 and the 80x80 básico taking the 40x40 básico's groove (F9); the machining sheet naming each hole's face | each is closed at its root, with failing tests written first; G49 (§4.6) passes against an independent hand script; no golden value or fixture diagnostic moves; the Forseti end-to-end test's head on the 80x80 básico bears 38.75 %, a warning, where it bore 54.41 %. **Done** ([x9](notes/x9-f8-f9.md)) |
 | Gaps, ninth run (*2.3*) | The gaps the decided frame's ninth run found (§13): a cover that arrives after assembly could not be written (F11), and a cross hole's face could be named only in the catalog (F12) | each is closed at its root, with failing tests written first (12 of the 13 new tests fail on the base, the 13th guarding the unchanged error); G50 (§4.6) passes against an independent hand script; no golden value or fixture diagnostic moves (175 cases); the acceptance frame's check is unchanged. **Done** ([f11](notes/f11-f12.md)) |
+| Gap X11 (*2.3*) | The gap an acceptance run measured: the room a frame stands in, modelled as placeholder parts, entered the BOM, the order and `bbox()` (X11) | closed at its root, with failing tests written first (25 fail on the base, the inspector's does not load, and two guards pass); G51 (§4.6) passes against an independent hand script; no golden value or fixture output moves (187 cases); the run's frame with its room marked context: `bbox().z` 2230, not 2260, the room's placeholder lines and reasons gone, its check otherwise unchanged. **Done** ([x11](notes/x11.md)) |
 | Gaps, round 3 (*2.3*) | The gaps the round-3 acceptance found (§13): an access hole at its connector's core and connectors placed by a recipe (X7), a connector's own head and a domed head under the lips (X8), a far-face head only on the hole F2 makes (F7); the quick connector's data in the Forseti catalog | each is closed at its root, with failing tests written first; G46–G48 (§4.6) pass against independent hand scripts; no earlier diagnostic moves. **Done** ([x7](notes/x7-x8-f7.md)) |
 | **Acceptance** | §13 | §13. **Passed on run 3.** Runs 1 and 2 passed tests 1–4 and failed on model gaps, which were fixed at their root (G29–G34) |
 
@@ -3136,6 +3243,15 @@ could say so, so each was a `connection` error (F11). And a face could be named 
 recipe, so the faces took 8 recipes and 5 split butts (F12). Both are fixed at their root (§3.4,
 §4.4, §4.5, §4.7), with golden case G50 (§4.6; [notes](notes/f11-f12.md)): with the walls marked
 `after_assembly`, the five errors become warnings, and nothing else in the frame's check moves.
+
+**Gap X11, 2026-11-27** (*2.3*). An acceptance run's room (three walls and the floor, placeholder
+parts so that X9 and F11 could read them) entered the BOM, the order, as placeholder lines that
+block it, and `bbox()`: its floor slab, 30 thick under z = 0, put the frame's size check at 2260
+where the frame is 2230 tall. With context (§4.4; G51; [notes](notes/x11.md)) and the room marked, measured on a
+copy of the run's document in each variant: `bbox()` 4900 × 1420.61 × 2230, the check's margin 100,
+not 70; the four placeholder lines and their four `placeholder` reasons gone; derive's diagnostics
+identical, every cross hole's cover and warning included. The order stays blocked by its own other
+reasons. Marking the room is the run's own change, in its project.
 
 ## 14. Calls made without asking (veto any)
 
@@ -3423,6 +3539,31 @@ recipe, so the faces took 8 recipes and 5 split butts (F12). Both are fixed at t
     bars, as derived; a part a step moves or removes is not listed, as a bar's move is not. An
     explode's copies keep their place, and its answer maps each copy (`b26@2`) to its new entity
     (e1 16, 17).
+
+80. *New in 2.3, gap X11, open.* Context is a field of the member, `context: true` on a bar, a placed
+    part or a butt's through body, not a kind of item or a field of a placeholder: one item is built
+    in one place and context in another (an existing frame extended with new bars of its profile, a
+    steel beam from `std`), as Inventor's per-instance BOM structure and Onshape's per-instance
+    suppression allow. No default on an item in v1; Inventor's file default is the way to add one.
+    The word is Inventor's ("add context to a design"), wide enough for what exists and for what is
+    no thing (IFC's `EXISTING` and `CLEARANCE`); `reference` would collide with reference catalogs
+    and id references (x11 1–4).
+81. *New in 2.3, gap X11, open.* Context is left out of the cut list, the BOM's groups and totals, the
+    order, the costs, `mass()` and `bbox()`, and kept everywhere else: derive, the checks, the view,
+    the GLB. One flag, not one per output: a wall left in the BOM but out of `bbox()` is no case
+    anyone has. The BOM lists it apart, as joint recipes, so a reader sees what was left out
+    (x11 8–11).
+82. *New in 2.3, gap X11, open.* A connection whose every member is context is the context's own: it
+    brings nothing to buy, lists no machining and asks for no connector; one with a built member is
+    the build's. What the build machines on a context bar is listed as made in place, from the bar's
+    own ends, and priced by no service (x11 6, 12).
+83. *New in 2.3, gap X11, open.* A part on a station of a context bar is not context unless it says
+    so, unlike `after_assembly`, which a part on such a bar inherits: a part cannot arrive before
+    its bar, but a new bracket on an existing beam is bought (x11 5).
+84. *New in 2.3, gap X11, open.* `bbox()` is the build's extent, so a check on the frame's size is not
+    moved by the room; no `bbox()` of everything drawn, since no check has asked for one. The view
+    draws context translucent in one neutral tone, whatever its item, and the GLB keeps it, flagged,
+    in its own material, so the frame exports in its room (x11 13, 15, 16).
 
 ## 15. Review 1 resolution
 

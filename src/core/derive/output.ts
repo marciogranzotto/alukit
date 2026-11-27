@@ -72,6 +72,7 @@ function barJson(b: DerivedBar) {
           },
         }
       : {}),
+    ...(b.context ? { context: true } : {}),
   };
 }
 
@@ -132,6 +133,7 @@ export function partJson(p: DerivedPart) {
     point: pt(p.point),
     frame: { x: dir(p.frame.x), y: dir(p.frame.y), z: dir(p.frame.z) },
     origin: pt(p.origin),
+    ...(p.context ? { context: true } : {}),
   };
 }
 
@@ -175,21 +177,33 @@ function fasteningJson(f: FaceResult) {
           }
         : {}),
     })),
+    ...(f.context ? { context: true } : {}),
   };
 }
 
-/** Hardware uses summed per item, options and source, in id order. */
+/**
+ * Hardware uses summed per item, options and source, in id order. A use that is not counted, the
+ * context's own or a through body marked context (X11), says so and sums apart.
+ */
 function hardwareJson(hw: readonly HardwareUse[]) {
   const sum = new Map<
     string,
-    { item: string; opt: Record<string, string>; source: string; qty: number }
+    { item: string; opt: Record<string, string>; source: string; qty: number; context?: true }
   >();
   for (const h of hw) {
     const opt = sortedOpt(h.opt);
-    const k = JSON.stringify([h.item, opt, h.source]);
+    const k = JSON.stringify([h.item, opt, h.source, h.context === true]);
     const e = sum.get(k);
     if (e) e.qty += h.qty;
-    else sum.set(k, { item: h.item, opt, source: h.source, qty: h.qty });
+    else {
+      sum.set(k, {
+        item: h.item,
+        opt,
+        source: h.source,
+        qty: h.qty,
+        ...(h.context ? { context: true as const } : {}),
+      });
+    }
   }
   return [...sum.values()].sort(
     (a, b) =>
@@ -262,6 +276,7 @@ export function derivedJson(d: Derived, stamp: { lock?: string } = {}): Record<s
       item: p.item,
       opt: sortedOpt(p.opt),
       len_mm: len(p.len),
+      ...(p.context ? { context: true } : {}),
     })),
     hardware: hardwareJson(d.hardware),
     ...(d.recipes.length > 0 ? { recipes: hardwareJson(d.recipes) } : {}),

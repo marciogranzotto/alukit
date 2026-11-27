@@ -1,0 +1,27 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G51",
+  "catalogs": ["../../catalogs/test"],
+  "defaults": {
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "item": "test:TS40", "opt": { "finish": "anodised" }, "a": [0, 0, 0], "b": [0, 0, 1000], "label": "a post of the frame" },
+    "b2": { "item": "test:TS40", "opt": { "finish": "anodised" }, "a": [400, 0, 0], "b": [400, 0, 1000], "label": "the frame's other post" },
+    "b3": { "item": "test:TS40", "opt": { "finish": "anodised" }, "a": [-300, 0, 0], "b": [-300, 0, 1200], "ops": [{ "op": "hole", "face": "+x", "at_mm": 500, "d_mm": 8.5 }], "context": true, "label": "a post of the bench the frame stands beside, drilled in place to fix the frame to it" },
+    "b4": { "item": "test:TS40", "opt": { "finish": "anodised" }, "a": [-1000, 500, 900], "b": [-500, 500, 900], "context": true, "label": "the bench's top rail, first piece" },
+    "b5": { "item": "test:TS40", "opt": { "finish": "anodised" }, "a": [-500, 500, 900], "b": [0, 500, 900], "context": true, "label": "the bench's top rail, second piece" }
+  },
+  "connections": {
+    "c1": { "type": "splice", "ends": ["b4.b", "b5.a"], "connector": "test:SPL-40", "label": "the bench's own splice" }
+  },
+  "parts": {
+    "p1": { "item": "test:BRK-40", "on": { "bar": "b1", "at_mm": 500, "face": "+x" }, "label": "a bracket on the post" },
+    "p2": { "item": "project:FLOOR", "at": { "pos": [-1000, -1000, -30] }, "context": true, "label": "the floor, a slab 30 thick under z = 0" },
+    "p3": { "item": "project:WALL", "at": { "pos": [-1000, 600, 0] }, "context": true, "label": "the wall behind the bench" }
+  },
+  "items": {
+    "FLOOR": { "kind": "placeholder", "name": "The floor the frame stands on", "bbox_mm": [[0, 0, 0], [3000, 3000, 30]] },
+    "WALL": { "kind": "placeholder", "name": "The wall behind the bench", "bbox_mm": [[0, 0, 0], [3000, 30, 2500]] }
+  }
+}

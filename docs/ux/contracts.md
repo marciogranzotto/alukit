@@ -458,3 +458,22 @@ everything below: E1; other streams add to it only.*
   origin }` for a placed part or `{ item, qty }` for a counted one, by id; always present, `{}` when
   none. `explodePattern`'s `info.copies` maps each copy (`b26@2`) to the entity it became (e1 16,
   17).
+
+## Gap X11 changes
+
+*Context ([`../notes/x11.md`](../notes/x11.md)): a bar or a placed part marked `context: true`,
+drawn and checked against but not built or bought. Each adds.*
+
+- **`ViewTheme`** (`src/viewer/theme.ts`) adds `body.context`, context's one tone whatever its
+  item; **`tokens.ts`** holds its dark and light values (S4 may retune them).
+- **The export's palette** (`src/mesh/style.ts`, frozen by D-UX-24): `COLOURS.context`, the GLB's
+  `context, translucent` material; `partTone` answers `"context"` first and `barColour` reads a
+  bar's `context`. No byte of a GLB without context moved (x11, what moved).
+- **The view model** (`src/mesh/model.ts`): `BarJson.context`, `PartJson.context`,
+  `ViewPart.context`, `ViewFastener.context`; `PartShape.context` (`src/mesh/place.ts`).
+- **`ViewerStats`** (`src/viewer/scene.ts`) adds `context`, the bars, parts and fasteners drawn as
+  context. The scene keeps a translucent pair of materials for context, made once, beside the
+  opaque pair.
+- **The inspector** (`src/ui/inspector/context.ts`): `contextOf(model, id)` (whether the entity can
+  be marked, whether it is, and the command) and `contextBatch(model, id, on)`; the Context row
+  (`ContextRow`, in `BarFields.tsx`) on a bar's and a placed part's fields, one step.

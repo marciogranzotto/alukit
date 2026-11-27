@@ -97,6 +97,11 @@ not drawn.
 
 **Patterns** repeat a template along a bar by pitch and count; the copies stay live (`b26@2`).
 
+**Context.** What the frame stands in but is not part of (a wall, the floor, a bench it is fixed
+to) is a bar or a placed part with `"context": true`. It is drawn translucent and the checks read
+it, but it is not cut, counted, bought or weighed, and `bbox()` leaves it out; the BOM lists it
+apart. Use it rather than a placeholder, which is a part still to buy and blocks its order line.
+
 <a id="items"></a>
 **Items** (`items`, named `project:<id>` by parts) are what no catalog holds: a `plate` with an
 outline and holes, a `bent-angle` with its legs, bend radius and K-factor, a `generic` item, or a
