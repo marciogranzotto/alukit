@@ -196,23 +196,32 @@ export function placeCommand(
   };
 }
 
-/** The batch the pattern tool makes, or why it makes none. */
-export function patternCommand(s: {
-  template: readonly string[];
-  along?: string | undefined;
-  pitch: string;
-  count: string;
-}): { cmd: string; args: Record<string, unknown> } | { why: string } {
+/**
+ * The batch the pattern tool makes, or why it makes none. The pitch is typed as every other
+ * length is (D-UX-17; the editing audit's D5): units and expressions over the project's
+ * `params`, written as the number it comes to when it reads no param and as typed when it does,
+ * so the param keeps driving it.
+ */
+export function patternCommand(
+  s: {
+    template: readonly string[];
+    along?: string | undefined;
+    pitch: string;
+    count: string;
+  },
+  params: Readonly<Record<string, number>> = {},
+): { cmd: string; args: Record<string, unknown> } | { why: string } {
   const template = s.template.filter((id) => !id.includes("@"));
   if (template.length === 0) return { why: "select the entities to repeat" };
   if (!s.along) return { why: "pick the bar or run to repeat along" };
-  const pitch = Number(s.pitch);
+  const pitch = typedNumber(s.pitch, params);
+  if ("why" in pitch) return { why: `the pitch: ${pitch.why}` };
+  if (pitch.value === 0) return { why: "the pitch is a length in mm, not 0" };
   const count = Number(s.count);
-  if (!(Number.isFinite(pitch) && pitch !== 0)) return { why: "the pitch is a length in mm" };
   if (!(Number.isInteger(count) && count >= 2)) return { why: "the count is 2 or more" };
   return {
     cmd: "addPattern",
-    args: { template, along: s.along, pitch_mm: pitch, count },
+    args: { template, along: s.along, pitch_mm: pitch.written, count },
   };
 }
 

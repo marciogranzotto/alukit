@@ -217,6 +217,28 @@ describe("pattern", () => {
       patternCommand({ template: ["p6"], along: "b9", pitch: "150", count: "1" }),
     ).toHaveProperty("why");
   });
+
+  it("takes the pitch as typed: an expression over params stays one, units are mm (D5, D-UX-17)", () => {
+    const params = { W: 1200 };
+    const s = { template: ["p6"], along: "b9", count: "4" };
+    expect(patternCommand({ ...s, pitch: "W / 8" }, params)).toEqual({
+      cmd: "addPattern",
+      args: { template: ["p6"], along: "b9", pitch_mm: "W / 8", count: 4 },
+    });
+    // A value that reads no param is written as the number it comes to.
+    expect(patternCommand({ ...s, pitch: "15cm" }, params)).toMatchObject({
+      args: { pitch_mm: 150 },
+    });
+    expect(patternCommand({ ...s, pitch: "300 / 2" }, params)).toMatchObject({
+      args: { pitch_mm: 150 },
+    });
+    expect(patternCommand({ ...s, pitch: "V / 2" }, params)).toEqual({
+      why: 'the pitch: "V" is no param of this project',
+    });
+    expect(patternCommand({ ...s, pitch: "W - W" }, params)).toEqual({
+      why: "the pitch is a length in mm, not 0",
+    });
+  });
 });
 
 describe("measure", () => {

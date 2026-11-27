@@ -20,6 +20,7 @@ import {
   pivotOptions,
   toolPrompt,
 } from "./state.ts";
+import { typedNumber, typedWords } from "./typed.ts";
 
 /**
  * The active tool's long form, above the inspector (D-UX-5): Connect's picks, face and pivot
@@ -382,7 +383,9 @@ const patternOutcome = signal<CommandOutcome | undefined>(undefined);
 
 function PatternPanel() {
   const s = patternState.value;
-  const c = patternCommand(s);
+  const params = model.value?.derived.params ?? {};
+  const c = patternCommand(s, params);
+  const pitch = typedNumber(s.pitch, params);
   const field = (k: "pitch" | "count" | "along", label: string) => (
     <label>
       {label}{" "}
@@ -417,6 +420,11 @@ function PatternPanel() {
         {field("pitch", "pitch mm")}
         {field("count", "count")}
       </div>
+      {!("why" in pitch) && typeof pitch.written === "string" && (
+        <p class="hint-text" data-testid="pattern-pitch-words">
+          pitch {typedWords(pitch)}
+        </p>
+      )}
       <button
         type="button"
         class="tp-btn"
