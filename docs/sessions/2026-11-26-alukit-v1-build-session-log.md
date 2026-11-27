@@ -727,3 +727,14 @@ anything, and each has a default in place.
     whose pin sits untapped in a core is not seat-checked, and with a tap its head is modelled as a
     plain cylinder and wrongly rejected.
   - The X7/X8 fix waits for the decided frame's run 6, to batch whatever it finds.
+- **05:50**: The decided frame's acceptance run 6 (internal; CLI at `eb14da6`).
+  - **Pass**: all four tests, with no exception.
+  - `check` now reports more: 23 errors and 32 warnings against run 5's 1 and 3. As a control, run 5's document on today's AluKit gives the same, so the new diagnostics come from the new checks (taps over grooves, end-face overhang, head seats), not from the project's changes. Each has a stated cause.
+  - It found the same two gaps as the alternative frame (here F5 = X7, F6 = X8).
+  - It also found **F7**: F2b seats a far-face head along the butting end's normal rather than along the screw, and seats heads for holes F2 refuses.
+  - The frozen worktree is removed.
+- **05:52**: Gap batch X7 / X8 / F7 launched (worktree):
+  - a quick connector (a pin in the core, its head under the groove's lips, a cross access hole) written as sold;
+  - access holes positioned across their face;
+  - the connector's own head seat-checked;
+  - F7 confirmed with a failing test before any change.
