@@ -525,6 +525,34 @@ note is the same [`ux/drag-ends-decisions.md`](ux/drag-ends-decisions.md), "The 
   where it goes; snaps, `→ ← ↑` locks, typed offsets, the moved bars drawn where they would be,
   the dry run's words before the release, Alt to detach; one step (move 11–18).
 
+### 3D editing, E2
+
+Stream E2 of the [editing audit](ux/editing-audit.md) builds selection, visibility, the menus and
+navigation ([`ux/e2-decisions.md`](ux/e2-decisions.md), cited as "e2"; the interfaces in
+[`ux/contracts.md`](ux/contracts.md)). Each is built test first. Nothing in the document, the
+commands or the outputs changes; `alukit query` gains one form.
+
+- §8: **the context menu everywhere**: on an outline row or a group's head (about its members), and
+  from Shift+F10 or the Menu key, about the selection; a right-drag still pans. The selection
+  header's buttons are the registry's edits, greyed with why (e2 1–4).
+- §8, §7.3: **select all (Ctrl/Cmd+A), similar, the same tags, connected and the whole assembly**,
+  from the menu; a click on an outline group's head selects its members, its twisty still opens
+  and closes it. The app asks the server's `GET /api/query`, which selects as `alukit query` does;
+  **`alukit query` takes `like:<id> by tag`** (e2 5–9). Calls 86, 89.
+- §8: **a box drawn right to left is a crossing**, dashed, and takes what it touches; left to right
+  a window, solid, takes what lies inside (e2 10). Call 87.
+- §8: **hide (H), isolate (Shift+H), show all (Alt+H)**, by visibility, so no shader program links;
+  a hidden body is not picked, snapped to, boxed or framed; the status bar says how many are hidden
+  with Show all, and the outline marks them (e2 11–15). Call 85.
+- §8: **the size readout**: the selection's W × D × H, or the model's, in the status bar, and as a
+  box in the view while Alt is held (e2 16, 17).
+- §8: **Mouse or Trackpad navigation**, a preference in the help: with Trackpad a two-finger scroll
+  pans; a pinch zooms in both, and in perspective it dollies (e2 18, 19). Call 88.
+- §8: **the palette arms the document's default bar whenever it has no bar and the default
+  changes**, so after the start card's frame B draws a bar of its profile (the audit's D1; e2 20).
+- §8: **labels over the view stay inside it**; the selected bar's label was cut off at the view's
+  right edge (e2 21).
+
 ### 3D editing, E1
 
 The [editing audit](ux/editing-audit.md) (2026-11-27) found the model far ahead of the app, and
@@ -3447,6 +3475,24 @@ recipe, so the faces took 8 recipes and 5 split butts (F12). Both are fixed at t
     E2.1, because the menu's first test opens it so: on what is under the pointer, selected first
     when it is not, else on the selection, in Select only. A greyed entry says why it cannot run.
     The outline's rows, the menu key and Shift+F10 stay E2.1's (e0 10, 11).
+85. *New in 2.3, 3D editing E2, open.* Isolate hides the rest: it writes every other drawn body into
+    the hidden set, rather than ghosting it as E-UX-9 said, so nothing put out of the way is picked
+    or snapped to, and Show's ghost stays Show's. What hides is what draws the selection (a corner
+    its bars, a joint its fasteners and bars), and hiding takes it out of the selection (e2 12, 13).
+86. *New in 2.3, 3D editing E2, open.* Ctrl/Cmd+A selects the document's bars and placed parts that
+    the view draws and does not hide, not pattern copies, connections, nodes or runs; it acts
+    anywhere but in a text field, where the audit said only on the view or the outline (e2 7).
+87. *New in 2.3, 3D editing E2, open.* A box drawn right to left is a crossing and takes a body
+    whose outline (the hull of its projected corners) touches it; left to right a window takes a
+    body wholly inside. The crossing is drawn dashed and the window, dashed before, solid (e2 10).
+88. *New in 2.3, 3D editing E2, open.* Navigation is Mouse (the wheel zooms) or Trackpad (a
+    two-finger scroll pans), per browser, Mouse by default. A pinch, or Ctrl + wheel, dollies in
+    perspective in both, where camera-controls zoomed the lens; in orthographic it zooms (e2 18,
+    19).
+89. *New in 2.3, 3D editing E2, open.* "The same tags" is `like:<id> by tag`, the entities of its
+    kind carrying every tag it carries, in `alukit query` and the app alike; the app's selection
+    verbs ask the server (`GET /api/query`), which holds the derived model, rather than bring the
+    schema into the page (e2 5, 6).
 
 ## 15. Review 1 resolution
 
