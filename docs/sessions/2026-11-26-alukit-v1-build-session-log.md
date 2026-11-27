@@ -118,8 +118,9 @@ anything, and each has a default in place.
 | Acceptance re-runs on the reference project's new heads (internal) | **ran** (01:26, 01:53) | Decided frame, run 4: **pass**. Alternative frame, first run: **fail** on AluKit gaps X1–X4, though one variant passes every numeric test. |
 | X4: stock length of parallel-cut bars | **done**, merged (02:42), pushed | Golden G38. Note: `docs/notes/x4-stock-length.md`. |
 | UX redesign, phase 1: three designer reviews | **done** (02:52–02:59), merged | `docs/ux/flows-and-ia.md`, `heuristics-and-first-run.md`, `visual-design.md` |
-| UX redesign, phase 2: one plan | running (Opus), launched 03:01 | `docs/ux/plan.md` | task flows and IA; heuristics and first run; visual design and 3D readability |
-| F2: end-hole axis, butt end-face coverage, head seats | **built** (03:05); merge held until the acceptance re-runs finish | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
+| UX redesign, phase 2: one plan | **done** (03:27); decisions taken (03:31) | `docs/ux/plan.md`: 68 problems (14 plain bugs), 26 decisions, six streams |
+| UX redesign, phase 3, S0: shared contracts | running (Opus, worktree), launched 03:33 | then S1, S3 and S4 in parallel; S2 and S5 after the tokens and corners land | task flows and IA; heuristics and first run; visual design and 3D readability |
+| F2: end-hole axis, butt end-face coverage, head seats | **done**, merged (03:30), pushed | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
 | X1–X3 plus F2a/F2b: blind fasteners, a butt screw through two bodies, plain bars held by a drilled-hole screw, head sizes from the cited standard, butt screws seat-checked | running (Opus, worktree on top of F2), launched 03:08 | goldens G39+ |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
@@ -182,11 +183,27 @@ anything, and each has a default in place.
     outline only on compound cuts in rounded sections, where it errs long.
   - The BOM's total length adds spans.
   - Two parallel pieces sharing one saw cut when nested is a v1 limit.
-- **F2 calls (calls 39–43 in the design).**
+- **F2 calls (calls 40–44 in the design).**
   - The overhang limit defaults to 0 (projects can raise it per connector or in defaults).
   - The 50 % head-seat limit is fixed.
   - Holes are matched to screws by tap position, with no new field.
   - G17's brace overhangs 5.00 per side and now warns, correctly.
+- **The UX decisions D-UX-1 to D-UX-26 (`docs/ux/plan.md` §3).** All taken as the plan recommends.
+  The weightiest:
+  - the left column becomes a parts bin plus outline, with a wide catalog overlay;
+  - six resizable sheets replace the ten drawer tabs;
+  - an order-readiness pill in the top bar; one command bar on the canvas;
+  - a start card on empty projects (catalogs and currency, box frame, guided first bar, the
+    skill's example);
+  - an `addFrame` core command;
+  - a `defaults.corner` rule defaulting to today's behaviour;
+  - a server dry run for previews; a problem model in core (`/api/problems`, `alukit problems`);
+  - Delete with a cascade list;
+  - undo naming whose step it is;
+  - restore keeps the rejected file;
+  - the theme follows the OS, with tests pinned dark;
+  - IBM Plex bundled locally;
+  - GLB colours unchanged.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
@@ -615,3 +632,24 @@ anything, and each has a default in place.
   - Merge held until the acceptance re-runs finish.
 - **03:08**: X1–X3 launched with F2a (head sizes from the standard a vendor screw cites, so Forseti's
   screws get seat-checked) and F2b (butt connectors' screws seat-checked), on top of F2's branch.
+- **03:24**: Acceptance run 5 on the decided frame's fix-round head: **pass**, with no exceptions.
+  - The owner's totals verified to the cent.
+  - Two new record findings went to that session: a fit problem with its new screw seats, and
+    screws too short in its bill.
+  - Two new AluKit gaps, neither moving a test, queued after X1–X3:
+    - **F3:** taps and screw heads aren't checked against a slot's geometry;
+    - **F4:** no way to ask a vendor to machine a bought part (e.g. a T-nut drilled out).
+- **03:27**: The UX plan is in (`docs/ux/plan.md`).
+  - 68 unified problems, 14 of them plain bugs; seven bugs' root causes were read in the code (a
+    phantom finish option, Connect showing only the new connection's diagnostics, an empty "not
+    sold with" list, an item id taken for a pattern copy, search ranking by name length, …).
+  - 26 decisions; 13 backend and CLI additions with parity.
+  - **Six streams with file ownership:** S0 contracts first, alone; S1 core and server; S2 app shell;
+    S3 the 3D view; S4 the visual system and sheets; S5 tools and the inspector.
+- **03:30**: F2 merged. Seven hunks in the design plus the notes index and golden lists.
+  - Both branches had added an open call 39: the sections' call keeps 39, and F2's become 40–44
+    (§14, its notes, the changelog).
+  - My merge-and-gate chain ran the gate on the conflicted tree once; nothing was committed.
+    Conflicts are now checked before gating.
+  - Gate PASS, 785 tests: G35–G38 hold together.
+- **03:31**: Every D-UX recommendation accepted and recorded in the plan's §9 and the review list.
