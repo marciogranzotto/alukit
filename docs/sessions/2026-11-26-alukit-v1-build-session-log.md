@@ -47,6 +47,8 @@ in the gitignored `internal/session-notes.md`.*
 | Full acceptance (§13), internal | **ran** (20:40): the four numeric tests pass; overall **fail** on two model gaps | Cut list: 214 pieces, largest difference 0.05 mm. Mass: within 0.09 % once the record's own errors are set aside. Cost: every vendor line to the cent on a frozen lock. Counts: pass. Every exception is an error in the record. Fails on A1 and A3, below. |
 | Gap A3: face contact on real section faces | **done**, merged (21:40), pushed | Golden G29. Note: `docs/notes/a3-face-contact.md`. |
 | Design draft 2.3: the design describes v1 as built | **done**, merged (22:07), pushed | 31 changelog bullets; all gap rules plus G28–G32; 15 design-vs-built entries changed to match the build, the rest stated as v1 limits; open calls left open. |
+| Acceptance run 2, internal | **ran** (22:09): tests 1–4 pass with **no exceptions**; overall fails narrowly on gap A9 | The record fixed its five errors (its Rev 3.5). Mass +0.03 %; cost to the cent, the heavier-wall variant included. A1–A7 all work in the frame. |
+| Gaps A9 (one through-fastener shared by two butting ends) and A8 (positions for a connector's machining) | running (Opus, worktree), launched 22:15 | goldens G33, G34 |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -344,3 +346,21 @@ in the gitignored `internal/session-notes.md`.*
   - §12 records honestly that M5's "recorded manual agent run" isn't in the repo; the skill's
     worked example runs as a test instead.
 - **22:07**: Merged without conflicts; gate PASS (674 tests).
+- **22:09**: Acceptance run 2 (internal; sanitized here).
+  - The reference record had fixed all five errors AluKit found. Re-checked against the record's
+    new revision: all four tests pass with **no exceptions**.
+    - Cut list: max difference 0.05 mm.
+    - Mass: +0.03 %.
+    - Cost: every vendor line to the cent; totals off only by cent rounding.
+    - Counts: pass.
+  - Every gap fix A1–A7 works in the real frame (for example, the block on the angle's inner leg is
+    now a fourth layer of its stack).
+  - **Overall still fails, narrowly**, on A9: one stud and one sleeve through a steel beam, shared by
+    two bars butting from opposite sides, can't be written. One butt with both ends doubles the stud
+    and sleeve; two butts leave the bush-only side with a fit error that blocks the order.
+  - A8 (machining only, no test moves): a connector's required ops have no position, so four taps
+    land on one point.
+  - The agent's worktree was auto-cleaned (no tracked changes); the results were restored from its
+    backup into `internal/acceptance/`.
+- **22:15**: An Opus agent launched on A9 (G33) and A8 (G34). It also applies the wording to draft
+  2.3 under "After acceptance run 2". Then acceptance run 3.
