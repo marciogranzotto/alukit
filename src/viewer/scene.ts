@@ -2,17 +2,13 @@ import CameraControls from "camera-controls";
 // camera-controls needs three's classes installed once.
 import * as THREE from "three";
 import {
-  AmbientLight,
-  AxesHelper,
   Box3,
   BufferAttribute,
   BufferGeometry,
   Color,
-  DirectionalLight,
   DoubleSide,
   EdgesGeometry,
   Float32BufferAttribute,
-  GridHelper,
   Group,
   InstancedMesh,
   LineBasicMaterial,
@@ -33,20 +29,27 @@ import {
   angledGeometry,
   appendEdges,
   barCorners,
-  sectionEdges,
+  sectionEdgeSets,
   sectionGeometry,
   squareEnds,
   squareMatrix,
 } from "../mesh/bars.ts";
-import { type Mat4, type MeshData, mulMatrix } from "../mesh/data.ts";
+import { applyMatrix, type Mat4, type MeshData, mulMatrix } from "../mesh/data.ts";
 import { HOLE_SEGMENTS, holeMarks, partMesh } from "../mesh/items.ts";
 import type { BarJson, MeshInput, V3, ViewSection } from "../mesh/model.ts";
 import { fastenerMatrix, holeMatrix, partShape } from "../mesh/place.ts";
 import { rodMesh } from "../mesh/solids.ts";
 import { finishTone, partTone } from "../mesh/style.ts";
+import { Ground } from "./ground.ts";
+import { Labels } from "./labels.ts";
+import { edgeColour, fogColour, GHOST_EDGES, Glyphs, Look, MIX, mix, THREE_UP } from "./look.ts";
+import { CORNER_PREFIX, MarkerLayer, type MarkerPoint } from "./markers.ts";
+
+export { CORNER_PREFIX };
+
 import { Overlay, type OverlayState } from "./overlay.ts";
 import type { P2, Ray } from "./snap.ts";
-import type { ViewTheme } from "./theme.ts";
+import type { Hex, ViewTheme } from "./theme.ts";
 import { type DocView, fromThree, isStandard, viewFrom } from "./views.ts";
 
 CameraControls.install({
@@ -67,7 +70,23 @@ export interface ViewerStats {
   /** Holes marked on the plates and bent angles drawn. */
   holes: number;
   fasteners: number;
+  /** Edge segments drawn on bars: outline and detail together. */
   edgeSegments: number;
+  /** Of them, the outline's (ends and silhouettes) and the detail's (slot lips, chambers). */
+  outlineSegments: number;
+  detailSegments: number;
+  /** Joint markers drawn, by state. */
+  joints: { joined: number; open: number; failed: number };
+  /** Problem badges drawn. */
+  badges: number;
+}
+
+/** What the viewer has spent drawing: frames, and CPU time in render calls and hover picks. */
+export interface RenderStats {
+  frames: number;
+  renderMs: number;
+  hovers: number;
+  hoverMs: number;
 }
 
 export type SelectMode = "replace" | "toggle" | "add";
@@ -123,15 +142,29 @@ export interface ProblemBadge {
   severity: "block" | "error" | "warn";
 }
 
+/** The camera, in world coordinates (Z up, mm): where it is, what it looks at, its screen axes. */
+export interface CameraState {
+  position: V3;
+  target: V3;
+  /** Screen right and screen up, as world directions. */
+  right: V3;
+  up: V3;
+  /**
+   * Whether the camera is on its way somewhere: from the moment a move starts (a standard view,
+   * a fit, a Show; set when the call is made, before any frame) until it comes to rest. A script
+   * waits for false, not for the camera to look still between two frames.
+   */
+  moving: boolean;
+}
+
 /**
- * The viewer's API. The methods after `stats` are the UX redesign's (docs/ux/plan.md §5.3):
- * today they do nothing, and S3 makes each work (the task named on it), keeping its signature.
+ * The viewer's API. The methods after `stats` are the UX redesign's (docs/ux/plan.md §5.3).
  */
 export interface Viewer {
   canvas: HTMLCanvasElement;
   setModel(m: MeshInput): void;
   setSelection(ids: ReadonlySet<string>): void;
-  /** Entities a tool has picked (a connection's bars), drawn in their own colour. */
+  /** Entities a tool has picked (a connection's bars), drawn in the tool's colour. */
   setHighlight(ids: ReadonlySet<string>): void;
   /** Called with the entities a click or a box picked, and how they combine with the selection. */
   onSelect(cb: (ids: string[], mode: SelectMode) => void): void;
@@ -164,28 +197,35 @@ export interface Viewer {
   /** The model's extent along a world axis (mm): the section plane's range. */
   extent(axis: SectionPlane["axis"]): [number, number];
   stats(): ViewerStats;
-  /** Tints the bodies the pointer, a row or a chip is over (S3.2). */
+  /** Tints the bodies the pointer, a row or a chip is over (C's pale amber; D-UX-23). */
   setHover(ids: ReadonlySet<string>): void;
-  /** Called with the entity under the pointer in Select, or undefined off every body (S3.2). */
+  /**
+   * Called with what is under the pointer in Select (an entity, or `corner:<key>` on a joint
+   * marker), or undefined off everything. At most once a frame, and only when it changes.
+   */
   onHover(cb: (id?: string) => void): void;
-  /** Ghosts every body but `keep`; undefined ends it (S3.6). */
+  /** Ghosts every body but `keep`, sinking it toward the fog; undefined ends it. */
   setGhost(keep: ReadonlySet<string> | undefined): void;
-  /** Pulses the bodies, to draw the eye to them (S3.6). */
+  /** Pulses the bodies three times over a second, to draw the eye to them. */
   pulse(ids: ReadonlySet<string>): void;
-  /** Fits the camera to a box in world coordinates (Z up, mm), keeping its direction (S3.6). */
+  /** Fits the camera to a box in world coordinates (Z up, mm), keeping its direction. */
   fitBox(box: [V3, V3]): void;
-  /** Draws a marker at each corner, by its state (S3.5). */
+  /** Draws a marker at each corner, by its state. */
   setCorners(c: readonly CornerMarker[]): void;
-  /** Draws each problem on its entities, by group (S3.7). */
+  /** Draws each problem on its entities, by group: a tinted outline and a glyph. */
   setProblemBadges(b: readonly ProblemBadge[]): void;
-  /** Colours bars by their finish (today's look) or by their item, from the swatches (S3.10). */
+  /** Colours bodies by their finish (today's look) or by their item, from the swatches. */
   setColourBy(mode: "finish" | "item", swatches?: ReadonlyMap<string, number>): void;
-  /** Draws with another theme's colours (S3.12). */
+  /** Draws with another theme's colours. */
   setTheme(t: ViewTheme): void;
   /** Calls back after each frame drawn, for DOM overlays that follow the scene; returns the undo. */
   onRender(cb: () => void): () => void;
-  /** A tool's label at a world point (S5's joint preview); undefined `at` takes it away (S3.8). */
+  /** A tool's label at a world point (S5's joint preview); undefined `at` takes it away. */
   setLabel(key: string, at: V3 | undefined, text?: string): void;
+  /** The camera in world coordinates: for the orientation gizmo, and for tests. */
+  camera(): CameraState;
+  /** What drawing has cost so far (frames, CPU ms): S3.13's measure. */
+  renderStats(): RenderStats;
   dispose(): void;
 }
 
@@ -194,6 +234,19 @@ const EMPTY_BOX = new Box3(new Vector3(0, 0, -1000), new Vector3(1000, 1000, 0))
 
 /** Below this angle between faces a part's edge is smooth and not drawn (degrees), as a bar's. */
 const PART_EDGE_DEG = 30;
+
+/** The detail edges fade in as a 40 mm face grows from 24 to 64 px on screen (C §5.2). */
+const RAMP = { face_mm: 40, from_px: 24, to_px: 64 } as const;
+
+/** A pulse: three beats over a second (B §5.3). */
+const PULSE = { ms: 1000, beats: 3 } as const;
+
+/** More changed bars than this, and a paint uploads a whole edge buffer, not their ranges. */
+const MAX_RANGES = 64;
+
+/** Joint markers and problem badges, CSS pixels. */
+const JOINT_PX = 13;
+const BADGE_PX = 16;
 
 /** A mesh from src/mesh as a geometry three can draw. */
 function geometryOf(d: MeshData): BufferGeometry {
@@ -204,47 +257,65 @@ function geometryOf(d: MeshData): BufferGeometry {
   return g;
 }
 
+/** A body's material: Lambert (cheapest on SwiftShader), pushed back so its edges always win. */
+function bodyMaterial(opts: ConstructorParameters<typeof MeshLambertMaterial>[0] = {}) {
+  return new MeshLambertMaterial({
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
+    ...opts,
+  });
+}
+
+/** Where an entity's edges sit in a merged edge buffer: first vertex and count. */
+interface Range {
+  start: number;
+  count: number;
+}
+
+/** A merged edge buffer: positions, colours with alpha, and each bar's range. */
+interface EdgeBuffer {
+  lines: LineSegments;
+  colours: Float32Array;
+  ranges: Map<string, Range>;
+}
+
 /**
  * The 3D viewport (design §8). The world is right-handed with Z up (§2); three.js is Y up, so the
  * conversion happens here and nowhere else: everything of ours lives under `world`, rotated −90°
- * about X. It renders on demand: after a camera move, a model, a selection or a resize. It draws
- * with the colours of `theme` (src/viewer/theme.ts).
+ * about X. It renders on demand: after a camera move, a model, a state or a resize; every frame
+ * while a pulse runs. It draws with the colours of `theme` (src/viewer/theme.ts) and the look of
+ * C's rendering spec (src/viewer/look.ts).
  */
-export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
+export function createViewer(container: HTMLElement, initialTheme: ViewTheme): Viewer {
+  let theme = initialTheme;
   const renderer = new WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   // The section plane clips the model's materials only, not the grid or the tools' overlay.
   renderer.localClippingEnabled = true;
   container.appendChild(renderer.domElement);
+  const dpr = () => renderer.getPixelRatio();
 
   const scene = new Scene();
-  scene.background = new Color(theme.background[0]);
+  const look = new Look(scene, theme);
   const world = new Group();
   world.name = "world (Z up)";
   world.rotation.x = -Math.PI / 2;
   scene.add(world);
 
-  // The ground grid lies in the world XY plane: GridHelper is built in XZ, so tip it onto XY.
-  const grid = new GridHelper(4000, 40, theme.grid.centre, theme.grid.line);
-  grid.rotation.x = Math.PI / 2;
-  world.add(grid);
-  world.add(new AxesHelper(300)); // X red, Y green, Z blue (up)
+  const ground = new Ground(theme);
+  world.add(ground.group);
 
   const content = new Group();
   content.name = "model";
   world.add(content);
-  const overlay = new Overlay(theme);
+  const glyphs = new Glyphs(theme.overlay.ring);
+  const overlay = new Overlay(theme, glyphs, dpr);
   world.add(overlay.group);
+  const joints = new MarkerLayer("joints", glyphs, JOINT_PX, dpr, 900);
+  const badges = new MarkerLayer("badges", glyphs, BADGE_PX, dpr, 910);
+  world.add(joints.group, badges.group);
   world.updateMatrixWorld(true);
-
-  const lights = theme.lights;
-  scene.add(new AmbientLight(lights.ambient.colour, lights.ambient.intensity));
-  const sun = new DirectionalLight(lights.key.colour, lights.key.intensity);
-  sun.position.set(800, 1500, 600);
-  scene.add(sun);
-  const fill = new DirectionalLight(lights.fill.colour, lights.fill.intensity);
-  fill.position.set(-900, 400, -700);
-  scene.add(fill);
 
   const persp = new PerspectiveCamera(45, 1, 5, 200_000);
   persp.position.set(2000, 1500, 2000);
@@ -266,7 +337,13 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
   /** Unit extrusions and their edges, kept across revisions while a section stays the same. */
   const unitCache = new Map<
     string,
-    { key: string; geometry: BufferGeometry; edges: Float32Array }
+    {
+      key: string;
+      section: ViewSection;
+      geometry: BufferGeometry;
+      outline: Float32Array;
+      detail: Float32Array;
+    }
   >();
   const unitOf = (id: string, s: ViewSection) => {
     const key = JSON.stringify(s);
@@ -274,19 +351,76 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     if (hit?.key === key) return hit;
     hit?.geometry.dispose();
     const geometry = sectionGeometry(s);
-    const entry = { key, geometry, edges: sectionEdges(geometry) };
+    const { outline, detail } = sectionEdgeSets(s);
+    const entry = { key, section: s, geometry, outline, detail };
     unitCache.set(id, entry);
     return entry;
   };
 
   let model: MeshInput | undefined;
   /**
-   * Per drawable: which entity it is and how to recolour it. A `fixed` group keeps its colours
-   * when selected (holes stay dark on a selected plate) but still picks its entity.
+   * Per drawable: which entity it is, its item, its own colour and how it recolours. A `fixed`
+   * group keeps its colours when selected (holes stay dark on a selected plate) but still picks
+   * its entity.
    */
-  let instanced: { mesh: InstancedMesh; ids: string[]; colours: number[]; fixed?: boolean }[] = [];
-  let single: { mesh: Mesh; id: string; colour: number }[] = [];
+  interface Instanced {
+    mesh: InstancedMesh;
+    ids: string[];
+    items: string[];
+    tones: Hex[];
+    fixed?: boolean;
+    shown: Hex[];
+  }
+  interface Single {
+    mesh: Mesh;
+    id: string;
+    item: string;
+    tone: Hex;
+    /** The cut faces' material, on a bar with an angled end. */
+    cap?: MeshLambertMaterial;
+    edges?: LineSegments;
+    shown?: Hex;
+    shownEdge?: string;
+  }
+  let instanced: Instanced[] = [];
+  let single: Single[] = [];
+  /**
+   * What the model in the scene owns on the GPU, and whether a frame has drawn it yet. A
+   * revision's build does not dispose the generation it replaces: that generation's materials
+   * hold their shader programs, and three.js deletes a program when the last material using it
+   * goes. The new generation's materials, alike, find their programs in the cache on its first
+   * frame; only then is the old one disposed (`retired`). Disposing first made every revision
+   * compile its programs again (six on the cart): on SwiftShader that blocks the revision's frame
+   * for up to a second, waiting on the links.
+   */
   let owned: { dispose(): void }[] = [];
+  let ownedDrawn = false;
+  let retired: { dispose(): void }[] = [];
+  const release = (list: readonly { dispose(): void }[]) => {
+    for (const o of list) o.dispose();
+  };
+  let outline: EdgeBuffer | undefined;
+  let detail: EdgeBuffer | undefined;
+  /** Each bar's own colour, as painted last (its edges follow its lightness). */
+  const barTone = new Map<string, Hex>();
+  const edgeState = new Map<string, string>();
+  const capMaterial = bodyMaterial();
+  const sideMaterial = bodyMaterial();
+  const detailMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true });
+  const outlineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true });
+  const xrayMaterial = new LineBasicMaterial({
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    fog: false,
+  });
+  const xray = new LineSegments(new BufferGeometry(), xrayMaterial);
+  xray.name = "selection x-ray";
+  xray.renderOrder = 800;
+  xray.raycast = () => {};
+  xray.frustumCulled = false;
+  world.add(xray);
+
   let counts: ViewerStats = {
     bars: 0,
     instancedBars: 0,
@@ -298,10 +432,34 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     holes: 0,
     fasteners: 0,
     edgeSegments: 0,
+    outlineSegments: 0,
+    detailSegments: 0,
+    joints: { joined: 0, open: 0, failed: 0 },
+    badges: 0,
   };
   let selection: ReadonlySet<string> = new Set();
   let highlight: ReadonlySet<string> = new Set();
+  let hovered: ReadonlySet<string> = new Set();
+  let ghost: ReadonlySet<string> | undefined;
+  let pulsing: { ids: ReadonlySet<string>; start: number } | undefined;
+  let colourBy: { mode: "finish" | "item"; swatches: ReadonlyMap<string, number> } = {
+    mode: "finish",
+    swatches: new Map(),
+  };
+  let badgeOf = new Map<string, ProblemBadge["severity"]>();
+  let corners: readonly CornerMarker[] = [];
+  let badgeList: readonly ProblemBadge[] = [];
   let fitted = false;
+  /** The model's bounding sphere's radius (mm), cached per revision for the fog. */
+  let radius = 1000;
+  const stats: RenderStats = { frames: 0, renderMs: 0, hovers: 0, hoverMs: 0 };
+
+  const applyThemeMaterials = () => {
+    capMaterial.color.setRGB(...theme.cut);
+    xrayMaterial.color.setHex(theme.selection);
+    xrayMaterial.opacity = theme.edge.xray;
+  };
+  applyThemeMaterials();
 
   // ---------------------------------------------------------------------------------------------
   // The section plane (§8): local clipping on the model's materials, and an outline where it
@@ -311,16 +469,17 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
   let section: SectionPlane | undefined;
   const clipPlane = new THREE.Plane();
   const clipPlanes = [clipPlane];
-  const outlineMaterial = new LineBasicMaterial({
+  const sectionMaterial = new LineBasicMaterial({
     color: theme.tool,
     transparent: true,
     opacity: 0.8,
+    fog: false,
   });
-  const outline = new THREE.LineLoop(new BufferGeometry(), outlineMaterial);
-  outline.name = "section outline";
-  outline.raycast = () => {};
-  outline.visible = false;
-  world.add(outline);
+  const sectionLine = new THREE.LineLoop(new BufferGeometry(), sectionMaterial);
+  sectionLine.name = "section outline";
+  sectionLine.raycast = () => {};
+  sectionLine.visible = false;
+  world.add(sectionLine);
 
   /** The model's box in the world frame (Z up, mm); the empty project's metre cube. */
   function worldBox(): Box3 {
@@ -334,19 +493,24 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     return box;
   }
 
-  /** Every material of the model clips, or none does. */
+  /** Every material of the model clips, and the markers and the x-ray with it, or none does. */
   function clipMaterials(): void {
     const planes = section ? clipPlanes : null;
     content.traverse((o) => {
       const m = (o as { material?: THREE.Material | THREE.Material[] }).material;
       for (const x of Array.isArray(m) ? m : m ? [m] : []) x.clippingPlanes = planes;
     });
+    for (const m of [capMaterial, sideMaterial, outlineMaterial, detailMaterial, xrayMaterial]) {
+      m.clippingPlanes = planes;
+    }
+    joints.setClipping(planes);
+    badges.setClipping(planes);
   }
 
   /** Moves the plane and its outline to the section, in three's frame. */
   function placeSection(): void {
     if (!section) {
-      outline.visible = false;
+      sectionLine.visible = false;
       return;
     }
     const i = AXIS_INDEX[section.axis];
@@ -358,7 +522,7 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     const b = worldBox();
     const pad = Math.max(b.getSize(new Vector3()).length() * 0.02, 10);
     const [u, v] = [0, 1, 2].filter((k) => k !== i) as [number, number];
-    const corners: number[] = [];
+    const pts: number[] = [];
     for (const [su, sv] of [
       [0, 0],
       [1, 0],
@@ -369,56 +533,104 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       p.setComponent(i, section.at_mm);
       p.setComponent(u, su === 0 ? b.min.getComponent(u) - pad : b.max.getComponent(u) + pad);
       p.setComponent(v, sv === 0 ? b.min.getComponent(v) - pad : b.max.getComponent(v) + pad);
-      corners.push(p.x, p.y, p.z);
+      pts.push(p.x, p.y, p.z);
     }
-    outline.geometry.setAttribute("position", new Float32BufferAttribute(corners, 3));
-    outline.geometry.computeBoundingSphere();
-    outline.visible = true;
+    sectionLine.geometry.setAttribute("position", new Float32BufferAttribute(pts, 3));
+    sectionLine.geometry.computeBoundingSphere();
+    sectionLine.visible = true;
   }
 
   /** Whether the section hides a point given in three's frame. */
   const hiddenThree = (p: Vector3) => section !== undefined && clipPlane.distanceToPoint(p) < 0;
+  const hiddenWorld = (p: V3) => hiddenThree(new Vector3(...p).applyMatrix4(world.matrixWorld));
 
   function clear(): void {
     for (const c of [...content.children]) content.remove(c);
-    for (const o of owned) o.dispose();
+    // A drawn generation waits for the next frame (it holds the programs); one never drawn holds
+    // none, so it goes now, and at most one generation waits.
+    if (ownedDrawn) {
+      release(retired);
+      retired = owned;
+    } else release(owned);
     owned = [];
+    ownedDrawn = false;
     instanced = [];
     single = [];
+    outline = undefined;
+    detail = undefined;
+    barTone.clear();
+    edgeState.clear();
+  }
+
+  /** One merged edge buffer of every bar's edges of one kind, with each bar's range. */
+  function edgeBuffer(
+    m: MeshInput,
+    drawable: readonly [string, BarJson, string][],
+    which: "outline" | "detail",
+    material: LineBasicMaterial,
+  ): EdgeBuffer {
+    let floats = 0;
+    for (const [, , sid] of drawable) {
+      floats += unitOf(sid, m.display.sections[sid] as ViewSection)[which].length;
+    }
+    const positions = new Float32Array(floats);
+    const ranges = new Map<string, Range>();
+    let at = 0;
+    for (const [id, bar, sid] of drawable) {
+      const view = m.display.bars[id] as NonNullable<MeshInput["display"]["bars"][string]>;
+      const start = at / 3;
+      at = appendEdges(
+        unitOf(sid, m.display.sections[sid] as ViewSection)[which],
+        bar,
+        view,
+        positions,
+        at,
+      );
+      ranges.set(id, { start, count: at / 3 - start });
+    }
+    const colours = new Float32Array((positions.length / 3) * 4);
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(positions, 3));
+    g.setAttribute("color", new Float32BufferAttribute(colours, 4));
+    const lines = new LineSegments(g, material);
+    lines.name = which;
+    lines.raycast = () => {};
+    content.add(lines);
+    owned.push(g);
+    return {
+      lines,
+      colours: (g.getAttribute("color") as BufferAttribute).array as Float32Array,
+      ranges,
+    };
   }
 
   function build(m: MeshInput): void {
     clear();
-    const groups = new Map<
-      string,
-      { section: ViewSection; sid: string; bars: [string, BarJson][] }
-    >();
+    const groups = new Map<string, { sid: string; bars: [string, BarJson][] }>();
     let angled = 0;
     let instancedCount = 0;
-    let edgeFloats = 0;
     const drawable: [string, BarJson, string][] = [];
     for (const [id, bar] of Object.entries(m.bars)) {
       const view = m.display.bars[id];
       const section = view ? m.display.sections[view.section] : undefined;
       if (!view || !section) continue;
       drawable.push([id, bar, view.section]);
-      edgeFloats += unitOf(view.section, section).edges.length;
+      unitOf(view.section, section);
       if (!squareEnds(bar)) continue;
-      const key = `${view.section}\u0000${finishTone(bar)}`;
-      const g = groups.get(key) ?? { section, sid: view.section, bars: [] };
+      const g = groups.get(view.section) ?? { sid: view.section, bars: [] };
       g.bars.push([id, bar]);
-      groups.set(key, g);
+      groups.set(view.section, g);
     }
 
-    // Square bars: one InstancedMesh per section and colour (§8).
+    // Square bars: one InstancedMesh per section (§8), each instance in its own colour; the
+    // ends (the extrusion's first group) a shade brighter than the sides.
     for (const g of groups.values()) {
-      const unit = unitOf(g.sid, g.section);
-      // White, so each instance is drawn in its own colour.
-      const material = new MeshLambertMaterial();
-      const mesh = new InstancedMesh(unit.geometry, material, g.bars.length);
+      const unit = unitOf(g.sid, m.display.sections[g.sid] as ViewSection);
+      const mesh = new InstancedMesh(unit.geometry, [capMaterial, sideMaterial], g.bars.length);
       mesh.name = `bars ${g.sid}`;
       const ids: string[] = [];
-      const colours: number[] = [];
+      const items: string[] = [];
+      const tones: Hex[] = [];
       g.bars.forEach(([id, bar], i) => {
         mesh.setMatrixAt(
           i,
@@ -427,60 +639,39 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
             m.display.bars[id] as NonNullable<MeshInput["display"]["bars"][string]>,
           ),
         );
-        const c = theme.body[finishTone(bar)];
-        mesh.setColorAt(i, new Color(c));
+        mesh.setColorAt(i, new Color(theme.body[finishTone(bar)]));
         ids.push(id);
-        colours.push(c);
+        items.push(bar.item);
+        tones.push(theme.body[finishTone(bar)]);
       });
       mesh.instanceMatrix.needsUpdate = true;
       mesh.computeBoundingSphere();
       content.add(mesh);
-      owned.push(material, { dispose: () => mesh.dispose() });
-      instanced.push({ mesh, ids, colours });
+      owned.push({ dispose: () => mesh.dispose() });
+      instanced.push({ mesh, ids, items, tones, shown: tones.map(() => -1) });
       instancedCount += g.bars.length;
     }
 
-    // Angled bars: their own geometry, exact on their end planes.
+    // Angled bars: their own geometry, exact on their end planes, with the same two groups.
     for (const [id, bar, sid] of drawable) {
       if (squareEnds(bar)) continue;
       const view = m.display.bars[id] as NonNullable<MeshInput["display"]["bars"][string]>;
       const unit = unitOf(sid, m.display.sections[sid] as ViewSection);
       const geometry = angledGeometry(unit.geometry, bar, view);
-      const colour = theme.body[finishTone(bar)];
-      const material = new MeshLambertMaterial({ color: colour });
-      const mesh = new Mesh(geometry, material);
+      const tone = theme.body[finishTone(bar)];
+      const cap = bodyMaterial();
+      const side = bodyMaterial();
+      const mesh = new Mesh(geometry, [cap, side]);
       mesh.name = id;
       content.add(mesh);
-      owned.push(geometry, material);
-      single.push({ mesh, id, colour });
+      owned.push(geometry, cap, side);
+      single.push({ mesh, id, item: bar.item, tone, cap });
       angled++;
     }
 
-    // Edges: one merged buffer for every bar.
-    const edges = new Float32Array(edgeFloats);
-    let at = 0;
-    for (const [id, bar, sid] of drawable) {
-      const view = m.display.bars[id] as NonNullable<MeshInput["display"]["bars"][string]>;
-      at = appendEdges(
-        unitOf(sid, m.display.sections[sid] as ViewSection).edges,
-        bar,
-        view,
-        edges,
-        at,
-      );
-    }
-    const edgeGeometry = new THREE.BufferGeometry();
-    edgeGeometry.setAttribute("position", new Float32BufferAttribute(edges, 3));
-    const edgeMaterial = new LineBasicMaterial({
-      color: theme.edge.colour,
-      transparent: true,
-      opacity: theme.edge.opacity,
-    });
-    const lines = new LineSegments(edgeGeometry, edgeMaterial);
-    lines.name = "edges";
-    lines.raycast = () => {};
-    content.add(lines);
-    owned.push(edgeGeometry, edgeMaterial);
+    // Edges: two merged buffers for every bar, the outline and the detail (C §5.2).
+    outline = edgeBuffer(m, drawable, "outline", outlineMaterial);
+    detail = edgeBuffer(m, drawable, "detail", detailMaterial);
 
     // Parts, each in its own frame (§3.2): the project's plates and bent angles from their shapes,
     // with their holes marked (§4.8); any other part as a box from its item's bounding box,
@@ -493,21 +684,14 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     let holes = 0;
     /** Each hole's rod, placed in the world: the part's frame times the rod's in it. */
     const marks: { id: string; matrix: Mat4 }[] = [];
-    const partEdges = new LineBasicMaterial({
-      color: theme.edge.colour,
-      transparent: true,
-      opacity: theme.edge.opacity,
-    });
-    const placeholderEdges = new LineBasicMaterial({ color: theme.edge.placeholder });
-    owned.push(partEdges, placeholderEdges);
     for (const [id, p] of Object.entries(m.parts)) {
       const placed = partShape(p, m.display.parts[id]);
       if (!placed) continue;
       const { shape, translucent } = placed;
       const geometry = geometryOf(partMesh(placed));
-      const colour = theme.body[partTone(placed)];
-      const material = new MeshLambertMaterial({
-        color: colour,
+      const tone = theme.body[partTone(placed)];
+      const material = bodyMaterial({
+        color: tone,
         transparent: translucent,
         opacity: translucent ? theme.translucent : 1,
         depthWrite: !translucent,
@@ -520,19 +704,23 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       mesh.matrix.fromArray(frame);
       content.add(mesh);
       owned.push(geometry, material);
-      single.push({ mesh, id, colour });
+      const entry: Single = { mesh, id, item: p.item, tone };
+      single.push(entry);
       parts++;
 
       // A shape's sharp edges, and a placeholder's box outlined (§4.8).
       if (shape || placed.placeholder) {
         const edges = new EdgesGeometry(geometry, PART_EDGE_DEG);
-        const lines = new LineSegments(edges, shape ? partEdges : placeholderEdges);
+        const lineMaterial = new LineBasicMaterial({ transparent: true });
+        const lines = new LineSegments(edges, lineMaterial);
         lines.name = `${id} edges`;
         lines.matrixAutoUpdate = false;
         lines.matrix.fromArray(frame);
         lines.raycast = () => {};
+        lines.userData.placeholder = !shape;
         content.add(lines);
-        owned.push(edges);
+        owned.push(edges, lineMaterial);
+        entry.edges = lines;
       }
       if (placed.placeholder) placeholders++;
       if (shape) {
@@ -548,22 +736,27 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     // Hole markers: one InstancedMesh, dark whatever the selection; a pick selects the part.
     if (marks.length > 0) {
       const geometry = geometryOf(rodMesh(HOLE_SEGMENTS));
-      const material = new MeshLambertMaterial();
+      const material = bodyMaterial();
       const mesh = new InstancedMesh(geometry, material, marks.length);
       mesh.name = "holes";
       const ids: string[] = [];
-      const colours: number[] = [];
       marks.forEach(({ id, matrix }, i) => {
         mesh.setMatrixAt(i, new Matrix4().fromArray(matrix));
         mesh.setColorAt(i, new Color(theme.body.hole));
         ids.push(id);
-        colours.push(theme.body.hole);
       });
       mesh.instanceMatrix.needsUpdate = true;
       mesh.computeBoundingSphere();
       content.add(mesh);
       owned.push(geometry, material, { dispose: () => mesh.dispose() });
-      instanced.push({ mesh, ids, colours, fixed: true });
+      instanced.push({
+        mesh,
+        ids,
+        items: ids.map(() => ""),
+        tones: ids.map(() => theme.body.hole),
+        fixed: true,
+        shown: ids.map(() => -1),
+      });
     }
 
     // Fasteners of face connections: rods from the head along the axis; a pick selects the
@@ -571,26 +764,33 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     const fs = m.display.fasteners;
     if (fs.length > 0) {
       const geometry = geometryOf(rodMesh());
-      const material = new MeshLambertMaterial();
+      const material = bodyMaterial();
       const mesh = new InstancedMesh(geometry, material, fs.length);
       mesh.name = "fasteners";
       const ids: string[] = [];
-      const colours: number[] = [];
       fs.forEach((f, i) => {
         mesh.setMatrixAt(i, new Matrix4().fromArray(fastenerMatrix(f)));
         mesh.setColorAt(i, new Color(theme.body.fastener));
         ids.push(f.connection);
-        colours.push(theme.body.fastener);
       });
       mesh.instanceMatrix.needsUpdate = true;
       mesh.computeBoundingSphere();
       content.add(mesh);
       owned.push(geometry, material, { dispose: () => mesh.dispose() });
-      instanced.push({ mesh, ids, colours });
+      instanced.push({
+        mesh,
+        ids,
+        items: fs.map((f) => f.item),
+        tones: ids.map(() => theme.body.fastener),
+        shown: ids.map(() => -1),
+      });
     }
 
     clipMaterials();
+    const segs = (b: EdgeBuffer | undefined) =>
+      b ? (b.lines.geometry.getAttribute("position") as BufferAttribute).count / 2 : 0;
     counts = {
+      ...counts,
       bars: instancedCount + angled,
       instancedBars: instancedCount,
       angledBars: angled,
@@ -600,32 +800,184 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       placeholders,
       holes,
       fasteners: fs.length,
-      edgeSegments: edges.length / 6,
+      outlineSegments: segs(outline),
+      detailSegments: segs(detail),
+      edgeSegments: segs(outline) + segs(detail),
+    };
+
+    // What depends on the model's size: the fog's depth, the ground, the markers' lift.
+    const sphere = modelBox().getBoundingSphere(new THREE.Sphere());
+    radius = Math.max(sphere.radius, 200);
+    const wb = worldBox();
+    ground.fit({ x0: wb.min.x, y0: wb.min.y, x1: wb.max.x, y1: wb.max.y });
+    let lift = 40;
+    for (const s of Object.values(m.display.sections)) {
+      const [[x0, y0], [x1, y1]] = s.bbox;
+      lift = Math.max(lift, Math.hypot(x1 - x0, y1 - y0) + 10);
+    }
+    joints.setLift(lift);
+    badges.setLift(lift);
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Painting: every body's colour and every bar's edges, from the states (C §5.3)
+
+  /** A body's own colour: its finish's or part's tone, or its item's swatch. */
+  const toneOf = (tone: Hex, item: string): Hex =>
+    colourBy.mode === "item" && item !== ""
+      ? (colourBy.swatches.get(item) ?? theme.body.neutral)
+      : tone;
+
+  /** How far into a pulse the time is, 0 (rest) to 1 (peak). */
+  const pulseAt = (now: number): number => {
+    if (!pulsing) return 0;
+    const t = (now - pulsing.start) / PULSE.ms;
+    if (t >= 1) return 0;
+    return 0.5 - 0.5 * Math.cos(2 * Math.PI * PULSE.beats * t);
+  };
+
+  /** A body's colour now, from its own and the states. */
+  function shade(id: string, own: Hex, fixed: boolean, beat: number): Hex {
+    if (fixed) return ghost && !ghost.has(id) ? mix(own, fogColour(theme), MIX.ghost) : own;
+    if (highlight.has(id)) return theme.tool;
+    let c = own;
+    if (selection.has(id)) c = mix(own, theme.selection, MIX.selected);
+    else if (hovered.has(id)) c = mix(own, theme.hover, MIX.hover);
+    else if (ghost && !ghost.has(id)) c = mix(own, fogColour(theme), MIX.ghost);
+    if (beat > 0 && pulsing?.ids.has(id)) c = mix(c, theme.hover, 0.65 * beat);
+    return c;
+  }
+
+  /** An entity's edges now: colour and alpha for its outline, alpha for its detail. */
+  function edgeLook(id: string, body: Hex): { colour: Hex; outline: number; detail: number } {
+    const ghosted = ghost !== undefined && !ghost.has(id) && !selection.has(id);
+    const badge = badgeOf.get(id);
+    const colour = selection.has(id)
+      ? theme.edge.selected
+      : badge
+        ? badge === "warn"
+          ? theme.status.warn
+          : theme.status.blocked
+        : edgeColour(theme, body);
+    return {
+      colour,
+      outline: ghosted ? GHOST_EDGES.outline : badge ? 1 : theme.edge.outline,
+      detail: ghosted ? GHOST_EDGES.detail / theme.edge.detail : 1,
     };
   }
 
-  function paint(): void {
-    const sel = new Color(theme.selection);
-    const hi = new Color(theme.tool);
-    const colourOf = (id: string, own: number) =>
-      highlight.has(id) ? hi : selection.has(id) ? sel : new Color(own);
+  function writeRange(b: EdgeBuffer, id: string, colour: Hex, alpha: number): Range | undefined {
+    const r = b.ranges.get(id);
+    if (!r || r.count === 0) return undefined;
+    const c = new Color(colour);
+    for (let v = r.start; v < r.start + r.count; v++) {
+      b.colours[v * 4] = c.r;
+      b.colours[v * 4 + 1] = c.g;
+      b.colours[v * 4 + 2] = c.b;
+      b.colours[v * 4 + 3] = alpha;
+    }
+    return r;
+  }
+
+  /** Uploads what changed: a few bars' ranges alone, or the whole buffer when many changed. */
+  function upload(b: EdgeBuffer, ranges: readonly Range[]): void {
+    if (ranges.length === 0) return;
+    const attr = b.lines.geometry.getAttribute("color") as BufferAttribute;
+    attr.clearUpdateRanges();
+    if (ranges.length <= MAX_RANGES)
+      for (const r of ranges) attr.addUpdateRange(r.start * 4, r.count * 4);
+    attr.needsUpdate = true;
+  }
+
+  function paint(now = performance.now()): void {
+    const beat = pulseAt(now);
     for (const g of instanced) {
-      if (g.fixed) continue;
+      let changed = false;
       g.ids.forEach((id, i) => {
-        g.mesh.setColorAt(i, colourOf(id, g.colours[i] as number));
+        const own = g.fixed ? (g.tones[i] as Hex) : toneOf(g.tones[i] as Hex, g.items[i] as string);
+        const c = shade(id, own, g.fixed === true, beat);
+        if (g.shown[i] === c) return;
+        g.shown[i] = c;
+        g.mesh.setColorAt(i, new Color(c));
+        changed = true;
+        if (!g.fixed && model?.bars[id]) barTone.set(id, own);
       });
-      if (g.mesh.instanceColor) g.mesh.instanceColor.needsUpdate = true;
+      if (changed && g.mesh.instanceColor) g.mesh.instanceColor.needsUpdate = true;
     }
     for (const s of single) {
-      (s.mesh.material as MeshLambertMaterial).color.copy(colourOf(s.id, s.colour));
+      const own = toneOf(s.tone, s.item);
+      const c = shade(s.id, own, false, beat);
+      if (model?.bars[s.id]) barTone.set(s.id, own);
+      if (s.shown !== c) {
+        s.shown = c;
+        const mats = Array.isArray(s.mesh.material) ? s.mesh.material : [s.mesh.material];
+        const side = mats[mats.length - 1] as MeshLambertMaterial;
+        side.color.setHex(c);
+        if (s.cap) s.cap.color.setHex(c).multiply(new Color().setRGB(...theme.cut));
+      }
+      if (s.edges) {
+        const e = edgeLook(s.id, own);
+        const key = `${e.colour}/${e.outline}`;
+        if (s.shownEdge !== key) {
+          s.shownEdge = key;
+          const mat = s.edges.material as LineBasicMaterial;
+          mat.color.setHex(s.edges.userData.placeholder ? theme.edge.placeholder : e.colour);
+          mat.opacity = s.edges.userData.placeholder && !selection.has(s.id) ? 1 : e.outline;
+        }
+      }
+    }
+    if (outline && detail) {
+      const changed: { outline: Range[]; detail: Range[] } = { outline: [], detail: [] };
+      for (const [id, own] of barTone) {
+        const e = edgeLook(id, own);
+        const key = `${e.colour}/${e.outline}/${e.detail}`;
+        if (edgeState.get(id) === key) continue;
+        edgeState.set(id, key);
+        const o = writeRange(outline, id, e.colour, e.outline);
+        const d = writeRange(detail, id, e.colour, e.detail);
+        if (o) changed.outline.push(o);
+        if (d) changed.detail.push(d);
+      }
+      upload(outline, changed.outline);
+      upload(detail, changed.detail);
     }
     invalidate();
+  }
+
+  /** The selection's outline again, on top of everything, faint: where it continues, hidden. */
+  function buildXray(): void {
+    const pts: number[] = [];
+    if (outline) {
+      const pos = (outline.lines.geometry.getAttribute("position") as BufferAttribute)
+        .array as Float32Array;
+      for (const id of selection) {
+        const r = outline.ranges.get(id);
+        if (r)
+          for (let k = r.start * 3; k < (r.start + r.count) * 3; k++) pts.push(pos[k] as number);
+      }
+    }
+    for (const s of single) {
+      if (!selection.has(s.id) || !s.edges) continue;
+      const pos = (s.edges.geometry.getAttribute("position") as BufferAttribute)
+        .array as ArrayLike<number>;
+      const frame = s.mesh.matrix.elements;
+      for (let k = 0; k < pos.length; k += 3) {
+        pts.push(
+          ...applyMatrix(frame, [pos[k] as number, pos[k + 1] as number, pos[k + 2] as number]),
+        );
+      }
+    }
+    xray.geometry.dispose();
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pts, 3));
+    xray.geometry = g;
+    xray.visible = pts.length > 0;
   }
 
   /** The model's box in three's frame, or the empty project's metre cube. */
   function modelBox(): Box3 {
     const box = new Box3();
-    for (const c of content.children) if (c.name !== "edges") box.expandByObject(c);
+    for (const c of content.children) if (!(c instanceof LineSegments)) box.expandByObject(c);
     return box.isEmpty() ? EMPTY_BOX.clone() : box;
   }
 
@@ -652,7 +1004,7 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
    * not given): every corner inside the view with a margin. camera-controls' own fitToBox turns
    * the view to the nearest axis, so an iso view would not stay iso.
    */
-  function fitBox(box: Box3, animate: boolean, from?: Vector3): void {
+  function fitThreeBox(box: Box3, animate: boolean, from?: Vector3): void {
     const target = controls.getTarget(new Vector3());
     const dir = (from ?? controls.getPosition(new Vector3()).sub(target)).clone().normalize();
     const f = dir.clone().negate();
@@ -662,23 +1014,23 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     right = right.lengthSq() < 1e-12 ? new Vector3(1, 0, 0) : right.normalize();
     const u = right.clone().cross(f).normalize();
     const c = box.getCenter(new Vector3());
-    const corners: Vector3[] = [];
+    const pts: Vector3[] = [];
     for (const x of [box.min.x, box.max.x])
       for (const y of [box.min.y, box.max.y])
-        for (const z of [box.min.z, box.max.z]) corners.push(new Vector3(x, y, z).sub(c));
+        for (const z of [box.min.z, box.max.z]) pts.push(new Vector3(x, y, z).sub(c));
     const w = Math.max(container.clientWidth, 1);
     const h = Math.max(container.clientHeight, 1);
     const margin = 1.12;
-    const radius = Math.max(box.getSize(new Vector3()).length() / 2, 50);
+    const r = Math.max(box.getSize(new Vector3()).length() / 2, 50);
     if (camera === ortho) {
       let ex = 1;
       let ey = 1;
-      for (const q of corners) {
+      for (const q of pts) {
         ex = Math.max(ex, Math.abs(q.dot(right)));
         ey = Math.max(ey, Math.abs(q.dot(u)));
       }
       const zoom = Math.min(w / (2 * ex * margin), h / (2 * ey * margin));
-      const pos = c.clone().addScaledVector(dir, radius * 4 + 1000);
+      const pos = c.clone().addScaledVector(dir, r * 4 + 1000);
       void controls.setLookAt(pos.x, pos.y, pos.z, c.x, c.y, c.z, animate);
       void controls.zoomTo(zoom, animate);
     } else {
@@ -687,7 +1039,7 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       // A corner at depth z beyond the centre is in view when |x| ≤ (d + z)·tan: d is the most
       // any corner asks for.
       let d = 0;
-      for (const q of corners) {
+      for (const q of pts) {
         const z = q.dot(f);
         d = Math.max(
           d,
@@ -695,7 +1047,7 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
           (Math.abs(q.dot(u)) * margin) / tanV - z,
         );
       }
-      d = Math.max(d, radius * 0.5);
+      d = Math.max(d, r * 0.5);
       const pos = c.clone().addScaledVector(dir, d);
       void controls.setLookAt(pos.x, pos.y, pos.z, c.x, c.y, c.z, animate);
     }
@@ -726,7 +1078,7 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     const dir = new Vector3(from[0], from[2], -from[1]).normalize();
     // Exactly down or up: lean a hair toward world −Y, so the screen's up is world +Y.
     if (Math.abs(dir.y) > 1 - 1e-9) dir.set(0, Math.sign(dir.y), 1e-6).normalize();
-    fitBox(modelBox(), animate, dir);
+    fitThreeBox(modelBox(), animate, dir);
     return true;
   }
 
@@ -757,15 +1109,17 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
   }
 
   // ---------------------------------------------------------------------------------------------
-  // Picking: click, and box select with Shift held
+  // Picking: click, hover, and box select with Shift held
 
   let selectCb: (ids: string[], mode: SelectMode) => void = () => {};
+  let hoverCb: (id?: string) => void = () => {};
   const raycaster = new Raycaster();
   const ndc = new Vector2();
   const rectEl = document.createElement("div");
   rectEl.className = "select-box";
   rectEl.hidden = true;
   container.appendChild(rectEl);
+  const labels = new Labels(container, (p) => project(p));
 
   function castFrom(clientX: number, clientY: number): void {
     const r = renderer.domElement.getBoundingClientRect();
@@ -787,7 +1141,10 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     return undefined;
   }
 
+  /** What a click or a hover in Select takes: a joint marker first, else a body. */
   function pick(clientX: number, clientY: number): string | undefined {
+    const corner = joints.pickAt(clientX, clientY, project, hiddenWorld);
+    if (corner !== undefined) return `${CORNER_PREFIX}${corner}`;
     return pickAt(clientX, clientY)?.id;
   }
 
@@ -830,20 +1187,28 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       const g = s.mesh.geometry;
       g.computeBoundingBox();
       const b = g.boundingBox as Box3;
-      const corners: [number, number, number][] = [];
+      const pts: [number, number, number][] = [];
       for (const x of [b.min.x, b.max.x])
         for (const y of [b.min.y, b.max.y])
           for (const z of [b.min.z, b.max.z]) {
             const p = new Vector3(x, y, z).applyMatrix4(s.mesh.matrix);
-            corners.push([p.x, p.y, p.z]);
+            pts.push([p.x, p.y, p.z]);
           }
-      if (within(corners)) out.push(s.id);
+      if (within(pts)) out.push(s.id);
     }
     return out;
   }
 
   let tool: ToolHandler | undefined;
   let down: { x: number; y: number; box: boolean } | undefined;
+  /** The pointer to hover-pick at the next frame, in Select with no button held. */
+  let hoverAt: { x: number; y: number } | undefined;
+  let hoverId: string | undefined;
+  const reportHover = (id: string | undefined) => {
+    if (id === hoverId) return;
+    hoverId = id;
+    hoverCb(id);
+  };
   const el = renderer.domElement;
   const onDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
@@ -860,6 +1225,12 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       tool.move?.(e);
       return;
     }
+    if (!tool && e.buttons === 0) hoverAt = { x: e.clientX, y: e.clientY };
+    // Dragging the camera or a box: nothing is under the pointer for long, so nothing hovers.
+    if (!tool && e.buttons !== 0) {
+      hoverAt = undefined;
+      reportHover(undefined);
+    }
     if (!down?.box) return;
     const cr = container.getBoundingClientRect();
     rectEl.hidden = false;
@@ -872,6 +1243,8 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     if (!down) return;
     const d = down;
     down = undefined;
+    // Pick again where the drag ended, without waiting for the pointer to move.
+    if (!tool) hoverAt = { x: e.clientX, y: e.clientY };
     const additive = e.ctrlKey || e.metaKey;
     if (d.box) {
       rectEl.hidden = true;
@@ -897,11 +1270,82 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     const id = pick(e.clientX, e.clientY);
     selectCb(id ? [id] : [], additive ? "toggle" : "replace");
   };
-  const onLeave = () => tool?.leave?.();
+  const onLeave = () => {
+    tool?.leave?.();
+    hoverAt = undefined;
+    reportHover(undefined);
+  };
   el.addEventListener("pointerdown", onDown);
   el.addEventListener("pointermove", onMove);
   el.addEventListener("pointerup", onUp);
   el.addEventListener("pointerleave", onLeave);
+
+  // ---------------------------------------------------------------------------------------------
+  // Markers: the joints and the problem badges
+
+  const JOINT_GLYPH = { joined: "joined", open: "open", failed: "failed" } as const;
+  function drawCorners(): void {
+    const colour = {
+      joined: theme.status.ready,
+      open: theme.status.warn,
+      failed: theme.status.blocked,
+    };
+    joints.set(
+      corners.map(
+        (c): MarkerPoint => ({
+          key: c.key,
+          at: c.at,
+          glyph: JOINT_GLYPH[c.state],
+          colour: colour[c.state],
+        }),
+      ),
+    );
+    counts.joints = { joined: 0, open: 0, failed: 0 };
+    for (const c of corners) counts.joints[c.state]++;
+    emphasiseCorners();
+  }
+
+  /** The hovered corner and the selected ones, drawn larger. */
+  function emphasiseCorners(): void {
+    const keys = new Set<string>();
+    for (const r of [...selection, ...hovered]) {
+      if (r.startsWith(CORNER_PREFIX)) keys.add(r.slice(CORNER_PREFIX.length));
+    }
+    joints.emphasise(keys);
+  }
+
+  /** Where a badge sits on an entity: a bar's middle, a part's origin. */
+  function anchorOf(id: string): V3 | undefined {
+    const b = model?.bars[id];
+    if (b) return [(b.a[0] + b.b[0]) / 2, (b.a[1] + b.b[1]) / 2, (b.a[2] + b.b[2]) / 2];
+    const p = model?.parts[id];
+    return p?.origin ?? p?.point;
+  }
+
+  const RANK = { block: 0, error: 1, warn: 2 } as const;
+  function drawBadges(): void {
+    badgeOf = new Map();
+    for (const b of badgeList) {
+      for (const id of b.ids) {
+        const was = badgeOf.get(id);
+        if (!was || RANK[b.severity] < RANK[was]) badgeOf.set(id, b.severity);
+      }
+    }
+    const pts: MarkerPoint[] = [];
+    for (const [id, sev] of badgeOf) {
+      const at = anchorOf(id);
+      if (!at) continue;
+      pts.push({
+        key: id,
+        at,
+        glyph: sev === "warn" ? "warn" : "block",
+        colour: sev === "warn" ? theme.status.warn : theme.status.blocked,
+      });
+    }
+    badges.set(pts);
+    counts.badges = pts.length;
+    paint();
+  }
 
   // ---------------------------------------------------------------------------------------------
   // Size and frames
@@ -924,14 +1368,68 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
   observer.observe(container);
   resize();
 
+  /** Before a frame: the key light and the fog follow the camera; the detail edges, the zoom. */
+  function beforeRender(): void {
+    const eye = controls.getPosition(new Vector3());
+    const target = controls.getTarget(new Vector3());
+    look.follow(eye, target, THREE_UP, radius);
+    // Pixels per millimetre at the target, as a 40 mm face sees them.
+    const h = Math.max(container.clientHeight, 1);
+    let opacity: number;
+    if (camera === ortho) opacity = theme.edge.opacity;
+    else {
+      const d = eye.distanceTo(target);
+      const ppm = h / (2 * d * Math.tan(((persp.fov / 2) * Math.PI) / 180));
+      const face = RAMP.face_mm * ppm;
+      const k = Math.min(1, Math.max(0, (face - RAMP.from_px) / (RAMP.to_px - RAMP.from_px)));
+      opacity = k * theme.edge.detail;
+    }
+    detailMaterial.opacity = opacity;
+    if (detail) detail.lines.visible = opacity > 0.004;
+  }
+
+  const renderCbs = new Set<() => void>();
+  function draw(): void {
+    beforeRender();
+    const t0 = performance.now();
+    renderer.render(scene, camera);
+    stats.renderMs += performance.now() - t0;
+    stats.frames++;
+    // The model drawn has taken its programs; the generation it replaced can go.
+    ownedDrawn = true;
+    if (retired.length > 0) {
+      release(retired);
+      retired = [];
+    }
+    labels.update();
+    for (const cb of renderCbs) cb();
+  }
+
   let frame = 0;
   let last = performance.now();
   const tick = (now: number) => {
     const moved = controls.update((now - last) / 1000);
     last = now;
+    // One hover pick a frame, at the pointer's last place.
+    if (hoverAt && !tool && !down && model) {
+      const at = hoverAt;
+      hoverAt = undefined;
+      const t0 = performance.now();
+      const id = pick(at.x, at.y);
+      stats.hoverMs += performance.now() - t0;
+      stats.hovers++;
+      reportHover(id);
+    }
+    if (pulsing) {
+      paint(now);
+      if (now - pulsing.start >= PULSE.ms) {
+        pulsing = undefined;
+        paint(now);
+      }
+    }
     if (moved || dirty) {
       dirty = false;
-      renderer.render(scene, camera);
+      draw();
     }
     frame = requestAnimationFrame(tick);
   };
@@ -943,6 +1441,9 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       model = m;
       build(m);
       paint();
+      buildXray();
+      drawCorners();
+      drawBadges();
       // The first model is shown whole, even an empty one; later revisions keep the view.
       if (!fitted) {
         fitView();
@@ -954,6 +1455,8 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     setSelection(ids) {
       selection = ids;
       paint();
+      buildXray();
+      emphasiseCorners();
     },
     setHighlight(ids) {
       highlight = ids;
@@ -966,6 +1469,10 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       tool?.leave?.();
       tool = t;
       el.style.cursor = t ? "crosshair" : "";
+      if (t) {
+        hoverAt = undefined;
+        reportHover(undefined);
+      }
     },
     setOverlay(state) {
       overlay.set(state);
@@ -980,11 +1487,11 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
     fitView,
     fitSelection(ids) {
       const box = ids.size > 0 ? boxOf(ids) : modelBox();
-      fitBox(box.isEmpty() ? modelBox() : box, true);
+      fitThreeBox(box.isEmpty() ? modelBox() : box, true);
     },
     renderNow() {
       controls.update(0);
-      renderer.render(scene, camera);
+      draw();
       dirty = false;
     },
     setSection(s) {
@@ -996,25 +1503,95 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       invalidate();
     },
     section: () => (section ? { ...section } : undefined),
-    clipped: (p) => hiddenThree(new Vector3(...p).applyMatrix4(world.matrixWorld)),
+    clipped: (p) => hiddenWorld(p),
     extent(axis) {
       const b = worldBox();
       const i = AXIS_INDEX[axis];
       return [b.min.getComponent(i), b.max.getComponent(i)];
     },
-    stats: () => ({ ...counts }),
-    // The UX redesign's methods (see the Viewer interface): no-ops until S3 builds them.
-    setHover() {},
-    onHover() {},
-    setGhost() {},
-    pulse() {},
-    fitBox() {},
-    setCorners() {},
-    setProblemBadges() {},
-    setColourBy() {},
-    setTheme() {},
-    onRender: () => () => {},
-    setLabel() {},
+    stats: () => ({ ...counts, joints: { ...counts.joints } }),
+    setHover(ids) {
+      hovered = ids;
+      paint();
+      emphasiseCorners();
+    },
+    onHover(cb) {
+      hoverCb = cb;
+    },
+    setGhost(keep) {
+      ghost = keep;
+      const fade = keep ? GHOST_EDGES.outline / theme.edge.outline : 1;
+      joints.setFade(fade);
+      badges.setFade(fade);
+      paint();
+    },
+    pulse(ids) {
+      pulsing = ids.size > 0 ? { ids, start: performance.now() } : undefined;
+      paint();
+    },
+    fitBox(box) {
+      const b = new Box3();
+      for (const x of [box[0][0], box[1][0]])
+        for (const y of [box[0][1], box[1][1]])
+          for (const z of [box[0][2], box[1][2]])
+            b.expandByPoint(new Vector3(x, y, z).applyMatrix4(world.matrixWorld));
+      fitThreeBox(b, true);
+    },
+    setCorners(c) {
+      corners = c;
+      drawCorners();
+      invalidate();
+    },
+    setProblemBadges(b) {
+      badgeList = b;
+      drawBadges();
+    },
+    setColourBy(mode, swatches = new Map()) {
+      colourBy = { mode, swatches };
+      paint();
+    },
+    setTheme(t) {
+      theme = t;
+      look.setTheme(t);
+      ground.setTheme(t);
+      overlay.setTheme(t);
+      glyphs.setRing(t.overlay.ring);
+      sectionMaterial.color.setHex(t.tool);
+      applyThemeMaterials();
+      if (model) {
+        build(model);
+        paint();
+        buildXray();
+      }
+      drawCorners();
+      drawBadges();
+      invalidate();
+    },
+    onRender(cb) {
+      renderCbs.add(cb);
+      return () => renderCbs.delete(cb);
+    },
+    setLabel(key, at, text) {
+      labels.set(key, at, text);
+    },
+    camera() {
+      const pos = controls.getPosition(new Vector3());
+      const target = controls.getTarget(new Vector3());
+      camera.updateMatrixWorld();
+      const e = camera.matrixWorld.elements;
+      const right: V3 = fromThree([e[0] as number, e[1] as number, e[2] as number]);
+      const up: V3 = fromThree([e[4] as number, e[5] as number, e[6] as number]);
+      return {
+        position: fromThree([pos.x, pos.y, pos.z]),
+        target: fromThree([target.x, target.y, target.z]),
+        right,
+        up,
+        // camera-controls marks a transition active when it is asked for, and rested when the
+        // camera's change per frame falls below its rest threshold (0.01 mm here).
+        moving: controls.active,
+      };
+    },
+    renderStats: () => ({ ...stats }),
     dispose() {
       cancelAnimationFrame(frame);
       observer.disconnect();
@@ -1023,9 +1600,21 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointerleave", onLeave);
       clear();
+      release(owned);
+      release(retired);
       overlay.dispose();
-      outline.geometry.dispose();
-      outlineMaterial.dispose();
+      joints.dispose();
+      badges.dispose();
+      ground.dispose();
+      look.dispose();
+      glyphs.dispose();
+      labels.dispose();
+      xray.geometry.dispose();
+      for (const m of [capMaterial, sideMaterial, outlineMaterial, detailMaterial, xrayMaterial]) {
+        m.dispose();
+      }
+      sectionLine.geometry.dispose();
+      sectionMaterial.dispose();
       for (const u of unitCache.values()) u.geometry.dispose();
       controls.dispose();
       renderer.dispose();

@@ -87,6 +87,13 @@ const DRAW = {
     </>
   ),
   problems: <path d="M8 2l6.5 11.5h-13zM8 6.5v3M8 11.2v.3" />,
+  // Two bars meeting at a corner, its joint marker filled (S3's joint markers)
+  joints: (
+    <>
+      <path d="M4 1.5V12h10.5" />
+      <circle cx="4" cy="12" r="2.5" fill="currentColor" />
+    </>
+  ),
 } satisfies Record<string, JSX.Element>;
 
 export type IconName = keyof typeof DRAW;

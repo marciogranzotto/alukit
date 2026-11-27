@@ -85,34 +85,49 @@ export const COLOURS: Readonly<Record<Theme, Readonly<Record<ColourToken, number
 };
 
 /**
- * The 3D view's own colours, which no stylesheet uses: bodies by finish, edges, the grid, the
- * lights, the tools' overlay. Today's values, as the viewer drew them before the tokens.
+ * The 3D view's own colours, which no stylesheet uses: bodies by finish, cut faces, edges, the
+ * fog, the grid, the lights, the tools' overlay. The dark theme's are C's rendering spec
+ * (docs/ux/visual-design.md §5.1 to §5.3), valued by S3 with the rendering that uses them; the
+ * export keeps its own palette (src/mesh/style.ts, D-UX-24). The selection, tool, status and
+ * marker-text colours are tokens (`viewTheme`).
  */
 const VIEW_DARK = {
   body: {
-    anodised: 0xb9c3cd,
-    black: 0x3a3f46,
-    steel: 0x8d949c,
-    part: 0x6fa8dc,
-    custom: 0xc49a6c,
-    hole: 0x101316,
+    anodised: 0xc4cbd2,
+    black: 0x4a5058,
+    steel: 0x9aa1a8,
+    part: 0x7f9fc2,
+    custom: 0xc9a27a,
+    hole: 0x15181c,
     fastener: 0xc9a227,
+    neutral: 0x9aa1a8,
   },
+  cut: [1.12, 1.1, 1.04],
   translucent: 0.35,
-  edge: { colour: 0x15181c, opacity: 0.6, placeholder: 0xa9cdf0 },
-  /** What hover tints toward (S3.2, C's pale amber); nothing hovers today. */
+  fog: { colour: 0x23272e, near: -0.6, far: 4 },
+  edge: {
+    colour: 0x5b6570,
+    onDark: 0x9aa3ad,
+    opacity: 0.6,
+    outline: 0.85,
+    detail: 0.5,
+    placeholder: 0xa9cdf0,
+    selected: 0x8a4a00,
+    xray: 0.45,
+  },
+  /** What hover tints toward (S3.2, C's pale amber). */
   hover: 0xffd29a,
-  grid: { centre: 0x59636e, line: 0x2c3238 },
+  grid: { line: 0x2c3138, major: 0x3a414a, axis: { x: 0xc8574f, y: 0x5d9a5b }, axisOpacity: 0.7 },
   lights: {
-    ambient: { colour: 0xffffff, intensity: 0.9 },
-    key: { colour: 0xffffff, intensity: 1.8 },
-    fill: { colour: 0xffffff, intensity: 0.6 },
+    ambient: { colour: 0xffffff, intensity: 0.25 },
+    key: { colour: 0xffffff, intensity: 1.7 },
+    sky: { colour: 0xf2f5f8, ground: 0x4a4540, intensity: 1.9 },
   },
   overlay: {
-    marker: { point: 0x4ade80, line: 0x38bdf8, grid: 0x9aa4ae, free: 0xe5e7eb, pick: 0xff9f1c },
+    marker: { point: 0x4ade80, face: 0x4ade80, datum: 0x4ade80 },
+    ring: 0x15181c,
     axis: { x: 0xef4444, y: 0x22c55e, z: 0x3b82f6 },
     line: 0xffffff,
-    ghost: 0xffb454,
   },
 } as const;
 
@@ -131,14 +146,21 @@ const VIEW_LIGHT = {
     custom: 0xa9773f,
     hole: 0x30353b,
     fastener: 0xa8841a,
+    neutral: 0x6f7780,
   },
-  edge: { colour: 0x20262d, opacity: 0.6, placeholder: 0x2f6aa8 },
-  grid: { centre: 0x8b95a0, line: 0xc9d0d8 },
+  fog: { colour: 0xe2e6ea, near: -0.6, far: 4 },
+  edge: { ...VIEW_DARK.edge, colour: 0x20262d, placeholder: 0x2f6aa8 },
+  grid: { line: 0xc9d0d8, major: 0xadb5be, axis: { x: 0xc8574f, y: 0x5d9a5b }, axisOpacity: 0.7 },
+  lights: {
+    ambient: { colour: 0xffffff, intensity: 0.3 },
+    key: { colour: 0xffffff, intensity: 1.5 },
+    sky: { colour: 0xffffff, ground: 0x6b665f, intensity: 1.7 },
+  },
   overlay: {
-    marker: { point: 0x15803d, line: 0x0b7f9a, grid: 0x59636e, free: 0x3a424c, pick: 0xc2640a },
+    marker: { point: 0x15803d, face: 0x15803d, datum: 0x15803d },
+    ring: 0x15181c,
     axis: { x: 0xdc2626, y: 0x16a34a, z: 0x2563eb },
     line: 0x1a1f26,
-    ghost: 0xc2640a,
   },
 } as const;
 
@@ -148,14 +170,20 @@ const BACKGROUND: Readonly<Record<Theme, readonly [number, number]>> = {
   light: [0xeef1f4, 0xd3d9df],
 };
 
-/** What the 3D view draws with in a theme. The selection, tool and status colours are tokens. */
+/**
+ * What the 3D view draws with in a theme. The selection, tool and status colours are tokens; so
+ * are the snap markers of a line, a pick and the preview bar (the tool's cyan: amber is the
+ * selection's alone, U42), and of the grid and a free point (text colours).
+ */
 export function viewTheme(t: Theme): ViewTheme {
   const c = COLOURS[t];
   const v = t === "dark" ? VIEW_DARK : VIEW_LIGHT;
   return {
     background: BACKGROUND[t],
+    fog: v.fog,
     lights: v.lights,
     body: v.body,
+    cut: v.cut,
     translucent: v.translucent,
     edge: v.edge,
     selection: c.sel,
@@ -163,7 +191,19 @@ export function viewTheme(t: Theme): ViewTheme {
     tool: c.tool,
     status: { ready: c.ready, blocked: c.blocked, warn: c.warn },
     grid: v.grid,
-    overlay: v.overlay,
+    overlay: {
+      marker: {
+        ...v.overlay.marker,
+        line: c.tool,
+        grid: c["text-3"],
+        free: c["text-1"],
+        pick: c.tool,
+      },
+      ring: v.overlay.ring,
+      axis: v.overlay.axis,
+      line: v.overlay.line,
+      ghost: c.tool,
+    },
   };
 }
 

@@ -1,6 +1,7 @@
 /*
- * The viewport: the canvas, box select, the bar over it (the tools' slot and the view controls:
- * standard views, projection, fit, the section plane), and snapshot mode. Owner: S3.
+ * The viewport: the canvas, box select, the tool rail and the view controls over it (standard
+ * views, projection, fit, the section plane, the display toggles), the labels, callout, legend
+ * and gizmo it draws over the scene, and snapshot mode. Owner: S3.
  */
 
 .viewport {
@@ -22,36 +23,60 @@
   pointer-events: none;
 }
 
-/* The bar over the viewport: the tool buttons (the `left` slot) and the view controls */
+/*
+ * Over the viewport's top: the tool rail (the `left` slot), a column down the left edge, and the
+ * view controls' bar at the right, wrapping when the viewport is narrow.
+ */
 
-.toolbar {
+.viewport-top {
   position: absolute;
   top: 6px;
   left: 6px;
   right: 6px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
+  gap: 8px;
+  align-items: flex-start;
   pointer-events: none;
+  z-index: 3;
 }
 
-.toolbar .tb {
+.tool-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.toolbar {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  align-items: center;
+}
+
+.viewport-top .tb {
   pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
   background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   padding: 2px 8px;
   cursor: pointer;
   font-size: var(--fs-small);
+  text-align: left;
 }
 
-.toolbar .tb.on {
+.viewport-top .tb.on {
   border-color: var(--mark-active);
   color: var(--mark-active-text);
 }
 
-.toolbar .tb:disabled {
+.viewport-top .tb:disabled {
   opacity: 0.45;
   cursor: default;
 }
@@ -87,4 +112,237 @@
 .viewport.snapshot {
   position: fixed;
   inset: 0;
+}
+
+/* The bar's groups (S3.11): views, section, what the view shows */
+
+.toolbar .tb-group {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  margin: 0 8px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.viewport-top .tb[aria-pressed="true"] {
+  border-color: var(--mark-active);
+  color: var(--mark-active-text);
+}
+
+/* What the viewport draws over the canvas, following the scene (S3.2, S3.6, S3.9, S3.10) */
+
+.viewport .anchored {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hover-label {
+  position: fixed;
+  z-index: 10;
+  padding: 3px 7px;
+  border-radius: var(--radius-control);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-float);
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  white-space: pre;
+  pointer-events: none;
+}
+
+.hover-label .first {
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The selected bar's label: at its middle, in the selection's colour */
+.sel-label {
+  margin: -11px 0 0 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-control);
+  background: var(--sel);
+  color: var(--sel-ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}
+
+/* A tool's label at a world point (Viewer.setLabel) */
+.view-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 10px 0 0 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-control);
+  background: var(--bg-tip);
+  border: 1px solid var(--tool);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Show's callout: at its target, the problem and its fixes */
+.callout {
+  margin: 14px 0 0 14px;
+  min-width: 220px;
+  max-width: 360px;
+  padding: 6px 8px;
+  border-radius: var(--radius-card);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--sel);
+  box-shadow: var(--shadow-float);
+  font-size: var(--fs-small);
+  pointer-events: auto;
+}
+
+.callout-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--text-2);
+}
+
+.callout-head button {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--text-1);
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.callout-head button:hover {
+  border-color: var(--line);
+}
+
+.callout-steps {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.callout-what {
+  flex: 1;
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.callout-problem {
+  margin: 4px 0 0;
+}
+
+.callout-refs,
+.callout-hint {
+  margin: 4px 0 0;
+  color: var(--text-2);
+}
+
+/* Colour by item: the legend, bottom right; an entry shows what uses its item */
+.legend {
+  position: absolute;
+  right: 8px;
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 45%;
+  overflow: auto;
+  padding: 4px;
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-float);
+  z-index: 2;
+}
+
+.legend-item {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-control);
+  padding: 1px 6px;
+  color: var(--text-1);
+  font-size: var(--fs-small);
+  text-align: left;
+  cursor: pointer;
+}
+
+.legend-item:hover {
+  background: var(--bg-raised);
+}
+
+.legend-item .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.legend-item .name {
+  color: var(--text-2);
+}
+
+/* The orientation gizmo: bottom left, above the help line; its ends are buttons */
+.gizmo {
+  position: absolute;
+  left: 6px;
+  bottom: 24px;
+  width: 72px;
+  height: 72px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.gizmo svg {
+  position: absolute;
+  inset: 0;
+}
+
+.gizmo-end {
+  position: absolute;
+  left: -8px;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 13px;
+  text-align: center;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.gizmo-end.pos {
+  background: currentColor;
+}
+
+.gizmo-end.pos::first-line {
+  color: var(--sel-ink);
+}
+
+.gizmo-end.neg {
+  left: -5px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+}
+
+.gizmo-end:hover {
+  outline: 2px solid var(--text-1);
 }

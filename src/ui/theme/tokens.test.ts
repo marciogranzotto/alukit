@@ -1,7 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { COLOURS as EXPORT } from "../../mesh/style.ts";
 import { contrast, failures, PAIRS } from "./contrast.ts";
 import { COLOUR_TOKENS, COLOURS, viewTheme } from "./tokens.ts";
 
@@ -93,18 +92,8 @@ describe("tokens", () => {
       expect(t.status).toEqual({ ready: c.ready, blocked: c.blocked, warn: c.warn });
       expect(t.background).toHaveLength(2);
     }
-    // The export keeps its own palette (D-UX-24); the dark view's bodies are still its.
-    const t = viewTheme("dark");
-    expect(t.body).toEqual({
-      anodised: EXPORT.anodised,
-      black: EXPORT.black,
-      steel: EXPORT.steel,
-      part: EXPORT.part,
-      custom: EXPORT.custom,
-      hole: EXPORT.hole,
-      fastener: EXPORT.fastener,
-    });
-    expect(t.edge).toMatchObject({ colour: EXPORT.edge, placeholder: EXPORT.placeholderEdge });
+    // The view's bodies and edges are C's rendering spec (S3); the export keeps its own palette
+    // (D-UX-24), which src/viewer/theme.test.ts holds with the view's contrast rules.
   });
 });
 

@@ -9,6 +9,7 @@ import {
   angledGeometry,
   barCorners,
   barMapper,
+  sectionEdgeSets,
   sectionEdges,
   sectionGeometry,
   squareEnds,
@@ -115,6 +116,56 @@ describe("bar meshes (§8)", () => {
     const tslot = models.cart?.display.sections["test:TS40"] as ViewSection;
     expect(tslot.holes).toHaveLength(1);
     expect(sectionGeometry(tslot).getAttribute("position").count).toBeGreaterThan(100);
+  });
+
+  it("split a section's edges into an outline and a detail set (C §5.2)", () => {
+    const segments = (a: Float32Array) => {
+      const out = new Set<string>();
+      for (let i = 0; i < a.length; i += 6) {
+        const p = [a[i], a[i + 1], a[i + 2]].map((x) => (x as number).toFixed(3)).join(",");
+        const q = [a[i + 3], a[i + 4], a[i + 5]].map((x) => (x as number).toFixed(3)).join(",");
+        out.add([p, q].sort().join(" "));
+      }
+      return out;
+    };
+    // A box: its ends and four corners, all outline.
+    const box = sectionEdgeSets(rect(40, 20));
+    expect(segments(box.outline).size).toBe(12);
+    expect(box.detail).toHaveLength(0);
+
+    // A rounded box: no corner is a crease, so its silhouette comes from where each flat face
+    // ends: two lines a side, eight in all.
+    const r = 4;
+    const ring: [number, number][] = [];
+    for (const [cx, cy, a0] of [
+      [16, -6, -90],
+      [16, 6, 0],
+      [-16, 6, 90],
+      [-16, -6, 180],
+    ] as const) {
+      for (let k = 0; k <= 8; k++) {
+        const a = ((a0 + (90 * k) / 8) * Math.PI) / 180;
+        ring.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+      }
+    }
+    const rounded = sectionEdgeSets({ ...rect(40, 20), outline: ring });
+    expect(sectionEdges(sectionGeometry({ ...rect(40, 20), outline: ring })).length / 6).toBe(
+      2 * ring.length,
+    );
+    expect(segments(rounded.outline).size - 2 * ring.length).toBe(8);
+    expect(rounded.detail).toHaveLength(0);
+
+    // The T-slot: the outline holds the hull's four corners along the bar; the slots' lips and
+    // the core's chamber are detail; together they hold every sharp edge `sectionEdges` finds.
+    const tslot = models.cart?.display.sections["test:TS40"] as ViewSection;
+    const t = sectionEdgeSets(tslot);
+    const outerRing =
+      tslot.outline.length - (tslot.outline[0]?.join() === tslot.outline.at(-1)?.join() ? 1 : 0);
+    expect(segments(t.outline).size - 2 * outerRing).toBe(4);
+    expect(t.detail.length).toBeGreaterThan(0);
+    const all = new Set([...segments(t.outline), ...segments(t.detail)]);
+    for (const s of segments(sectionEdges(sectionGeometry(tslot))))
+      expect(all.has(s), s).toBe(true);
   });
 
   it("place a square bar with one matrix that agrees with the exact map", () => {
