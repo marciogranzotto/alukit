@@ -7,27 +7,30 @@ import { cornerKey, cornersOf } from "./corners.ts";
 import type { Model } from "./model.ts";
 
 /**
- * What a list of refs stands for in the scene (docs/ux/plan.md §5.3): the entities to select, the
- * points to frame and to anchor a callout at, and their box. Show (src/ui/focus.ts) and every
- * link to an entity resolve refs here. Pure. Owner: S3.
+ * What a list of refs stands for (docs/ux/plan.md §5.3), in two ways. `ids` are the entities the
+ * refs name: what Show selects (src/ui/focus.ts), what a filter by the selection matches, what
+ * the callout steps through. `bodies` are what draws them in the scene: what the view tints on a
+ * hover, pulses, keeps out of the ghost and badges. Then the points to anchor a callout at and
+ * the box to frame. Pure. Owner: S3.
  *
- * - an entity → itself, then what it stands for in the scene: a connection → its bars (and its
- *   fasteners, which are drawn under its id); a run → its bars; a pattern → its template and its
- *   copies; a copy → itself;
+ * - an entity → itself; its bodies: a bar or a part itself; a connection itself (its fasteners
+ *   are drawn under its id) and its bars; a run its bars; a pattern its template and copies; a
+ *   node none (a point);
  * - a part of an entity (`c23.f1`) → the entity; a bar's end (`b9.b`) → its bar, at the end;
- * - a corner (`corner:<key>`) → its bars, at its point;
+ * - a corner (`corner:<key>`) → the corner, which the selection holds; its bodies: its bars;
  * - an item (`forseti:PF40-01`, `project:plate-a`) → what uses it: its BOM lines' sources;
  * - an open item (`O1`) → its scope;
  * - a supplier (`supplier:<id>`) → the sources of its lines' items, given the order (`ctx`);
  * - no refs at all (a check with no entity) → the whole model: no ids, the model's box.
  *
- * Ids come in the order the refs give them, each once. Points are world points (Z up, mm), the
- * first ref's first: a bar's middle, an end's point, a part's origin, a fastener's head, a
- * corner's or a node's point. The box holds every target's body and point.
+ * Ids and bodies come in the order the refs give them, each once. Points are world points (Z up,
+ * mm), the first ref's first: a bar's middle, an end's point, a part's origin, a fastener's head,
+ * a corner's or a node's point. The box holds every body and point.
  */
 
 export interface Targets {
   ids: string[];
+  bodies: string[];
   points: V3[];
   box?: [V3, V3];
 }
@@ -88,16 +91,22 @@ const barOf = (ref: string) => ref.split(".")[0] as string;
 
 export function resolveTargets(m: Model, refs: readonly Ref[], ctx: TargetContext = {}): Targets {
   const ids: string[] = [];
-  const seen = new Set<string>();
+  const bodies: string[] = [];
+  const seen = { ids: new Set<string>(), bodies: new Set<string>() };
   const points: V3[] = [];
   const bars = m.derived?.bars ?? {};
   const parts = m.derived?.parts ?? {};
   let corners: ReturnType<typeof cornersOf> | undefined;
 
   const add = (id: string) => {
-    if (seen.has(id)) return;
-    seen.add(id);
+    if (seen.ids.has(id)) return;
+    seen.ids.add(id);
     ids.push(id);
+  };
+  const draw = (id: string) => {
+    if (seen.bodies.has(id)) return;
+    seen.bodies.add(id);
+    bodies.push(id);
   };
   const middle = (id: string): V3 | undefined => {
     const b = bars[id];
@@ -132,8 +141,9 @@ export function resolveTargets(m: Model, refs: readonly Ref[], ctx: TargetContex
       corners ??= cornersOf(m);
       const c = corners.find((x) => x.key === key);
       if (!c) return;
+      add(ref);
       points.push(c.at);
-      for (const b of c.bars) add(b);
+      for (const b of c.bars) draw(b);
       return;
     }
     if (ref.startsWith(SUPPLIER)) {
@@ -162,6 +172,7 @@ export function resolveTargets(m: Model, refs: readonly Ref[], ctx: TargetContex
     const end = ref.slice(id.length);
     const bar = bars[id];
     if (bar) {
+      draw(id);
       const p =
         end === ".a" || end === ".b" ? bar.ends?.[end === ".a" ? "a" : "b"].point : middle(id);
       if (p) points.push(p);
@@ -169,6 +180,7 @@ export function resolveTargets(m: Model, refs: readonly Ref[], ctx: TargetContex
     }
     const part = parts[id];
     if (part) {
+      draw(id);
       const p = part.origin ?? part.point;
       if (p) points.push(p);
       return;
@@ -180,7 +192,7 @@ export function resolveTargets(m: Model, refs: readonly Ref[], ctx: TargetContex
     }
     const run = m.derived?.runs?.[id];
     if (run) {
-      for (const b of run.bars) add(b);
+      for (const b of run.bars) draw(b);
       const p = middle(run.bars[0] as string);
       if (p) points.push(p);
       return;
@@ -190,12 +202,14 @@ export function resolveTargets(m: Model, refs: readonly Ref[], ctx: TargetContex
       const copies = [...Object.entries(bars), ...Object.entries(parts)]
         .filter(([, x]) => x.pattern === id)
         .map(([cid]) => cid);
-      for (const t of [...strings(pattern.template), ...copies]) if (isEntity(m, t)) add(t);
+      for (const t of [...strings(pattern.template), ...copies]) if (isEntity(m, t)) draw(t);
       return;
     }
-    // A connection: its bars, and where it is: its first fastener's head, else its first end.
+    // A connection: itself (its fasteners) and its bars, and where it is: its first fastener's
+    // head, else its first end.
     const cbars = connectionBars(id);
-    for (const b of cbars) add(b);
+    draw(id);
+    for (const b of cbars) draw(b);
     const fastener = (m.display?.fasteners ?? []).find((f) => f.connection === id);
     const first = bars[cbars[0] as string];
     if (fastener) points.push(fastener.head);
@@ -206,8 +220,8 @@ export function resolveTargets(m: Model, refs: readonly Ref[], ctx: TargetContex
   };
 
   for (const r of refs) resolve(r, 0);
-  const box = boxOf(m, refs.length === 0 ? undefined : ids, points);
-  return { ids, points, ...(box ? { box } : {}) };
+  const box = boxOf(m, refs.length === 0 ? undefined : bodies, points);
+  return { ids, bodies, points, ...(box ? { box } : {}) };
 }
 
 /**

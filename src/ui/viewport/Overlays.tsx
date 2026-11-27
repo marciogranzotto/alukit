@@ -3,12 +3,13 @@ import { useEffect, useRef } from "preact/hooks";
 import type { V3 } from "../../mesh/model.ts";
 import { ItemSwatch } from "../common/ItemSwatch.tsx";
 import { clearShow, hover, selection, show, shown } from "../focus.ts";
-import { ProblemRow } from "../problems/ProblemRow.tsx";
-import { model, problems } from "../store.ts";
+import { ProblemList, ProblemRow } from "../problems/ProblemRow.tsx";
+import { problemList } from "../problems/source.ts";
+import { model } from "../store.ts";
 import { resolveTargets, type Targets } from "../targets.ts";
 import { theme } from "../theme/theme.ts";
 import { viewTheme } from "../theme/tokens.ts";
-import { colourBy, drawnCorners, viewer } from "./viewer.ts";
+import { colourBy, drawnCorners, ghostsRest, viewer } from "./viewer.ts";
 import { barWords, hoverWords, itemCode, legendItems } from "./words.ts";
 
 /**
@@ -114,9 +115,9 @@ const step = signal(0);
 
 /**
  * Show in 3D (B §5.3): the camera frames the targets keeping its direction, they pulse three
- * times, and with `isolate` everything else is ghosted until Esc. This callout sits at the
- * first target with the problem's row (S4's `ProblemRow`, its fixes with it) and steps through
- * the targets, framing and pulsing each.
+ * times, and everything else is ghosted until Esc for a problem or when asked (`ghostsRest`).
+ * This callout sits at the first target with the problem's row (S4's `ProblemRow`, its fixes
+ * with it) and steps through the targets, framing and pulsing each.
  */
 export function Callout() {
   const host = useRef<HTMLDivElement>(null);
@@ -131,14 +132,18 @@ export function Callout() {
     step.value = 0;
   }, [s?.n]);
   if (!s || !m || !t) return null;
-  const problem = s.problem ? problems.value?.problems.find((p) => p.id === s.problem) : undefined;
+  // The problem as the Problems sheet lists it (S4's source: the served answer, or the check's
+  // diagnostics until it is served). An order reason is not in it until then: its refs show.
+  const problem = s.problem
+    ? problemList.value?.answer.problems.find((p) => p.id === s.problem)
+    : undefined;
   const go = (d: number) => {
     const next = (k + d + n) % n;
     step.value = next;
     const one = resolveTargets(m, [t.ids[next] as string]);
     const v = viewer.value;
     if (one.box) v?.fitBox(one.box);
-    v?.pulse(new Set(one.ids));
+    v?.pulse(new Set(one.bodies));
   };
   return (
     <div class="callout anchored" ref={host} data-testid="callout">
@@ -162,13 +167,15 @@ export function Callout() {
         </button>
       </div>
       {problem ? (
-        <ul class="diagnostics callout-problem">
-          <ProblemRow p={problem} compact />
-        </ul>
+        <div class="callout-problem">
+          <ProblemList label="The problem shown">
+            <ProblemRow p={problem} compact />
+          </ProblemList>
+        </div>
       ) : (
         <p class="callout-refs">{s.refs.join(", ")}</p>
       )}
-      {s.isolate && <p class="callout-hint">Others dimmed · Esc to leave</p>}
+      {ghostsRest(s) && <p class="callout-hint">Others dimmed · Esc to leave</p>}
     </div>
   );
 }

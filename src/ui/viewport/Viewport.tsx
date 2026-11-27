@@ -16,13 +16,14 @@ import { clearShow, hover, select, selection, shown } from "../focus.ts";
 import { extendHook } from "../hook.ts";
 import { onKey } from "../keys.ts";
 import { meshInput } from "../model.ts";
-import { model, problems } from "../store.ts";
+import { problemList } from "../problems/source.ts";
+import { model } from "../store.ts";
 import { resolveTargets } from "../targets.ts";
 import { theme } from "../theme/theme.ts";
 import { viewTheme } from "../theme/tokens.ts";
 import { Callout, Gizmo, HoverLabel, Legend, SelectionLabel, usePointer } from "./Overlays.tsx";
 import { ViewControls } from "./ViewControls.tsx";
-import { colourBy, drawnCorners, showJoints, showProblems, viewer } from "./viewer.ts";
+import { colourBy, drawnCorners, ghostsRest, showJoints, showProblems, viewer } from "./viewer.ts";
 import { badgesOf } from "./words.ts";
 
 /**
@@ -159,12 +160,12 @@ export function Viewport({
           const h = hover.value;
           const m = model.peek();
           const ids = h?.ids ?? [];
-          const bodies = m && ids.length > 0 ? resolveTargets(m, ids).ids : [];
+          const bodies = m && ids.length > 0 ? resolveTargets(m, ids).bodies : [];
           v.setHover(new Set([...ids, ...bodies]));
         }),
         effect(() => {
           const m = model.value;
-          v.setProblemBadges(showProblems.value && m ? badgesOf(problems.value, m) : []);
+          v.setProblemBadges(showProblems.value && m ? badgesOf(problemList.value?.answer, m) : []);
         }),
         effect(() => {
           const m = model.value;
@@ -181,9 +182,9 @@ export function Viewport({
           if (!m) return;
           const t = resolveTargets(m, s.refs);
           if (t.box) v.fitBox(t.box);
-          const ids = new Set(t.ids);
+          const ids = new Set([...t.ids, ...t.bodies]);
           v.pulse(ids);
-          v.setGhost(s.isolate ? ids : undefined);
+          v.setGhost(ghostsRest(s) ? ids : undefined);
         }),
         onKey("app", showKey, 10),
       );

@@ -102,7 +102,7 @@ export function badgesOf(p: ProblemsAnswer | undefined, m: Model): ProblemBadge[
   const out: ProblemBadge[] = [];
   for (const x of p.problems) {
     if (x.group === "note") continue;
-    const ids = resolveTargets(m, x.targets).ids.filter(
+    const ids = resolveTargets(m, x.targets).bodies.filter(
       (id) => id in (m.derived?.bars ?? {}) || id in (m.derived?.parts ?? {}),
     );
     if (ids.length > 0) out.push({ ids, severity: SEVERITY[x.group] });

@@ -1,6 +1,7 @@
 import { signal } from "@preact/signals";
 import type { Projection, SectionPlane, Viewer } from "../../viewer/scene.ts";
 import type { Corner } from "../corners.ts";
+import type { Shown } from "../focus.ts";
 
 /**
  * The viewport's state, which other regions read: the viewer once the viewport has made it (the
@@ -22,3 +23,11 @@ export const colourBy = signal<"finish" | "item">("finish");
 
 /** The drawn revision's corners (src/ui/corners.ts), as the joint markers show them. */
 export const drawnCorners = signal<readonly Corner[]>([]);
+
+/**
+ * Whether a Show dims the rest of the model: when its caller asks (`isolate`, as the legend
+ * does), and always for a problem, which B §5.3 shows with "others dimmed" until Esc.
+ */
+export function ghostsRest(s: Pick<Shown, "isolate" | "problem">): boolean {
+  return s.isolate || s.problem !== undefined;
+}

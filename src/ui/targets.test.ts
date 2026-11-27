@@ -32,7 +32,7 @@ describe("resolveTargets", () => {
 
   it("resolves to nothing what the model does not hold", () => {
     const t = resolveTargets(SMALL, ["forseti:PF40-01", "project:plate-a", "O1", "supplier:x"]);
-    expect(t).toEqual({ ids: [], points: [] });
+    expect(t).toEqual({ ids: [], bodies: [], points: [] });
     expect(resolveTargets(SMALL, ["corner:0,0,0", "b9"]).ids).toEqual([]);
   });
 
@@ -46,10 +46,12 @@ describe("resolveTargets", () => {
     expect(t.box?.[1][2]).toBeCloseTo(860, 6);
   });
 
-  it("a connection: itself, then its bars, at its first fastener (c35: a face joint of two runs)", () => {
+  it("a connection: itself, drawn by its fasteners and bars, at its first fastener (c35)", () => {
     const t = resolveTargets(cart, ["c35"]);
-    // c35 joins the runs r2 (b33, b34) and r1 (b11, b12): the bars are drawn, the runs are not.
-    expect(t.ids).toEqual(["c35", "b33", "b34", "b11", "b12"]);
+    // c35, a face joint, joins the runs r2 (b33, b34) and r1 (b11, b12): Show selects c35, and
+    // the scene draws it with its fasteners (under its id) and the bars, not the runs.
+    expect(t.ids).toEqual(["c35"]);
+    expect(t.bodies).toEqual(["c35", "b33", "b34", "b11", "b12"]);
     const f = cart.display.fasteners.find((x) => x.connection === "c35");
     expect(t.points[0]).toEqual(f?.head);
     for (const id of ["b11", "b12", "b33", "b34"]) {
@@ -57,17 +59,20 @@ describe("resolveTargets", () => {
       expect(inside(e?.a.point as V3, t.box) && inside(e?.b.point as V3, t.box), id).toBe(true);
     }
     // A butt: its butting end and the bar it bears on; a copy's butt, from the derived butts.
-    expect(resolveTargets(cart, ["c5"]).ids).toEqual(["c5", "b9", "b1"]);
-    expect(resolveTargets(cart, ["c26@1"]).ids).toEqual(["c26@1", "b26@1", "b9"]);
+    expect(resolveTargets(cart, ["c5"]).bodies).toEqual(["c5", "b9", "b1"]);
+    expect(resolveTargets(cart, ["c26@1"])).toMatchObject({
+      ids: ["c26@1"],
+      bodies: ["c26@1", "b26@1", "b9"],
+    });
   });
 
   it("an item: what uses it; an open item: its scope; a supplier: its lines' items", () => {
     // The sensor bracket, a bent angle the project makes, is p7; O2 is scoped to the item.
     const angle = resolveTargets(cart, ["project:angle-a"]);
-    expect(angle.ids).toEqual(["p7"]);
+    expect(angle).toMatchObject({ ids: ["p7"], bodies: ["p7"] });
     expect(resolveTargets(cart, ["O2"]).ids).toEqual(["p7"]);
     // O1 is scoped to c35.
-    expect(resolveTargets(cart, ["O1"]).ids).toEqual(resolveTargets(cart, ["c35"]).ids);
+    expect(resolveTargets(cart, ["O1"])).toEqual(resolveTargets(cart, ["c35"]));
     // The RHS beam is one bar; the 40 mm profile is most of the frame.
     expect(resolveTargets(cart, ["test-geo:RHS-100x50x4"]).ids).toEqual(["b18"]);
     expect(resolveTargets(cart, ["test:TS40"]).ids.length).toBeGreaterThan(20);
@@ -76,19 +81,22 @@ describe("resolveTargets", () => {
     expect(resolveTargets(cart, ["supplier:local"]).ids).toEqual([]);
   });
 
-  it("a corner: its bars, at its point; a run: its bars; a pattern: template and copies", () => {
+  it("a corner: drawn by its bars, at its point; a run: its bars; a pattern: template and copies", () => {
     const c = resolveTargets(cart, ["corner:0,0,900"]);
-    expect(c.ids).toEqual(["b1", "b5", "b7"]);
+    expect(c.ids).toEqual(["corner:0,0,900"]);
+    expect(c.bodies).toEqual(["b1", "b5", "b7"]);
     expect(c.points).toEqual([[0, 0, 900]]);
-    expect(resolveTargets(cart, ["r1"]).ids).toEqual(["r1", "b11", "b12"]);
-    const pt = resolveTargets(cart, ["pt1"]).ids;
-    expect(pt.slice(0, 4)).toEqual(["pt1", "b26", "c26", "c27"]);
-    expect(pt).toContain("b26@6");
+    expect(resolveTargets(cart, ["r1"])).toMatchObject({ ids: ["r1"], bodies: ["b11", "b12"] });
+    const pt = resolveTargets(cart, ["pt1"]);
+    expect(pt.ids).toEqual(["pt1"]);
+    expect(pt.bodies.slice(0, 3)).toEqual(["b26", "c26", "c27"]);
+    expect(pt.bodies).toContain("b26@6");
   });
 
   it("no refs: the whole model's box, nothing to select", () => {
     const t = resolveTargets(cart, []);
     expect(t.ids).toEqual([]);
+    expect(t.bodies).toEqual([]);
     expect(inside([0, 0, 0], t.box) && inside([1200, 600, 900], t.box)).toBe(true);
   });
 });

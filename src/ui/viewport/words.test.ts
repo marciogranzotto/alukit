@@ -6,6 +6,7 @@ import type { ProblemsAnswer } from "#core/problems/types.ts";
 import { scratchFixtures } from "#core/testing.ts";
 import { cornersOf } from "../corners.ts";
 import type { Model } from "../model.ts";
+import { fromCheck } from "../problems/source.ts";
 import { viewOf } from "../testing.ts";
 import { badgesOf, barWords, hoverWords, legendItems } from "./words.ts";
 
@@ -78,5 +79,15 @@ describe("badgesOf", () => {
       }
     }
     expect(badgesOf(undefined, cart)).toEqual([]);
+  });
+
+  it("badges the check's warnings while they stand in for the problems (S4's fromCheck)", () => {
+    // The cart's check warns on three connections, the overhanging butts c21 and c22 and the
+    // handle's end plate c33; its notes badge nothing.
+    expect(badgesOf(fromCheck(cart), cart)).toEqual([
+      { ids: ["b18", "b9"], severity: "warn" },
+      { ids: ["b18", "b10"], severity: "warn" },
+      { ids: ["b32", "b31"], severity: "warn" },
+    ]);
   });
 });
