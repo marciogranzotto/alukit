@@ -4,13 +4,28 @@
  * Owner: S5.
  */
 
+/*
+ * The command row under the 3D view (review M5): the command bar while a tool is on, the view's
+ * keys in Select. A row of the canvas column, as the status bar is, so it never covers the model
+ * and Fit frames into the view above it; one row high either way, so the view keeps its size.
+ */
+.command-row {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-5);
+  min-height: 34px;
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--bg-panel);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+
 .viewport-help {
-  position: absolute;
-  left: 8px;
-  bottom: 6px;
   font-size: var(--fs-tiny);
   color: var(--text-3);
-  pointer-events: none;
 }
 
 .tool-hint {
@@ -39,33 +54,6 @@
 
 /* The command bar (S5.2): the tool, its prompt, the typed value and the options */
 
-.command-bar {
-  position: absolute;
-  /* Clear of the orientation gizmo at the bottom left (S3.9). */
-  left: 86px;
-  right: 6px;
-  bottom: 6px;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  padding: var(--sp-3) var(--sp-4);
-  background: color-mix(in srgb, var(--bg-panel) 94%, transparent);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-float);
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
-}
-
-.cb-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2) var(--sp-5);
-  min-width: 0;
-}
-
 .cb-tool {
   display: inline-flex;
   align-items: center;
@@ -74,10 +62,53 @@
   color: var(--mark-active-text);
 }
 
+/* Cut short rather than wrap: its words are in its title, and announced */
 .cb-prompt {
   color: var(--text-2);
-  flex: 1 1 18em;
-  min-width: 0;
+  flex: 1 1 10em;
+  min-width: 6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The less frequent options, in a panel over the bar (review M5) */
+.cb-more {
+  position: relative;
+}
+
+.cb-more > summary {
+  cursor: pointer;
+  color: var(--text-2);
+  list-style: none;
+  padding: 1px var(--sp-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+}
+
+.cb-more > summary::after {
+  content: " ▾";
+}
+
+.cb-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cb-more-panel {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-float);
+  white-space: nowrap;
 }
 
 .cb-field {

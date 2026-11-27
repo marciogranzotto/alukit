@@ -2,6 +2,7 @@ import type { Problem, ProblemGroup } from "#core/problems/types.ts";
 import { EmptyState } from "../common/EmptyState.tsx";
 import { Num } from "../common/Num.tsx";
 import { StatusGlyph, StatusMark } from "../common/StatusGlyph.tsx";
+import { plural } from "../format.ts";
 import type { Model } from "../model.ts";
 import { OpenItemsSection } from "../records/OpenItems.tsx";
 import { registerSheet, selectionOnly } from "../sheets/registry.ts";
@@ -144,30 +145,39 @@ export function ProblemsSheet({ m }: { m: Model }) {
   );
 }
 
-/** The rail's badge: what blocks the order, then the warnings, each as a glyph and a number. */
+/**
+ * The rail's badge: what blocks the order and the errors, then the warnings, each as a glyph and
+ * a number, counted as the sheet lists them (docs/ux/review-phase4.md M3).
+ */
 function ProblemsBadge() {
-  const { blocks, warnings } = problemCounts.value;
-  if (blocks === 0 && warnings === 0) {
+  const { blocks, errors, warnings } = problemCounts.value;
+  if (blocks === 0 && errors === 0 && warnings === 0) {
     return (
-      <span class="badge ok" title="Every check passes">
-        <StatusGlyph status="ready" size={12} /> <span class="sr-only">Every check passes</span>
+      <span class="badge ok" title="Nothing blocks the order, and no errors or warnings">
+        <StatusGlyph status="ready" size={12} /> <span class="sr-only">No errors or warnings</span>
       </span>
     );
   }
+  // What blocks the order and the errors share the red mark, as both must be fixed.
+  const severe = [
+    blocks > 0 ? `${blocks} ${blocks === 1 ? "blocks" : "block"} the order` : "",
+    errors > 0 ? plural(errors, "error") : "",
+  ].filter((x) => x !== "");
+  const title = [...severe, ...(warnings > 0 ? [plural(warnings, "warning")] : [])].join(", ");
   return (
-    <span class="badge" title={`${blocks} block the order, ${warnings} warnings`}>
-      {blocks > 0 && (
+    <span class="badge" title={title}>
+      {blocks + errors > 0 && (
         <span class="badge-n blocked">
           <StatusGlyph status="blocked" size={12} />
-          {blocks}
-          <span class="sr-only"> block the order</span>
+          {blocks + errors}
+          <span class="sr-only"> ({severe.join(", ")})</span>
         </span>
       )}
       {warnings > 0 && (
         <span class="badge-n warn">
           <StatusGlyph status="warn" size={12} />
           {warnings}
-          <span class="sr-only"> warnings</span>
+          <span class="sr-only">{warnings === 1 ? " warning" : " warnings"}</span>
         </span>
       )}
     </span>

@@ -164,7 +164,8 @@ describe("alukit do", () => {
       { severity: "warn", code: "unconnected", entity: "b2.b", refs: ["b2.b", "b3.b"] },
     ]);
     expect(answer.diagnostics.resolved).toEqual([]);
-    expect(answer.diagnostics.counts).toEqual({ error: 0, warn: 1, info: 0 });
+    // And G01's own butt, c1, which names no connector: a note that was there before.
+    expect(answer.diagnostics.counts).toEqual({ error: 0, warn: 1, info: 1 });
     expect((await capture(["fmt", "--check", dir])).code).toBe(0);
     const doc = JSON.parse(read(join(dir, "alukit.json")));
     expect(doc.ids).toEqual({ b: 3, n: 1 });
@@ -509,7 +510,13 @@ describe("alukit check", () => {
     const { dir } = await g01();
     const clean = await capture(["check", dir]);
     expect(clean).toMatchObject({ code: 0 });
-    expect(clean.out).toBe("check: 0 errors, 0 warnings, 0 info; 0 checks: 0 passed, 0 failed");
+    // G01's one butt names no connector, nor does the project: a note, which passes.
+    expect(clean.out).toBe(
+      [
+        "info butt-no-connector c1: c1 names no connector, and the project names no default butt connector: the order buys nothing to join its ends",
+        "check: 0 errors, 0 warnings, 1 info; 0 checks: 0 passed, 0 failed",
+      ].join("\n"),
+    );
     await capture([
       "do",
       dir,
@@ -576,7 +583,11 @@ describe("alukit check", () => {
         pass: true,
       },
     ]);
-    expect(report.diagnostics.map((d: { code: string }) => d.code)).toEqual(["check"]);
+    // The failed warn check, and G01's butt with no connector.
+    expect(report.diagnostics.map((d: { code: string }) => d.code)).toEqual([
+      "check",
+      "butt-no-connector",
+    ]);
     const text = await capture(["check", dir]);
     expect(text.out).toContain(
       "warn check C2: C2 (long enough): cut(b2) = 580, not >= 600 (margin -20)",

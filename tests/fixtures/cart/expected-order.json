@@ -13,7 +13,8 @@
     "est-price": "block",
     "out-of-stock": "block",
     "option-not-sold": "block",
-    "stale-price": "warn"
+    "stale-price": "warn",
+    "no-connector": "warn"
   },
   "suppliers": [
     {
@@ -367,7 +368,33 @@
     {
       "supplier": "test-steel",
       "status": "READY",
-      "reasons": [],
+      "reasons": [
+        {
+          "rule": "no-connector",
+          "action": "warn",
+          "message": "18 butts name no connector, and the project names no default butt connector: the order buys nothing to join them (c1, c2, c5 and 15 more)",
+          "entities": [
+            "c1",
+            "c2",
+            "c5",
+            "c6",
+            "c7",
+            "c8",
+            "c10",
+            "c11",
+            "c12",
+            "c21",
+            "c22",
+            "c26",
+            "c27",
+            "c28",
+            "c29",
+            "c30",
+            "c31",
+            "c32"
+          ]
+        }
+      ],
       "lines": [
         {
           "item": "test-geo:FB-50x10",
@@ -536,6 +563,31 @@
           "message": "test:PSU-24V: the price of test:PSU-24V is an estimate",
           "entities": [
             "test:PSU-24V"
+          ]
+        },
+        {
+          "rule": "no-connector",
+          "action": "warn",
+          "message": "18 butts name no connector, and the project names no default butt connector: the order buys nothing to join them (c1, c2, c5 and 15 more)",
+          "entities": [
+            "c1",
+            "c2",
+            "c5",
+            "c6",
+            "c7",
+            "c8",
+            "c10",
+            "c11",
+            "c12",
+            "c21",
+            "c22",
+            "c26",
+            "c27",
+            "c28",
+            "c29",
+            "c30",
+            "c31",
+            "c32"
           ]
         }
       ],
@@ -1612,9 +1664,117 @@
     },
     {
       "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c1",
+      "message": "c1 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c2",
+      "message": "c2 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c5",
+      "message": "c5 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c6",
+      "message": "c6 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c7",
+      "message": "c7 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c8",
+      "message": "c8 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c10",
+      "message": "c10 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c11",
+      "message": "c11 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c12",
+      "message": "c12 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c21",
+      "message": "c21 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c22",
+      "message": "c22 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
       "code": "fit",
       "entity": "c23",
       "message": "test-geo:WSH-M10 gives no outside diameter (d2_mm), so its seats are not checked: c23"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c26",
+      "message": "c26 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c27",
+      "message": "c27 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c28",
+      "message": "c28 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c29",
+      "message": "c29 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c30",
+      "message": "c30 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c31",
+      "message": "c31 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
+    },
+    {
+      "severity": "info",
+      "code": "butt-no-connector",
+      "entity": "c32",
+      "message": "c32 names no connector, and the project names no default butt connector: the order buys nothing to join its ends"
     },
     {
       "severity": "info",

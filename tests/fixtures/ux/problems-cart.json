@@ -3,7 +3,7 @@
   "rev": 0,
   "variant": null,
   "as_of": "2026-11-26",
-  "order": { "status": "BLOCKED", "blocks": 6, "warnings": 1 },
+  "order": { "status": "BLOCKED", "blocks": 6, "warnings": 2 },
   "problems": [
     {
       "id": "open-item/O2/local",
@@ -115,6 +115,64 @@
       "targets": ["c33", "b32", "b31"],
       "fixes": [],
       "from": ["check"]
+    },
+    {
+      "id": "butt-no-connector/c1/test-steel,test-vendor",
+      "code": "butt-no-connector",
+      "rule": "no-connector",
+      "group": "warning",
+      "title": "18 butts name no connector: the order buys nothing to join them",
+      "detail": "Neither these butts nor the project name a connector, so nothing is bought or machined to hold the ends. Choose one, which becomes the project's default butt connector, or one per butt in the inspector.",
+      "raw": "18 butts name no connector, and the project names no default butt connector: the order buys nothing to join them (c1, c2, c5 and 15 more)",
+      "suppliers": ["test-steel", "test-vendor"],
+      "targets": [
+        "c1",
+        "c2",
+        "c5",
+        "c6",
+        "c7",
+        "c8",
+        "c10",
+        "c11",
+        "c12",
+        "c21",
+        "c22",
+        "c26",
+        "c27",
+        "c28",
+        "c29",
+        "c30",
+        "c31",
+        "c32"
+      ],
+      "fixes": [
+        {
+          "label": "Set a connector for all 18…",
+          "kind": "connector",
+          "butts": [
+            "c1",
+            "c2",
+            "c5",
+            "c6",
+            "c7",
+            "c8",
+            "c10",
+            "c11",
+            "c12",
+            "c21",
+            "c22",
+            "c26",
+            "c27",
+            "c28",
+            "c29",
+            "c30",
+            "c31",
+            "c32"
+          ],
+          "systems": ["test:s40-c8"]
+        }
+      ],
+      "from": ["check", "order"]
     },
     {
       "id": "stale-price/test-geo:NUT-M10/test-geo-vendor",

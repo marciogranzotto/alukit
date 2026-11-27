@@ -28,6 +28,11 @@
  * view controls' bar at the right, wrapping when the viewport is narrow.
  */
 
+/*
+ * No stacking context of its own (no z-index): the rail and the toolbar sit at 3, over the scene's
+ * labels, and the message lane at 13, over the start card (12), so a toast about what the card did
+ * is seen (review M4).
+ */
 .viewport-top {
   position: absolute;
   top: 6px;
@@ -37,23 +42,54 @@
   gap: 8px;
   align-items: flex-start;
   pointer-events: none;
-  z-index: 3;
 }
 
 .tool-rail {
+  position: relative;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   gap: 4px;
   align-items: stretch;
 }
 
-.toolbar {
+/* The view controls, and under their last row the message lane */
+.viewport-head {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toolbar {
+  position: relative;
+  z-index: 3;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 4px;
   align-items: center;
+}
+
+/*
+ * The message lane (review M4): from the rail's right edge plus 8 px to the view's right edge,
+ * under the toolbar's last row. Top to bottom: what is shown (the read-only label), the tool's
+ * steps, then the toasts, which keep to its right part. Only their buttons take clicks.
+ */
+.message-lane {
+  position: relative;
+  z-index: 13;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.message-lane > * {
+  max-width: 100%;
 }
 
 .viewport-top .tb {

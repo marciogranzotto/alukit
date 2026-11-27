@@ -54,8 +54,13 @@ export const problemList = computed<{ answer: ProblemsAnswer; served: boolean } 
   return m ? { answer: fromCheck(m), served: false } : undefined;
 });
 
-/** What the rail's badge counts: what blocks the order (or errors, before the server says), and warnings. */
+/**
+ * What the rail's badge counts: the problems by group, as the sheet's summary counts them, so the
+ * badge and the list agree (docs/ux/review-phase4.md M3). Notes are not counted. The order's own
+ * warnings (`order.warnings`, its rules that warn) are the Order tab's and the readiness pill's.
+ */
 export const problemCounts = computed(() => {
-  const answer = problemList.value?.answer;
-  return { blocks: answer?.order.blocks ?? 0, warnings: answer?.order.warnings ?? 0 };
+  const list = problemList.value?.answer.problems ?? [];
+  const count = (g: ProblemGroup) => list.filter((p) => p.group === g).length;
+  return { blocks: count("blocks-order"), errors: count("error"), warnings: count("warning") };
 });

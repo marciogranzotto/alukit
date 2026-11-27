@@ -9,6 +9,7 @@ import {
   type FrameDraft,
   type FrameOptions,
   faceOptions,
+  JOIN_NONE,
   type PivotOptions,
   type PlaceStation,
 } from "./state.ts";
@@ -266,21 +267,41 @@ export function placeFrom(st: PlaceStation, barLen: number): "a" | "b" {
   return st.at_mm > barLen / 2 ? "b" : "a";
 }
 
+/** What the box frame needs to know of the project: its default bar and default butt connector. */
+export interface FrameProject {
+  hasDefaultBar: boolean;
+  /** `defaults.butt.connector`, which every butt that names none takes. */
+  defaultButt?: string | undefined;
+}
+
+/** Connectors per butting end, as typed: empty for one. */
+function perEnd(text: string): { value: number } | { why: string } {
+  const t = text.trim();
+  if (t === "") return { value: 1 };
+  const n = Number(t);
+  return Number.isInteger(n) && n >= 1
+    ? { value: n }
+    : { why: "connectors per end: a whole number, 1 or more" };
+}
+
 /**
  * The box frame's `addFrame` (BE-6) from the draft and the options, or why it makes none. The
  * size takes expressions with params, as typed, and is sent as the numbers they come to
  * (`addFrame` takes numbers; with `params` it writes W, D and H itself). The bars are the
  * palette's bar, else the project's `defaults.bar` (left out, so `addFrame` reads it).
+ *
+ * How the corners are joined is asked, never left to chance (docs/ux/review-phase4.md B1): a
+ * connector, or "nothing", said in so many words. With no project default yet, the connector
+ * chosen becomes it (`frameBatch`); one other than the project's default is the frame's own.
  */
 export function frameCommand(
   d: FrameDraft,
   o: FrameOptions,
   bar: PaletteItem | undefined,
-  hasDefaultBar: boolean,
+  project: FrameProject,
   params: Readonly<Record<string, number>>,
 ): { cmd: "addFrame"; args: Record<string, unknown> } | { why: string } {
-  if (!bar && !hasDefaultBar)
-    return { why: "choose the frame's profile first: arm a bar from the parts bin or the catalog" };
+  if (!bar && !project.hasDefaultBar) return { why: "pick the frame's profile first" };
   if (!d.at) return { why: "click the frame's corner, or type [x, y, z]" };
   const size: number[] = [];
   for (const [name, text] of [
@@ -302,6 +323,16 @@ export function frameCommand(
     shelf = n.value;
   }
   const rings = [...(o.rings.base ? ["base"] : []), ...(o.rings.top ? ["top"] : [])];
+  if (o.joint === "" && project.defaultButt === undefined)
+    return { why: "choose how the corners are joined: Joined with" };
+  const qty = perEnd(o.qty);
+  if ("why" in qty) return qty;
+  // The frame's own connector: one other than the project's default, which exists.
+  const own =
+    o.joint !== "" &&
+    o.joint !== JOIN_NONE &&
+    project.defaultButt !== undefined &&
+    o.joint !== project.defaultButt;
   return {
     cmd: "addFrame",
     args: {
@@ -312,8 +343,42 @@ export function frameCommand(
       ...(o.corner ? { corner: o.corner } : {}),
       ...(rings.length < 2 ? { rings } : {}),
       ...(shelf !== undefined ? { shelf_mm: shelf } : {}),
-      ...(o.connector.trim() !== "" ? { connector: o.connector.trim() } : {}),
+      ...(own ? { connector: o.joint, ...(qty.value > 1 ? { qty: qty.value } : {}) } : {}),
       ...(o.params ? { params: true } : {}),
     },
   };
+}
+
+/**
+ * The box frame's one step (review B1): its `addFrame`, after the project's defaults it sets in
+ * the same batch, so Undo takes them back together; `addFrame` is last.
+ *
+ * - The default butt connector, when the project has none and a connector was chosen: the
+ *   frame's butts and every bar drawn later join with it.
+ * - The default bar, when the start card's profile is given (`defaultBar`, a merge patch of
+ *   `defaults.bar`; review M1): the frame's bars take it, as the bars drawn later do.
+ */
+export function frameBatch(
+  d: FrameDraft,
+  o: FrameOptions,
+  bar: PaletteItem | undefined,
+  project: FrameProject,
+  params: Readonly<Record<string, number>>,
+  defaultBar?: Record<string, unknown>,
+): { commands: { cmd: string; args: Record<string, unknown> }[] } | { why: string } {
+  const c = defaultBar
+    ? frameCommand(d, o, undefined, { ...project, hasDefaultBar: true }, params)
+    : frameCommand(d, o, bar, project, params);
+  if ("why" in c) return c;
+  const qty = perEnd(o.qty);
+  const defaults: Record<string, unknown> = defaultBar ? { bar: defaultBar } : {};
+  if (o.joint !== "" && o.joint !== JOIN_NONE && project.defaultButt === undefined) {
+    defaults.butt = {
+      connector: o.joint,
+      ...(!("why" in qty) && qty.value > 1 ? { qty: qty.value } : {}),
+    };
+  }
+  return Object.keys(defaults).length === 0
+    ? { commands: [c] }
+    : { commands: [{ cmd: "setProject", args: { defaults } }, c] };
 }

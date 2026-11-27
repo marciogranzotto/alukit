@@ -69,8 +69,23 @@ export function noteProject(m: Model): void {
 }
 
 /**
+ * The profile the start card's first step chose (docs/ux/review-phase4.md M1), which both ways
+ * use: the item, its options, its name, and the `defaults.bar` merge patch that makes it the
+ * project's default bar.
+ */
+export interface FrameProfile {
+  item: string;
+  opt: Readonly<Record<string, string>>;
+  name: string;
+  patch: Record<string, unknown>;
+}
+
+/**
  * The box frame's form, which the box frame tool's module provides (S5.7: `FrameForm`, D-UX-8):
  * the card shows it as its first way in once it is there, and leaves the way out until then.
- * `onDone` closes the card when the frame is made.
+ * `onDone` closes the card when the frame is made; `profile` is the card's first step's choice,
+ * `null` until there is one.
  */
-export const frameWay = signal<ComponentType<{ onDone: () => void }> | undefined>(undefined);
+export const frameWay = signal<
+  ComponentType<{ onDone: () => void; profile: FrameProfile | null }> | undefined
+>(undefined);

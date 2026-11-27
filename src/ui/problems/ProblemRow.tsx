@@ -37,6 +37,7 @@ export const RULE_WORDS: Readonly<Record<string, string>> = {
   "check-error": "Check error",
   "out-of-stock": "Out of stock",
   "option-not-sold": "Option not sold",
+  "no-connector": "No connector",
 };
 
 export function ProblemRow({ p, compact = false }: { p: Problem; compact?: boolean }) {

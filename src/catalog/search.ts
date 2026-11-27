@@ -35,6 +35,31 @@ export interface CatalogEntry {
   size_mm?: readonly [number, number];
   /** The lowest regular price it is sold at, per metre or per unit (BE-12). */
   from?: FromPrice;
+  /** A bar's shape (`tslot`, `rail`, …): the start card offers frame profiles, not rails. */
+  shape?: string;
+  /** A bar's system, as a full id (`forseti:s40-c8`): what decides which connectors fit it. */
+  system?: string;
+  /**
+   * The systems a connector or an accessory fits, as full ids: the connector pickers list those
+   * that fit the joined bars first (docs/ux/review-phase4.md B1).
+   */
+  fits?: string[];
+}
+
+/**
+ * A bar's shape and system, and what a connector or an accessory fits, the references as full
+ * ids (`fullRef`'s rule: a reference with no catalog is in the item's own).
+ */
+function fitsOf(item: Item, catalog: string): Pick<CatalogEntry, "shape" | "system" | "fits"> {
+  const o = item as Record<string, unknown>;
+  const full = (r: string) => (r.includes(":") ? r : `${catalog}:${r}`);
+  const out: Pick<CatalogEntry, "shape" | "system" | "fits"> = {};
+  if (item.kind === "bar" && typeof o.shape === "string") out.shape = o.shape;
+  if (item.kind === "bar" && typeof o.system === "string") out.system = full(o.system);
+  if (Array.isArray(o.fits)) {
+    out.fits = o.fits.filter((x): x is string => typeof x === "string").map(full);
+  }
+  return out;
 }
 
 export function localId(ref: string | undefined): string | undefined {
@@ -92,6 +117,7 @@ export function catalogIndex(
         live: true,
         ...(size ? { size_mm: size } : {}),
         ...(from ? { from } : {}),
+        ...fitsOf(li.item, cat.id),
       });
     }
   }
@@ -115,6 +141,7 @@ export function catalogIndex(
       live: isLive,
       ...(size ? { size_mm: size } : {}),
       ...(from ? { from } : {}),
+      ...fitsOf(e.item, catalog),
     });
   }
   return out.sort((a, b) => compareIds(a.id, b.id));

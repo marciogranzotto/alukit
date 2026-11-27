@@ -557,6 +557,8 @@ describe("a dry run (BE-2)", () => {
     expect(headless.out.split("\n")).toEqual([
       "addBar: would create b4",
       "autoConnect: would create c3",
+      // G27's butts name no connector, nor does the project: the new one is noted too.
+      "would add info butt-no-connector c3: c3 names no connector, and the project names no default butt connector: the order buys nothing to join its ends",
       "cut b1: 1000 → 980",
       expect.stringMatching(/^new b4: cut \d+(\.\d+)?$/),
       "claims b1.b, b4.a",

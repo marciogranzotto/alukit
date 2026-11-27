@@ -71,6 +71,8 @@ describe("project checks", () => {
       ["error", "check", "C3"],
       ["error", "check", "checks[0]"],
       ["info", "check-pending", "C4"],
+      // G01's one butt names no connector, nor does the project (review B1).
+      ["info", "butt-no-connector", "c1"],
     ]);
     expect(r.diagnostics[0]?.message).toContain("no bar b9 that derives");
   });

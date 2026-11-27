@@ -318,22 +318,49 @@ function SupplierCard({
   );
 }
 
-/** The verdict strip: can the order be sent, what holds it, what it comes to, as of when. */
-function Verdict({ o }: { o: Order }) {
+/**
+ * What the order warns about while it can be sent: each warning reason once, however many
+ * suppliers it reaches, in the problem model's words when the server has them.
+ */
+function orderWarnings(m: Model, o: Order, served: ProblemsAnswer | undefined): Problem[] {
+  const seen = new Map<string, Problem>();
+  for (const s of o.suppliers) {
+    for (const r of s.reasons) {
+      const key = `${r.rule}|${r.message}`;
+      if (r.action === "warn" && !seen.has(key)) seen.set(key, reasonProblem(m, s, r, served));
+    }
+  }
+  return [...seen.values()];
+}
+
+/**
+ * The verdict strip: can the order be sent, what holds it, what it comes to, as of when. Ready
+ * with warnings (docs/ux/review-phase4.md B1) reads in the warning's look and names each.
+ */
+function Verdict({ m, o, served }: { m: Model; o: Order; served: ProblemsAnswer | undefined }) {
   const blocked = o.status === "BLOCKED";
   const nBlocked = o.suppliers.filter((s) => s.status === "BLOCKED").length;
   const nReady = o.suppliers.length - nBlocked;
   const things = thingsToResolve(o);
+  const warnings = blocked ? [] : orderWarnings(m, o, served);
+  const look = blocked ? "blocked" : warnings.length > 0 ? "warn" : "ready";
   const t = o.totals.total;
   return (
     <div
-      class={`verdict ${blocked ? "blocked" : "ready"}`}
+      class={`verdict ${look}`}
       data-testid="verdict"
       data-status={o.status}
+      data-warnings={warnings.length}
     >
       <div class="verdict-status">
-        <StatusGlyph status={blocked ? "blocked" : "ready"} size={22} />
-        <span class="verdict-word">{blocked ? "Not ready to order" : "Ready to order"}</span>
+        <StatusGlyph status={look} size={22} />
+        <span class="verdict-word">
+          {blocked
+            ? "Not ready to order"
+            : warnings.length > 0
+              ? "Ready, but check first"
+              : "Ready to order"}
+        </span>
       </div>
       <div class="verdict-text">
         {blocked ? (
@@ -342,6 +369,18 @@ function Verdict({ o }: { o: Order }) {
             blocked by {plural(things, "thing")} to resolve.{" "}
             {nReady > 0 && `${plural(nReady, "supplier")} ${nReady === 1 ? "is" : "are"} ready.`}
           </p>
+        ) : warnings.length > 0 ? (
+          <>
+            <p>
+              Every one of {plural(o.suppliers.length, "supplier")} can be ordered from, but the
+              order warns:
+            </p>
+            <ul class="verdict-warnings" data-testid="verdict-warnings">
+              {warnings.map((p) => (
+                <li key={p.id}>{p.title}</li>
+              ))}
+            </ul>
+          </>
         ) : (
           <p>
             Every one of {plural(o.suppliers.length, "supplier")} can be ordered from as it stands.
@@ -394,7 +433,7 @@ function OrderPart({ m, o, stale, rev }: { m: Model; o: Order; stale: boolean; r
   return (
     <Sheet testid="order" rev={rev} stale={stale}>
       <SheetBar />
-      <Verdict o={o} />
+      <Verdict m={m} o={o} served={served} />
       <div class="cards">
         {suppliers.map((s) => (
           <SupplierCard key={s.supplier ?? ""} m={m} o={o} s={s} served={served} />
@@ -603,10 +642,28 @@ function OrderBadge() {
   if (!m || got === undefined || "error" in got) return null;
   const things = thingsToResolve(got.value);
   if (things === 0) {
-    return got.value.suppliers.length === 0 ? null : (
+    if (got.value.suppliers.length === 0) return null;
+    // The order's own warnings, each once (`order.warnings`; review M3, B1).
+    const warns = new Set(
+      got.value.suppliers.flatMap((s) =>
+        s.reasons.filter((r) => r.action === "warn").map((r) => `${r.rule}|${r.message}`),
+      ),
+    ).size;
+    return warns === 0 ? (
       <span class="badge ok" title="Every supplier can be ordered from">
         <StatusGlyph status="ready" size={12} />
         <span class="sr-only">Ready to order</span>
+      </span>
+    ) : (
+      <span
+        class="badge"
+        title={`Ready to order, with ${plural(warns, "warning")} to check before it is sent`}
+      >
+        <span class="badge-n warn">
+          <StatusGlyph status="warn" size={12} />
+          {warns}
+          <span class="sr-only"> {warns === 1 ? "warning" : "warnings"}: ready to order</span>
+        </span>
       </span>
     );
   }

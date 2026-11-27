@@ -61,15 +61,23 @@ describe("the cart's hand-made problem model", () => {
   });
 
   it("holds each of the check's diagnostics once, in its severity's group, as the CLI words it", () => {
-    for (const d of check.diagnostics) {
+    // The notes on butts with no connector are the order's no-connector problem, which names
+    // them all (review B1); every other diagnostic is a problem of its own.
+    const folded = (d: Diagnostic) => d.code === "butt-no-connector";
+    for (const d of check.diagnostics.filter((x) => !folded(x))) {
       const found = fixture.problems.filter((p) => p.from.includes("check") && p.raw === d.message);
       expect(found, d.message).toHaveLength(1);
       const p = found[0] as Problem;
       expect([p.code, p.group]).toEqual([d.code, SEVERITY_GROUP[d.severity]]);
       if (d.entity) expect(p.targets).toContain(d.entity.split(".")[0]);
     }
+    const notes = check.diagnostics.filter(folded);
+    const unjoined = fixture.problems.filter((p) => p.code === "butt-no-connector");
+    expect(unjoined).toHaveLength(1);
+    expect(unjoined[0]).toMatchObject({ rule: "no-connector", from: ["check", "order"] });
+    expect(unjoined[0]?.targets).toEqual(notes.map((d) => d.entity));
     expect(fixture.problems.filter((p) => p.from.includes("check"))).toHaveLength(
-      check.diagnostics.length,
+      check.diagnostics.length - notes.length + 1,
     );
   });
 
@@ -86,12 +94,14 @@ describe("the cart's hand-made problem model", () => {
         r.action === "block" ? "blocks-order" : "warning",
       ]);
     }
-    expect(fixture.problems.filter((p) => p.from.includes("order"))).toHaveLength(reasons.length);
-    const blocks = reasons.filter((r) => r.action === "block").length;
+    // One problem per reason, over every supplier it holds.
+    const distinct = new Map(reasons.map((r) => [`${r.rule} ${r.message}`, r]));
+    expect(fixture.problems.filter((p) => p.from.includes("order"))).toHaveLength(distinct.size);
+    const blocks = [...distinct.values()].filter((r) => r.action === "block").length;
     expect(fixture.order).toEqual({
       status: order.status,
       blocks,
-      warnings: reasons.length - blocks,
+      warnings: distinct.size - blocks,
     });
     expect(fixture.problems.filter((p) => p.group === "blocks-order")).toHaveLength(blocks);
   });

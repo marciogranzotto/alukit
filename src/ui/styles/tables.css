@@ -748,6 +748,12 @@ details.mach[open] > summary {
   border-color: color-mix(in srgb, var(--ready) 50%, transparent);
 }
 
+/* Ready, but the order warns (review B1): the warning's look, never the plain ready one */
+.verdict.warn {
+  background: var(--warn-wash);
+  border-color: color-mix(in srgb, var(--warn) 50%, transparent);
+}
+
 .verdict-status {
   display: flex;
   align-items: center;
@@ -760,6 +766,15 @@ details.mach[open] > summary {
 
 .verdict.ready .glyph {
   color: var(--ready);
+}
+
+.verdict.warn .glyph {
+  color: var(--warn);
+}
+
+.verdict-warnings {
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-6);
 }
 
 .verdict-word {

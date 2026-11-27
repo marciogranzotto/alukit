@@ -222,22 +222,32 @@ export const patternState = signal<{
 
 export const measureState = signal<{ a?: Snap; b?: Snap }>({});
 
-/** The box frame's options (D-UX-8, BE-6), shared by the tool's command bar and its form. */
+/** The box frame's "Joined with" when the person joins the corners themselves (review B1). */
+export const JOIN_NONE = "-";
+
+/** The box frame's options (D-UX-8, BE-6): its form holds them (review M6). */
 export interface FrameOptions {
   rings: { base: boolean; top: boolean };
   /** A shelf ring, its top face this high above the base: typed, empty for none. */
   shelf: string;
   /** Which bar runs through at each corner; the project's `defaults.corner` when unset. */
   corner?: CornerRule | undefined;
-  /** Each butt's connector: an item id, empty for the project's `defaults.butt`. */
-  connector: string;
+  /**
+   * How the corners are joined (docs/ux/review-phase4.md B1): a connector's id; `JOIN_NONE`,
+   * nothing, said so; or empty, not chosen yet, which is the project's default butt connector
+   * when it has one and must be chosen when it has none.
+   */
+  joint: string;
+  /** Connectors per butting end, typed: empty for one. */
+  qty: string;
   /** Write W, D and H as params, and the frame's points from them. */
   params: boolean;
 }
 export const frameOptions = signal<FrameOptions>({
   rings: { base: true, top: true },
   shelf: "",
-  connector: "",
+  joint: "",
+  qty: "",
   params: false,
 });
 

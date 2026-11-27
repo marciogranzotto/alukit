@@ -41,7 +41,7 @@ import type { Model } from "../model.ts";
 import { palette } from "../palette.ts";
 import { type CommandOutcome, model, sendCommands, summary } from "../store.ts";
 import { viewer } from "../viewport/viewer.ts";
-import { frameCommand, pickRefusal, placeCommand, placeFrom, runOf } from "./commands.ts";
+import { frameBatch, pickRefusal, placeCommand, placeFrom, runOf } from "./commands.ts";
 import { jointWords } from "./joint.ts";
 import {
   activeTool,
@@ -92,6 +92,9 @@ const fmt = (x: number) => String(Math.round(x * 100) / 100);
 
 /** A character that starts a value in the command bar (D-UX-17). */
 const VALUE_START = /^[0-9.\-+([=]$/;
+
+/** Enter on a typed length with neither a pointer direction nor a locked axis (review M2). */
+export const NO_DIRECTION = "Which way? Move the pointer, or press → ← ↑";
 
 /**
  * How long the pointer rests before the joint preview dry-runs a gesture whose end is in open
@@ -522,6 +525,14 @@ export function createTools(viewer: Viewer): Tools {
     }
     const end = drawEnd();
     if (end) void commitBar(end);
+    else if (t.kind === "value") {
+      // A length with no way to go (review M2): say so, rather than nothing.
+      lastResult.value = {
+        rev: model.peek()?.rev ?? 0,
+        created: [],
+        error: NO_DIRECTION,
+      };
+    }
     return true;
   }
 
@@ -659,21 +670,29 @@ export function createTools(viewer: Viewer): Tools {
     );
   }
 
-  /** Sends the frame when the draft is whole: one `addFrame` step. */
+  /**
+   * Sends the frame when the draft is whole: one step, its `addFrame` after the default butt
+   * connector the form's Joined with chose (review B1); while none is chosen, it says so.
+   */
   async function commitFrame(): Promise<void> {
     const m = model.peek();
-    const c = frameCommand(
+    const butt = m?.defaults.butt as { connector?: unknown } | undefined;
+    const c = frameBatch(
       frameDraft.peek(),
       frameOptions.peek(),
       palette.peek().bar,
-      typeof (m?.defaults.bar as { item?: unknown } | undefined)?.item === "string",
+      {
+        hasDefaultBar:
+          typeof (m?.defaults.bar as { item?: unknown } | undefined)?.item === "string",
+        defaultButt: typeof butt?.connector === "string" ? butt.connector : undefined,
+      },
       params(),
     );
     if ("why" in c) {
       lastResult.value = { rev: m?.rev ?? 0, created: [], error: c.why };
       return;
     }
-    const o = await sendCommands([c], "box frame", { inline: true });
+    const o = await sendCommands(c.commands, "box frame", { inline: true });
     noteResult(o);
     if (o.ok) {
       frameDraft.value = { w: "", d: "", h: "" };

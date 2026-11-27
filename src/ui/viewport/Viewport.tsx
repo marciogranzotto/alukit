@@ -50,6 +50,11 @@ export interface ViewportSlots {
   centre?: ComponentChildren;
   bottom?: ComponentChildren;
   topRight?: ComponentChildren;
+  /**
+   * The message lane (docs/ux/review-phase4.md M4): under the view controls' last row, from the
+   * tool rail's right edge to the view's, its messages stacked so none covers another or a tool.
+   */
+  lane?: ComponentChildren;
 }
 
 /** Snapshot mode's state: "ready" once the named view is drawn, or why it cannot be. */
@@ -204,8 +209,15 @@ export function Viewport({
         <div class="tool-rail" data-testid="tool-rail">
           {slots.left}
         </div>
-        <div class="toolbar" data-testid="toolbar">
-          <ViewControls />
+        <div class="viewport-head">
+          <div class="toolbar" data-testid="toolbar">
+            <ViewControls />
+          </div>
+          {slots.lane && (
+            <div class="message-lane" data-testid="message-lane">
+              {slots.lane}
+            </div>
+          )}
         </div>
       </div>
       <SelectionLabel />

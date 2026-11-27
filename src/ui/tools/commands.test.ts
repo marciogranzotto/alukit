@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   connectionCommand,
+  frameBatch,
   frameCommand,
   measured,
   patternCommand,
@@ -10,6 +11,7 @@ import {
   placeFrom,
   runOf,
 } from "./commands.ts";
+import { JOIN_NONE } from "./state.ts";
 import { valueList } from "./typed.ts";
 
 /** What the connect, place and pattern tools send (design §8), from what was picked. */
@@ -248,26 +250,37 @@ describe("place part on the click (D-UX-16)", () => {
 });
 
 describe("box frame (S5.7, BE-6)", () => {
-  const opts = { rings: { base: true, top: true }, shelf: "", connector: "", params: false };
+  const opts = {
+    rings: { base: true, top: true },
+    shelf: "",
+    joint: JOIN_NONE,
+    qty: "",
+    params: false,
+  };
   const bar40 = { id: "test:TS40", kind: "bar", name: "TS40" };
   const draft = { at: [0, 0, 0] as const, w: "1000", d: "600", h: "W - 400" };
+  const bare = { hasDefaultBar: false };
+  const frame = {
+    cmd: "addFrame",
+    args: { at: [0, 0, 0], size: [1000, 600, 800], item: "test:TS40" },
+  };
   it("sends addFrame with the size as numbers, defaults left out", () => {
-    expect(frameCommand({ ...draft, at: [0, 0, 0] }, opts, bar40, false, { W: 1200 })).toEqual({
-      cmd: "addFrame",
-      args: { at: [0, 0, 0], size: [1000, 600, 800], item: "test:TS40" },
-    });
+    expect(frameCommand({ ...draft, at: [0, 0, 0] }, opts, bar40, bare, { W: 1200 })).toEqual(
+      frame,
+    );
     expect(
       frameCommand(
         { ...draft, at: [10, 20, 0] },
         {
           rings: { base: false, top: true },
           shelf: "300",
-          connector: "test:BRK",
+          joint: "test:BRK",
+          qty: "2",
           params: true,
           corner: "x",
         },
         { ...bar40, opt: { finish: "black" } },
-        false,
+        { hasDefaultBar: false, defaultButt: "test:OTHER" },
         { W: 1200 },
       ),
     ).toEqual({
@@ -281,26 +294,27 @@ describe("box frame (S5.7, BE-6)", () => {
         rings: ["top"],
         shelf_mm: 300,
         connector: "test:BRK",
+        qty: 2,
         params: true,
       },
     });
     // No palette bar: addFrame takes the project's default.
-    expect(frameCommand({ ...draft, at: [0, 0, 0] }, opts, undefined, true, { W: 1200 })).toEqual({
-      cmd: "addFrame",
-      args: { at: [0, 0, 0], size: [1000, 600, 800] },
-    });
+    const project = { hasDefaultBar: true };
+    expect(
+      frameCommand({ ...draft, at: [0, 0, 0] }, opts, undefined, project, { W: 1200 }),
+    ).toEqual({ cmd: "addFrame", args: { at: [0, 0, 0], size: [1000, 600, 800] } });
   });
   it("says what a frame lacks", () => {
-    expect(frameCommand({ ...draft, at: [0, 0, 0] }, opts, undefined, false, {})).toHaveProperty(
-      "why",
-    );
-    expect(frameCommand({ w: "1000", d: "600", h: "800" }, opts, bar40, false, {})).toEqual({
+    expect(frameCommand({ ...draft, at: [0, 0, 0] }, opts, undefined, bare, {})).toEqual({
+      why: "pick the frame's profile first",
+    });
+    expect(frameCommand({ w: "1000", d: "600", h: "800" }, opts, bar40, bare, {})).toEqual({
       why: "click the frame's corner, or type [x, y, z]",
     });
-    expect(frameCommand({ ...draft, at: [0, 0, 0], h: "" }, opts, bar40, false, {})).toEqual({
+    expect(frameCommand({ ...draft, at: [0, 0, 0], h: "" }, opts, bar40, bare, {})).toEqual({
       why: "give the height H",
     });
-    expect(frameCommand({ ...draft, at: [0, 0, 0], d: "-5" }, opts, bar40, false, {})).toEqual({
+    expect(frameCommand({ ...draft, at: [0, 0, 0], d: "-5" }, opts, bar40, bare, {})).toEqual({
       why: "the depth D is more than 0",
     });
     expect(
@@ -308,9 +322,40 @@ describe("box frame (S5.7, BE-6)", () => {
         { ...draft, at: [0, 0, 0] },
         { ...opts, rings: { base: false, top: false } },
         bar40,
-        false,
+        bare,
         { W: 1200 },
       ),
     ).toEqual({ why: "keep the base ring, the top ring or both" });
+    expect(
+      frameCommand({ ...draft, at: [0, 0, 0] }, { ...opts, qty: "1.5" }, bar40, bare, { W: 1200 }),
+    ).toEqual({ why: "connectors per end: a whole number, 1 or more" });
+  });
+
+  // docs/ux/review-phase4.md B1: a box frame never leaves its corners unjoined unasked.
+  it("asks how the corners are joined while the project has no default butt connector", () => {
+    const unchosen = { ...opts, joint: "" };
+    const why = { why: "choose how the corners are joined: Joined with" };
+    expect(frameCommand({ ...draft }, unchosen, bar40, bare, { W: 1200 })).toEqual(why);
+    expect(frameBatch({ ...draft }, unchosen, bar40, bare, { W: 1200 })).toEqual(why);
+    // With a project default, not choosing is choosing it.
+    const withDefault = { hasDefaultBar: false, defaultButt: "x:CT" };
+    expect(frameBatch({ ...draft }, unchosen, bar40, withDefault, { W: 1200 })).toEqual({
+      commands: [frame],
+    });
+  });
+
+  it("makes the connector chosen the project's default, in the same step, before addFrame", () => {
+    const chosen = { ...opts, joint: "forseti:CT75-06", qty: "2" };
+    expect(frameBatch({ ...draft }, chosen, bar40, bare, { W: 1200 })).toEqual({
+      commands: [
+        {
+          cmd: "setProject",
+          args: { defaults: { butt: { connector: "forseti:CT75-06", qty: 2 } } },
+        },
+        frame,
+      ],
+    });
+    // "Nothing: I will join them myself" is an explicit choice: addFrame alone.
+    expect(frameBatch({ ...draft }, opts, bar40, bare, { W: 1200 })).toEqual({ commands: [frame] });
   });
 });
