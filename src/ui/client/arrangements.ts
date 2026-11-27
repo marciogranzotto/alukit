@@ -1,4 +1,4 @@
-import type { Arrangements } from "#core/corners/arrange.ts";
+import type { Arrangements, JointKind } from "#core/corners/arrange.ts";
 import type { CornerRule } from "#core/project/schema.ts";
 import type { V3 } from "#core/vec.ts";
 import { ApiError, get } from "../api.ts";
@@ -15,8 +15,14 @@ import type { ClientAnswer } from "./answer.ts";
 /** The answer: the corners, every rule's arrangement, and the revision they ran against. */
 export type ArrangementsAnswer = Arrangements & { rev: number };
 
-/** The query string of an arrangements request: each corner's point, then the rules. */
-export function arrangementsParams(at: readonly V3[], rules: readonly CornerRule[] = []): string {
+/**
+ * The query string of an arrangements request: each corner's point, then the rules; a miter or a
+ * splice is named as a rule is (E1.4).
+ */
+export function arrangementsParams(
+  at: readonly V3[],
+  rules: readonly (CornerRule | JointKind)[] = [],
+): string {
   return new URLSearchParams([
     ...at.map((p) => ["at", p.join(",")]),
     ...rules.map((r) => ["rule", r]),
@@ -25,7 +31,7 @@ export function arrangementsParams(at: readonly V3[], rules: readonly CornerRule
 
 export async function fetchArrangements(
   at: readonly V3[],
-  rules?: readonly CornerRule[],
+  rules?: readonly (CornerRule | JointKind)[],
 ): Promise<ClientAnswer<ArrangementsAnswer>> {
   try {
     return {

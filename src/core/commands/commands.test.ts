@@ -339,6 +339,45 @@ describe("connections", () => {
     ).toBe("schema");
   });
 
+  it("a sleeve's len_mm reads bore, the layer's inside depth (§4.5): a face joint with one edits", () => {
+    // The cart's c23 holds a sleeve cut to `bore`; any setConnection of it was refused, `bore`
+    // read as a param.
+    const at = {
+      cmd: "setConnection",
+      args: { id: "c23", set: { stations: { at_mm: [100, 200, 300] } } },
+    };
+    const r = ok(cart(), at);
+    expect(
+      (r.state.doc.connections as Record<string, { stations: unknown }>).c23?.stations,
+    ).toEqual({ at_mm: [100, 200, 300], across_mm: [-15, 15] });
+    // G32's form: bore and a section's wall, as the golden case writes it.
+    const c23 = (cart().doc.connections as Record<string, { stack: unknown[] }>).c23;
+    const stack = (len: string) =>
+      c23?.stack.map((e) => (typeof e === "object" ? { ...e, len_mm: len } : e));
+    ok(cart(), {
+      cmd: "setConnection",
+      args: { id: "c23", set: { stack: stack("bore + sec(b18).t_mm") } },
+    });
+    const made = ok(cart(), {
+      cmd: "addConnection",
+      args: { ...c23, stations: { at_mm: [400], across_mm: [0] } },
+    });
+    expect(made.results[0]?.created).toEqual(["c36"]);
+    // Only there: a name no param holds is refused elsewhere, and beside bore.
+    expect(
+      no(cart(), {
+        cmd: "setConnection",
+        args: { id: "c23", set: { stations: { at_mm: ["bore"] } } },
+      }).map((e) => e.message),
+    ).toEqual(['stations/at_mm/0: "bore" is not a param']);
+    expect(
+      no(cart(), {
+        cmd: "setConnection",
+        args: { id: "c23", set: { stack: stack("bore + Q") } },
+      }).map((e) => e.message),
+    ).toEqual(['stack/2/len_mm: "Q" is not a param']);
+  });
+
   it("autoConnect butts through the bar passing the point, else a vertical, else the lowest id", () => {
     const bare = ok(g("G01"), { cmd: "removeEntity", args: { id: "c1" } }).state;
     const a = ok(bare, { cmd: "autoConnect", args: { at: [1000, 0, 0] } });

@@ -610,3 +610,42 @@ drawn and checked against but not built or bought. Each adds.*
 - **The inspector** (`src/ui/inspector/context.ts`): `contextOf(model, id)` (whether the entity can
   be marked, whether it is, and the command) and `contextBatch(model, id, on)`; the Context row
   (`ContextRow`, in `BarFields.tsx`) on a bar's and a placed part's fields, one step.
+
+## Editing round: E5 changes
+
+*Stream E5 of the [editing audit](editing-audit.md) ([e5-decisions.md](e5-decisions.md)). Owner of
+everything below: E5, except where a line names another owner; other streams add to it only.*
+
+- **Editable rows** (`src/ui/inspector/rows.tsx`): `Edit` (`{ commands } | { why }`), `useEdit()`
+  (a row's own outcome and `edit(e, what)`, which sends one step inline or keeps the why),
+  `EditErrors` (`row-<name>-errors`), `TextRow` and `SelectRow` (`row-<name>`, `field-<name>`),
+  `editOff()` (e5 1).
+- **Field edits, pure**: `src/ui/inspector/connection.ts` (`connectionSet`, `quantityEdit`,
+  `lengthEdit`, `throughEndCode`, `throughEndEdit`, `THROUGH_END_CHOICES`, `holeFaceCode`,
+  `holeFacesEdit`, `stationFacePatch`, `stationEdit`, `stationAtEdit`, `offsetEdit`) and
+  `src/ui/inspector/pattern.ts` (`patternEdit`, `explodeEdit`).
+- **The inspector's new parts**: `PatternFields.tsx` (Inspector.tsx shows it for a pattern, one
+  line in E4's file), `FaceEdit.tsx`, `PartReplace.tsx` (`PartReplaceForm`, `partsLike`).
+- **Actions** (`src/ui/inspector/edit-actions.ts`): `edit-connection`, `change-connector`,
+  `explode-pattern`, `replace-part`, registered by `editActions()` beside `inspectorActions()`
+  (one line in Inspector.tsx); the first two also apply to a corner (`corner:<key>`) with one
+  connection, which they select first; `asked` and `useAsked(id, what, then)`, how an action asks the
+  inspector to focus a field or open a form; `explodePattern(id, edit?)`, which selects what it
+  made; `replaceable(m, id)`, whether the catalog can replace a part's item (e5 26–28).
+- **The face form** (`src/ui/tools/forms/FaceForm.tsx`, out of `ToolForm.tsx`): `FaceForm`
+  (`value`, `onChange`, `listId`, `fixed`, `disabled`), `BinList`, `connectReplacing` (the joint
+  Connect replaces the layers of) and `startRelayer(m, id, layers, options)`. In
+  `tools/commands.ts`: `faceOptionsOf(c)`, `faceEditCommand(id, c, edited, layers?)`, and
+  `patternCommand(s, params)` (e5 4, 19–22).
+- **Arrangements** (`src/ui/inspector/arrangements.ts`): `Arrangement` gains `kind` (`butt`, `miter`,
+  `splice`) and `key`, `through` is optional; `arrangementsOf(m, corner, rules, joints?)`,
+  `arrangementBatch(m, corners, a)`, `jointWords`, `JOINTS`; `nextArrangement` cycles butts only;
+  `matchingCorners` matches a joint's corners by their ends' items too (e5 9–13).
+- **`ConnectorSelect`** (`src/ui/common/ConnectorSelect.tsx`): `joins?: "butt" | "splice" | "hinge"
+  | "any"` (butt unless it says), and `useConnectors(systems, joins?)` (e5 14).
+- **`fetchArrangements` and `arrangementsParams`** (`src/ui/client/arrangements.ts`, E1's) take a
+  `miter` or a `splice` among their rules, as the server's `?rule=` already did.
+- **The test host** (`src/ui/testing.ts`): `hostOf(dir).arrange(at)` gives `joints` too.
+- **`inspector.css`** (S5's, added to): a field table's value cell takes the room its label
+  leaves (`table.kv.fields td`), so a long select no longer widens the table past the panel; the
+  face form's rules (`.face-edit`) (e5 31).

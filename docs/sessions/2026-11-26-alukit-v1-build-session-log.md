@@ -939,3 +939,15 @@ anything, and each has a default in place.
 - **15:48**: The editing streams E2 (selection, visibility, menus), E3 (rotate, mirror, duplicate, arrays, copy and paste, align), E4 (editable ends, offsets, split, holes, several bars at once, nodes) and E5 (joints, patterns, parts) started in parallel.
   - Each has its own block of §14 call numbers, so merges don't renumber.
   - Gap X11 runs alongside them in the core.
+- **16:30**: The alternative frame's fix head passed a byte-compare against run 6: all 41 outputs are identical.
+  - The converter now passes the record's drawing explicitly, since the record's code stopped reading it by default.
+  - AluKit's own bar for a rail block agrees to under 0.001 mm with the record's new open item: the block sits 1.6 past its wall limit.
+- **16:52**: Gap X11 merged (gate PASS, 1,331 tests).
+  - A bar, a placed part or a butt's through body may be marked `context`. It still counts for covers and clearance, but stays out of the cut list, BOM totals, order, costs, mass and `bbox()`. The view draws it translucent with one material pair, and the GLB keeps it, flagged.
+  - G51 is added, and nothing moved across 187 cases.
+  - Its conflicts with E0 were resolved by keeping both sides.
+- **17:04**: E3 merged (gate PASS, 1,346 tests).
+  - Rotate (Q) with ring drags in 15° steps, mirror, duplicate with `4x` / `/4` arrays, copy and paste, point-to-point, align to a face, and a part sliding along its bar.
+  - Each matches the CLI's result (`alukit diff` empty, or byte-identical cut lists), and almost every test failed first.
+  - The calls (90–94) are put in numeric order in §14.
+  - **Known limits:** the slide arrow shows only for bars along a world axis, and the length label can cover part of a ring.
