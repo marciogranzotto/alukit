@@ -20,6 +20,9 @@ export async function editCommand(cmd: EditCommand, argv: readonly string[], io:
       return (await import("./do.ts")).doCommand(argv, io);
     case "add":
       return (await import("./add.ts")).addCommand(argv, io);
+    case "move":
+    case "rotate":
+      return (await import("./move.ts")).transformCommand(cmd, argv, io);
     case "query":
       return (await import("./query.ts")).queryCommand(argv, io);
   }

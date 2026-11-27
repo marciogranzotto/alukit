@@ -15,12 +15,22 @@ import { extendHook } from "../hook.ts";
  * they draw and place with is palette.ts's. Owner: S5.
  */
 
-export const TOOLS = ["select", "draw", "connect", "place", "pattern", "measure", "frame"] as const;
+export const TOOLS = [
+  "select",
+  "move",
+  "draw",
+  "connect",
+  "place",
+  "pattern",
+  "measure",
+  "frame",
+] as const;
 export type ToolName = (typeof TOOLS)[number];
 
 /** Each tool's key (D-UX-18): the letter on its cap. */
 export const TOOL_KEYS: Readonly<Record<string, ToolName>> = {
   v: "select",
+  d: "move",
   b: "draw",
   g: "frame",
   c: "connect",
@@ -32,6 +42,7 @@ export const TOOL_KEYS: Readonly<Record<string, ToolName>> = {
 /** Each tool's name, as the rail, the command bar and the help say it. */
 export const TOOL_NAMES: Readonly<Record<ToolName, string>> = {
   select: "Select",
+  move: "Move",
   draw: "Draw bar",
   frame: "Box frame",
   connect: "Connect",
@@ -127,6 +138,8 @@ export interface JointPreview {
   shape: string;
   /** The dry run's time, ms: for the decisions' note and the test hook. */
   ms: number;
+  /** Whether a joint is made, so Tab has something to flip; undefined reads as yes. */
+  joins?: boolean;
 }
 export const jointPreview = signal<JointPreview | undefined>(undefined);
 
@@ -145,6 +158,33 @@ export const lastResult = signal<
     }
   | undefined
 >(undefined);
+
+/**
+ * A drag gesture on (drag.ts; docs/ux/drag-ends-decisions.md): an end handle dragged, or the
+ * selection moved. The command bar shows it whatever the tool, with its value field; the
+ * selected bar's label reads `reading` while an end is dragged.
+ */
+export interface Gesture {
+  kind: "end" | "move";
+  /** The command bar's title: "Drag end b3.b". */
+  title: string;
+  /** What it asks: drag, or type, and Enter. */
+  prompt: string;
+  /** What it comes to now: "cut 580 mm · length 600". */
+  reading: string;
+  /** The machine label of where it is: `on b1`, `at b2.a`, `touches b7`, `free`, `typed`. */
+  snap: string;
+  /** An end drag's bar and end. */
+  bar?: string;
+  end?: "a" | "b";
+}
+export const gesture = signal<Gesture | undefined>(undefined);
+
+/**
+ * The selected bar's length label being typed into (docs/ux/drag-ends-decisions.md): its bar and
+ * the end the typed length moves, which the handles draw larger.
+ */
+export const labelEdit = signal<{ bar: string; end: "a" | "b" } | undefined>(undefined);
 
 /** The draw tool's gesture, for the panel and the test hook. */
 export const drawState = signal<{ start?: DrawPoint; end?: DrawEnd }>({});
@@ -338,6 +378,8 @@ export const toolPrompt = computed<string>(() => {
       return measureState.value.a && !measureState.value.b
         ? "Click the second point."
         : "Click a point to measure from.";
+    case "move":
+      return "Drag the selection or a bar, or click a base point and then where it goes; type x, y, z to move by that. Alt frees what joins it.";
     default:
       return "";
   }

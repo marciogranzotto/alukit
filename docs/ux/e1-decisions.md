@@ -2,7 +2,8 @@
 
 *E1 of the [editing audit](editing-audit.md) (§7.5): the core and CLI work the 3D editing tools
 stand on. This note covers E1.2–E1.6; E1.1 (`transform`, with `alukit move` and `rotate`) is built
-by another stream with the Move tool and has its own note. Drop 1 is E1.5, E1.2 and E1.3; drop 2 is
+with the Move tool, and its note is [drag-ends-decisions.md](drag-ends-decisions.md), "The Move
+tool". Drop 1 is E1.5, E1.2 and E1.3; drop 2 is
 E1.4 and E1.6. Labels: **measured** (a test or a run says so), **read** (from the code),
 **inferred**. Decisions are numbered for the design's citations ("e1 3").*
 

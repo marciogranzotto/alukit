@@ -22,8 +22,8 @@ proved the better choice is now the rule; a feature v1 does not have is stated a
 with the version that takes it up. Calls left for the owner's review are marked *open* (§14, call 6
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
-up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections and 68–73 in
-"3D editing, E1"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
+handles and the Move tool, and 72–77 in "3D editing, E1"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
 groups below record, from "After acceptance run 2" to "3D editing, E1". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
@@ -493,32 +493,64 @@ now has its real outline where it passes a check against the published values
   0.6 more, and its end faces lose 2 mm² to the trace's rounded corners, all warnings before and
   after (ts, what moved).
 
+### End handles and the length label (after the UX redesign)
+
+The owner asked, using the app, to grab a bar's end and extend it, attaching to the bars it meets,
+and to type a new length on the selected bar's label. The note is
+[`ux/drag-ends-decisions.md`](ux/drag-ends-decisions.md) ("ends"). No golden value or derived
+output moved.
+
+- §6: **`moveEnd`** moves one end of a bar along its own axis, to a design length, a cut length, by
+  a distance, or onto another bar's line or end; `detach` frees an end a node, a station, another
+  bar's end or a butt holds; it refuses an end a pivot, miter, splice or its own plane sets, and a
+  coordinate a param drives (ends 9, 10, 15; calls 68, 69).
+- §8: the v1 limit on dragging bar ends is lifted: **end handles** on a selected bar drag an end
+  along its axis, snapping onto other bars' lines and ends and to whole millimetres of cut, with
+  the joint preview before the release and one step after it (ends 1–8). **The length label**
+  says "cut" and takes a typed cut length, moving the end the inspector's rule picks (ends 12–14).
+
+### The Move tool and `transform` (after the UX redesign)
+
+The owner asked how to move an item; the app had no way. The [editing
+audit](ux/editing-audit.md) specified one core command for it (E-UX-3 to E-UX-5, task E1.1). The
+note is the same [`ux/drag-ends-decisions.md`](ux/drag-ends-decisions.md), "The Move tool"
+(cited "move"). No golden value or derived output moved.
+
+- §6: **`transform`** moves or turns nodes, bars, runs, parts and pattern templates as one step,
+  keeping what is written in its form (`W` moved by 100 is `W + 100`); what joins the moved set to
+  the rest follows (joined ends slide along their own bars to stay on it) or, with `joined:
+  "detach"`, is freed (move 1–9; calls 70, 71).
+- §7.3: **`alukit move`** and **`alukit rotate`**, sugar over `do` for one `transform` (move 10).
+- §8 Tools: **Move, `D`**: drag the selection or what is pressed, or click a base point and then
+  where it goes; snaps, `→ ← ↑` locks, typed offsets, the moved bars drawn where they would be,
+  the dry run's words before the release, Alt to detach; one step (move 11–18).
+
 ### 3D editing, E1
 
 The [editing audit](ux/editing-audit.md) (2026-11-27) found the model far ahead of the app, and
 four defects on the way; stream E1 builds the core and CLI half of its plan
 ([`ux/e1-decisions.md`](ux/e1-decisions.md), cited as "e1"). Drop 1 is E1.5, E1.2 and E1.3; drop 2
-is E1.4 and E1.6. Each is built test first; the audit's brace is a fixture, `tests/fixtures/brace`,
+is E1.4 and E1.6; E1.1 is `transform`, under "The Move tool and `transform`" above. Each is built test first; the audit's brace is a fixture, `tests/fixtures/brace`,
 worked by hand in its test.
 
 - §4.5 Default connection: **an end at a joined corner joins it** (E-UX-12, D4). A brace drawn into
   a box frame's corner, whose other ends are all claimed, butts on the corner's through bar, with a
   butt of its own that leaves the post's end to the corner's butt (`through_end: "none"`). The
   audit's brace was refused, "only b13 meets at that point: nothing butts on it" (e1 1, 3, 4).
-  Calls 68, 69.
+  Calls 72, 73.
 - §4.5: **an angled end `autoConnect` makes declares its cut** (E-UX-11, D3), `cut: "angle"`, in the
   same step, by derive's own angle; a square end declares nothing, so the box frame's documents and
-  draw.spec's cut list are unchanged (e1 5). Call 70.
+  draw.spec's cut list are unchanged (e1 5). Call 74.
 - §4.5, §5.5: **an end a provider claims is joined, even where its claim fails**: `autoConnect`
   leaves it, and the unconnected ends do not list it, since the failure is its own error. G10 and
-  G11 each lose a false `unconnected` warning (e1 2, what moved). Call 69.
+  G11 each lose a false `unconnected` warning (e1 2, what moved). Call 73.
 - §5.5 The problem list: **words for every diagnostic code**, held by the type of a diagnostic's
   code; "Cut it on the face" and "Cut it square" for an angled end not declared; an open corner's
   join offered only where the default butt would join it, by `autoConnect`'s own rule (D3, D4; e1
   1, 7–9). The titles of G07, G10, G11 and G20's problems change; no other diagnostic moved.
 - §7.3: **`alukit query` selects `like:b1`** (b1's kind, item and options) **and `connected:b1`**
   (the bars connections join to it; `connected*:` the whole assembly), the core of the app's
-  "select similar" and "select connected" (E1.5; e1 10, 11). Call 71.
+  "select similar" and "select connected" (E1.5; e1 10, 11). Call 75.
 - The audit's other defect, a claimed end whose words read "open: nothing joins it" (D2), is the
   inspector's words, not the core's: left to its stream (e1 12).
 - §7.1, §7.3: **a corner's arrangements include a miter and a splice** (E1.4): for a corner of two
@@ -526,11 +558,11 @@ worked by hand in its test.
   as a dry run and judged by derive, or refused with derive's words; `rule=miter`, `rule=splice`.
   Taking a corner's joint out now removes a miter or splice of its ends too, so a corner rule's
   arrangement can follow a joint's. On G01's corner the miter takes b2 from 580 to 620 (e1 13–15).
-  Call 72.
+  Call 76.
 - §6: **a dry run lists the parts it adds** (E1.6), each with its item and where it lands (the bar
   and the distance along it, and its origin), so a preview of `mirror`, `array` or
   `explodePattern` reads the parts as it reads the bars and their cuts; `explodePattern`'s answer
-  names which drawn copy each new entity is (e1 16, 17). Call 73.
+  names which drawn copy each new entity is (e1 16, 17). Call 77.
 - §3.5: **a mass computed from a traced section's area is `est`**, as the fidelity table says; it
   was tagged `calc`. A computed value's provenance follows its section's fidelity. No mass moved:
   each of the eight traced Forseti profiles publishes its mass (e1 18).
@@ -2295,7 +2327,7 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
 
 | Group | Commands |
 |---|---|
-| Structure | `addNode` `moveNode` `addBar` `setBar` `reverseBar` `splitBar` (optionally adding a `splice`, and the run) `addFrame` (*2.3*) `addRun` `setRun` `removeEntity` |
+| Structure | `addNode` `moveNode` `addBar` `setBar` `moveEnd` (*2.3*) `transform` (*2.3*) `reverseBar` `splitBar` (optionally adding a `splice`, and the run) `addFrame` (*2.3*) `addRun` `setRun` `removeEntity` |
 | Connections | `addConnection` `setConnection` `autoConnect` |
 | Parts and patterns | `addPart` `setPart` `addPattern` `setPattern` `explodePattern` `mirror` `array` |
 | Items | `addItem` `setItem` (project items) |
@@ -2338,6 +2370,36 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   (*2.3*, after the integration) a frame with no item, neither given nor the project's default
   bar, whose bars would have no section and so no end to butt
   ([int](ux/integration-decisions.md) 26).
+- **`moveEnd`** (*2.3*, after the UX redesign) moves one end of a bar along the bar's own axis,
+  the other end staying put: to a design length (`len_mm`; an expression over params is kept on a
+  bar along a world axis), a cut length (`cut_mm`, the end's own default plane taken after the
+  move; over params, the design length is written as the cut plus what the ends add or take, so
+  the param keeps driving the cut), by a distance (`by_mm`), or onto another bar (`to`: where the axis meets that bar's
+  design line, or that bar's end). An end a node, a station or another bar's end holds, or that a
+  butt lists among its butting ends, moves with `detach: true`, which writes it as coordinates and
+  drops it from its butt (the butt goes with its last end); the through bar's own end at a corner
+  moves without it. An end a pivot, miter, splice, a named `through_end` or its own plane sets is
+  refused, and so is a move that would overwrite a coordinate a param drives, naming the param,
+  or write a length over params where no coordinate can hold it.
+  The app's end handles and length label send it followed by an `autoConnect` with `end`, so an
+  end that lands on a bar joins it by the corner rule ([ends](ux/drag-ends-decisions.md) 9, 15).
+- **`transform`** (*2.3*, after the UX redesign; the editing audit's E-UX-3 to E-UX-5) moves
+  (`by: [dx, dy, dz]`) or turns (`rotate: { axis, deg, about }`, about a world axis through a
+  point) nodes, bars, runs, parts and patterns' templates as one step, keeping each in the form it
+  is written: an inline point moves, an expression keeping its params (`W` moved by 100 is
+  `W + 100`, and the step's words say so); a node moves as `moveNode` moves it; a part on a
+  station rides its bar, or, moved alone along it, changes `at_mm` (off it, it is refused); a part
+  at a world pose moves its pose; a template moves and its copies follow. A quarter turn is exact
+  and keeps expressions; another angle refuses a coordinate a param drives rather than write a
+  number. What joins the moved set to the rest is `joined`'s: `follow` (the default) keeps every
+  joint, a joined end of the rest sliding along its own bar to stay on a moved bar it bears on and
+  a node shared with the rest moving with its users, and refuses a move that would still break a
+  joint, naming it; `detach` takes the moved ends out of the connections that join them to the
+  rest (a connection goes with its last end or layer) and writes the rest's ends that were written
+  on the moved set as coordinates where they are. Its answer lists what moved, what followed (the
+  rest's ends, and the parts on moved bars), what was freed and what was kept as an expression;
+  a dry run adds the cut lengths that move and what is removed ([move](ux/drag-ends-decisions.md)
+  1–9).
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
   moves (`cuts`, before and after), the bars it adds with their cuts, the parts it adds (`parts`,
@@ -2469,6 +2531,7 @@ source in the log.
 | `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context. *2.3* (E1.5): `like:b1`, the entities of b1's kind with its item and options (a bar's or part's as derived, a connection's of its type too); `connected:b1,c3`, the bars a connection joins to them (through bar, ends, base, layers, a run's bars), and `connected*:b1`, the whole assembly they belong to; the app's "select similar" and "select connected" read the same functions (`similarTo`, `connectedTo` in `src/core/query.ts`) |
 | `alukit do <dir> -f batch.json` (or `-f -` for stdin) | edits from a file or stdin, one process per batch; inline JSON also works. `--dry-run` (*2.3*) says what the batch would do and writes nothing (§6) |
 | `alukit add bar --item … --a n1 --b 0,0,900`, … | sugar over `do`; `alukit add frame <dir> --size W,D,H` (*2.3*) is `addFrame` (§6) |
+| `alukit move <dir> --ids b3,b4 --by dx,dy,dz [--detach]` / `alukit rotate <dir> --ids … --axis z --deg 90 --about x,y,z [--detach]` (*2.3*) | sugar over `do` for one `transform` (§6); `--by` takes expressions; `--dry-run` writes nothing |
 | `alukit log` / `alukit undo` / `alukit redo` | the server's log; undo the latest step; redo the last one undone (*2.3*: all three need a running server) |
 | `alukit lock update <dir> [--item id] [--dry-run]` | §4.13 |
 | `alukit fmt <dir> [--check]` | canonical form |
@@ -2577,8 +2640,9 @@ As built (*2.3*):
   they open, from the server's origin under its `default-src 'self'`. No chunk passes Vite's
   500 kB advice.
 - **v1 limits** (v1.1): the inspector does not edit a face or pivot connection (a butt is
-  rearranged through its corner), and dragging an existing node or bar end is not built (gestures
-  are clicks; §7.1's rule for a drag stands).
+  rearranged through its corner), and dragging an existing node is not built. *2.3* (after the
+  UX redesign): **a bar end drags**, by its handle (below, Tools); §7.1's rule for a drag holds,
+  a local preview committed as one step on release ([ends](ux/drag-ends-decisions.md)).
 
 ### Tools
 
@@ -2634,6 +2698,38 @@ s5 9).
 - **Pattern** (`X`, *2.3*): select the template, pick the bar (or type a bar or run), type pitch
   and count. A pattern by a direction or by offsets is written by command in v1.
 - **Measure** (`M`): two snapped points, the distance and its components.
+
+**End handles** (*2.3*, after the UX redesign; [ends](ux/drag-ends-decisions.md) 1–11). One bar
+selected in Select shows a handle at each end's face, drawn over every body. Dragging one (press,
+drag, release; or click, move, click, as SketchUp's Move allows) moves that end along the bar's
+axis, the pointer's ray projected onto it. The end falls onto another bar's design line or end
+where the axis is inside that bar's box, stops on the face of a bar whose line it misses (no
+joint, and the words say so), and otherwise moves the cut in whole millimetres. A value typed
+meanwhile is the cut (`600`, `+50`, `=L - 40`, a param kept driving it); a cut that lands inside
+a bar it can join joins it. The
+selected bar's label, the pointer's tip and the command bar read "on b1 · cut 580 mm · length
+600", and the joint preview says what the release does ("will butt on b1 · cut 580", "frees it
+from c1"; `Tab` flips). The release is one step, `moveEnd` then `autoConnect`; `Esc` cancels. An
+end a node, another bar's end, a station or a butt holds is freed by the drag, which the preview
+says first; one a pivot, miter, splice or its own plane sets, or whose length a param drives, is
+locked, and pressing it says why ("driven by L: edit L").
+
+**The length label** (*2.3*; ends 12–14) says "cut 569.88 mm", and a click on it types a new cut:
+Enter commits, `Esc` leaves it. End b moves when it is free, else end a, the end drawn large while
+the field is open; a driven length says "driven by L: edit L"; with both ends held it says why.
+It joins and previews as a drag does.
+
+**Move, `D`** (*2.3*, after the UX redesign; [move](ux/drag-ends-decisions.md) 11–18; SketchUp's
+Move). The selection, or what is pressed when it is not selected, moves by a drag (press, drag,
+release) or by two clicks (a base point, then where it goes), on the end handles' drag machinery.
+The base point and where it goes snap to ends, faces, grooves and parts' points, not the moved
+set's own; Shift moves freely in a plane parallel to the work plane; `→ ← ↑` lock X, Y or Z, and
+parts alone on one bar slide along it. A value typed meanwhile is the distance along the lock or
+the way the pointer went (`200`, `=D`), the offset (`0, 200, 0`) or where the base point goes
+(`[0, 0, H]`); a param is kept. The moved bars are drawn where they would be, with the overlay's
+one ghost material; after a snap or a pause, the dry run says what follows, frees, joins or is
+cut ("b2.a, p1 follow · cut b2 580 → 680"), or why the move is refused. The release is one step:
+`transform`, then an `autoConnect` at each moved bar's end. Joined ends follow; Alt frees them.
 
 **The inspector** (*2.3*; s5 25–28) edits in place. A bar's new length moves end b along the bar,
 written as numbers; a coordinate a param drives says "driven by H: edit H" and is never
@@ -3275,32 +3371,55 @@ recipe, so the faces took 8 recipes and 5 split butts (F12). Both are fixed at t
     grooves' spread). Where the image contradicts a dimension laid over it (the 20x20 T-slot's
     chamber, printed 14,1 and drawn 14.66 wide at the lips), the printed value is the groove's but
     does not calibrate the trace (`printed_only`), and the note gives both.
+68. *New in 2.3, after the UX redesign, open.* Dragging a held end frees it: an end a node, a
+    station, another bar's end or a butt holds is written as coordinates and dropped from its butt
+    (the butt goes with its last end), said by the hint and the joint preview before the release,
+    and one undo takes it back. An end a pivot, miter, splice, a named `through_end` or its own
+    plane sets is locked instead, and so is one whose moving coordinate a param drives. The other
+    way, a held end that cannot be dragged until freed, would block most ends of a joined frame
+    ([ends](ux/drag-ends-decisions.md) 9, 10).
+69. *New in 2.3, after the UX redesign, open.* The selected bar's label edits the cut length, the
+    number it shows and the cut list prints, and says "cut"; a typed cut that puts the end inside a
+    bar it can join joins it there, at that bar's face. The inspector's Length field stays the
+    design length, "· cut" beside it. A typed cut that reads a param keeps it: the design length is
+    written as the cut plus what the ends add or take (`L - 40 + 20`), so the param keeps driving
+    the cut (D-UX-17); where no coordinate can hold it, the step is refused (ends 7, 8, 12).
+70. *New in 2.3, after the UX redesign, open.* `transform` follows by default: a joined end of the
+    rest slides along its own bar to stay on a moved bar it bears on (a post under a rail that
+    rises grows with it), and a move that would still break a joint is refused, naming it, with
+    `detach` to free it; in the app, Alt. The other default, detaching, would leave a moved
+    sub-assembly's neighbours open at every joint without a word ([move](ux/drag-ends-decisions.md)
+    3–5, 16).
+71. *New in 2.3, after the UX redesign, open.* The Move tool's key is `D` (D-UX-18 has `M` for
+    Measure and `G` for the box frame; the editing audit's Duplicate, Ctrl/Cmd+D, starts a Move on
+    a copy, so the two share a letter). A part on a station moves only along its bar; off it,
+    `transform` refuses it, saying so, rather than turn it into a part at a world pose (move 6, 11).
 
-68. *New in 2.3, 3D editing E1, open.* An end at a joined corner butts on the corner's through bar
+72. *New in 2.3, 3D editing E1, open.* An end at a joined corner butts on the corner's through bar
     with a butt of its own, `through_end: "none"`, rather than joining the corner's butt, whose cover
     rule would then cut the post's end to the brace's face (measured). The corner's through bar is
     the bar the first butt by id that claims an end there runs through; a corner joined only by a
     miter has none, and the end stays refused (e1 3, 4).
-69. *New in 2.3, 3D editing E1, open.* An end is joined when a provider claims it, whether or not the
+73. *New in 2.3, 3D editing E1, open.* An end is joined when a provider claims it, whether or not the
     claim resolves: `autoConnect`, its problem's fix and the unconnected ends read derive's claims,
     not the plane's provider. The alternative, a failed claim counted as open, warned "has no
     connection" beside the failure's own error and offered a join that would add another provider
     (e1 2).
-70. *New in 2.3, 3D editing E1, open.* `autoConnect` declares `cut: "angle"` on an end it makes at
+74. *New in 2.3, 3D editing E1, open.* `autoConnect` declares `cut: "angle"` on an end it makes at
     an angle, never `square`, and never over a cut the end declares; an angle cut sits flush on the
     face the seat checks read. §4.5's rule that an undeclared angled end is an error stands, for the
     joints a person or an agent writes by hand (e1 5; the audit's E-UX-11).
-71. *New in 2.3, 3D editing E1, open.* "Like" is the same kind with the same item and options as
+75. *New in 2.3, 3D editing E1, open.* "Like" is the same kind with the same item and options as
     derived (a connection: also its type), or every tag the entity carries; "connected" is the bars
     the document's connections name together, structurally, and not what an expression reads or a
     point placed on a bar's face. Pattern copies are neither (e1 10, 11).
-72. *New in 2.3, 3D editing E1, open.* A corner's miter and splice are arrangements beside the
+76. *New in 2.3, 3D editing E1, open.* A corner's miter and splice are arrangements beside the
     corner rules, not rules: `corner` and `autoConnect` never make one. Derive judges each, from the
     state the corner's joint leaves, and an error it brings refuses the arrangement in derive's
     words; the arrangement has no rule of its own for which ends can mitre or splice. Taking a
     corner's joint out removes a miter or splice of its ends, so any arrangement follows any other
     (e1 13–15).
-73. *New in 2.3, 3D editing E1, open.* A dry run's effects list the parts a step adds, beside the
+77. *New in 2.3, 3D editing E1, open.* A dry run's effects list the parts a step adds, beside the
     bars, as derived; a part a step moves or removes is not listed, as a bar's move is not. An
     explode's copies keep their place, and its answer maps each copy (`b26@2`) to its new entity
     (e1 16, 17).

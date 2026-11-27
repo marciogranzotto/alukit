@@ -63,7 +63,7 @@ import { CORNER_PREFIX, MarkerLayer, type MarkerPoint } from "./markers.ts";
 
 export { CORNER_PREFIX };
 
-import { Overlay, type OverlayState } from "./overlay.ts";
+import { type HandlesState, Overlay, type OverlayState } from "./overlay.ts";
 import type { P2, Ray } from "./snap.ts";
 import type { Hex, ViewTheme } from "./theme.ts";
 import { type DocView, fromThree, isStandard, viewFrom } from "./views.ts";
@@ -147,6 +147,22 @@ export interface ToolHandler {
   leave?(): void;
 }
 
+/**
+ * A press the app takes as a drag (an end handle, the Move tool; docs/ux/drag-ends-decisions.md),
+ * asked before the camera, the tools and Select see it. A taken press turns the camera off and
+ * captures the pointer until the button comes up, and makes no click.
+ */
+export interface Grab {
+  /** Whether a press here is the grab's: a handle under the pointer, or a gesture already on. */
+  press(e: ToolPointer): boolean;
+  /** The pointer moved: with the button held after a taken press (`held`), or with none. */
+  move(e: ToolPointer, held: boolean): void;
+  /** The button came up after a taken press. */
+  release(e: ToolPointer): void;
+  /** While true (a gesture on), nothing hovers in Select. */
+  busy(): boolean;
+}
+
 /** A corner as the view draws it (D-UX-10; src/ui/corners.ts derives the rest of it). */
 export interface CornerMarker {
   key: string;
@@ -191,6 +207,10 @@ export interface Viewer {
   setTool(tool: ToolHandler | undefined): void;
   /** What the active tool draws over the model. */
   setOverlay(state: OverlayState): void;
+  /** The press the app takes as a drag, before the camera; undefined: none. */
+  setGrab(g: Grab | undefined): void;
+  /** Grips over the model, through every body (end handles); undefined takes them away. */
+  setHandles(h: HandlesState | undefined): void;
   /** The pointer's ray in world coordinates (Z up, mm), for analytic snapping (§8). */
   ray(clientX: number, clientY: number): Ray;
   /** A world point's position on the page, in CSS pixels; undefined behind the camera. */
@@ -1230,6 +1250,9 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   }
 
   let tool: ToolHandler | undefined;
+  let grab: Grab | undefined;
+  /** A press the grab took: until the button comes up, the pointer is the grab's alone. */
+  let grabbing = false;
   let down: { x: number; y: number; box: boolean } | undefined;
   /** The pointer to hover-pick at the next frame, in Select with no button held. */
   let hoverAt: { x: number; y: number } | undefined;
@@ -1242,6 +1265,17 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   const el = renderer.domElement;
   const onDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
+    // A drag the app takes (a handle, Move) goes first: the camera lets go of this press.
+    if (grab?.press(e)) {
+      grabbing = true;
+      down = undefined;
+      controls.enabled = false;
+      el.setPointerCapture(e.pointerId);
+      hoverAt = undefined;
+      reportHover(undefined);
+      invalidate();
+      return;
+    }
     // A tool owns the click; Shift is its modifier (a free line), not a box.
     const box = e.shiftKey && !tool;
     down = { x: e.clientX, y: e.clientY, box };
@@ -1251,6 +1285,20 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     }
   };
   const onMove = (e: PointerEvent) => {
+    if (grabbing) {
+      grab?.move(e, true);
+      invalidate();
+      return;
+    }
+    if (grab && e.buttons === 0) {
+      grab.move(e, false);
+      invalidate();
+      if (grab.busy()) {
+        hoverAt = undefined;
+        reportHover(undefined);
+        return;
+      }
+    }
     if (tool && !down && e.buttons === 0) {
       tool.move?.(e);
       return;
@@ -1270,6 +1318,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     rectEl.style.height = `${Math.abs(e.clientY - down.y)}px`;
   };
   const onUp = (e: PointerEvent) => {
+    if (grabbing) {
+      grabbing = false;
+      controls.enabled = true;
+      if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+      grab?.release(e);
+      invalidate();
+      return;
+    }
     if (!down) return;
     const d = down;
     down = undefined;
@@ -1506,6 +1562,13 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     },
     setOverlay(state) {
       overlay.set(state);
+      invalidate();
+    },
+    setGrab(g) {
+      grab = g;
+    },
+    setHandles(h) {
+      overlay.setHandles(h);
       invalidate();
     },
     ray,

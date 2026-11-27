@@ -48,6 +48,9 @@ const GLYPH: Readonly<Record<MarkerKind, Glyph>> = {
 /** A snap marker's size, CSS pixels. */
 const MARKER_PX = 13;
 const PIN_PX = 11;
+/** An end handle's size, and the hovered or held one's, CSS pixels: big enough to grab. */
+const HANDLE_PX = 17;
+const HANDLE_HOT_PX = 23;
 
 export interface GhostBar {
   section: ViewSection;
@@ -60,6 +63,17 @@ export interface GhostBar {
   shift: readonly [number, number];
 }
 
+/**
+ * Grips drawn over the model, through every body (the end handles of a selected bar,
+ * docs/ux/drag-ends-decisions.md): each draggable, in the tool's colour, or locked, grey; the
+ * hovered or held one larger.
+ */
+export interface HandlesState {
+  points: readonly { p: V3; locked: boolean }[];
+  /** The index of the hovered or held handle. */
+  hot?: number | undefined;
+}
+
 export interface OverlayState {
   marker?: { p: V3; kind: MarkerKind } | undefined;
   /** The line being drawn, from its start to the end under the pointer. */
@@ -67,6 +81,11 @@ export interface OverlayState {
   /** The axis the line follows: drawn long, in the axis colour. */
   guide?: { through: V3; axis: "x" | "y" | "z" } | undefined;
   ghost?: GhostBar | undefined;
+  /**
+   * Several bars as they would be (the Move tool's selection, moved): drawn as the ghost is, with
+   * its one material, from a pool of meshes that only grows, so a drag makes no material.
+   */
+  ghosts?: readonly GhostBar[] | undefined;
   /** Picked points (a connection's ends, a station). */
   pins?: readonly V3[] | undefined;
   /** The work plane, drawn when it is not the ground. */
@@ -99,8 +118,19 @@ export class Overlay {
   private readonly pinMaterial: PointsMaterial;
   private readonly plane: LineSegments;
   private readonly planeMaterial: LineBasicMaterial;
+  /** The handles: draggable, locked, and the hot one, each with its own lasting material. */
+  private readonly handles: Points;
+  private readonly lockedHandles: Points;
+  private readonly hotHandle: Points;
+  private readonly handleMaterial: PointsMaterial;
+  private readonly lockedMaterial: PointsMaterial;
+  private readonly hotMaterial: PointsMaterial;
+  private handleState: HandlesState | undefined;
   private ghost: { mesh: Mesh; key: string } | undefined;
   private readonly ghostMaterial: MeshBasicMaterial;
+  /** The ghosts' meshes, reused; and each section's geometry, made once. */
+  private readonly ghostPool: Mesh[] = [];
+  private readonly ghostGeometry = new Map<string, BufferGeometry>();
   private colours: ViewTheme["overlay"];
   private kind: MarkerKind | undefined;
   private last: OverlayState = {};
@@ -153,12 +183,38 @@ export class Overlay {
       fog: false,
     });
     this.plane = onTop(new LineSegments(new BufferGeometry(), this.planeMaterial));
-    for (const o of [this.plane, this.guide, this.line, this.pins, this.marker]) {
+    const handle = (colour: number) =>
+      new PointsMaterial({
+        size: HANDLE_PX,
+        sizeAttenuation: false,
+        depthTest: false,
+        transparent: true,
+        color: colour,
+        map: glyphs.get("square"),
+        fog: false,
+      });
+    this.handleMaterial = handle(theme.overlay.marker.pick);
+    this.lockedMaterial = handle(theme.overlay.marker.grid);
+    this.hotMaterial = handle(theme.overlay.marker.pick);
+    this.handles = onTop(new Points(new BufferGeometry(), this.handleMaterial));
+    this.lockedHandles = onTop(new Points(new BufferGeometry(), this.lockedMaterial));
+    this.hotHandle = onTop(new Points(new BufferGeometry(), this.hotMaterial));
+    for (const o of [
+      this.plane,
+      this.guide,
+      this.line,
+      this.pins,
+      this.lockedHandles,
+      this.handles,
+      this.hotHandle,
+      this.marker,
+    ]) {
       o.frustumCulled = false;
       o.raycast = () => {};
       this.group.add(o);
     }
     this.set({});
+    this.setHandles(undefined);
   }
 
   /** Draws with another theme's colours, keeping what is drawn. */
@@ -168,7 +224,35 @@ export class Overlay {
     this.lineMaterial.color.setHex(t.overlay.line);
     this.pinMaterial.color.setHex(t.overlay.marker.pick);
     this.planeMaterial.color.setHex(t.tool);
+    this.handleMaterial.color.setHex(t.overlay.marker.pick);
+    this.lockedMaterial.color.setHex(t.overlay.marker.grid);
     this.set(this.last);
+    this.setHandles(this.handleState);
+  }
+
+  /** Draws the handles, or takes them away. Only positions and a colour change, never a material. */
+  setHandles(h: HandlesState | undefined): void {
+    this.handleState = h;
+    const dpr = this.pixelRatio();
+    this.handleMaterial.size = HANDLE_PX * dpr;
+    this.lockedMaterial.size = HANDLE_PX * dpr;
+    this.hotMaterial.size = HANDLE_HOT_PX * dpr;
+    const pts = h?.points ?? [];
+    const hot = h?.hot !== undefined ? pts[h.hot] : undefined;
+    setPositions(
+      this.handles,
+      pts.filter((x, i) => !x.locked && i !== h?.hot).map((x) => x.p),
+    );
+    setPositions(
+      this.lockedHandles,
+      pts.filter((x, i) => x.locked && i !== h?.hot).map((x) => x.p),
+    );
+    setPositions(this.hotHandle, hot ? [hot.p] : []);
+    if (hot) {
+      this.hotMaterial.color.setHex(
+        hot.locked ? this.colours.marker.grid : this.colours.marker.pick,
+      );
+    }
   }
 
   set(s: OverlayState): void {
@@ -199,6 +283,35 @@ export class Overlay {
     setPositions(this.pins, s.pins ?? []);
     setPositions(this.plane, s.plane ? planeGrid(s.plane) : []);
     this.setGhost(s.ghost);
+    this.setGhosts(s.ghosts ?? []);
+  }
+
+  private setGhosts(gs: readonly GhostBar[]): void {
+    gs.forEach((g, i) => {
+      const key = JSON.stringify(g.section);
+      let geometry = this.ghostGeometry.get(key);
+      if (!geometry) {
+        geometry = sectionGeometry(g.section);
+        this.ghostGeometry.set(key, geometry);
+      }
+      let mesh = this.ghostPool[i];
+      if (!mesh) {
+        mesh = new Mesh(geometry, this.ghostMaterial);
+        mesh.name = "preview";
+        mesh.matrixAutoUpdate = false;
+        mesh.raycast = () => {};
+        mesh.renderOrder = 999;
+        this.group.add(mesh);
+        this.ghostPool.push(mesh);
+      }
+      mesh.geometry = geometry;
+      mesh.matrix.copy(ghostMatrix(g));
+      mesh.matrixWorldNeedsUpdate = true;
+      mesh.visible = g.len > 0;
+    });
+    for (let i = gs.length; i < this.ghostPool.length; i++) {
+      (this.ghostPool[i] as Mesh).visible = false;
+    }
   }
 
   private setGhost(g: GhostBar | undefined): void {
@@ -220,32 +333,46 @@ export class Overlay {
       this.group.add(mesh);
       this.ghost = { mesh, key };
     }
-    const { x, y, t, a, len, shift } = g;
-    const o: V3 = [
-      a[0] + x[0] * shift[0] + y[0] * shift[1],
-      a[1] + x[1] * shift[0] + y[1] * shift[1],
-      a[2] + x[2] * shift[0] + y[2] * shift[1],
-    ];
-    // biome-ignore format: a matrix reads best by rows
-    const m = new Matrix4().set(
-      x[0], y[0], t[0] * len, o[0],
-      x[1], y[1], t[1] * len, o[1],
-      x[2], y[2], t[2] * len, o[2],
-      0, 0, 0, 1,
-    );
-    this.ghost.mesh.matrix.copy(m);
+    this.ghost.mesh.matrix.copy(ghostMatrix(g));
     this.ghost.mesh.matrixWorldNeedsUpdate = true;
     this.ghost.mesh.visible = true;
   }
 
   dispose(): void {
-    for (const o of [this.marker, this.line, this.guide, this.pins, this.plane]) {
+    for (const o of [
+      this.marker,
+      this.line,
+      this.guide,
+      this.pins,
+      this.plane,
+      this.handles,
+      this.lockedHandles,
+      this.hotHandle,
+    ]) {
       o.geometry.dispose();
       (o.material as { dispose(): void }).dispose();
     }
     this.ghost?.mesh.geometry.dispose();
+    for (const g of this.ghostGeometry.values()) g.dispose();
     this.ghostMaterial.dispose();
   }
+}
+
+/** A ghost bar's placement: the section's x and y, the axis scaled to its length, at a + shift. */
+function ghostMatrix(g: GhostBar): Matrix4 {
+  const { x, y, t, a, len, shift } = g;
+  const o: V3 = [
+    a[0] + x[0] * shift[0] + y[0] * shift[1],
+    a[1] + x[1] * shift[0] + y[1] * shift[1],
+    a[2] + x[2] * shift[0] + y[2] * shift[1],
+  ];
+  // biome-ignore format: a matrix reads best by rows
+  return new Matrix4().set(
+    x[0], y[0], t[0] * len, o[0],
+    x[1], y[1], t[1] * len, o[1],
+    x[2], y[2], t[2] * len, o[2],
+    0, 0, 0, 1,
+  );
 }
 
 function setPositions(o: Points | Line | LineSegments, pts: readonly V3[]): void {

@@ -84,11 +84,21 @@ export function hoverWords(m: Model, id: string, corners: readonly Corner[]): st
   return [t ? `${id}  ${CONNECTION_GLYPH[t] ?? ""} ${t}` : id];
 }
 
-/** The selected bar's label (C §5.3): its cut length, then each end, square or angled. */
+/** A selected bar's ends as its label says them: each square, or at its angle. */
+export function endsWords(m: Model, id: string): string | undefined {
+  const bar = m.derived?.bars?.[id];
+  if (!bar) return undefined;
+  return `${endWord(bar.ends.a.angle_deg)} · ${endWord(bar.ends.b.angle_deg)}`;
+}
+
+/**
+ * The selected bar's label (C §5.3): its cut length, saying it is the cut (the number a click
+ * on it edits; docs/ux/drag-ends-decisions.md), then each end, square or angled.
+ */
 export function barWords(m: Model, id: string): string | undefined {
   const bar = m.derived?.bars?.[id];
   if (!bar) return undefined;
-  return `${mm(bar.cut_mm)} mm  ${endWord(bar.ends.a.angle_deg)} · ${endWord(bar.ends.b.angle_deg)}`;
+  return `cut ${mm(bar.cut_mm)} mm  ${endsWords(m, id)}`;
 }
 
 const SEVERITY = { "blocks-order": "block", error: "error", warning: "warn" } as const;

@@ -82,7 +82,7 @@ function splitTop(s: string): string[] {
   return out.map((x) => x.trim());
 }
 
-function vec3(s: string, what: string): (number | string)[] {
+export function vec3(s: string, what: string): (number | string)[] {
   const parts = splitTop(s);
   if (parts.length !== 3 || parts.some((p) => p === "")) {
     throw new Error(`${what}: give three comma-separated values, x,y,z`);
@@ -91,7 +91,7 @@ function vec3(s: string, what: string): (number | string)[] {
 }
 
 /** Three plain numbers, `a,b,c`: a size or a corner, which take no expression. */
-function numbers3(s: string, what: string, names: string): number[] {
+export function numbers3(s: string, what: string, names: string): number[] {
   const parts = s.split(",").map((p) => p.trim());
   if (parts.length !== 3 || parts.some((p) => !/^-?(\d+(\.\d*)?|\.\d+)$/.test(p))) {
     throw new Error(`${what}: give three comma-separated values, ${names}`);

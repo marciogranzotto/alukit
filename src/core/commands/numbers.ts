@@ -45,6 +45,17 @@ export function plus(e: Expr, d: number, q: (x: number) => number = len): Expr {
   return d > 0 ? `${left} + ${q(d)}` : `${left} - ${q(-d)}`;
 }
 
+/**
+ * `e ± d` where `d` may be an expression: a number when both are numbers, else an expression, so
+ * a coordinate moved by a typed param keeps following it (`W` moved by `D / 2` is `W + D / 2`).
+ */
+export function offsetBy(e: Expr, sign: 1 | -1, d: Expr, q: (x: number) => number = len): Expr {
+  if (typeof d === "number") return plus(e, sign * d, q);
+  if (e === 0) return sign > 0 ? d : `-${term(d)}`;
+  const left = typeof e === "number" ? String(q(e)) : rank(e) === "other" ? `(${e})` : e;
+  return `${left} ${sign > 0 ? "+" : "-"} ${term(d)}`;
+}
+
 /** `-e`. */
 export function negate(e: Expr, q: (x: number) => number = len): Expr {
   if (typeof e === "number") return q(-e);

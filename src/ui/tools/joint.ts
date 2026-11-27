@@ -80,10 +80,11 @@ export function jointWords(
   }
   const joins = plans.length > 0;
   if (!joins) parts.push("no joint: the ends stay open");
-  const cut = e.added[bar];
+  // The bar the gesture makes or moves: its cut alone; every other bar's cut that moves.
+  const cut = e.added[bar] ?? e.cuts[bar]?.[1];
   if (cut !== undefined) parts.push(`cut ${len(cut)}`);
   for (const [id, [was, now]] of Object.entries(e.cuts))
-    parts.push(`${id} ${len(was)} → ${len(now)}`);
+    if (id !== bar) parts.push(`${id} ${len(was)} → ${len(now)}`);
   const shape = JSON.stringify({
     plans: plans.map((p) => [barOf(p.through), [...p.ends].sort()]),
     cuts: Object.entries(e.cuts).sort(),

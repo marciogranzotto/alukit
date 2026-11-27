@@ -908,3 +908,11 @@ anything, and each has a default in place.
   - `catalog check` holds traced sections to the same tolerances.
   - No mass, golden or acceptance result moved. Four groove disagreements are recorded, and the printed value wins.
 - **13:55**: Merged; gate PASS (1,162 tests). The tracing's open calls were renumbered 65–67 in the merge, since the F11/F12 batch had taken 63–64. The reference project published its decided frame's next revision, which AluKit's last run and byte-compares had passed.
+- **14:09**: End handles, the cut label edited in place, and the Move tool merged (gate PASS, 1,204 tests). Decisions are in `docs/ux/drag-ends-decisions.md`.
+  - A selected bar shows a handle at each end. Dragging one moves that end along the bar's axis and joins what it meets.
+  - Clicking the label's cut number lets you type a new cut. A typed `=L - 40` stays driven by `L`.
+  - **Move (`D`)** works by dragging, or by clicking a base point and then where it goes. Arrow keys lock an axis, and you can type an offset. Joined ends follow by default, and Alt frees them.
+  - **Core:** new commands `moveEnd` and `transform` (move and rotate; `alukit move` and `alukit rotate`) with CLI parity.
+  - The preview reuses the joint preview with one shared material, and `view.spec` still shows zero shader links.
+  - The open calls were renumbered 68–71 in the merge.
+- **14:12**: E0, the editing contracts, started. It splits the tools' wiring and adds the action registry and context menu, picks with face and station, the hidden and isolated view state, gizmo pieces built once and the batch builders. It changes nothing visible; the streams E2–E5 build on it.
