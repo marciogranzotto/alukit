@@ -48,7 +48,8 @@ in the gitignored `internal/session-notes.md`.*
 | Gap A3: face contact on real section faces | **done**, merged (21:40), pushed | Golden G29. Note: `docs/notes/a3-face-contact.md`. |
 | Design draft 2.3: the design describes v1 as built | **done**, merged (22:07), pushed | 31 changelog bullets; all gap rules plus G28–G32; 15 design-vs-built entries changed to match the build, the rest stated as v1 limits; open calls left open. |
 | Acceptance run 2, internal | **ran** (22:09): tests 1–4 pass with **no exceptions**; overall fails narrowly on gap A9 | The record fixed its five errors (its Rev 3.5). Mass +0.03 %; cost to the cent, the heavier-wall variant included. A1–A7 all work in the frame. |
-| Gaps A9 (one through-fastener shared by two butting ends) and A8 (positions for a connector's machining) | running (Opus, worktree), launched 22:15 | goldens G33, G34 |
+| Gaps A9 (one through-fastener shared by two butting ends) and A8 (positions for a connector's machining) | **done**, merged (22:52), pushed | Goldens G33, G34. Note: `docs/notes/acceptance-gaps-2.md`; design 2.3, "After acceptance run 2". |
+| Acceptance run 3, internal | running (Opus, worktree), launched 22:55 | |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -90,6 +91,11 @@ in the gitignored `internal/session-notes.md`.*
 - **Sleeve clearance default (A7).** Holes a sleeve passes take ISO 273 medium for its OD: Ø17.5 for
   16 mm. The reference shop cut Ø18, which `clearance_mm: 2` reproduces. Between table sizes the
   next size up is used, an inferred rule.
+- **A9/A8 calls (open calls 36–38 in the design).**
+  - A shared stud is written as two butts, the second `held_by` the first; the alternative was one
+    butt whose fastener set counts once.
+  - Machining positions are read in the butting bar's section, not turned to suit the end.
+  - Coincident ops are an error that blocks the supplier, not a warning.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
@@ -364,3 +370,15 @@ in the gitignored `internal/session-notes.md`.*
     backup into `internal/acceptance/`.
 - **22:15**: An Opus agent launched on A9 (G33) and A8 (G34). It also applies the wording to draft
   2.3 under "After acceptance run 2". Then acceptance run 3.
+- **22:15**: The reference record's owner confirmed 4 of the 5 findings, and 1 partly: the bolt
+  count was 18, not the 20 sent. The internal notes and the first run's report carry the
+  correction.
+- **22:50**: A9 and A8 fixed (4 commits, failing tests first).
+  - **A9:** a butt can name `held_by` another butt through the same bar's side whose connector
+    passes a through-fastener. The ends must be coaxial and on the far side, otherwise a clear
+    `connection` error. The fit rule is not loosened. G33: one stud, one sleeve 90.50, one Ø9 hole.
+  - **A8:** a connector's required ops take `at_mm` or `at_holes`; splices tap one core per stud;
+    two ops at one place on a bar are a `machining` error. G34.
+  - Left open: two ends that each set a sleeve on one axis with no hole aren't flagged (flagging
+    them would change G30).
+- **22:52**: Merged without conflicts; gate PASS (699 tests).
