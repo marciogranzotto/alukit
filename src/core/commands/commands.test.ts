@@ -784,6 +784,22 @@ describe("addFrame (BE-6)", () => {
     );
   });
 
+  it("refuses a frame with no item to build it of, saying so, not that no end meets", () => {
+    // A project made by `alukit new --catalog …`: no default bar until one is set.
+    const s = empty();
+    const bare = { ...s, doc: { ...s.doc, defaults: {} } };
+    expect(no(bare, { cmd: "addFrame", args: { size: [1000, 600, 800] } })).toEqual([
+      expect.objectContaining({
+        code: "item",
+        field: "item",
+        message: expect.stringContaining("defaults.bar.item is not set"),
+      }),
+    ]);
+    // Naming the item is enough.
+    const item = (s.doc.defaults as { bar: { item: string } }).bar.item;
+    expect(ok(bare, { cmd: "addFrame", args: { size: [1000, 600, 800], item } }).ok).toBe(true);
+  });
+
   it("is one step, in words", () => {
     const h = new History(empty());
     const r = h.apply([{ cmd: "addFrame", args: { size: [1000, 600, 800] } }], ENV, "ui");
