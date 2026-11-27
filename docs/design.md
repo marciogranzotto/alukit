@@ -2657,6 +2657,14 @@ as a cylinder (X8); and a far-face head was seated where F2 had refused its hole
 normal (F7). All three are fixed at their root (§3.4, §4.5, §5.5), with golden cases G46–G48 (§4.6;
 [notes](notes/x7-x8-f7.md)).
 
+**Round 4, 2026-11-27** (*2.3*): the decided frame's seventh and eighth runs passed all four tests,
+with the quick connector written natively. The alternative frame's fourth run passed its four tests
+and failed on gap X9 alone: the cross hole was drilled from the face nearest its core even where
+another member stood in front of it. With X9, the bearing under the lips (F8) and each profile's own
+groove (F9) fixed at their root ([notes](notes/x9-f8-f9.md); G49), **the alternative frame's fifth
+run passed on both variants**, on the same project head: every cross hole on a clear face, the 36
+new head warnings each a bearing below half. Both frames now pass acceptance.
+
 ## 14. Calls made without asking (veto any)
 
 1. Z-up mm world (the Fusion frame); conversion only in the scene and GLB.

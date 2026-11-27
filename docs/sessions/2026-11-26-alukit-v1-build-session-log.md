@@ -843,3 +843,8 @@ anything, and each has a default in place.
   - **F8 mutant** (bearing on the face, not the lips' underside): G49's bearing cases and the quick connector's end-to-end test fail.
   - **F9 mutant** (each profile's own groove ignored): 6 fail, among them the per-profile Forseti grooves and the unread-lip case.
   - Each fix is held by tests on today's code, not only by the failing-first tests written on the base commit.
+- **10:41**: **The alternative frame passes acceptance on both variants** (run 5, internal; same project head, AluKit `6de7329`).
+  - All four tests are unchanged from run 4.
+  - All 36 cross holes per variant are on clear faces: the 8 that moved went to the one clear face the project's own rule finds for each core.
+  - The 36 new head warnings are exactly the bearings below half.
+  - No new AluKit gap. Both reference frames now pass, and design §13 says so.
