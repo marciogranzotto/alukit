@@ -61,10 +61,10 @@ G1–G21 still pass unchanged.
 
 | # | Decision | Why |
 |---|---|---|
-| 27 | A butt counts its connector once per butting end (times `qty`); `defaults.butt` supplies the connector when the connection names none | One end connector per joint end |
+| 27 | A butt counts its connector once per butting end (times `qty`); `defaults.butt` supplies the connector when the connection names none. *Extended by [acceptance-gaps-2](acceptance-gaps-2.md) A9: a butt `held_by` another shares that butt's through-fastener* | One end connector per joint end |
 | 28 | A connector must fit every joined bar's system (`fit` error). Its mount's fastener set is the one keyed by a joined bar's system, the through bar's first; it counts once per mount hole and unit. *Changed by [acceptance-gaps](acceptance-gaps.md) A1: fit by role; the through bar may be held by a sleeve in its bore* | §3.4: "a connector's fastener set once per hole" |
-| 29 | `requires`: once per butting end. An end tap goes in the butting end; an access hole on the butting bar's +y face, `from_end_mm` in from that end; a hole in the through bar where the butting bar's centre line, moved by the spacer, meets the face it butts into. *Extended by [acceptance-gaps](acceptance-gaps.md) A4: through an end, into the end face along the axis* | The design names the ops, not where they go |
-| 30 | A splice counts its `parts` as their own lines and taps both spliced ends with its `tap` | The cart's SPL-40 and its stud |
+| 29 | `requires`: once per butting end. An end tap goes in the butting end; an access hole on the butting bar's +y face, `from_end_mm` in from that end; a hole in the through bar where the butting bar's centre line, moved by the spacer, meets the face it butts into. *Extended by [acceptance-gaps](acceptance-gaps.md) A4: through an end, into the end face along the axis; and by [acceptance-gaps-2](acceptance-gaps-2.md) A8: a requirement with positions makes one op at each* | The design names the ops, not where they go |
+| 30 | A splice counts its `parts` as their own lines and taps both spliced ends with its `tap`. *Changed by [acceptance-gaps-2](acceptance-gaps-2.md) A8: one tap per stud, at the cores its item gives* | The cart's SPL-40 and its stud |
 
 ## The cut list and nesting (§5.3)
 
