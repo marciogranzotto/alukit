@@ -101,11 +101,11 @@ or `"square"`; `extend_mm` lengthens an end.
 
 | `type` | What it does |
 |---|---|
-| `butt` | `ends` stop on a face of `through` (a bar, a bar's end `"b7.b"`, or a body); `connector`, `qty`, `spacer_mm` |
+| `butt` | `ends` stop on a face of `through` (a bar, a bar's end `"b7.b"`, or a body); `connector`, `qty`, `spacer_mm`. An end face that reaches past its face is a warning (a connector's `overhang_mm`, else `defaults.butt.overhang_mm`, allows more); a bar that goes into the body it bears on, an error. A connector's hole in a block's end for a screw into the butting bar's tap follows the screw's axis, and is an error where the screw leaves the block |
 | `miter` | two ends cut on the bisector plane |
 | `splice` | two collinear ends joined end to end; `gap_mm`; a run lists the pieces |
 | `pivot` | a hinge on a `base` station; the carried ends' points are `{ "pivot": "<this id>" }` |
-| `face` | layers held face to face (`bars`, head to nut): `fastening` `none`, `bolt`, `tnut` or `screw`, a `fastener`, a `stack`, and `stations` (`at_mm`, `across_mm`, `rail_holes`) |
+| `face` | layers held face to face (`bars`, head to nut): `fastening` `none`, `bolt`, `tnut` or `screw`, a `fastener`, a `stack`, and `stations` (`at_mm`, `across_mm`, `rail_holes`). A head or nut on less than half its seat (over a groove's opening, off the face) is a `fit` warning, on none an error; a washer in the stack (the first under the head, the next under the nut) widens it |
 
 A face connection never moves or cuts a bar; it checks contact and generates holes and hardware.
 A sleeve in its `stack` (`{ "item", "inside": "<hollow layer>", "len_mm": "bore" }`) clears the

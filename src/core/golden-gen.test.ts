@@ -14,8 +14,9 @@ import { FIXTURES, mergePatch, readJson, shown, subdirs } from "./testing.ts";
  * document and the values the design's table gives for it, to 0.01 mm, and for G26 to the minor
  * unit. A row's variations ("factory: b", "at at_mm 470") are merge patches of the same document.
  * G29 (gap A3: a layer on an angle's inner leg face, `docs/notes/a3-face-contact.md`), G30–G32
- * (the other gaps the v1 acceptance found, `docs/notes/acceptance-gaps.md`) and G33–G34 (the gaps
- * its second run found, `docs/notes/acceptance-gaps-2.md`) each have a hand calculation beside
+ * (the other gaps the v1 acceptance found, `docs/notes/acceptance-gaps.md`), G33–G34 (the gaps
+ * its second run found, `docs/notes/acceptance-gaps-2.md`) and G35–G37 (the joint geometry its
+ * fourth run found, `docs/notes/f2-joint-geometry.md`) each have a hand calculation beside
  * them, `by_hand.py`, that imports nothing from AluKit, and so does G38 (a piece's span, the length
  * of stock it is cut from: `docs/notes/x4-stock-length.md`).
  */
@@ -79,6 +80,40 @@ interface Expect {
   bom?: Record<string, { length_mm: number }>;
   /** Every error the cut list reports, by code and entity. */
   cut_errors?: { code: string; entity: string }[];
+  /**
+   * Per butt connection: each butting end's seat on the face it bears on (§4.5, after acceptance
+   * run 4): the end face's area, the greatest distance and the area of it past the face, and how
+   * far the bar goes into the through bar beyond the face.
+   */
+  butts?: Record<
+    string,
+    {
+      end: string;
+      on: string;
+      area_mm2: number;
+      overhang_mm: number;
+      overhang_mm2: number;
+      overlap_mm: number;
+    }[]
+  >;
+  /**
+   * Per face connection: every station's head and nut seats (§4.5, after acceptance run 4), the
+   * part that bears, the face, its annulus and the percentage of it on the face's material.
+   */
+  seats?: Record<
+    string,
+    {
+      k: number;
+      side: string;
+      item: string;
+      on: string;
+      d_in_mm: number;
+      d_out_mm: number;
+      bearing_pct: number;
+    }[]
+  >;
+  /** Every warning derive reports, by code and entity (and refs), where the case gives them. */
+  warnings?: { code: string; entity: string; refs?: string[] }[];
   errors: { code: string; entity: string; refs?: string[] }[];
 }
 
@@ -136,6 +171,38 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
     if (!e.refs) continue;
     const match = errors.find((x) => x.code === e.code && x.entity === e.entity);
     expect(match?.refs, `${label}: refs of ${e.code} on ${e.entity}`).toEqual(e.refs);
+  }
+  if (want.warnings) {
+    const warns = shown(d.diagnostics, "warn");
+    expect(
+      warns.map((w) => ({ code: w.code, entity: w.entity, ...(w.refs ? { refs: w.refs } : {}) })),
+      `${label}: warnings ${JSON.stringify(warns, null, 1)}`,
+    ).toEqual(want.warnings);
+  }
+  for (const [id, seats] of Object.entries(want.butts ?? {})) {
+    const got = d.butts.get(id)?.ends.map((e) => ({
+      end: e.end,
+      on: e.on,
+      area_mm2: r2(e.area),
+      overhang_mm: r2(e.overhang),
+      overhang_mm2: r2(e.overhang_area),
+      overlap_mm: r2(e.overlap),
+    }));
+    expect(got, `${label}: ${id}'s seats`).toEqual(seats);
+  }
+  for (const [id, seats] of Object.entries(want.seats ?? {})) {
+    const got = d.fastenings.get(id)?.stations.flatMap((st) =>
+      st.seats.map((x) => ({
+        k: st.k,
+        side: x.side,
+        item: x.item,
+        on: x.on,
+        d_in_mm: r2(x.d_in),
+        d_out_mm: r2(x.d_out),
+        bearing_pct: r2(100 * x.bearing),
+      })),
+    );
+    expect(got, `${label}: ${id}'s head seats`).toEqual(seats);
   }
 
   for (const [id, b] of Object.entries(want.bars ?? {})) {
@@ -327,6 +394,9 @@ describe("golden generation cases (design §4.6)", () => {
       "G32",
       "G33",
       "G34",
+      "G35",
+      "G36",
+      "G37",
       "G38",
     ]);
   });

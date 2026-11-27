@@ -1,0 +1,93 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-seat",
+  "name": "Joint geometry test catalog (synthetic)",
+  "vendor": "test-seat-vendor",
+  "currency": "BRL",
+  "prov": {
+    "src": "est",
+    "note": "synthetic test data for screws through a block's end, an end face on its receiving face and a head on its face, not a vendor's"
+  },
+  "items": {
+    "J2": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Two screws through a block's end into a 40x80's two cores, tapped M8 (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M8", "at_mm": [[0, -20], [0, 20]] },
+        { "op": "through-hole", "on": "through", "d_mm": 9, "at_mm": [[0, -20], [0, 20]] }
+      ]
+    },
+    "OV5": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "A butt joint whose end may overhang its face by 5 (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "overhang_mm": 5
+    },
+    "SHCS-M8x50": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M8x50 (synthetic, ISO 4762's head)",
+      "thread": "M8",
+      "length_mm": 50,
+      "head": "ISO 4762",
+      "dims": { "dk_mm": 13, "k_mm": 8 }
+    },
+    "SHCS-M4x50": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M4x50 (synthetic, ISO 4762's head)",
+      "thread": "M4",
+      "length_mm": 50,
+      "head": "ISO 4762",
+      "dims": { "dk_mm": 7, "k_mm": 4 }
+    },
+    "SCR-M8x50": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Screw M8x50 that publishes no dimensions (synthetic)",
+      "thread": "M8",
+      "length_mm": 50,
+      "head": "ISO 4762"
+    },
+    "HEX-M8x90": {
+      "kind": "fastener",
+      "subtype": "bolt",
+      "name": "Hex head bolt M8x90 (synthetic, ISO 4017's head)",
+      "thread": "M8",
+      "length_mm": 90,
+      "head": "ISO 4017",
+      "dims": { "s_mm": 13, "k_mm": 5.3 }
+    },
+    "N8": {
+      "kind": "fastener",
+      "subtype": "nut",
+      "name": "Hex nut M8 (synthetic, ISO 4032's)",
+      "thread": "M8",
+      "head": "ISO 4032",
+      "dims": { "s_mm": 13, "m_mm": 6.8 }
+    },
+    "W8": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Plain washer 8 (synthetic, ISO 7089's)",
+      "thread": "M8",
+      "head": "ISO 7089",
+      "dims": { "d1_mm": 8.4, "d2_mm": 16, "h_mm": 1.6 }
+    },
+    "J2-H": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Two holes through a block's end at a 40x80's cores, with no tap in the 40x80 (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "requires": [
+        { "op": "through-hole", "on": "through", "d_mm": 9, "at_mm": [[0, -20], [0, 20]] }
+      ]
+    }
+  }
+}

@@ -211,5 +211,48 @@
       ]
     }
   ],
-  "diagnostics": []
+  "diagnostics": [
+    {
+      "severity": "warn",
+      "code": "connection",
+      "entity": "c21",
+      "refs": [
+        "b18",
+        "b9"
+      ],
+      "message": "b18.a's end face overhangs b9's face +x by 30.00 mm: 2969.10 of its 4969.10 mm² (59.8 %) bear on nothing"
+    },
+    {
+      "severity": "warn",
+      "code": "connection",
+      "entity": "c22",
+      "refs": [
+        "b18",
+        "b10"
+      ],
+      "message": "b18.b's end face overhangs b10's face -x by 30.00 mm: 2969.10 of its 4969.10 mm² (59.8 %) bear on nothing"
+    },
+    {
+      "severity": "warn",
+      "code": "connection",
+      "entity": "c33",
+      "refs": [
+        "b32",
+        "b31"
+      ],
+      "message": "b32.b's end face overhangs b31's end b by 16.28 mm: 662.74 of its 2262.74 mm² (29.3 %) bear on nothing"
+    },
+    {
+      "severity": "info",
+      "code": "fit",
+      "entity": "c23",
+      "message": "test-geo:WSH-M10 gives no outside diameter (d2_mm), so its seats are not checked: c23"
+    },
+    {
+      "severity": "info",
+      "code": "fit",
+      "entity": "c35",
+      "message": "test-gen:SCR-M5x25 gives no bearing diameter (dw_mm, dk_mm or s_mm), so its seats are not checked: c35"
+    }
+  ]
 }

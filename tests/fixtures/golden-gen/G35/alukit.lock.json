@@ -1,0 +1,30 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-seat": { "hash": "sha256:7690d93754bf89eda195e3b27906edd6027a16aa4821f25258def06ed242d160", "name": "Joint geometry test catalog (synthetic)", "vendor": "test-seat-vendor", "currency": "BRL" },
+    "test-stud": { "hash": "sha256:37e5b1a53f0c4b3a6b03d02f45b3be497dbf929fabf23d852339df53ad10f7f0", "name": "Stud joint test catalog (synthetic)", "vendor": "test-stud-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-seat:J2": { "hash": "sha256:33be029d3ecb705681ba7d2ceaf85ebc7ab8c93760542ee2cf4d0084115c6e44", "item": { "kind": "connector", "name": "Two screws through a block's end into a 40x80's two cores, tapped M8 (synthetic)", "prov": { "src": "est", "note": "synthetic test data for screws through a block's end, an end face on its receiving face and a head on its face, not a vendor's" }, "subtype": "end-connector", "fits": ["test:s40-c8"], "recipe": true, "requires": [{ "op": "end-tap", "on": "butting", "thread": "M8", "at_mm": [[0, -20], [0, 20]] }, { "op": "through-hole", "on": "through", "d_mm": 9, "at_mm": [[0, -20], [0, 20]] }] } },
+    "test-stud:TS80": { "hash": "sha256:a33ecf23c4f8fb44b0ccc3640845b52b3efae5e18d6993860c88afb9b4de1dc4", "item": { "kind": "bar", "name": "Profile 80x80, four cores tapped M16 (synthetic)", "material": "test:al-6063-t5", "prov": { "src": "est", "note": "synthetic test data for through studs and joints in several cores, not a vendor's" }, "shape": "tslot", "section": "TS80", "system": "test:s40-c8", "mass_kg_per_m": 4.5, "core": { "bore_mm": 13.7, "tap": "M16" } } },
+    "test:TS4080": { "hash": "sha256:92a66726f8df6a39c0e0f7814e0373da28f1663caf2ac9756955ddef95ad2def", "item": { "kind": "bar", "name": "Profile 40x80 (parametric)", "code": "TS4080", "material": "al-6063-t5", "options": { "finish": ["anodised", "black"] }, "prov": { "src": "est", "note": "synthetic test data, not a vendor's" }, "shape": "tslot", "section": "TS4080", "system": "s40-c8", "mass_kg_per_m": 2.743, "area_mm2": 1016, "Ix_mm4": { "v": 655000, "src": "calc", "read": "2026-11-26", "note": "printed with the axis labels swapped and a digit lost: the strong axis cannot be the smaller value" }, "Iy_mm4": { "v": 177600, "src": "calc", "read": "2026-11-26", "note": "printed with the axis labels swapped" } } }
+  },
+  "offers": {
+    "test:TS4080-c7": { "hash": "sha256:de331c9e25b293b42ddde67d8648694bd8a7b5e449fd8677791778df93c9f7c5", "offer": { "item": "TS4080", "options": { "finish": "anodised" }, "sale": { "mode": "cut", "min_mm": 40, "max_mm": 3000, "tol_mm": 1, "res_mm": 1, "step_mm": 10 }, "price": { "regular_minor": 23100, "sale_minor": null, "per": "m", "read": "2026-11-26", "src": "src" } } },
+    "test:TS4080-pp-c7": { "hash": "sha256:18fef60f5fd9b3013358551bbfa99313219837e32d557120ee42bd0299fb6367", "offer": { "item": "TS4080", "options": { "finish": "black" }, "sale": { "mode": "cut", "min_mm": 40, "max_mm": 3000, "tol_mm": 1, "res_mm": 1, "step_mm": 10 }, "price": { "regular_minor": 25400, "sale_minor": null, "per": "m", "read": "2026-11-26", "src": "src" } } }
+  },
+  "sections": {
+    "test-stud:TS80": { "hash": "sha256:ff1b302a97d0d9bd493a56178433d3d1cc00e5ad64ca0efef36623c914f064a9", "section": { "schema": "alukit.section/1", "id": "TS80", "fidelity": "parametric", "props_ok": false, "generator": "tslot", "params": { "w_mm": 80, "h_mm": 80, "groove": "test:c8", "grooves": [{ "face": "-y", "at_mm": -20 }, { "face": "-y", "at_mm": 20 }, { "face": "+x", "at_mm": -20 }, { "face": "+x", "at_mm": 20 }, { "face": "+y", "at_mm": -20 }, { "face": "+y", "at_mm": 20 }, { "face": "-x", "at_mm": -20 }, { "face": "-x", "at_mm": 20 }], "bores": [{ "at_mm": [-20, -20], "d_mm": 13.7 }, { "at_mm": [20, -20], "d_mm": 13.7 }, { "at_mm": [-20, 20], "d_mm": 13.7 }, { "at_mm": [20, 20], "d_mm": 13.7 }] } } },
+    "test:TS4080": { "hash": "sha256:d88b4fa331a4d80642d45f9acaa6719a6a6b82bd5369093a537abfd7040d807e", "section": { "schema": "alukit.section/1", "id": "TS4080", "fidelity": "parametric", "props_ok": false, "generator": "tslot", "params": { "w_mm": 40, "h_mm": 80, "groove": "c8", "grooves": [{ "face": "-y", "at_mm": 0 }, { "face": "+y", "at_mm": 0 }, { "face": "+x", "at_mm": -20 }, { "face": "+x", "at_mm": 20 }, { "face": "-x", "at_mm": -20 }, { "face": "-x", "at_mm": 20 }], "bores": [{ "at_mm": [0, -20], "d_mm": 6.8 }, { "at_mm": [0, 20], "d_mm": 6.8 }] } } }
+  },
+  "materials": {
+    "test:al-6063-t5": { "hash": "sha256:e0c482b7732d94a71938e8fe5ddb0fecedb37039f991accf85a370fb368642c2", "material": { "name": "Aluminium 6063-T5", "alloy": "6063", "temper": "T5", "E_MPa": 69000, "G_MPa": 25900, "nu": 0.33, "density_kg_per_m3": 2700, "Rp02_MPa": { "v": 110, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" }, "Rm_MPa": { "v": 150, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" }, "alpha_per_K": 0.0000234 } }
+  },
+  "grooves": {
+    "test:c8": { "hash": "sha256:d0d9d5c23fc3205a5fd7202229075da350ef157baa05880012e81405f1dc5892", "groove": { "opening_mm": 8.2, "lip_mm": 2.2, "depth_mm": 12.25, "undercut_mm": 14.5, "class": "standard" } }
+  },
+  "systems": {
+    "test:s40-c8": { "hash": "sha256:e76600165e0023babbe826be9199e4ca0156a33c640bf1a058c2265e86ee253c", "system": { "type": "tslot", "series_mm": 40, "groove": "c8" } }
+  }
+}

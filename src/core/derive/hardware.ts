@@ -3,13 +3,14 @@ import type { ConnectorItem } from "#catalog/schema/items.ts";
 import { compareIds } from "../ids.ts";
 import { fullRef } from "../items.ts";
 import type { Connection, Face } from "../project/schema.ts";
+import { threadDiameter } from "../threads.ts";
 import { TOL } from "../tolerances.ts";
 import { add, addScaled, angleDeg, dot, neg, norm, scale, sub, type V3 } from "../vec.ts";
 import type { Ctx } from "./context.ts";
 import type { DerivedBar, EndHoleOp, HoleOp } from "./derive.ts";
 import { type GenOut, stockOptions } from "./fastenings.ts";
 import { boxCentre, faceLocal, facePlane, onBar, resolveStation } from "./place.ts";
-import type { Copy, HardwareUse, StockPiece } from "./types.ts";
+import type { Copy, HardwareUse, PlacedBar, StockPiece } from "./types.ts";
 
 /**
  * Hardware and machining from connectors (design §3.4, §5.1). Each connection counts its
@@ -584,6 +585,20 @@ class ConnectorGen {
     return [undefined];
   }
 
+  /**
+   * Where the connector taps the butting end: every end tap it asks of the butting bar (`on`
+   * butting or each), at its positions, the centre where it gives none. A hole the connector
+   * makes in the through bar at one of these places is the clearance for a screw into that tap.
+   */
+  private buttingTaps(item: ConnectorItem): (readonly [number, number])[] {
+    const out: (readonly [number, number])[] = [];
+    for (const req of item.requires ?? []) {
+      if (req.op !== "end-tap" || (req.on !== "butting" && req.on !== "each")) continue;
+      for (const p of this.positions(item, req)) out.push(p ?? [0, 0]);
+    }
+    return out;
+  }
+
   private requires(item: ConnectorItem): void {
     const { roles, id } = this;
     for (const [ri, req] of (item.requires ?? []).entries()) {
@@ -609,6 +624,10 @@ class ConnectorGen {
         ...(req.thread && req.op !== "end-tap" ? { thread: req.thread } : {}),
         ...(depth !== undefined ? { depth } : {}),
       };
+      // A hole in the through bar at a place where the connector also taps the butting end is
+      // the clearance for a screw into that tap: it follows the screw (after acceptance run 4).
+      const screws = this.buttingTaps(item);
+      const intoTap = (p: Pos) => screws.some((q) => samePlace(q, p));
       for (const target of targets) {
         if (target === "butting") {
           for (const { bar, end } of roles.butting) {
@@ -657,7 +676,14 @@ class ConnectorGen {
           }
           for (const b of roles.butting) {
             for (const p of at) {
-              const off = this.endPlace(through.bar, through.end, b.bar, b.end, p);
+              const off = this.endPlace(
+                through.bar,
+                through.end,
+                b.bar,
+                b.end,
+                this.jointPoint(b.bar, b.end, p),
+                p,
+              );
               if (!off) continue;
               through.bar.ops.push({
                 op: "end-tap",
@@ -693,16 +719,35 @@ class ConnectorGen {
         }
         for (const b of roles.butting) {
           const off: string[] = [];
+          const tilted: { at: Pos; angle: number; face: Face }[] = [];
           for (const p of at) {
-            const op = through.end
-              ? this.endHole(through.bar, through.end, b.bar, b.end, hole, p)
-              : this.jointHole(through.bar, b.bar, b.end, hole, p, off);
-            if (op) through.bar.ops.push(op);
+            if (through.end) {
+              const op = this.endHole(through.bar, through.end, b.bar, b.end, hole, p, {
+                screw: intoTap(p),
+                field,
+              });
+              if (op) through.bar.ops.push(op);
+              continue;
+            }
+            const r = this.jointHole(through.bar, b.bar, b.end, hole, p, off, intoTap(p));
+            if (r && "tilted" in r) tilted.push({ at: p, angle: r.tilted, face: r.face });
+            else if (r) through.bar.ops.push(r);
           }
           if (off.length > 0) {
             this.error(
               "connection",
               `${field}: ${off.length === 1 ? "a position" : `${off.length} positions`} at ${b.bar.placed.id}.${b.end} meet ${through.bar.placed.id} off its face: ${off.join(", ")}`,
+              { field: "connector", refs: [through.bar.placed.id] },
+            );
+          }
+          const first = tilted[0];
+          if (first) {
+            const one = tilted.length === 1;
+            const places = tilted.flatMap((x) => (x.at ? [posText(x.at)] : []));
+            const where = places.length > 0 ? ` at ${places.join(", ")}` : "";
+            this.error(
+              "connection",
+              `${field}: the ${one ? "screw" : "screws"} into ${b.bar.placed.id}.${b.end}'s ${one ? "tap" : "taps"}${where} ${one ? "runs" : "run"} ${deg(first.angle)}° off square to ${through.bar.placed.id}'s face ${first.face}; a hole in a bar's side is drilled square to its face, so ${one ? "it cannot be made" : "none of them can be made"}`,
               { field: "connector", refs: [through.bar.placed.id] },
             );
           }
@@ -768,21 +813,19 @@ class ConnectorGen {
   }
 
   /**
-   * Where a butting bar's position meets the through bar's end face, as an offset from the
-   * section's box centre (G17; acceptance gaps A4, A8). It must fall on the end face.
+   * A point of the through bar's end face as an offset from the section's box centre (G17;
+   * acceptance gaps A4, A8): where a butting bar's position meets it. It must fall on the end face.
    */
   private endPlace(
     through: DerivedBar,
     throughEnd: "a" | "b",
     butting: DerivedBar,
     end: "a" | "b",
+    Q: V3,
     p?: Pos,
   ): { off: readonly [number, number]; centre: boolean } | undefined {
     const T = through.placed;
-    const Q = this.jointPoint(butting, end, p);
-    const [cx, cy] = boxCentre(T.box);
-    const x = dot(sub(Q, T.A), T.frame.x) - cx;
-    const y = dot(sub(Q, T.A), T.frame.y) - cy;
+    const [x, y] = sectionOffset(T, Q);
     const hx = (T.box.x1 - T.box.x0) / 2;
     const hy = (T.box.y1 - T.box.y0) / 2;
     if (Math.abs(x) > hx - TOL.len || Math.abs(y) > hy - TOL.len) {
@@ -799,7 +842,14 @@ class ConnectorGen {
 
   /**
    * A hole in the through bar's end face, for a butt that bears on that end (G17; acceptance gap
-   * A4): along the through bar's axis, where the butting bar meets the end face.
+   * A4). It follows its fastener's axis (after acceptance run 4). A `screw` into a tap the
+   * connector makes in the butting end at this position runs along the butting bar's axis
+   * through the position, so the hole enters the end face where that line meets it and runs on
+   * to the other end face (or its depth): its exit and its angle to the end face's normal go
+   * with it. Any other hole runs along the through bar's axis, where the butting bar meets the
+   * end face (A4). Either way it must stay in the bar's section box: a hole whose axis leaves by a
+   * side before it reaches the other end face (or its depth) has no place, and one whose wall
+   * breaks out of a side is made and reported; each a `connection` error on the connection.
    */
   private endHole(
     through: DerivedBar,
@@ -807,14 +857,79 @@ class ConnectorGen {
     butting: DerivedBar,
     end: "a" | "b",
     fields: Pick<HoleOp, "d" | "thread" | "depth">,
-    p?: Pos,
+    p: Pos,
+    how: { screw: boolean; field: string },
   ): EndHoleOp | undefined {
-    const place = this.endPlace(through, throughEnd, butting, end, p);
+    const T = through.placed;
+    const face = through.ends[throughEnd];
+    const other = throughEnd === "a" ? "b" : "a";
+    const inward = throughEnd === "a" ? T.frame.t : neg(T.frame.t);
+    let Q: V3;
+    let u: V3;
+    if (how.screw) {
+      const B = butting.placed;
+      const [cx, cy] = boxCentre(B.box);
+      const O = add(
+        B.A,
+        add(scale(B.frame.x, cx + (p?.[0] ?? 0)), scale(B.frame.y, cy + (p?.[1] ?? 0))),
+      );
+      u = end === "a" ? neg(B.frame.t) : B.frame.t;
+      // The butt is valid, so its centre line, parallel to u, crosses the end face going in.
+      Q = addScaled(O, u, dot(sub(face.point, O), face.normal) / dot(u, face.normal));
+    } else {
+      Q = this.jointPoint(butting, end, p);
+      u = inward;
+    }
+    const place = this.endPlace(through, throughEnd, butting, end, Q, p);
     if (!place) return undefined;
+    const along = angleDeg(u, inward) <= TOL.ang;
+    const angle = angleDeg(u, neg(face.normal));
+    // How far the axis runs inside: to the other end face, or the hole's depth.
+    const far = through.ends[other];
+    const toFar =
+      dot(u, far.normal) > 1e-12
+        ? dot(sub(far.point, Q), far.normal) / dot(u, far.normal)
+        : Infinity;
+    const length = fields.depth === undefined ? toFar : Math.min(fields.depth, toFar);
+    const r = holeRadius(fields);
+    const path = holePath(T, Q, u, length, r ?? 0);
+    const what = fields.thread
+      ? `tap ${fields.thread}`
+      : `Ø${fields.d === undefined ? "?" : mm(fields.d)} hole`;
+    if (path.leaves) {
+      const into = how.screw
+        ? `the screw into ${butting.placed.id}.${end}'s tap${p ? ` at ${posText(p)}` : ""}`
+        : `the ${what}`;
+      this.error(
+        "connection",
+        `${how.field}: ${into} enters ${T.id}'s end ${throughEnd} ${deg(angle)}° off square and leaves ${T.id} by its face ${path.leaves.face} ${mm(path.leaves.at)} mm in from end ${throughEnd}${r === undefined ? "" : `, its ${what}'s wall from ${mm(path.leaves.wall)} mm in`}, before it reaches ${fields.depth === undefined ? `end ${other}` : "its depth"}: there is no place for its hole`,
+        { field: "connector", refs: [T.id] },
+      );
+      return undefined;
+    }
+    if (r !== undefined && path.breaks) {
+      const b = path.breaks;
+      const entry = place.centre
+        ? "at the centre"
+        : `at x ${mm(place.off[0])}, y ${mm(place.off[1])} from the centre`;
+      const tilt = along ? "" : `, ${deg(angle)}° off square,`;
+      const where = b.whole
+        ? `along its whole length, by ${mm(b.by)} mm`
+        : `from ${mm(b.from)} mm in from end ${throughEnd}, by up to ${mm(b.by)} mm`;
+      this.error(
+        "connection",
+        `${how.field}: the ${what} in ${T.id}'s end ${throughEnd} ${entry}${tilt} breaks out of its face ${b.face} ${where}`,
+        { field: "connector", refs: [T.id] },
+      );
+    }
+    const exit = path.exit;
     return {
       op: "end-hole",
       from: throughEnd,
       ...(place.centre ? {} : { off: place.off }),
+      ...(along
+        ? {}
+        : { exit: [zero(exit[0]) ? 0 : exit[0], zero(exit[1]) ? 0 : exit[1]] as const, angle }),
       ...fields,
       by: this.id,
     };
@@ -822,7 +937,10 @@ class ConnectorGen {
 
   /**
    * A hole in the through bar where a butting bar's centre line (or the line at a position of its
-   * section) meets its face. A position whose line misses the face is collected in `off`.
+   * section) meets its face. A position whose line misses the face is collected in `off`. A hole
+   * for a screw into the butting end (`screw`) follows the screw, and a side hole is drilled
+   * square to its face: where the screw, on the face, meets it at an angle, the angle is returned
+   * instead, and no hole is made (after acceptance run 4).
    */
   private jointHole(
     through: DerivedBar,
@@ -831,7 +949,8 @@ class ConnectorGen {
     fields: Pick<HoleOp, "d" | "thread" | "depth">,
     p: Pos,
     off: string[],
-  ): HoleOp | undefined {
+    screw: boolean,
+  ): HoleOp | { tilted: number; face: Face } | undefined {
     const e = butting.ends[end];
     const Q = this.jointPoint(butting, end, p);
     const T = through.placed;
@@ -858,6 +977,11 @@ class ConnectorGen {
         off.push(posText(p));
         return undefined;
       }
+    }
+    if (screw) {
+      const u = end === "a" ? neg(butting.placed.frame.t) : butting.placed.frame.t;
+      const tilt = angleDeg(u, neg(facePlane(T, face).n));
+      if (tilt > TOL.ang) return { tilted: tilt, face };
     }
     return {
       op: "hole",
@@ -907,6 +1031,89 @@ function spliceStuds(ctx: Ctx, sp: NonNullable<ConnectorItem["splice"]>, home: s
 }
 
 const zero = (v: number) => Math.abs(v) <= TOL.len / 100;
+const deg = (a: number) => (Math.round(a * 100) / 100).toFixed(2);
+
+/** Two positions in a section are one place, within tol.len; none is the centre. */
+function samePlace(q: readonly [number, number], p: Pos): boolean {
+  return Math.hypot(q[0] - (p?.[0] ?? 0), q[1] - (p?.[1] ?? 0)) <= TOL.len;
+}
+
+/** A world point's offset in a placed bar's section, from its box centre. */
+function sectionOffset(T: PlacedBar, X: V3): [number, number] {
+  const [cx, cy] = boxCentre(T.box);
+  const r = sub(X, T.A);
+  return [dot(r, T.frame.x) - cx, dot(r, T.frame.y) - cy];
+}
+
+/** A hole's radius: half its diameter, or half its thread's nominal diameter. */
+function holeRadius(f: Pick<HoleOp, "d" | "thread">): number | undefined {
+  if (f.d !== undefined) return f.d / 2;
+  const d = f.thread ? threadDiameter(f.thread) : undefined;
+  return d === undefined ? undefined : d / 2;
+}
+
+/**
+ * A hole's path through a bar from a point of an end face, along the unit axis `u`, for `length`
+ * (Infinity: it never reaches the other end face): where it ends, in the section from its box
+ * centre, and the side it fails on. Its axis `leaves` the section box by a side, at a distance
+ * along the bar's axis from the entry; or, with the axis inside, its wall `breaks` out of a
+ * side, by the greatest amount, from where it first does (`whole` when it does all along). In a
+ * section across the bar the hole's wall stands r √(1 + (u·e / u·t)²) from its axis along each
+ * of the section's axes e, the half-width of the ellipse the tilted cylinder cuts there, and the
+ * axis's offset is linear along it, so its ends decide. Where the axis leaves, `wall` is where
+ * the wall reached that side first.
+ */
+function holePath(
+  T: PlacedBar,
+  Q: V3,
+  u: V3,
+  length: number,
+  r: number,
+): {
+  exit: [number, number];
+  leaves?: { face: Face; at: number; wall: number };
+  breaks?: { face: Face; by: number; from: number; whole: boolean };
+} {
+  const [x0, y0] = sectionOffset(T, Q);
+  const ux = dot(u, T.frame.x);
+  const uy = dot(u, T.frame.y);
+  const ut = Math.abs(dot(u, T.frame.t));
+  const hx = (T.box.x1 - T.box.x0) / 2;
+  const hy = (T.box.y1 - T.box.y0) / 2;
+  const rx = ut > 0 ? r * Math.sqrt(1 + (ux / ut) ** 2) : Infinity;
+  const ry = ut > 0 ? r * Math.sqrt(1 + (uy / ut) ** 2) : Infinity;
+  const sides: { face: Face; c0: number; dc: number; h: number; rr: number }[] = [
+    { face: "+x", c0: x0, dc: ux, h: hx, rr: rx },
+    { face: "-x", c0: -x0, dc: -ux, h: hx, rr: rx },
+    { face: "+y", c0: y0, dc: uy, h: hy, rr: ry },
+    { face: "-y", c0: -y0, dc: -uy, h: hy, rr: ry },
+  ];
+  // Where the axis first crosses a side: before the length, it leaves the box there.
+  let leaves: { face: Face; w: number; wall: number } | undefined;
+  for (const s of sides) {
+    if (s.dc <= 0) continue;
+    const w = (s.h - s.c0) / s.dc;
+    // Its wall reaches the side first, as far before as the wall stands off the axis.
+    const wall = Math.max(0, (s.h - s.rr - s.c0) / s.dc);
+    if (w < length - TOL.len / 100 && (!leaves || w < leaves.w)) leaves = { face: s.face, w, wall };
+  }
+  const end = Number.isFinite(length) ? length : 0;
+  const exit: [number, number] = [x0 + end * ux, y0 + end * uy];
+  if (leaves) {
+    return { exit, leaves: { face: leaves.face, at: leaves.w * ut, wall: leaves.wall * ut } };
+  }
+  let breaks: { face: Face; by: number; from: number; whole: boolean } | undefined;
+  for (const s of sides) {
+    const e0 = s.c0 + s.rr - s.h;
+    const e1 = e0 + end * s.dc;
+    const by = Math.max(e0, e1);
+    if (by <= TOL.len || (breaks && by <= breaks.by)) continue;
+    const whole = e0 > TOL.len && e1 > TOL.len;
+    const from = e0 > TOL.len ? 0 : (-e0 / (e1 - e0)) * end * ut;
+    breaks = { face: s.face, by, from, whole };
+  }
+  return { exit, ...(breaks ? { breaks } : {}) };
+}
 
 /** Whether a position lies inside a bar's end, its section box less `tol.len`. */
 function onEnd(b: DerivedBar, p: readonly [number, number]): boolean {

@@ -1,0 +1,33 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-geo": { "hash": "sha256:5d41a6d7c43671052d74bf5387b76e9c3e428d09da74fbe3088f0ba9ae5f1718", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" },
+    "test-seat": { "hash": "sha256:7690d93754bf89eda195e3b27906edd6027a16aa4821f25258def06ed242d160", "name": "Joint geometry test catalog (synthetic)", "vendor": "test-seat-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-geo:FB-50x10": { "hash": "sha256:940ba09dee00f3db3afa2356302471a9c006e588437214b4a945bd195aecdadc", "item": { "kind": "bar", "name": "Flat bar 50x10", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "shape": "flat", "section": "FB-50x10" } },
+    "test-seat:SHCS-M8x50": { "hash": "sha256:f5a7103e4ba3be6e2de09289ea7d8e8eaeb8389d67c34d48c532ccdade2374b9", "item": { "kind": "fastener", "name": "Socket head cap screw M8x50 (synthetic, ISO 4762's head)", "prov": { "src": "est", "note": "synthetic test data for screws through a block's end, an end face on its receiving face and a head on its face, not a vendor's" }, "subtype": "screw", "thread": "M8", "length_mm": 50, "head": "ISO 4762", "dims": { "dk_mm": 13, "k_mm": 8 } } },
+    "test:TS40": { "hash": "sha256:7f2d44e6a46260b8782338a4e2c51f099d848c4cab84f75dd71fdfe85dee9009", "item": { "kind": "bar", "name": "Profile 40x40 (parametric)", "code": "TS40", "material": "al-6063-t5", "options": { "finish": ["anodised", "black"] }, "prov": { "src": "est", "note": "synthetic test data, not a vendor's" }, "shape": "tslot", "section": "TS40", "system": "s40-c8", "mass_kg_per_m": 1.493, "area_mm2": 553, "Ix_mm4": 91200, "Iy_mm4": 91200, "core": { "bore_mm": 6.8, "tap": "M8" } } }
+  },
+  "offers": {
+    "test-geo:FB-50x10-3000": { "hash": "sha256:9d37b4cb7995c7bdcd49e6ff6dbbee7e54110fdedfd2640e38041fc21a317785", "offer": { "item": "FB-50x10", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 3000 }, "price": { "regular_minor": 4000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test-geo:FB-50x10-6000": { "hash": "sha256:b32d104b7f16875582c4311172c7670747eb29ab0a17dd8915ca348b76a3b571", "offer": { "item": "FB-50x10", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 7000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test:TS40-c7": { "hash": "sha256:a7377fee01436ccb6e114391ebb883e0a816aa646005893b1f47e21bfd0c1d70", "offer": { "item": "TS40", "options": { "finish": "anodised" }, "sale": { "mode": "cut", "min_mm": 40, "max_mm": 3000, "tol_mm": 1, "res_mm": 1, "step_mm": 10 }, "price": { "regular_minor": 12650, "sale_minor": 11385, "per": "m", "read": "2026-11-26", "src": "src" }, "in_stock": true } },
+    "test:TS40-pp-c7": { "hash": "sha256:bc8170af558703d0f224094c62bbff67cf781e7af4e18906046dd4acb88870b3", "offer": { "item": "TS40", "options": { "finish": "black" }, "sale": { "mode": "cut", "min_mm": 40, "max_mm": 3000, "tol_mm": 1, "res_mm": 1, "step_mm": 10 }, "price": { "regular_minor": 13900, "sale_minor": null, "per": "m", "read": "2026-11-26", "src": "src" }, "in_stock": true } }
+  },
+  "sections": {
+    "test-geo:FB-50x10": { "hash": "sha256:b797bebb37ad05884e8d076afb3dab529ca274ffeca4c45cb71eb4e1f3ea34e9", "section": { "schema": "alukit.section/1", "id": "FB-50x10", "fidelity": "parametric", "props_ok": true, "generator": "flat", "params": { "b_mm": 50, "t_mm": 10 } } },
+    "test:TS40": { "hash": "sha256:c2d8c5b42fff26a8aeef9d4110af2bf9c049cac3d4ef8a85be0294d97b8b9d5d", "section": { "schema": "alukit.section/1", "id": "TS40", "fidelity": "parametric", "props_ok": false, "generator": "tslot", "params": { "w_mm": 40, "h_mm": 40, "groove": "c8", "bores": [{ "at_mm": [0, 0], "d_mm": 6.8 }] } } }
+  },
+  "materials": {
+    "test:al-6063-t5": { "hash": "sha256:e0c482b7732d94a71938e8fe5ddb0fecedb37039f991accf85a370fb368642c2", "material": { "name": "Aluminium 6063-T5", "alloy": "6063", "temper": "T5", "E_MPa": 69000, "G_MPa": 25900, "nu": 0.33, "density_kg_per_m3": 2700, "Rp02_MPa": { "v": 110, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" }, "Rm_MPa": { "v": 150, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" }, "alpha_per_K": 0.0000234 } },
+    "test:s235": { "hash": "sha256:642f592f18278ab312b5939c9a0525dcc6ec0aa40a5c52253e599e27cf2ea6ab", "material": { "name": "Steel S235", "E_MPa": 210000, "G_MPa": 81000, "nu": 0.3, "density_kg_per_m3": 7850, "Rp02_MPa": 235, "Rm_MPa": 360, "alpha_per_K": 0.000012 } }
+  },
+  "grooves": {
+    "test:c8": { "hash": "sha256:d0d9d5c23fc3205a5fd7202229075da350ef157baa05880012e81405f1dc5892", "groove": { "opening_mm": 8.2, "lip_mm": 2.2, "depth_mm": 12.25, "undercut_mm": 14.5, "class": "standard" } }
+  },
+  "systems": {
+    "test:s40-c8": { "hash": "sha256:e76600165e0023babbe826be9199e4ca0156a33c640bf1a058c2265e86ee253c", "system": { "type": "tslot", "series_mm": 40, "groove": "c8" } }
+  }
+}

@@ -183,7 +183,21 @@ describe("alukit derive, cutlist and bom", () => {
     expect(d.schema).toBe("alukit.derived/1");
     expect(d.bars.b14.cut_mm).toBe(569.88);
     expect(d.bars["b26@6"].pattern).toBe("pt1");
-    expect(d.diagnostics).toEqual([]);
+    // Its three end faces that overhang their faces, warnings, and two parts whose seats are not
+    // checked, infos (§4.5): derive exits 0.
+    expect(
+      d.diagnostics.map((x: { severity: string; code: string; entity: string }) => [
+        x.severity,
+        x.code,
+        x.entity,
+      ]),
+    ).toEqual([
+      ["warn", "connection", "c21"],
+      ["warn", "connection", "c22"],
+      ["warn", "connection", "c33"],
+      ["info", "fit", "c23"],
+      ["info", "fit", "c35"],
+    ]);
   });
 
   it("answers only the members --select names, as derive --json has them (§7.3)", async () => {
@@ -234,7 +248,13 @@ describe("alukit derive, cutlist and bom", () => {
     const json = await capture(["bom", project("cart"), "--format", "json"]);
     const b = JSON.parse(json.out.join("\n"));
     expect(b.schema).toBe("alukit.bom/1");
-    expect(b.diagnostics).toEqual([]);
+    expect(b.diagnostics.map((x: { entity: string }) => x.entity)).toEqual([
+      "c21",
+      "c22",
+      "c33",
+      "c23",
+      "c35",
+    ]);
   });
 
   it("exits 1 for the BOM of a document with an error, naming it", async () => {
@@ -271,6 +291,11 @@ describe("alukit derive, cutlist and bom", () => {
     expect(r.code).toBe(1);
     expect(r.out.join("\n")).toMatch(/^## test-vendor: BLOCKED$/m);
     expect(r.err).toEqual([
+      "warn connection c21: b18.a's end face overhangs b9's face +x by 30.00 mm: 2969.10 of its 4969.10 mm² (59.8 %) bear on nothing",
+      "warn connection c22: b18.b's end face overhangs b10's face -x by 30.00 mm: 2969.10 of its 4969.10 mm² (59.8 %) bear on nothing",
+      "warn connection c33: b32.b's end face overhangs b31's end b by 16.28 mm: 662.74 of its 2262.74 mm² (29.3 %) bear on nothing",
+      "info fit c23: test-geo:WSH-M10 gives no outside diameter (d2_mm), so its seats are not checked: c23",
+      "info fit c35: test-gen:SCR-M5x25 gives no bearing diameter (dw_mm, dk_mm or s_mm), so its seats are not checked: c35",
       "BLOCKED local: open-item: O2: price the sensor bracket with the local shop",
       "BLOCKED local: missing-price: project:angle-a: no price",
       "BLOCKED test-gen-vendor: open-item: O1: confirm the rail screws' length against the rail's counterbore",

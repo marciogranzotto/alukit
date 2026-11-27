@@ -456,7 +456,8 @@ describe("parts and patterns", () => {
     expect((r.state.doc.bars as Record<string, Record<string, unknown>>).b35?.a).toEqual({
       on: { bar: "b9", at_mm: 300 },
     });
-    expect(errorsOf(d1)).toEqual([]);
+    // Nothing new: the cart's own warnings, its three overhanging end faces (§4.5).
+    expect(errorsOf(d1)).toEqual(errorsOf(d0));
   });
 
   it("array copies at a pitch as ordinary entities", () => {
@@ -525,7 +526,12 @@ describe("mirror", () => {
       cut: d.b2?.cut,
       centre: d.b2?.centre,
     });
-    expect(errorsOf(derived(r.state))).toEqual([]);
+    // The brace, rolled 30°, and its image overhang the beam's top alike (§4.5): two warnings.
+    const m = derived(r.state);
+    expect(errorsOf(m)).toEqual(["connection c1", "connection c2"]);
+    const seat = (c: string) => m.butts.get(c)?.ends[0];
+    expect(seat("c2")?.overhang).toBeCloseTo(seat("c1")?.overhang ?? Number.NaN, 9);
+    expect(seat("c2")?.overhang_area).toBeCloseTo(seat("c1")?.overhang_area ?? Number.NaN, 9);
   });
 
   it("refuses what the plane does not map onto itself, and keeps a node on the plane", () => {
