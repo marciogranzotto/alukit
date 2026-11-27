@@ -40,6 +40,66 @@ async function atRest(page: Page): Promise<void> {
 
 const selection = (page: Page) => page.evaluate(() => window.__alukit?.selection());
 
+/** Runs a menu entry on the selection: Shift+F10 opens the menu, a click runs the entry. */
+async function fromMenu(page: Page, action: string): Promise<void> {
+  await page.getByTestId("skip-link").focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByTestId("context-menu").locator(`[data-action="${action}"]`).click();
+}
+
+const range = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, i) => `b${from + i}`);
+
+test("on the frame: same tags, a tag's head, Ctrl+A, similar and connected select as the CLI does", async ({
+  page,
+}) => {
+  // The editing audit's frame: 1000 × 600 × 750 of 40 × 40, made by `alukit add frame`; b1–b4
+  // are its posts (tag post), b5–b8 its base, b9–b12 its top.
+  served = await serve("brace");
+  await openTab(page, served, 0);
+
+  // "Select tagged post" on a post: the four posts.
+  await selectByIds(page, ["b2"]);
+  await fromMenu(page, "select-tagged");
+  await expect.poll(() => selection(page)).toEqual(range(1, 4));
+
+  // The outline by tag: a click on the head "post" selects its members; its twisty still opens
+  // and closes it, and leaves the selection as it was.
+  await page.keyboard.press("Escape");
+  await expect.poll(() => selection(page)).toEqual([]);
+  await page.getByRole("checkbox", { name: "by tag" }).check();
+  const head = page.getByTestId("tree").locator('[data-key="g:tag:post"]');
+  await head.locator(".title").click();
+  await expect.poll(() => selection(page)).toEqual(range(1, 4));
+  await head.locator(".twisty").click();
+  await expect(head).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByTestId("tree").locator('[data-id="b1"]')).toHaveCount(0);
+  expect(await selection(page)).toEqual(range(1, 4));
+  await head.locator(".twisty").click();
+  await expect(head).toHaveAttribute("aria-expanded", "true");
+
+  // Ctrl+A: the twelve bars.
+  await page.getByTestId("skip-link").focus();
+  await page.keyboard.press("ControlOrMeta+a");
+  await expect.poll(() => selection(page)).toEqual(range(1, 12));
+
+  // Similar on a post: every bar of its item and options, as `alukit query like:b1`.
+  const like = JSON.parse(
+    (await cli(["query", served.dir, "like:b1", "--json", "--limit", "100"])).out,
+  ) as { entities: { id: string }[] };
+  await selectByIds(page, ["b1"]);
+  await fromMenu(page, "select-similar");
+  await expect.poll(() => selection(page)).toEqual(like.entities.map((e) => e.id));
+
+  // Connected on the front base rail b5: the bars its joints join to it, b1 and b2 (the posts
+  // it butts on) and b7 and b8 (the side rails butted with it), as `alukit query connected:b5`.
+  await selectByIds(page, ["b5"]);
+  await fromMenu(page, "select-connected");
+  await expect.poll(() => selection(page)).toEqual(["b1", "b2", "b5", "b7", "b8"]);
+  // None of it is a step.
+  expect(await page.evaluate(() => window.__alukit?.rev())).toBe(0);
+});
+
 test("a box right to left takes what it touches, left to right only what lies inside", async ({
   page,
 }) => {

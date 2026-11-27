@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Problem } from "#core/problems/types.ts";
 import type { Corner } from "../corners.ts";
 import type { Model } from "../model.ts";
-import { groupsOf, placesOf, problemsByEntity, rowsOf } from "./rows.ts";
+import { groupsOf, membersOf, placesOf, problemsByEntity, rowsOf } from "./rows.ts";
 
 /** The outline's rows and groups (rows.ts): entities in words, Joints by corner. */
 
@@ -94,6 +94,16 @@ describe("groupsOf", () => {
       ["(untagged)", ["c1", "p1"]],
       ["leg", ["b1"]],
     ]);
+  });
+});
+
+describe("membersOf", () => {
+  it("is every row under a head, its subgroups' too: what a click on the head selects", () => {
+    const g = groupsOf(M, { byTag: false, filter: "", corners: [corner("0,0,900", ["c1"])] });
+    expect(membersOf(g.find((x) => x.key === "bars") as never)).toEqual(["b1", "b2", "b2@1"]);
+    expect(membersOf(g.find((x) => x.key === "connections") as never)).toEqual(["c1", "c2"]);
+    const tags = groupsOf(M, { byTag: true, filter: "", corners: [] });
+    expect(membersOf(tags.find((x) => x.title === "leg") as never)).toEqual(["b1"]);
   });
 });
 

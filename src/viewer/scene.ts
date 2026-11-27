@@ -200,6 +200,8 @@ export interface CornerMarker {
   state: "joined" | "open" | "failed";
   /** The bar that runs through, when one does. */
   through?: string;
+  /** The bars that meet here: while every one is hidden, the marker is not drawn (E-UX-9). */
+  bars?: readonly string[];
 }
 
 /** A problem drawn on the entities it is about (S3.7). */
@@ -269,7 +271,11 @@ export interface Viewer {
    * pans. Returns the undo.
    */
   onContextMenu(cb: (hit: Hit | undefined, client: readonly [number, number]) => void): () => void;
-  /** The entities hidden from the view (E-UX-9). A no-op until E2.4 builds hiding. */
+  /**
+   * The bodies hidden from the view (E-UX-9), by id (a bar, a part, a pattern copy, a connection's
+   * fasteners): not drawn, not picked, left out of a box select, the x-ray, the badges, and the
+   * joint markers whose bars are all hidden; the camera fits what is left. No material changes.
+   */
   setHidden(ids: ReadonlySet<string>): void;
   /**
    * Looks from a standard view (iso, top, front, right or side, left, back, bottom), fitted to
@@ -377,6 +383,14 @@ function bodyMaterial(opts: ConstructorParameters<typeof MeshLambertMaterial>[0]
     polygonOffsetUnits: 1,
     ...opts,
   });
+}
+
+/** An instanced mesh's matrices as placed, kept to put a hidden instance back, none hidden. */
+function placedOf(mesh: InstancedMesh): { placed: Float32Array; off: boolean[] } {
+  return {
+    placed: (mesh.instanceMatrix.array as Float32Array).slice(),
+    off: Array.from({ length: mesh.count }, () => false),
+  };
 }
 
 /** Where an entity's edges sit in a merged edge buffer: first vertex and count. */
@@ -504,6 +518,13 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     tones: Hex[];
     fixed?: boolean;
     shown: Hex[];
+    /**
+     * Each instance's matrix as placed, 16 floats each: a hidden instance's matrix is zeroed (it
+     * draws nothing), and this puts it back (E-UX-9: hiding changes no material).
+     */
+    placed: Float32Array;
+    /** Which instances are hidden now. */
+    off: boolean[];
   }
   interface Single {
     mesh: Mesh;
@@ -572,6 +593,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     badges: 0,
   };
   let selection: ReadonlySet<string> = new Set();
+  /** The bodies hidden (E-UX-9), by id: not drawn, not picked, their markers not drawn. */
+  let hiddenIds: ReadonlySet<string> = new Set();
   let highlight: ReadonlySet<string> = new Set();
   let hovered: ReadonlySet<string> = new Set();
   let ghost: ReadonlySet<string> | undefined;
@@ -783,7 +806,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       mesh.computeBoundingSphere();
       content.add(mesh);
       owned.push({ dispose: () => mesh.dispose() });
-      instanced.push({ mesh, ids, items, tones, shown: tones.map(() => -1) });
+      instanced.push({ mesh, ids, items, tones, shown: tones.map(() => -1), ...placedOf(mesh) });
       instancedCount += g.bars.length;
     }
 
@@ -891,6 +914,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         tones: ids.map(() => theme.body.hole),
         fixed: true,
         shown: ids.map(() => -1),
+        ...placedOf(mesh),
       });
     }
 
@@ -918,6 +942,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         items: fs.map((f) => f.item),
         tones: ids.map(() => theme.body.fastener),
         shown: ids.map(() => -1),
+        ...placedOf(mesh),
       });
     }
 
@@ -985,6 +1010,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
 
   /** An entity's edges now: colour and alpha for its outline, alpha for its detail. */
   function edgeLook(id: string, body: Hex): { colour: Hex; outline: number; detail: number } {
+    // A hidden bar's edges stay in the merged buffers, drawn with no alpha: nothing is rebuilt.
+    if (hiddenIds.has(id)) return { colour: body, outline: 0, detail: 0 };
     const ghosted = ghost !== undefined && !ghost.has(id) && !selection.has(id);
     // Only what blocks or errs outlines its bar, in red; a warning keeps its triangle badge and
     // leaves the amber band to the selection, which its outline was read as (review m1).
@@ -1080,6 +1107,37 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     invalidate();
   }
 
+  /**
+   * Hides and shows bodies by what draws them, never by their materials (E-UX-9, E-UX-19): an
+   * instance's matrix is zeroed, so it draws nothing, and put back from where it was placed; a
+   * body of its own and its edges are made invisible; a bar's edges in the merged buffers take no
+   * alpha (`edgeLook`). The x-ray, the joint markers and the badges leave out what is hidden.
+   */
+  function applyHidden(): void {
+    for (const g of instanced) {
+      const a = g.mesh.instanceMatrix.array as Float32Array;
+      let changed = false;
+      g.ids.forEach((id, i) => {
+        const off = hiddenIds.has(id);
+        if (g.off[i] === off) return;
+        g.off[i] = off;
+        if (off) a.fill(0, i * 16, i * 16 + 16);
+        else a.set(g.placed.subarray(i * 16, i * 16 + 16), i * 16);
+        changed = true;
+      });
+      if (changed) g.mesh.instanceMatrix.needsUpdate = true;
+    }
+    for (const s of single) {
+      const on = !hiddenIds.has(s.id);
+      s.mesh.visible = on;
+      if (s.edges) s.edges.visible = on;
+    }
+    paint();
+    buildXray();
+    drawCorners();
+    drawBadges();
+  }
+
   /** The selection's outline again, on top of everything, faint: where it continues, hidden. */
   function buildXray(): void {
     const pts: number[] = [];
@@ -1087,13 +1145,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       const pos = (outline.lines.geometry.getAttribute("position") as BufferAttribute)
         .array as Float32Array;
       for (const id of selection) {
+        if (hiddenIds.has(id)) continue;
         const r = outline.ranges.get(id);
         if (r)
           for (let k = r.start * 3; k < (r.start + r.count) * 3; k++) pts.push(pos[k] as number);
       }
     }
     for (const s of single) {
-      if (!selection.has(s.id) || !s.edges) continue;
+      if (!selection.has(s.id) || !s.edges || hiddenIds.has(s.id)) continue;
       const pos = (s.edges.geometry.getAttribute("position") as BufferAttribute)
         .array as ArrayLike<number>;
       const frame = s.mesh.matrix.elements;
@@ -1115,6 +1174,19 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     const box = new Box3();
     for (const c of content.children) if (!(c instanceof LineSegments)) box.expandByObject(c);
     return box.isEmpty() ? EMPTY_BOX.clone() : box;
+  }
+
+  /**
+   * The box of what is drawn now, in three's frame, which the camera fits: the model's, less what
+   * is hidden (an isolated corner is framed alone); the model's when nothing is shown.
+   */
+  function shownBox(): Box3 {
+    if (hiddenIds.size === 0 || !model) return modelBox();
+    const ids = new Set(
+      [...Object.keys(model.bars), ...Object.keys(model.parts)].filter((id) => !hiddenIds.has(id)),
+    );
+    const box = boxOf(ids);
+    return box.isEmpty() ? modelBox() : box;
   }
 
   /** The box of some entities in three's frame: bars by their corners, parts by their meshes. */
@@ -1214,7 +1286,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     const dir = new Vector3(from[0], from[2], -from[1]).normalize();
     // Exactly down or up: lean a hair toward world −Y, so the screen's up is world +Y.
     if (Math.abs(dir.y) > 1 - 1e-9) dir.set(0, Math.sign(dir.y), 1e-6).normalize();
-    fitThreeBox(modelBox(), animate, dir);
+    fitThreeBox(shownBox(), animate, dir);
     return true;
   }
 
@@ -1285,7 +1357,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       const g = instanced.find((x) => x.mesh === h.object);
       const s = single.find((x) => x.mesh === h.object);
       const id = g && h.instanceId !== undefined ? g.ids[h.instanceId] : s?.id;
-      if (!id || skip?.has(id)) continue;
+      // What is hidden is not there to pick either: the ray goes on to what is behind it.
+      if (!id || skip?.has(id) || hiddenIds.has(id)) continue;
       const r = raycaster.ray;
       const ray: Ray = {
         o: fromThree([r.origin.x, r.origin.y, r.origin.z]),
@@ -1351,12 +1424,13 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     };
     const out: string[] = [];
     for (const [id, bar] of Object.entries(model.bars)) {
+      if (hiddenIds.has(id)) continue;
       const view = model.display.bars[id];
       const section = view ? model.display.sections[view.section] : undefined;
       if (view && section && within(barCorners(bar, section, view))) out.push(id);
     }
     for (const s of single) {
-      if (!model.parts[s.id]) continue;
+      if (!model.parts[s.id] || hiddenIds.has(s.id)) continue;
       const g = s.mesh.geometry;
       g.computeBoundingBox();
       const b = g.boundingBox as Box3;
@@ -1577,14 +1651,18 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   // Markers: the joints and the problem badges
 
   const JOINT_GLYPH = { joined: "joined", open: "open", failed: "failed" } as const;
+  /** A corner is drawn while one of its bars is (a corner given no bars always is). */
+  const cornerShown = (c: CornerMarker) =>
+    !c.bars || c.bars.length === 0 || c.bars.some((b) => !hiddenIds.has(b));
   function drawCorners(): void {
     const colour = {
       joined: theme.status.ready,
       open: theme.status.warn,
       failed: theme.status.blocked,
     };
+    const shown = corners.filter(cornerShown);
     joints.set(
-      corners.map(
+      shown.map(
         (c): MarkerPoint => ({
           key: c.key,
           at: c.at,
@@ -1594,7 +1672,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       ),
     );
     counts.joints = { joined: 0, open: 0, failed: 0 };
-    for (const c of corners) counts.joints[c.state]++;
+    for (const c of shown) counts.joints[c.state]++;
     emphasiseCorners();
   }
 
@@ -1627,7 +1705,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     const pts: MarkerPoint[] = [];
     for (const [id, sev] of badgeOf) {
       const at = anchorOf(id);
-      if (!at) continue;
+      if (!at || hiddenIds.has(id)) continue;
       pts.push({
         key: id,
         at,
@@ -1743,10 +1821,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     setModel(m) {
       model = m;
       build(m);
-      paint();
-      buildXray();
-      drawCorners();
-      drawBadges();
+      // Paints, and draws the x-ray, the markers and the badges, with what stays hidden left out.
+      applyHidden();
       // The first model is shown whole, even an empty one; later revisions keep the view.
       if (!fitted) {
         fitView();
@@ -1801,16 +1877,17 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       menuCbs.add(cb);
       return () => menuCbs.delete(cb);
     },
-    setHidden() {
-      // E2.4 draws hidden bodies hidden, and Select's own pick passes them over.
+    setHidden(ids) {
+      hiddenIds = ids;
+      applyHidden();
     },
     setView,
     setProjection,
     projection: () => (camera === ortho ? "orthographic" : "perspective"),
     fitView,
     fitSelection(ids) {
-      const box = ids.size > 0 ? boxOf(ids) : modelBox();
-      fitThreeBox(box.isEmpty() ? modelBox() : box, true);
+      const box = ids.size > 0 ? boxOf(ids) : shownBox();
+      fitThreeBox(box.isEmpty() ? shownBox() : box, true);
     },
     renderNow() {
       controls.update(0);
@@ -1888,11 +1965,11 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       applyThemeMaterials();
       if (model) {
         build(model);
-        paint();
-        buildXray();
+        applyHidden();
+      } else {
+        drawCorners();
+        drawBadges();
       }
-      drawCorners();
-      drawBadges();
       invalidate();
     },
     onRender(cb) {

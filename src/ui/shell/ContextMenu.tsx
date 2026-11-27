@@ -2,10 +2,12 @@ import { signal } from "@preact/signals";
 import { Fragment } from "preact";
 import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
+  type Action,
   type ActionContext,
   type ActionGroup,
   actionsFor,
   keyCaps,
+  registerAction,
   runAction,
   titleOf,
 } from "../actions/registry.ts";
@@ -14,6 +16,7 @@ import { extendHook } from "../hook.ts";
 import { onKey } from "../keys.ts";
 import { model, tell } from "../store.ts";
 import { activeTool, gesture } from "../tools/state.ts";
+import { type SizeBox, sizeOf } from "../viewport/size.ts";
 import { viewer } from "../viewport/viewer.ts";
 
 /**
@@ -138,7 +141,11 @@ function MenuBox({ r }: { r: MenuRequest }) {
     const outside = (e: PointerEvent) => {
       if (box.current && !box.current.contains(e.target as Node)) closeMenu();
     };
+    // The browser's own menu never opens over this one (the Menu key and Shift+F10 also send
+    // `contextmenu`, after the key that opened this).
+    const native = (e: Event) => e.preventDefault();
     document.addEventListener("pointerdown", outside, true);
+    document.addEventListener("contextmenu", native, true);
     window.addEventListener("resize", closeMenu);
     let rev = model.peek()?.rev;
     const offModel = model.subscribe((m) => {
@@ -198,6 +205,7 @@ function MenuBox({ r }: { r: MenuRequest }) {
       offKey();
       offModel();
       document.removeEventListener("pointerdown", outside, true);
+      document.removeEventListener("contextmenu", native, true);
       window.removeEventListener("resize", closeMenu);
       if (before instanceof HTMLElement && before.isConnected) before.focus();
     };
@@ -249,9 +257,65 @@ function MenuBox({ r }: { r: MenuRequest }) {
 }
 
 /**
+ * Where the keyboard opens the menu (E-UX-2's Shift+F10 and Menu key): by the outline's row when
+ * the focus is on one, about that row; else at the selection's middle in the view, about the
+ * selection; else in the middle of the view.
+ */
+function keyedMenuAt(m: ActionContext["m"]): { at: [number, number]; from: ActionContext["from"] } {
+  const row = (document.activeElement as HTMLElement | null)?.closest?.('[role="treeitem"]');
+  if (row) {
+    const r = row.getBoundingClientRect();
+    return { at: [r.left + 24, r.bottom], from: "outline" };
+  }
+  const v = viewer.peek();
+  const box = selection.peek().size > 0 ? sizeOf(m, [...selection.peek()]) : undefined;
+  const mid = box && v?.project(centreOf(box));
+  if (mid) return { at: [mid[0], mid[1]], from: "key" };
+  const vp = document.querySelector('[data-testid="viewport"]')?.getBoundingClientRect();
+  return { at: vp ? [vp.left + vp.width / 2, vp.top + vp.height / 2] : [0, 0], from: "key" };
+}
+
+const centreOf = (b: SizeBox): [number, number, number] => [
+  (b[0][0] + b[1][0]) / 2,
+  (b[0][1] + b[1][1]) / 2,
+  (b[0][2] + b[1][2]) / 2,
+];
+
+/**
+ * Shift+F10 and the Menu key open the menu for the selection (E-UX-2; WAI-ARIA's menu pattern).
+ * It is never an entry of a menu itself.
+ */
+const OPEN_MENU: Action = {
+  id: "menu",
+  title: "Open the menu",
+  group: "select",
+  keys: ["shift+f10", "contextmenu"],
+  help: "Open the menu of the selection (or of the outline's row)",
+  applies: () => false,
+  when: () => (menu.peek() ? "the menu is open" : true),
+  run(c) {
+    const { at, from } = keyedMenuAt(c.m);
+    openMenu({ m: c.m, selection: selection.peek(), from }, at);
+  },
+};
+
+/**
+ * Opens the menu from the outline (E2.1): a right-click on a row is about that row, selecting it
+ * first when it is not selected, as in the view; on a group's head, about its members.
+ */
+export function outlineMenu(e: MouseEvent, ids: readonly string[]): void {
+  e.preventDefault();
+  const m = model.peek();
+  if (!m || ids.length === 0) return;
+  const sel = selection.peek();
+  if (!ids.every((id) => sel.has(id))) select(ids, "replace");
+  openMenu({ m, selection: selection.peek(), from: "outline" }, [e.clientX, e.clientY]);
+}
+
+/**
  * Opens the menu from the view (E-UX-2): a right-click that did not move, in Select with no drag
  * on, opens it on what is under the pointer, selecting that first when it is not selected; on
- * empty space, on the selection. Returns the undo.
+ * empty space, on the selection. Registers the menu's keys (Shift+F10, Menu). Returns the undo.
  */
 export function connectMenu(): () => void {
   let offView: (() => void) | undefined;
@@ -264,9 +328,11 @@ export function connectMenu(): () => void {
       openMenu({ m, selection: selection.peek(), ...(hit ? { hit } : {}), from: "view" }, at);
     });
   });
+  const offKeys = registerAction(OPEN_MENU);
   return () => {
     off();
     offView?.();
+    offKeys();
   };
 }
 

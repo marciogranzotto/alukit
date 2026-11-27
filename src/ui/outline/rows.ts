@@ -249,6 +249,14 @@ export function groupsOf(
   return out;
 }
 
+/**
+ * Every row under a group, its subgroups' rows included, in the tree's order: what a click on its
+ * head selects (editing audit E2.2), and what its count counts.
+ */
+export function membersOf(g: Group): string[] {
+  return [...(g.groups ?? []).flatMap(membersOf), ...g.rows.map((r) => r.id)];
+}
+
 /** Where a ref sits in the outline: the groups to open, outermost first, and its item's key. */
 export interface Place {
   trail: Group[];

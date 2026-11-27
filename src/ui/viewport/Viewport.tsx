@@ -13,7 +13,7 @@ import {
 import { docViews } from "../../viewer/views.ts";
 import { swatches } from "../common/ItemSwatch.tsx";
 import { type Corner, cornersOf } from "../corners.ts";
-import { clearShow, hover, select, selection, shown } from "../focus.ts";
+import { clearShow, hidden, hover, select, selection, shown } from "../focus.ts";
 import { extendHook } from "../hook.ts";
 import { onKey } from "../keys.ts";
 import { meshInput } from "../model.ts";
@@ -169,6 +169,8 @@ export function Viewport({
       });
       offs.push(
         selection.subscribe((s) => v.setSelection(s)),
+        // What is hidden or isolated (E-UX-9): not drawn, not picked.
+        hidden.subscribe((h) => v.setHidden(h)),
         // The corners, drawn while the joints are on.
         effect(() => {
           const m = model.value;

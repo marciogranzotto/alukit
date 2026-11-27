@@ -301,23 +301,6 @@ function DeleteDialog({ a }: { a: Asking }) {
   );
 }
 
-/** The inspector's Delete button, for the selection. */
-export function DeleteButton({ label = "Delete" }: { label?: string }) {
-  const off = summary.value?.status.readOnly === true || busy.value || planning.value;
-  return (
-    <button
-      type="button"
-      class="btn"
-      data-testid="delete"
-      disabled={off}
-      title="Delete the selection, and say first what else goes (Delete or Backspace)"
-      onClick={() => void startDelete()}
-    >
-      {label} <kbd>⌫</kbd>
-    </button>
-  );
-}
-
 /**
  * Delete's dialog: mounted once, by the inspector, for as long as the app is shown. Its keys and
  * its line in the help are the `delete` action's (inspector/actions.ts).

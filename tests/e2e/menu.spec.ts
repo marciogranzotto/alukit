@@ -70,29 +70,29 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
   // What was under the pointer is selected first (E-UX-2), and the menu names it.
   expect(await page.evaluate(() => window.__alukit?.selection())).toEqual(["b1"]);
   await expect(menu).toHaveAttribute("aria-label", "Actions on b1");
-  const items = menu.getByRole("menuitem");
-  await expect(items).toHaveText([
-    /^Delete\s*Delete/,
-    /^Join b1\.a/,
-    /^Replace profile…/,
-    /^Fit to the selection\s*F/,
-    /^Show/,
-  ]);
+  // Each stream adds its actions to the menu as it lands: the seeded ones are there, in their
+  // groups' order (select, edit, bar, view), each with its keys, enabled or saying why.
   const hook = await page.evaluate(() => window.__alukit?.menu());
   expect(hook?.title).toBe("b1");
-  expect(hook?.entries.map((e) => [e.id, e.enabled])).toEqual([
-    ["delete", true],
-    ["join-end", true],
-    ["replace", true],
-    ["fit", true],
-    ["show", true],
-  ]);
+  const ids = hook?.entries.map((e) => e.id) ?? [];
+  const seeded = ["select-all", "select-similar", "delete", "join-end", "replace", "fit", "show"];
+  expect(ids.filter((id) => seeded.includes(id))).toEqual(seeded);
+  for (const id of seeded) {
+    expect(hook?.entries.find((e) => e.id === id)?.enabled, id).toBe(true);
+  }
+  const item = (id: string) => menu.locator(`[data-action="${id}"]`);
+  await expect(item("delete")).toHaveText(/^Delete\s*Delete/);
+  await expect(item("join-end")).toHaveText(/^Join b1\.a/);
+  await expect(item("replace")).toHaveText(/^Replace profile…/);
+  await expect(item("fit")).toHaveText(/^Fit to the selection\s*F/);
+  await expect(item("select-all")).toHaveText(/^Select all\s*Ctrl\+A/);
   // The first entry has the focus; the arrow keys move it, and a letter jumps to its entry.
+  const items = menu.getByRole("menuitem");
   await expect(items.first()).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(items.nth(1)).toBeFocused();
-  await page.keyboard.press("s");
-  await expect(items.nth(4)).toBeFocused();
+  await page.keyboard.press("r");
+  await expect(item("replace")).toBeFocused();
 
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);
@@ -101,4 +101,105 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
   expect(await page.evaluate(() => window.__alukit?.selection())).toEqual(["b1"]);
   expect(await page.evaluate(() => window.__alukit?.rev())).toBe(0);
   expect(await docOf(served.dir)).toEqual(before);
+});
+
+test("a right-drag pans and opens no menu; Shift+F10 opens it for the selection", async ({
+  page,
+}) => {
+  served = await serve("cart");
+  await openTab(page, served, 0);
+  const at = await onB1(page);
+  const s = await page.evaluate((p) => window.__alukit?.screen(p), at);
+  if (!s) throw new Error("b1 is off the screen");
+  const camera = () => page.evaluate(() => window.__alukit?.camera()?.target);
+  const before = await camera();
+  // A right press, a drag, a release: the camera pans (E-UX-2), and nothing opens.
+  await page.mouse.move(s[0], s[1]);
+  await page.mouse.down({ button: "right" });
+  await page.mouse.move(s[0] + 80, s[1] + 30, { steps: 8 });
+  await page.mouse.up({ button: "right" });
+  await expect
+    .poll(async () => page.evaluate(() => window.__alukit?.camera()?.moving), { timeout: 10_000 })
+    .toBe(false);
+  expect(await camera()).not.toEqual(before);
+  await expect(page.getByTestId("context-menu")).toHaveCount(0);
+  expect(await page.evaluate(() => window.__alukit?.selection())).toEqual([]);
+
+  // Shift+F10, with b5 selected and the focus off the outline: the menu about b5, in the view.
+  await selectByIds(page, ["b5"]);
+  await page.getByTestId("skip-link").focus();
+  await page.keyboard.press("Shift+F10");
+  const menu = page.getByTestId("context-menu");
+  await expect(menu).toHaveAttribute("aria-label", "Actions on b5");
+  await expect(menu.getByRole("menuitem").first()).toBeFocused();
+  const vb = await page.getByTestId("viewport").boundingBox();
+  const mb = await menu.boundingBox();
+  if (!vb || !mb) throw new Error("no box");
+  expect(mb.x).toBeGreaterThanOrEqual(vb.x);
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  // The Menu key does the same; nothing was written.
+  await page.getByTestId("skip-link").focus();
+  await page.keyboard.press("ContextMenu");
+  await expect(menu).toHaveAttribute("aria-label", "Actions on b5");
+  await page.keyboard.press("Escape");
+  expect(await page.evaluate(() => window.__alukit?.rev())).toBe(0);
+});
+
+test("a right-click on an outline row opens the menu about it; a head's, about its members", async ({
+  page,
+}) => {
+  served = await serve("cart");
+  await openTab(page, served, 0);
+  await selectByIds(page, ["b2"]);
+  const tree = page.getByTestId("tree");
+  await tree.locator('[data-id="b9"]').click({ button: "right" });
+  const menu = page.getByTestId("context-menu");
+  await expect(menu).toHaveAttribute("aria-label", "Actions on b9");
+  expect(await page.evaluate(() => window.__alukit?.selection())).toEqual(["b9"]);
+  // Shift+F10 on a focused row opens it there, about the selection.
+  await page.keyboard.press("Escape");
+  await tree.locator('[data-id="b9"]').focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(menu).toHaveAttribute("aria-label", "Actions on b9");
+  // By the row: just right of its start, from its foot (or above, when the page ends first).
+  const row = await tree.locator('[data-id="b9"]').boundingBox();
+  const mb = await menu.boundingBox();
+  if (!row || !mb) throw new Error("no box");
+  expect(Math.abs(mb.x - (row.x + 24))).toBeLessThan(6);
+  expect(mb.y).toBeLessThanOrEqual(row.y + row.height + 1);
+  await page.keyboard.press("Escape");
+  // A group's head: its members, the 34 bars and their pattern copies.
+  const bars = await tree.locator('[data-key^="r:bars:"]').count();
+  await tree.locator('[data-key="g:bars"]').click({ button: "right" });
+  await expect(menu).toHaveAttribute("aria-label", `Actions on ${bars} selected`);
+  await page.keyboard.press("Escape");
+});
+
+test("the selection header's buttons are the registry's edits, greyed with why", async ({
+  page,
+}) => {
+  served = await serve("cart");
+  await openTab(page, served, 0);
+  await selectByIds(page, ["b1"]);
+  const head = page.getByTestId("properties").locator(".insp-head");
+  const ids = () =>
+    head
+      .locator("[data-action]")
+      .evaluateAll((els) => els.map((e) => e.getAttribute("data-action")));
+  // Delete, as the Delete action (its title, its key); in a tool it is greyed, saying why.
+  expect(await ids()).toContain("delete");
+  const del = head.locator('[data-action="delete"]');
+  await expect(del).toHaveText(/^Delete\s*Delete$/);
+  await expect(del).not.toHaveAttribute("aria-disabled", "true");
+  await page.keyboard.press("b");
+  await expect(del).toHaveAttribute("aria-disabled", "true");
+  await expect(del).toHaveAttribute("title", "Delete works in Select: press Esc first");
+  await page.keyboard.press("Escape");
+  // Several selected: the same buttons, about them all; a click runs the action: Delete's dialog
+  // lists what else goes, and nothing is written yet.
+  await selectByIds(page, ["b1", "b2"]);
+  await head.locator('[data-action="delete"]').click();
+  await expect(page.getByTestId("delete-dialog")).toBeVisible();
+  expect(await page.evaluate(() => window.__alukit?.rev())).toBe(0);
 });
