@@ -75,7 +75,8 @@ catalog checks) passes, and CI is green.
 - **Findings on the reference project itself:** AluKit found six errors in that project's
   record (missing screws and bolts, two masses, rail end distances, and a joint whose screws miss
   their block) plus one open question (which core takes a single end screw). The project's own
-  session confirmed and fixed five; the joint and the question are with it.
+  session confirmed four of the first five, the bolt count in part (18 where AluKit had said 20),
+  and fixed all five. The joint and the question are with it.
 
 **What v1 leaves for later** (each a *v1 limit* in the design):
 
