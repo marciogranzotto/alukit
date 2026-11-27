@@ -11,6 +11,8 @@ import { model, redo, select, selection, summary, undo } from "./store.ts";
 import { Hint, projection, Toolbar, ToolPanel, viewer } from "./ToolPanel.tsx";
 import { NoAccess, ReadOnlyBanner, TopBar } from "./TopBar.tsx";
 import { Tree } from "./Tree.tsx";
+import { theme } from "./theme/theme.ts";
+import { viewTheme } from "./theme/tokens.ts";
 import {
   activeTool,
   createTools,
@@ -71,7 +73,7 @@ function Viewport({ snapshot }: { snapshot?: string | undefined }) {
 
   useEffect(() => {
     if (!host.current) return;
-    const v = createViewer(host.current);
+    const v = createViewer(host.current, viewTheme(theme.peek()));
     v0.current = v;
     viewer.value = v;
     if (!snapshot) {
