@@ -2053,7 +2053,10 @@ One minor finding moved no test: an end tap is not checked against the section's
 written with no position on a section with no centre core passes silently (a v1 limit, §5.5).
 *Closed after the run* (*2.3*): a tap into a bar's end on none of its section's cores is a
 `machining` error, and a section that gives no core positions an info
-([notes](notes/v1-limits-closed.md) 16–21).
+([notes](notes/v1-limits-closed.md) 16–21). With it, the reference document's single-screw end joints, where the
+record says only "the profile's tapped core" on sections with no centre core (an open item in the
+third run), are `machining` errors that hold the order until the record names the core. No
+compared number moves: the check is right, and the question is the record's.
 
 ## 14. Calls made without asking (veto any)
 

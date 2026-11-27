@@ -28,6 +28,68 @@ in the gitignored `internal/session-notes.md`.*
 | Commits | Personal repo: no AI co-author trailers. Agents commit locally; the coordinator reviews, then pushes `main`. |
 | Public hygiene | The reference project is "the reference project" only. Every push is scanned for internal names and paths. |
 
+## Final report (2026-11-27 00:20)
+
+**AluKit v1 is built and passed its acceptance.** `main` holds every milestone of
+[design §12](../design.md#12-v1-milestones-review-m9) (M0–M6, plus M4c), and the design (draft
+2.3) describes the system as built. The gate (lint, typecheck, 717 unit tests, build, Playwright,
+catalog checks) passes, and CI is green.
+
+**What you can do with it** (quickstart in the [README](../../README.md), details in the
+[guide](../guide.md)):
+
+- **Catalogs:**
+  - all of Forseti (1,034 items, 1,208 offers, 27 profile sections) plus `std` and `ref-hiwin`;
+  - `alukit catalog check | show | search | import | schema`;
+  - your own catalogs by path.
+- **Projects:** a folder with `alukit.json` and its lock.
+  - bars on points and stations, end planes and the connection types (butt, miter, splice,
+    pivot, face);
+  - patterns, parts, plates and bent angles with holes, placeholders;
+  - params, variants, costs and open items.
+- **Outputs:** derive, cut list, BOM, order (with blocking rules), costs (price bands),
+  machining sheet, GLB export and `snapshot`. Every output states its lock hash.
+- **Agents:** the CLI (`new`, `do`, `add`, `query`, `check`, `fmt`, `lock update`, `diff`,
+  `revision`) and the skill (`alukit skill install`).
+- **The browser app** (`alukit serve` or `pnpm dev`):
+  - a live view shared with the CLI;
+  - drawing with snapping, connect and pattern tools;
+  - the catalog browser, variants, revisions, a section plane;
+  - a drawer with cut list, BOM, order, costs, machining, open items, params, decisions, checks
+    and log.
+
+**The evidence:**
+
+- **34 golden cases** (G1–G34), each with a hand script that imports nothing from AluKit.
+- **The cart fixture:** its cut list, BOM, order and machining sheet match hand-worked goldens
+  byte for byte.
+- **Acceptance on the reference project's whole frame** (§13; full report internal): it took
+  three runs.
+  - **Runs 1 and 2** passed every numeric test but failed on gaps in AluKit's model. Those gaps
+    (A1–A9) were fixed at the root, with new golden cases G29–G34.
+  - **Run 3 passed:**
+    - all 214 pieces within 0.05 mm of the drawing;
+    - mass within 0.03 %;
+    - every vendor line to the cent on a frozen lock;
+    - the counts.
+- **Findings on the reference project itself:** AluKit found six errors in that project's
+  record (missing screws and bolts, two masses, rail end distances, and a joint whose screws miss
+  their block) plus one open question (which core takes a single end screw). The project's own
+  session confirmed and fixed five; the joint and the question are with it.
+
+**What v1 leaves for later** (each a *v1 limit* in the design):
+
+- editing an existing connection in the properties panel; dragging a node or an end;
+- `channel` and `beam` section generators;
+- `services.json` (machining prices other than by cost lines);
+- placeholder hatching;
+- `serve` rebuilding `dist/`.
+
+Loads and simulation are v2 (D5).
+
+**Your calls:** see [For Marcio to review later](#for-marcio-to-review-later) below. None blocks
+anything, and each has a default in place.
+
 ## Status
 
 | Milestone | State | Notes |
@@ -50,6 +112,7 @@ in the gitignored `internal/session-notes.md`.*
 | Acceptance run 2, internal | **ran** (22:09): tests 1–4 pass with **no exceptions**; overall fails narrowly on gap A9 | The record fixed its five errors (its Rev 3.5). Mass +0.03 %; cost to the cent, the heavier-wall variant included. A1–A7 all work in the frame. |
 | Gaps A9 (one through-fastener shared by two butting ends) and A8 (positions for a connector's machining) | **done**, merged (22:52), pushed | Goldens G33, G34. Note: `docs/notes/acceptance-gaps-2.md`; design 2.3, "After acceptance run 2". |
 | Acceptance run 3, internal | **PASS** (23:09) | Tests 1–4 pass with no exceptions; no AluKit failures. Design §13 records the verdict. |
+| v1 limits: the stamp on every output, `bbox()` over parts, end taps on cores | **done**, merged (00:17), pushed | Note: `docs/notes/v1-limits-closed.md`. |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -96,6 +159,10 @@ in the gitignored `internal/session-notes.md`.*
     butt whose fastener set counts once.
   - Machining positions are read in the butting bar's section, not turned to suit the end.
   - Coincident ops are an error that blocks the supplier, not a warning.
+- **v1-limits calls (`docs/notes/v1-limits-closed.md`).**
+  - Tapped end holes count as end taps for the core check.
+  - A placed part whose item gives no box makes `bbox()` an error, as `mass()` does.
+  - A section with `bores: []` has no cores, so every end tap on it errors.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
@@ -393,3 +460,18 @@ in the gitignored `internal/session-notes.md`.*
   - One minor AluKit finding, no test moved: an end tap isn't checked against the section's cores.
     Listed as a v1 limit in §5.5 for now.
   - Design §13 and the §12 row now record the pass.
+- **00:14**: Three v1 limits closed (3 commits, failing tests first).
+  - The lock hash on every output; the price basis and oldest read date where an output has
+    prices. `/api/*` matches the CLI byte for byte, and `revision verify` still shows zero drift.
+  - `bbox()` over bars, parts and fasteners, from the viewer's and GLB's geometry
+    (`src/mesh/extent.ts`). A new test keeps three.js out of the core.
+  - End taps are checked against the section's cores. G31's and G34's fault cases gained the new
+    error, and their hand scripts agree. No golden value moved.
+- **00:17**: Merged without conflicts; gate PASS (717 tests).
+  - The core check turns acceptance run 3's open item into 18 `machining` errors on the reference
+    document. The record's single-screw end joints say "the profile's tapped core", but those
+    sections have no centre core.
+  - This is the record's question, not an AluKit gap. Nothing numeric moves, and the verdict
+    stands. Design §13 and the internal report have a dated addendum, and the question went to
+    the project's session.
+- **00:20**: Final report written (top of this log).
