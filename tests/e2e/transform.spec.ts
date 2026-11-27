@@ -110,6 +110,30 @@ test("Rotate (Q): b1 and its bracket, with b2, turned 90° about Z through b1's 
   expect(errors).toEqual([]);
 });
 
+test("Rotate from the keyboard: Q, X, 90, Enter turns about X through the selection's centre", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  served = await serve("ux/move");
+  await openTab(page, served, 0);
+  // The focus stays on the outline's row: the turn's keys still reach it.
+  await selectByIds(page, ["b3"]);
+  await page.keyboard.press("q");
+  await page.keyboard.press("x");
+  await expect.poll(() => page.evaluate(() => window.__alukit?.gesture()?.kind)).toBe("rotate");
+  await page.keyboard.type("90");
+  await expect(page.getByTestId("command-result")).toContainText(
+    "90° about X through [500, 450, 0]",
+  );
+  await page.keyboard.press("Enter");
+  await waitDrawn(page, 1);
+  expect(await lastStepWords(served.dir)).toBe("turn b3 90° about x through [500, 450, 0]");
+  expect((await doc(served.dir)).bars.b3).toMatchObject({
+    a: [500, 450, 150],
+    b: [500, 450, -150],
+  });
+});
+
 test("a ring's drag turns in 15° steps, previewed locally: few dry runs, no shader linked", async ({
   page,
 }) => {

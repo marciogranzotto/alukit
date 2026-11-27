@@ -39,8 +39,9 @@ export function createAlign(viewer: Viewer, gestures: Gestures): () => void {
     /** Where the pointer met the face: the preview's words go there. */
     let where: V3 = [0, 0, 0];
     const skip = () => new Set([...hidden.peek(), ...set.ids]);
-    const batch = () =>
-      target ? alignBatch(m, set.ids, target, drawOptions.peek().prefer) : undefined;
+    /** The step with a corner rule: Tab's, else the command bar's. */
+    const batch = (prefer = preview.flipped ?? drawOptions.peek().prefer) =>
+      target ? alignBatch(m, set.ids, target, prefer) : undefined;
 
     function draw(): void {
       const b = batch();
@@ -63,7 +64,10 @@ export function createAlign(viewer: Viewer, gestures: Gestures): () => void {
       preview.ask(
         by && b && !("why" in b)
           ? {
-              commands: () => b,
+              commands: (prefer) => {
+                const x = batch(prefer ?? undefined);
+                return x && !("why" in x) ? x : undefined;
+              },
               at: where,
               soon: true,
               words: (r) => moveWords(r, false),
@@ -83,6 +87,9 @@ export function createAlign(viewer: Viewer, gestures: Gestures): () => void {
           if (hit) where = hit.p;
         }
         draw();
+      },
+      flip() {
+        void preview.flip();
       },
       commit() {
         const b = batch();

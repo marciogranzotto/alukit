@@ -132,9 +132,9 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
     const title = copy ? `${copy.title} ${idList(set.ids)}` : `Move ${idList(set.ids)}`;
     const axisU = (): V3 | undefined => (lock ? UNIT[lock] : slide?.u);
     const rule = () => preview.flipped ?? drawOptions.peek().prefer;
-    /** A copy's step, or why it cannot be built. */
-    const copyBatch = () =>
-      duplicateBatch(m, set.ids, [now.d[0], now.d[1], now.d[2]], { ...copies, prefer: rule() });
+    /** A copy's step with a corner rule (Tab's, else the gesture's), or why it cannot be built. */
+    const copyBatch = (prefer = rule()) =>
+      duplicateBatch(m, set.ids, [now.d[0], now.d[1], now.d[2]], { ...copies, prefer });
 
     function prompt(): string {
       if (copy && !based) return "click a base point, or drag; or type an offset, then 4x or /4";
@@ -187,10 +187,15 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
       }
       const soon = snapped || label === "typed";
       if (copy) {
-        const b = copyBatch();
-        preview.ask(
-          "why" in b ? undefined : { commands: () => b, at: dest, soon, words: copyWords },
-        );
+        preview.ask({
+          commands: (prefer) => {
+            const b = copyBatch(prefer ?? rule());
+            return "why" in b ? undefined : b;
+          },
+          at: dest,
+          soon,
+          words: copyWords,
+        });
         return;
       }
       preview.ask({
@@ -346,10 +351,13 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
   // A part selected alone, in Select: the gizmo's arrow along its bar (E3.7).
   let arrowShown: GizmoSpec | undefined;
   function restArrow(): void {
+    // A move of this tool's on (the arrow's own slide among them) leaves the arrow as it is.
+    if (live) return;
     const m = model.peek();
     const sel = selection.peek();
     let want: GizmoSpec | undefined;
-    if (m && !live && activeTool.peek() === "select" && sel.size > 0) {
+    // Another gesture on (a Mirror, a Duplicate) takes the arrow away until it ends.
+    if (m && !gesture.peek() && activeTool.peek() === "select" && sel.size > 0) {
       const set = moveSet(m, sel);
       const slide = "why" in set ? undefined : slideAxis(m, set);
       const k = slide ? worldAxis(slide.u) : undefined;
@@ -439,6 +447,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
     selection.subscribe(restArrow),
     model.subscribe(restArrow),
     activeTool.subscribe(restArrow),
+    gesture.subscribe(restArrow),
     // Move with a selection and no drag on: a value typed moves it from the keyboard (D-UX-17).
     // Above the drag's own keys (wiring.ts), which take the value once the move is on.
     onKey(

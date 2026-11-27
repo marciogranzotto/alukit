@@ -293,15 +293,15 @@ export function createRotateTool(viewer: Viewer, gestures: Gestures, deps: Rotat
     selection.subscribe(rest),
     model.subscribe(rest),
     activeTool.subscribe(rest),
-    // Rotate with a selection and no turn on: a value typed turns it about the selection's centre.
+    // Rotate with a selection and no turn on: a value typed, or an axis's key, starts a turn
+    // about the selection's centre (so Q, X, 90, Enter turns 90° about X, as Blender's R X 90).
     onKey(
       "tool",
       (e) =>
         !chord(e) &&
         activeTool.peek() === "rotate" &&
         !gestures.live() &&
-        e.key.length === 1 &&
-        VALUE_START.test(e.key) &&
+        ((e.key.length === 1 && VALUE_START.test(e.key)) || AXIS_KEYS[e.key] !== undefined) &&
         selection.peek().size > 0 &&
         begin(undefined, "") &&
         gestures.key(e),
