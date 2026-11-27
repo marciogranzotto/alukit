@@ -879,3 +879,6 @@ anything, and each has a default in place.
   - Two agents he stopped by accident were relaunched.
   - **Traced sections:** at his request, Forseti's 19 generated profiles get traced cross-sections, from the catalogue's vector drawings where they exist and its raster drawings otherwise, each validated against the published kg/m and inertia before it is marked real.
   - **Ends and lengths:** he asked to drag a bar's end to extend it, auto-attaching to the bars it meets, and to click a bar's length label to type a new length. This lifts the v1 limit on dragging ends. An agent is building it on the draw tool's joint preview.
+- **12:31–12:34**: Marcio found the app has no way to move an item, and asked that the 3D view get **all the UI/UX needed to design and edit everything**.
+  - A Move tool joined the end-handle work, sharing its drag machinery.
+  - An editing audit was launched, the same method as the redesign: inventory what the model can do against what the app offers, research CAD tools and extrusion-frame configurators, a gap matrix, buildable streams, then a designer review on real editing tasks (build a table, widen it, move a shelf, change the legs' profile, add a brace, undo it all).
