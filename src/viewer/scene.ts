@@ -1200,6 +1200,11 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       return;
     }
     if (!tool && e.buttons === 0) hoverAt = { x: e.clientX, y: e.clientY };
+    // Dragging the camera or a box: nothing is under the pointer for long, so nothing hovers.
+    if (!tool && e.buttons !== 0) {
+      hoverAt = undefined;
+      reportHover(undefined);
+    }
     if (!down?.box) return;
     const cr = container.getBoundingClientRect();
     rectEl.hidden = false;
@@ -1212,6 +1217,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     if (!down) return;
     const d = down;
     down = undefined;
+    // Pick again where the drag ended, without waiting for the pointer to move.
+    if (!tool) hoverAt = { x: e.clientX, y: e.clientY };
     const additive = e.ctrlKey || e.metaKey;
     if (d.box) {
       rectEl.hidden = true;
