@@ -1,10 +1,7 @@
-import { computed, signal } from "@preact/signals";
-import { nextIdNumber } from "#core/ids.ts";
-import type { V3 } from "../mesh/model.ts";
+import type { V3 } from "../../mesh/model.ts";
 import {
   barCommands,
   type DrawEnd,
-  type DrawPoint,
   endUnder,
   nextAnchor,
   nextRoll,
@@ -12,213 +9,44 @@ import {
   previewPlacement,
   typedEnd,
   writtenPoint,
-} from "../viewer/draw.ts";
-import type { MarkerKind } from "../viewer/overlay.ts";
-import type { ToolHandler, ToolPointer, Viewer } from "../viewer/scene.ts";
-import { findSnap, type Snap, type SnapTargets, snapTargets } from "../viewer/snap.ts";
-import { facePlane, GROUND, gridSnap, rayFace, type WorkPlane } from "../viewer/workplane.ts";
-import { select, selection } from "./focus.ts";
-import { extendHook } from "./hook.ts";
-import { chord, onKey } from "./keys.ts";
-import type { Model } from "./model.ts";
-import { type PaletteItem, palette } from "./palette.ts";
-import { applyCommands, model, summary } from "./store.ts";
-import { viewer } from "./viewport/viewer.ts";
+} from "../../viewer/draw.ts";
+import type { MarkerKind } from "../../viewer/overlay.ts";
+import type { ToolHandler, ToolPointer, Viewer } from "../../viewer/scene.ts";
+import { findSnap, type Snap, type SnapTargets, snapTargets } from "../../viewer/snap.ts";
+import { facePlane, GROUND, gridSnap, rayFace } from "../../viewer/workplane.ts";
+import { select, selection } from "../focus.ts";
+import { chord, onKey } from "../keys.ts";
+import type { Model } from "../model.ts";
+import { palette } from "../palette.ts";
+import { applyCommands, model, summary } from "../store.ts";
+import { viewer } from "../viewport/viewer.ts";
+import { runOf } from "./commands.ts";
+import {
+  activeTool,
+  type ConnectPick,
+  connectPicks,
+  connectType,
+  drawOptions,
+  drawState,
+  hint,
+  measureState,
+  patternState,
+  pickingPlane,
+  pivotOptions,
+  placeState,
+  TOOL_KEYS,
+  type ToolName,
+  typed,
+  workPlane,
+} from "./state.ts";
 
 /**
- * The tools of the viewport (design §8, Tools): draw bar, connect, place part, pattern and
- * measure; select is no tool. Each turns pointer and key events into one batch of commands
- * (§7.1), sent with source `ui`; the next revision comes back on the event stream. What a tool
- * shows (its state, the hint by the pointer, its prompt) lives in signals the panels read. The
- * palette they draw and place with is palette.ts's.
+ * The tools' wiring (design §8, Tools): the active tool gets the viewport's pointer, and the keys
+ * (keys.ts) its gesture's keys first, then the tool shortcuts. Each tool turns pointer and key
+ * events into one batch of commands (§7.1), sent with source `ui`; the next revision comes back on
+ * the event stream. What a tool shows lives in state.ts's signals, which the command bar, the
+ * tool forms and the status bar read. Owner: S5.
  */
-
-export const TOOLS = ["select", "draw", "connect", "place", "pattern", "measure"] as const;
-export type ToolName = (typeof TOOLS)[number];
-
-export const TOOL_KEYS: Readonly<Record<string, ToolName>> = {
-  v: "select",
-  b: "draw",
-  c: "connect",
-  p: "place",
-  m: "measure",
-};
-
-export const activeTool = signal<ToolName>("select");
-
-export const drawOptions = signal<{ roll: number; anchor: string; autoConnect: boolean }>({
-  roll: 0,
-  anchor: "c",
-  autoConnect: true,
-});
-
-/** The work plane (§8): the ground, or a face picked with W. */
-export const workPlane = signal<WorkPlane>(GROUND);
-/** Waiting for a click on a face to set the work plane. */
-export const pickingPlane = signal(false);
-
-/**
- * The text by the pointer: what it snaps to, the length, what is typed. `snap` is the machine
- * label of what the pointer is on, as the active tool resolves it, which the text words for the
- * person and may change; tests and agents read `snap` (`__alukit.tool().snap`):
- *
- * - draw: the point or end under the pointer: `grid (0, 0, 0)`, `end b1.b`, `on b1 at 100`,
- *   `b9 +y face centre`, `+z 450` (along an axis from the start), `typed 900`, `free in …`;
- * - connect: the pick a click makes, `bar b5`, `end b1.b`, `part p6`; a pivot's base station;
- * - place and measure: the station or point, `b9 +y face at 300`, `p8 origin`;
- * - pattern: the bar to repeat along, `bar b9`.
- */
-export const hint = signal<{ x: number; y: number; text: string; snap?: string } | undefined>(
-  undefined,
-);
-/** A length being typed (§8: type a length and press Enter). */
-export const typed = signal("");
-
-/** The draw tool's gesture, for the panel and the test hook. */
-export const drawState = signal<{ start?: DrawPoint; end?: DrawEnd }>({});
-
-export type ConnectType = "butt" | "miter" | "splice" | "pivot" | "face";
-export interface ConnectPick {
-  /**
-   * A bar (`b5`), a bar end (`b1.b`), or, as a face connection's layer, a part holding a plate
-   * (`p6`) or the run a picked bar belongs to (`r1`).
-   */
-  ref: string;
-  kind: "bar" | "end" | "part" | "run";
-  p: V3;
-}
-export const connectPicks = signal<ConnectPick[]>([]);
-export const connectType = signal<ConnectType>("butt");
-
-/** A face station, as the place tool and a pivot's base take one (§4.3). */
-export interface FaceStation {
-  bar: string;
-  at_mm: number;
-  face?: string;
-  groove?: string;
-  p: V3;
-}
-
-/** A pivot's own fields (§4.5): its base station, the hinge axis and its connector. */
-export interface PivotOptions {
-  base?: FaceStation;
-  /** The end of the base bar `at_mm` is counted from. */
-  from: "a" | "b";
-  axis: "along" | "across";
-  connector: string;
-}
-export const pivotOptions = signal<PivotOptions>({ from: "a", axis: "across", connector: "" });
-
-/**
- * A face connection's own fields (§4.5), as typed: the fastening; the fastener, an item or a
- * rod cut from bar stock to a length; the stack; the stations, at distances along the first
- * layer (and across it) or at its rail's holes; the gaps between layers; a screw's tap depth.
- * Lists are comma-separated numbers or expressions.
- */
-export interface FaceOptions {
-  fastening: "none" | "bolt" | "tnut" | "screw" | "blind";
-  fastener: string;
-  /** The fastener is a rod cut from `fastener`'s bar stock, `rodLen` long. */
-  rod: boolean;
-  rodLen: string;
-  stack: string;
-  at: string;
-  across: string;
-  railHoles: boolean;
-  gaps: string;
-  tapDepth: string;
-}
-export const faceOptions = signal<FaceOptions>({
-  fastening: "none",
-  fastener: "",
-  rod: false,
-  rodLen: "",
-  stack: "",
-  at: "",
-  across: "",
-  railHoles: false,
-  gaps: "",
-  tapDepth: "",
-});
-
-export type PlaceStation = FaceStation;
-export const placeState = signal<{ station?: PlaceStation; from: "a" | "b"; roll: number }>({
-  from: "a",
-  roll: 0,
-});
-
-export const patternState = signal<{
-  template: string[];
-  along?: string;
-  pitch: string;
-  count: string;
-}>({ template: [], pitch: "150", count: "3" });
-
-export const measureState = signal<{ a?: Snap; b?: Snap }>({});
-
-/**
- * What the active tool asks the person to do next, in words: the tool panels show it today, the
- * status bar (S2.7) will. Empty when the tool asks nothing (select, measure).
- */
-export const toolPrompt = computed<string>(() => {
-  switch (activeTool.value) {
-    case "draw": {
-      const { start, end } = drawState.value;
-      if (!start) return "click a start point";
-      return `from ${start.label}${end ? ` to ${end.label}` : ""}${typed.value ? ` · length ${typed.value}` : ""}`;
-    }
-    case "connect":
-      return `${
-        connectType.value === "pivot"
-          ? "Click a face for the base, then near each end the pivot carries."
-          : connectType.value === "face"
-            ? "Click the layers in order, head to nut: bars along their middle, or plates."
-            : "Click a bar near an end to pick that end, along its middle to pick the bar."
-      } Click again to drop a pick.`;
-    case "place":
-      return "Click a face or a groove of a bar; then set the distance from an end.";
-    case "pattern":
-      return "Click the bar to repeat along (or type a bar or run).";
-    default:
-      return "";
-  }
-});
-
-declare module "./hook.ts" {
-  interface AlukitHook {
-    /**
-     * The active tool, its draw options, the gesture's points, the text by the pointer and the
-     * machine label of what the pointer is on (`hint`'s `snap`).
-     */
-    tool(): {
-      name: string;
-      anchor: string;
-      roll: number;
-      start?: string;
-      end?: string;
-      hint?: string;
-      snap?: string;
-    };
-  }
-}
-
-extendHook({
-  tool: () => {
-    const { start, end } = drawState.value;
-    const h = hint.value;
-    return {
-      name: activeTool.value,
-      anchor: drawOptions.value.anchor,
-      roll: drawOptions.value.roll,
-      ...(start ? { start: start.label } : {}),
-      ...(end ? { end: end.label } : {}),
-      ...(h ? { hint: h.text } : {}),
-      ...(h?.snap !== undefined ? { snap: h.snap } : {}),
-    };
-  },
-});
-
-// ---------------------------------------------------------------------------------------------
 
 const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const len3 = (a: V3) => Math.hypot(a[0], a[1], a[2]);
@@ -240,212 +68,6 @@ function barPick(m: Model, id: string, p: V3): ConnectPick | undefined {
   if (s > (3 * L) / 4) return { ref: `${id}.b`, kind: "end", p: bar.b };
   return { ref: id, kind: "bar", p };
 }
-
-/** A typed value as a command takes it: a number when it reads as one, else an expression. */
-export function typedValue(text: string): number | string {
-  const t = text.trim();
-  return /^[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?$/.test(t) ? Number(t) : t;
-}
-
-/** A comma-separated list of numbers or expressions; undefined when a member is empty. */
-export function valueList(text: string): (number | string)[] | undefined {
-  if (text.trim() === "") return [];
-  const parts = text.split(",").map((s) => s.trim());
-  return parts.some((s) => s === "") ? undefined : parts.map(typedValue);
-}
-
-/** A face connection's fields from its options, or why they make none. */
-function faceFields(f: FaceOptions): { fields: Record<string, unknown> } | { why: string } {
-  const gaps = valueList(f.gaps);
-  if (!gaps) return { why: "the gaps are a comma-separated list, one per pair of layers" };
-  const common = gaps.length > 0 ? { gaps_mm: gaps } : {};
-  if (f.fastening === "none") return { fields: { fastening: "none", ...common } };
-  const item = f.fastener.trim();
-  if (item === "") {
-    return {
-      why: f.rod ? "name the bar stock the rod is cut from" : "name the fastener: an item id",
-    };
-  }
-  let fastener: unknown = item;
-  if (f.rod) {
-    if (f.rodLen.trim() === "") return { why: "give the rod's length" };
-    fastener = { bar: item, len_mm: typedValue(f.rodLen) };
-  }
-  const at = valueList(f.at);
-  const across = valueList(f.across);
-  if (!at || !across) return { why: "the stations are comma-separated distances in mm" };
-  if (at.length === 0 && !f.railHoles) {
-    return { why: "give the stations: distances along the first layer, or its rail's holes" };
-  }
-  const stack = f.stack
-    .split(/[\s,]+/)
-    .map((s) => s.trim())
-    .filter((s) => s !== "");
-  return {
-    fields: {
-      fastening: f.fastening,
-      fastener,
-      ...(stack.length > 0 ? { stack } : {}),
-      stations: {
-        ...(at.length > 0 ? { at_mm: at } : {}),
-        ...(across.length > 0 ? { across_mm: across } : {}),
-        ...(f.railHoles ? { rail_holes: true } : {}),
-      },
-      ...(f.fastening === "screw" && f.tapDepth.trim() !== ""
-        ? { tap_depth_mm: typedValue(f.tapDepth) }
-        : {}),
-      ...common,
-    },
-  };
-}
-
-/** The batch a connection's picks make, or why they make none. */
-export function connectionCommand(
-  picks: readonly ConnectPick[],
-  type: ConnectType,
-  opts: { pivot?: PivotOptions; face?: FaceOptions } = {},
-): { cmd: string; args: Record<string, unknown> } | { why: string } {
-  const bars = picks.filter((p) => p.kind === "bar").map((p) => p.ref);
-  const ends = picks.filter((p) => p.kind === "end").map((p) => p.ref);
-  const layers = picks.filter((p) => p.kind !== "end").map((p) => p.ref);
-  switch (type) {
-    case "butt": {
-      if (bars.length === 1 && ends.length >= 1)
-        return { cmd: "addConnection", args: { type: "butt", through: bars[0], ends } };
-      if (bars.length === 0 && ends.length >= 2) {
-        // An end bearing on another bar's end (§4.5, G17): the first end picked is the through.
-        const [through, ...rest] = ends;
-        return { cmd: "addConnection", args: { type: "butt", through, ends: rest } };
-      }
-      return { why: "a butt takes a through bar and the ends that butt on it" };
-    }
-    case "miter":
-    case "splice":
-      if (bars.length === 0 && ends.length === 2)
-        return { cmd: "addConnection", args: { type, ends } };
-      return { why: `a ${type} takes two ends` };
-    case "pivot": {
-      const p = opts.pivot;
-      if (!p?.base) return { why: "click a station on a face for the pivot's base" };
-      if (layers.length > 0 || ends.length === 0)
-        return { why: "a pivot carries ends: click near each end it carries" };
-      if (p.connector.trim() === "")
-        return { why: "name the connector: one with pivot geometry, a hinge" };
-      const b = p.base;
-      return {
-        cmd: "addConnection",
-        args: {
-          type: "pivot",
-          base: {
-            bar: b.bar,
-            at_mm: b.at_mm,
-            ...(p.from === "b" ? { from: "b" } : {}),
-            ...(b.face ? { face: b.face } : {}),
-          },
-          axis: p.axis,
-          ends,
-          connector: p.connector.trim(),
-        },
-      };
-    }
-    case "face": {
-      if (ends.length > 0 || layers.length < 2)
-        return {
-          why: "a face connection takes two or more layers, head to nut: bars, runs or plates",
-        };
-      const f = faceFields(opts.face ?? faceOptions.value);
-      if ("why" in f) return f;
-      return { cmd: "addConnection", args: { type: "face", bars: layers, ...f.fields } };
-    }
-  }
-}
-
-/**
- * A pivot's batch (§4.5): the connection, then each carried end's design point set to it, as a
- * pivot requires. The connection's id is the one the document gives next (`nextIdNumber`); the
- * batch is sent strict, so a step made by anyone else first refuses it instead of pointing the
- * ends at another connection.
- */
-export function pivotBatch(
-  command: { cmd: string; args: Record<string, unknown> },
-  doc: Readonly<Record<string, unknown>>,
-): { id: string; commands: { cmd: string; args: Record<string, unknown> }[] } {
-  const ids = (doc.ids ?? {}) as Record<string, unknown>;
-  const conns = doc.connections;
-  const existing =
-    typeof conns === "object" && conns !== null ? Object.keys(conns as object) : ([] as string[]);
-  const id = `c${nextIdNumber(ids.c, existing, "c")}`;
-  const ends = (command.args.ends as string[]) ?? [];
-  return {
-    id,
-    commands: [
-      command,
-      ...ends.map((ref) => {
-        const [bar, end] = ref.split(".") as [string, string];
-        return { cmd: "setBar", args: { id: bar, set: { [end]: { pivot: id } } } };
-      }),
-    ],
-  };
-}
-
-/** The run a bar is a piece of, if any: a face connection's layer may be the whole run (§4.5). */
-export function runOf(doc: Readonly<Record<string, unknown>>, bar: string): string | undefined {
-  const runs = doc.runs;
-  if (typeof runs !== "object" || runs === null) return undefined;
-  for (const [id, r] of Object.entries(runs as Record<string, unknown>)) {
-    const members = Array.isArray(r)
-      ? r
-      : typeof r === "object" && r !== null && Array.isArray((r as { bars?: unknown }).bars)
-        ? (r as { bars: unknown[] }).bars
-        : [];
-    if (members.includes(bar)) return id;
-  }
-  return undefined;
-}
-
-/** The batch the place tool's station makes. */
-export function placeCommand(
-  item: PaletteItem,
-  st: PlaceStation,
-  from: "a" | "b",
-  roll: number,
-): { cmd: string; args: Record<string, unknown> } {
-  return {
-    cmd: "addPart",
-    args: {
-      item: item.id,
-      ...(item.opt && Object.keys(item.opt).length > 0 ? { opt: item.opt } : {}),
-      on: {
-        bar: st.bar,
-        at_mm: st.at_mm,
-        ...(from === "b" ? { from: "b" } : {}),
-        ...(st.groove ? { groove: st.groove } : st.face ? { face: st.face } : {}),
-      },
-      ...(roll !== 0 ? { roll_deg: roll } : {}),
-    },
-  };
-}
-
-/** The batch the pattern tool makes, or why it makes none. */
-export function patternCommand(s: {
-  template: readonly string[];
-  along?: string | undefined;
-  pitch: string;
-  count: string;
-}): { cmd: string; args: Record<string, unknown> } | { why: string } {
-  const template = s.template.filter((id) => !id.includes("@"));
-  if (template.length === 0) return { why: "select the entities to repeat" };
-  if (!s.along) return { why: "pick the bar or run to repeat along" };
-  const pitch = Number(s.pitch);
-  const count = Number(s.count);
-  if (!(Number.isFinite(pitch) && pitch !== 0)) return { why: "the pitch is a length in mm" };
-  if (!(Number.isInteger(count) && count >= 2)) return { why: "the count is 2 or more" };
-  return {
-    cmd: "addPattern",
-    args: { template, along: s.along, pitch_mm: pitch, count },
-  };
-}
-
 // ---------------------------------------------------------------------------------------------
 
 export interface Tools {
@@ -952,10 +574,4 @@ export function connectTools(): () => void {
     tools?.dispose();
     tools = undefined;
   };
-}
-
-/** Distances between two measured points: along each axis and straight. */
-export function measured(a: V3, b: V3): { d: number; dx: number; dy: number; dz: number } {
-  const v = sub(b, a);
-  return { d: len3(v), dx: v[0], dy: v[1], dz: v[2] };
 }

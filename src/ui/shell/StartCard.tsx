@@ -13,7 +13,7 @@ import { onKey } from "../keys.ts";
 import type { Model } from "../model.ts";
 import { optionFields, pickedOptions } from "../options.ts";
 import { busy, type CommandOutcome, model, sendCommands, summary } from "../store.ts";
-import { drawState } from "../tools.ts";
+import { drawState } from "../tools/state.ts";
 import { exampleBatch, exampleOf, whyNotExample } from "./example.ts";
 import { GUIDE_URL, helpOpen } from "./Help.tsx";
 import { settingsOpen } from "./Settings.tsx";

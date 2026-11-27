@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { describeKeys, keyHelp, letterKeys, onKey, setLetterKeys } from "../keys.ts";
-import { TOOL_KEYS } from "../tools.ts";
+import { TOOL_KEYS } from "../tools/state.ts";
 import { Dialog } from "./Dialog.tsx";
 import { showStart } from "./start.ts";
 

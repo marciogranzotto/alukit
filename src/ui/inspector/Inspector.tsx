@@ -1,8 +1,8 @@
 import { useState } from "preact/hooks";
-import { selection } from "./focus.ts";
-import type { Model } from "./model.ts";
-import { ProjectPanel } from "./shell/ProjectPanel.tsx";
-import { model } from "./store.ts";
+import { selection } from "../focus.ts";
+import type { Model } from "../model.ts";
+import { ProjectPanel } from "../shell/ProjectPanel.tsx";
+import { model } from "../store.ts";
 
 /**
  * Properties of the selection (design §8, right): the entity's fields as written, its derived
@@ -334,7 +334,7 @@ function OtherDerived({ m, id }: { m: Model; id: string }) {
   );
 }
 
-export function Properties() {
+export function Inspector() {
   const m = model.value;
   const sel = [...selection.value];
   if (!m) return <div class="panel-empty">No model yet.</div>;

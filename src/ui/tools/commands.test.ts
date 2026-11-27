@@ -6,8 +6,8 @@ import {
   pivotBatch,
   placeCommand,
   runOf,
-  valueList,
-} from "./tools.ts";
+} from "./commands.ts";
+import { valueList } from "./typed.ts";
 
 /** What the connect, place and pattern tools send (design §8), from what was picked. */
 

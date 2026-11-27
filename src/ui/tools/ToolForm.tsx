@@ -1,107 +1,37 @@
 import { signal } from "@preact/signals";
-import { GROUND } from "../viewer/workplane.ts";
-import { Diagnostics, Errors, newDiagnostics } from "./Feedback.tsx";
-import { selection } from "./focus.ts";
-import { palette } from "./palette.ts";
-import { applyCommands, busy, type CommandOutcome, model, sendCommands, summary } from "./store.ts";
+import { GROUND } from "../../viewer/workplane.ts";
+import { Diagnostics, Errors, newDiagnostics } from "../Feedback.tsx";
+import { selection } from "../focus.ts";
+import { palette } from "../palette.ts";
+import { applyCommands, busy, type CommandOutcome, model, sendCommands } from "../store.ts";
+import {
+  connectionCommand,
+  measured,
+  patternCommand,
+  pivotBatch,
+  placeCommand,
+  runOf,
+} from "./commands.ts";
 import {
   activeTool,
   type ConnectPick,
   type ConnectType,
-  connectionCommand,
   connectPicks,
   connectType,
   drawOptions,
   type FaceOptions,
   faceOptions,
-  hint,
-  measured,
   measureState,
   type PivotOptions,
-  patternCommand,
   patternState,
   pickingPlane,
-  pivotBatch,
   pivotOptions,
-  placeCommand,
   placeState,
-  runOf,
-  TOOLS,
-  type ToolName,
   toolPrompt,
   workPlane,
-} from "./tools.ts";
+} from "./state.ts";
 
-/**
- * The tools' parts of the screen (design §8): the tool buttons (the viewport's `left` slot), the
- * tip by the pointer and the help line over the viewport (its `bottom` slot), and the active
- * tool's panel, above the inspector.
- */
-
-const TOOL_TEXT: Readonly<Record<ToolName, [string, string]>> = {
-  select: ["Select", "V"],
-  draw: ["Draw bar", "B"],
-  connect: ["Connect", "C"],
-  place: ["Place part", "P"],
-  pattern: ["Pattern", ""],
-  measure: ["Measure", "M"],
-};
-
-/** A button per tool; the active one is on. */
-export function ToolButtons() {
-  const readOnly = summary.value?.status.readOnly === true;
-  return (
-    <>
-      {TOOLS.map((t) => {
-        const [text, key] = TOOL_TEXT[t];
-        return (
-          <button
-            type="button"
-            key={t}
-            data-testid={`tool-${t}`}
-            class={activeTool.value === t ? "tb on" : "tb"}
-            disabled={readOnly && t !== "select" && t !== "measure"}
-            title={key ? `${text} (${key})` : text}
-            onClick={() => {
-              activeTool.value = t;
-            }}
-          >
-            {text}
-          </button>
-        );
-      })}
-    </>
-  );
-}
-
-/** The text by the pointer: what it snaps to, the length, what is typed. */
-function Hint() {
-  const h = hint.value;
-  if (!h) return null;
-  return (
-    <div
-      class="tool-hint"
-      data-testid="tool-hint"
-      style={{ left: `${h.x + 14}px`, top: `${h.y + 14}px` }}
-    >
-      {h.text}
-    </div>
-  );
-}
-
-/** Over the viewport: the tip by the pointer, and what the mouse does in the active tool. */
-export function ToolOverlay() {
-  return (
-    <>
-      <Hint />
-      <div class="viewport-help">
-        {activeTool.value === "select"
-          ? "drag: orbit · right-drag: pan · wheel: zoom · Shift-drag: box select"
-          : "click: pick · drag: orbit · Esc: back to select"}
-      </div>
-    </>
-  );
-}
+/** The active tool's long form, above the inspector (D-UX-5). Owner: S5. */
 
 function PaletteLine({ which }: { which: "bar" | "part" }) {
   const p = palette.value[which];
@@ -666,7 +596,7 @@ function MeasurePanel() {
   );
 }
 
-export function ToolPanel() {
+export function ToolForm() {
   if (!model.value) return null;
   switch (activeTool.value) {
     case "draw":

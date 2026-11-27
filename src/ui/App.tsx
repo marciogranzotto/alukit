@@ -4,9 +4,9 @@ import { CatalogOverlay } from "./catalog/CatalogOverlay.tsx";
 import { PartsBin } from "./catalog/PartsBin.tsx";
 import { keepPalette, startPalette } from "./catalog/state.ts";
 import { showKey } from "./focus.ts";
+import { Inspector } from "./inspector/Inspector.tsx";
 import { listenKeys, onKey } from "./keys.ts";
 import { Outline } from "./outline/Outline.tsx";
-import { Properties } from "./Properties.tsx";
 import { activeSheet, sheetsOpen } from "./sheets/registry.ts";
 import { Sheets } from "./sheets/Sheets.tsx";
 import { Help } from "./shell/Help.tsx";
@@ -21,9 +21,12 @@ import { noteProject, orderSeen } from "./shell/start.ts";
 import { Toasts } from "./shell/Toasts.tsx";
 import { requestRedo, requestUndo, UndoConfirm } from "./shell/Undo.tsx";
 import { model, summary } from "./store.ts";
-import { ToolButtons, ToolOverlay, ToolPanel } from "./ToolPanel.tsx";
 import { TopBar, VariantStrip } from "./TopBar.tsx";
-import { activeTool, connectTools } from "./tools.ts";
+import { CommandBar } from "./tools/CommandBar.tsx";
+import { activeTool } from "./tools/state.ts";
+import { ToolForm } from "./tools/ToolForm.tsx";
+import { ToolRail } from "./tools/ToolRail.tsx";
+import { connectTools } from "./tools/wiring.ts";
 import { Viewport } from "./viewport/Viewport.tsx";
 // The sheets, which register themselves with the container (sheets/registry.ts).
 import "./tables/index.ts";
@@ -144,7 +147,7 @@ export function App() {
             <Viewport
               tool={activeTool.value}
               slots={{
-                left: <ToolButtons />,
+                left: <ToolRail />,
                 centre: (
                   <>
                     <StartCard />
@@ -152,7 +155,7 @@ export function App() {
                     <LastGood />
                   </>
                 ),
-                bottom: <ToolOverlay />,
+                bottom: <CommandBar />,
                 topRight: <Toasts />,
               }}
             />
@@ -160,8 +163,8 @@ export function App() {
           </main>
           <ColumnSplitter side="right" />
           <aside class="right" aria-label="Inspector">
-            <ToolPanel />
-            <Properties />
+            <ToolForm />
+            <Inspector />
           </aside>
           <CatalogOverlay />
         </div>

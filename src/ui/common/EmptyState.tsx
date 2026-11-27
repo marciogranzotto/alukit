@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { activeTool } from "../tools.ts";
+import { activeTool } from "../tools/state.ts";
 
 /**
  * An empty or idle state (docs/ux/visual-design.md §6.3): what is missing, why it is fine, and

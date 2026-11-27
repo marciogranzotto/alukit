@@ -6,7 +6,7 @@ import { chord, describeKeys, onKey } from "../keys.ts";
 import type { Model } from "../model.ts";
 import { Splitter } from "../shell/Splitter.tsx";
 import { model } from "../store.ts";
-import { activeTool } from "../tools.ts";
+import { activeTool } from "../tools/state.ts";
 import {
   activeSheet,
   firstOutputPending,
