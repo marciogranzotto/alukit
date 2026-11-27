@@ -89,7 +89,11 @@ Run one test file with `npx vitest run <path>` or `npx playwright test <spec> --
   revision (design §12).
 - `tests/e2e/view.spec.ts` counts **WebGL shader-program links across a revision and expects
   zero**. Don't create or dispose materials per revision; reuse them (a revision disposes the old
-  model only after the frame that draws the new one).
+  model only after the frame that draws the new one). A lasting material that is first shown
+  later (a gizmo part, the x-ray, a marker) needs a hidden object in the scene at startup, so the
+  viewer's `renderer.compile` links its program before the first frame. A link count must be read
+  after the frame that drew what it waits for (`RenderStats.modelFrame`, `badgeFrame`; the
+  `waitDrawn` helper waits for the model's), never after "some frames".
 
 When a timing test fails, **measure before blaming the machine**: run it alone, then A/B it
 against the previous `main` under the same load. A recurring "load flake" was once a real cost
