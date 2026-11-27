@@ -86,6 +86,15 @@ def text(fragment: str | None) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
+def standard_of(p: dict) -> dict | None:
+    """The standard a screw or bolt product is made to, by `tables.STANDARDS`, as the item's
+    `standard` (cited as `est`: the shop names none), or None."""
+    for pattern, ref, what in tables.STANDARDS:
+        if re.match(pattern, name(p), re.I):
+            return {"id": ref, "src": "est", "note": f"the shop names no standard; its type is {what}"}
+    return None
+
+
 def family_of(p: dict) -> str | None:
     """The family of a product (not a variation), or None when the tables do not name it."""
     if p.get("type") == "simple" and tables.PROFILE_SKU.match(p["sku"]):

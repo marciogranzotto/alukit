@@ -1,16 +1,24 @@
 import { num } from "#catalog/schema/common.ts";
-import type { ConnectorItem } from "#catalog/schema/items.ts";
+import type { ConnectorItem, FastenerItem } from "#catalog/schema/items.ts";
 import { compareIds } from "../ids.ts";
-import { fullRef } from "../items.ts";
+import { type BarItemInfo, fullRef } from "../items.ts";
 import type { Connection, Face } from "../project/schema.ts";
-import { threadDiameter } from "../threads.ts";
+import { clearanceHole, threadDiameter } from "../threads.ts";
 import { TOL } from "../tolerances.ts";
 import { add, addScaled, angleDeg, dot, neg, norm, scale, sub, type V3 } from "../vec.ts";
 import type { Ctx } from "./context.ts";
 import type { DerivedBar, EndHoleOp, HoleOp } from "./derive.ts";
-import { type GenOut, stockOptions } from "./fastenings.ts";
-import { boxCentre, faceLocal, facePlane, onBar, resolveStation } from "./place.ts";
-import type { Copy, HardwareUse, PlacedBar, StockPiece } from "./types.ts";
+import { barFaceBearing, fitsGroove, type GenOut, SEAT_MIN, stockOptions } from "./fastenings.ts";
+import { boxCentre, faceLocal, facePlane, grooveOffsets, onBar, resolveStation } from "./place.ts";
+import type {
+  ButtHead,
+  Copy,
+  HardwareUse,
+  HeadSeat,
+  PlacedBar,
+  StackLayer,
+  StockPiece,
+} from "./types.ts";
 
 /**
  * Hardware and machining from connectors (design §3.4, §5.1). Each connection counts its
@@ -45,6 +53,11 @@ interface Roles {
   connector?: string;
   /** A butt's spacer, for where the butting bar meets the through bar's face. */
   spacer: number;
+  /**
+   * A butt's stack (after the alternative frame's acceptance, X2): its bars, and at each butting
+   * end where stage 3 laid it out, its layers from the face out.
+   */
+  stack?: { bars: DerivedBar[]; at: ReadonlyMap<string, readonly StackLayer[]> };
   /** A butt through a body: the body, counted with the connection (§4.5). */
   body?: HardwareUse;
 }
@@ -86,21 +99,47 @@ export function connectorHardware(
   ctx: Ctx,
   bars: ReadonlyMap<string, DerivedBar>,
   out: GenOut,
+  stacks: ReadonlyMap<string, ReadonlyMap<string, readonly StackLayer[]>> = new Map(),
 ): void {
   const joints = new Map<string, Joint>();
   for (const id of [...ctx.conns.keys()].sort(compareIds)) {
     const ent = ctx.conns.get(id);
     if (!ent) continue;
     const roles = rolesOf(ctx, id, ent.spec, ent.copy, bars);
-    if (roles) joints.set(id, { spec: ent.spec, ...(ent.copy ? { copy: ent.copy } : {}), roles });
+    if (!roles) continue;
+    // A butt's stack (X2), at each butting end where stage 3 laid it out.
+    const st = stacks.get(id);
+    if (st && ent.spec.type === "butt" && ent.spec.stack) {
+      roles.stack = {
+        bars: ent.spec.stack.flatMap((s) => {
+          const b = bars.get(s);
+          return b ? [b] : [];
+        }),
+        at: st,
+      };
+    }
+    joints.set(id, { spec: ent.spec, ...(ent.copy ? { copy: ent.copy } : {}), roles });
   }
   const held = heldBy(ctx, joints);
+  const unchecked: Unchecked = new Map();
   for (const [id, j] of joints) {
     if (j.roles.body) out.hardware.push(j.roles.body);
     if (!j.roles.connector) continue;
-    new ConnectorGen(ctx, id, j.spec, j.roles, !j.copy, out, held.get(id)).run();
+    new ConnectorGen(ctx, id, j.spec, j.roles, !j.copy, out, unchecked, held.get(id)).run();
+  }
+  // A screw whose head gives no size the check reads: one info, naming its connections (F2b).
+  for (const [item, u] of [...unchecked].sort(([a], [b]) => compareIds(a, b))) {
+    ctx.d.info(
+      "fit",
+      u.conns[0] as string,
+      `${item} gives ${u.what}, so its head's seat in a butt is not checked: ${u.conns.join(", ")}`,
+      u.conns.length > 1 ? { refs: u.conns.slice(1) } : {},
+    );
   }
 }
+
+/** Per screw a butt connector seats but cannot check: what it does not give, and where (F2b). */
+type Unchecked = Map<string, { what: string; conns: string[] }>;
 
 function rolesOf(
   ctx: Ctx,
@@ -408,6 +447,7 @@ class ConnectorGen {
   private readonly report: boolean;
   private readonly out: GenOut;
   private readonly held: Held | undefined;
+  private readonly unchecked: Unchecked;
   private sleeves = 0;
 
   constructor(
@@ -417,6 +457,7 @@ class ConnectorGen {
     roles: Roles,
     report: boolean,
     out: GenOut,
+    unchecked: Unchecked,
     held?: Held,
   ) {
     this.ctx = ctx;
@@ -425,6 +466,7 @@ class ConnectorGen {
     this.roles = roles;
     this.report = report;
     this.out = out;
+    this.unchecked = unchecked;
     this.held = held;
   }
 
@@ -453,11 +495,224 @@ class ConnectorGen {
     const home = found.id.slice(0, found.id.indexOf(":"));
     const fits = item.fits.map((s) => fullRef(s, home));
     const sets = this.spec.type === "face" ? [] : this.chosenSets(item, home);
-    this.fit(found.id, fits, sets);
+    this.fit(found.id, item, home, fits, sets);
     if (this.spec.type === "face") return;
     this.mounts(sets, home);
     this.requires(item);
     if (item.splice) this.splice(item, home);
+    this.screwSeats(item, home, sets);
+  }
+
+  /**
+   * Where each screw into the butting end seats its head (after the alternative frame's
+   * acceptance, F2b), for a butt through a bar's side. The screw is the chosen sets' first screw
+   * or bolt; one goes into each tap the connector makes in each butting end (`buttingTaps`).
+   *
+   * - **On the far face**, where the connector drills a `through-hole` in the through bar at the
+   *   tap's place (call 40's pairing): the screw comes through the bar from its far side, and its
+   *   head (or the sets' first washer under it) bears on that face round the hole, as a face
+   *   fastener's does (§4.5): below half a `fit` warning, on nothing a `fit` error.
+   * - **Under the lips** of the near face's groove, where the connector drills no hole there and a
+   *   groove of the face the end bears on lies under the joint: the head sits in the groove's
+   *   chamber, on the lips' underside, or on a T-nut from the sets (a `t-nut`, drilled out to
+   *   pass the screw) that bears on them. The shank must pass the opening, the head fit the
+   *   chamber's width, and the lip, the T-nut seat's body (`k_mm`) and the head's height
+   *   (`k_mm`) the groove's depth: each a `fit` error. With no T-nut, the head's seat on the lips
+   *   is the face's material at the joint, as the opening leaves it.
+   * - **Nowhere**, with neither: a `fit` error, since the screw has no way through the bar.
+   *
+   * A screw that gives no size the check needs is not checked: an info. A butt through a bar's end
+   * is not checked in v1: an end face's material is its section, which no seat reads yet.
+   */
+  private screwSeats(item: ConnectorItem, home: string, sets: readonly ChosenSet[]): void {
+    const through = this.roles.through;
+    if (this.spec.type !== "butt" || !through || through.end) return;
+    const taps = buttingTaps(item);
+    if (taps.length === 0) return;
+    const parts = setParts(this.ctx, sets, home);
+    const screw = parts.find((p) => p.item.subtype === "screw" || p.item.subtype === "bolt");
+    if (!screw) return;
+    const washer = parts.find((p) => p.item.subtype === "washer");
+    const tnut = parts.find((p) => p.item.subtype === "t-nut");
+    const holes = (item.requires ?? []).filter(
+      (r) => r.op === "through-hole" && (r.on === "through" || r.on === "each"),
+    );
+    const T = through.bar;
+    const heads: ButtHead[] = [];
+    for (const b of this.roles.butting) {
+      const e = b.bar.ends[b.end];
+      const near = (["+x", "-x", "+y", "-y"] as const).find(
+        (f) => angleDeg(facePlane(T.placed, f).n, neg(e.normal)) <= TOL.ang,
+      );
+      if (!near) continue; // jointHole has said the end meets the bar at an angle
+      for (const p of taps) {
+        const at = p[0] === 0 && p[1] === 0 ? undefined : p;
+        const where = `${b.bar.placed.id}.${b.end}'s tap${at ? ` at ${posText(at)}` : ""}`;
+        const Q = this.jointPoint(b.bar, b.end, at);
+        const hole = holes.find((r) => requirementPositions(item, r).some((q) => samePlace(p, q)));
+        const seat = hole
+          ? this.farSeat(T, near, Q, e.normal, screw, washer, hole, where)
+          : this.slotSeat(T, near, Q, screw, tnut, where);
+        if (seat)
+          heads.push({ end: `${b.bar.placed.id}.${b.end}`, ...(at ? { at } : {}), ...seat });
+      }
+    }
+    if (heads.length > 0) this.out.heads.set(this.id, heads);
+  }
+
+  /** A head on the through bar's far face, where the through-hole's axis leaves it. */
+  private farSeat(
+    T: DerivedBar,
+    near: Face,
+    Q: V3,
+    u: V3,
+    screw: SetPart,
+    washer: SetPart | undefined,
+    hole: NonNullable<ConnectorItem["requires"]>[number],
+    where: string,
+  ): HeadSeat | undefined {
+    const far = OPPOSITE[near];
+    const pl = facePlane(T.placed, far);
+    const X = addScaled(Q, u, dot(sub(pl.p, Q), pl.n) / dot(u, pl.n));
+    const d = hole.d_mm === undefined ? undefined : num(hole.d_mm);
+    const by = washer ?? screw;
+    const out = washer ? dimOf(washer.item, "d2_mm") : bearingOf(screw.item);
+    if (out === undefined) {
+      this.notChecked(by.id, washer ? "no outside diameter (d2_mm)" : BEARING);
+      return undefined;
+    }
+    const din = Math.max(d ?? 0, washer ? (dimOf(washer.item, "d1_mm") ?? 0) : 0);
+    const seat: HeadSeat = {
+      side: "head",
+      item: by.id,
+      d_in: din,
+      d_out: out,
+      on: `${T.placed.id} ${far}`,
+      bearing: barFaceBearing(T, far, X, out, din),
+    };
+    const what = washer
+      ? `the washer ${washer.id} under the head of ${screw.id}`
+      : `the head of ${screw.id}`;
+    this.reportSeat(seat, `${what} into ${where}`, `${T.placed.id}'s face ${far}`, T.placed.id);
+    return seat;
+  }
+
+  /** A head in the near face's groove, under its lips, on them or on a T-nut seat. */
+  private slotSeat(
+    T: DerivedBar,
+    face: Face,
+    Q: V3,
+    screw: SetPart,
+    tnut: SetPart | undefined,
+    where: string,
+  ): HeadSeat | undefined {
+    const tid = T.placed.id;
+    const g = grooveAt(T, face, Q);
+    if (!g) {
+      this.error(
+        "fit",
+        `the screw ${screw.id} into ${where} has no way through ${tid}: the connector drills no hole in it there, and no groove of its face ${face} lies under the joint for the head`,
+        { field: "connector", refs: [tid] },
+      );
+      return undefined;
+    }
+    const lips = `under the lips of ${tid}'s face ${face}`;
+    const thread = screw.item.thread ? threadDiameter(screw.item.thread) : undefined;
+    const { groove, off } = g;
+    if (thread !== undefined && groove.opening_mm !== undefined) {
+      const reach = Math.abs(off) + thread / 2;
+      if (reach > groove.opening_mm / 2 + TOL.len) {
+        this.error(
+          "fit",
+          `the screw ${screw.id} into ${where} sits ${mm(off)} off the centre of the groove of ${tid}'s face ${face}, so its ${screw.item.thread} shank does not pass the ${mm(groove.opening_mm)} opening`,
+          { field: "connector", refs: [tid] },
+        );
+        return undefined;
+      }
+    }
+    const out = bearingOf(screw.item);
+    const kHead = dimOf(screw.item, "k_mm");
+    if (out === undefined || kHead === undefined) {
+      this.notChecked(screw.id, out === undefined ? BEARING : "no head height (k_mm)");
+      return undefined;
+    }
+    if (tnut && !fitsGroove(tnut.id, tnut.item, T.placed.item, groove.type)) {
+      this.error(
+        "fit",
+        `${tnut.id}, the T-nut seat under the head of ${screw.id}, does not fit ${tid} (${T.placed.item.system ?? "no system"}${groove.type ? `, groove ${groove.type}` : ""})`,
+        { field: "connector", refs: [tid] },
+      );
+    }
+    const kNut = tnut ? dimOf(tnut.item, "k_mm") : 0;
+    const { lip_mm: lip, depth_mm: depth } = groove;
+    if (kNut === undefined) {
+      this.notChecked((tnut as SetPart).id, "no body height (k_mm)");
+    } else if (lip !== undefined && depth !== undefined) {
+      const reach = lip + kNut + kHead;
+      const seated = tnut ? ` on the T-nut seat ${tnut.id} (k ${mm(kNut)})` : "";
+      const head = `the head of ${screw.id} into ${where}`;
+      if (reach > depth + TOL.len) {
+        this.error(
+          "fit",
+          `${head} (k ${mm(kHead)})${seated} ${lips} (${mm(lip)}) reaches ${mm(reach)} into the groove, ${mm(reach - depth)} past its depth (${mm(depth)})`,
+          { field: "connector", refs: [tid] },
+        );
+        return undefined;
+      }
+      // The chamber is narrowest where the head reaches deepest.
+      const width = chamberWidth(groove, reach);
+      if (width !== undefined && out > width + TOL.len) {
+        this.error(
+          "fit",
+          `${head}, Ø${mm(out)}${seated}, is wider than the chamber ${lips} where it reaches, ${mm(reach)} deep (${mm(width)})`,
+          { field: "connector", refs: [tid] },
+        );
+        return undefined;
+      }
+    }
+    if (tnut) return undefined; // the T-nut is the head's seat, and a groove part bears on the lips
+    const din = thread !== undefined ? (clearanceHole(screw.item.thread as string) ?? thread) : 0;
+    const seat: HeadSeat = {
+      side: "head",
+      item: screw.id,
+      d_in: din,
+      d_out: out,
+      on: `${tid} ${face} (under its lips)`,
+      bearing: barFaceBearing(T, face, Q, out, din),
+    };
+    this.reportSeat(
+      seat,
+      `the head of ${screw.id} into ${where}`,
+      `the lips of ${tid}'s face ${face}`,
+      tid,
+    );
+    return seat;
+  }
+
+  /** A seat on nothing is a `fit` error; on less than SEAT_MIN of its annulus, a `fit` warning. */
+  private reportSeat(seat: HeadSeat, what: string, on: string, ref: string): void {
+    if (!this.report || seat.bearing >= SEAT_MIN) return;
+    if (seat.bearing <= 1e-9) {
+      this.error(
+        "fit",
+        `${what}, Ø${mm(seat.d_out)}, bears on nothing of ${on}: its seat lies wholly over an opening or off the face`,
+        { refs: [ref] },
+      );
+      return;
+    }
+    this.ctx.d.warn(
+      "fit",
+      this.id,
+      `${what}, Ø${mm(seat.d_out)}, bears on ${(100 * seat.bearing).toFixed(1)} % of its seat on ${on}, less than ${(100 * SEAT_MIN).toFixed(0)} %`,
+      { refs: [ref] },
+    );
+  }
+
+  private notChecked(item: string, what: string): void {
+    if (!this.report) return;
+    const u = this.unchecked.get(item) ?? { what, conns: [] };
+    if (!u.conns.includes(this.id)) u.conns.push(this.id);
+    this.unchecked.set(item, u);
   }
 
   /** Each mount's fastener set (`chooseSets`); a mount with none for the joined systems is a `fit` error. */
@@ -478,9 +733,17 @@ class ConnectorGen {
    * or by another butt's through-fastener (`held_by`). A bar held no way is a `fit` error naming
    * it. The through bar is judged only when some joined bar has a system the connector fits: with
    * none, no fastener set can apply, every butting bar has failed, and that is the error to fix.
-   * A `held_by` that fails has its own error, so the through bar is not judged again.
+   * A `held_by` that fails has its own error, so the through bar is not judged again. A solid
+   * through bar is also held by a screw through it into the butting end (`screwThrough`; after
+   * the alternative frame's acceptance, X3).
    */
-  private fit(itemId: string, fits: readonly string[], sets: readonly ChosenSet[]): void {
+  private fit(
+    itemId: string,
+    item: ConnectorItem,
+    home: string,
+    fits: readonly string[],
+    sets: readonly ChosenSet[],
+  ): void {
     const through = this.roles.through?.bar;
     const sleeved = sets.some((s) => s.entries.some((e) => "inside" in e));
     const fitted = (b: DerivedBar) => {
@@ -496,12 +759,33 @@ class ConnectorGen {
       if (isThrough && sleeved) continue; // held by its bore; the sleeve checks it is hollow
       if (isThrough && this.held) continue; // held by another butt's through-fastener
       if (isThrough && !anyFitted) continue;
+      const screw = isThrough ? screwThrough(this.ctx, item, home, sets, b) : undefined;
+      if (screw?.holds) continue; // held by a screw through a drilled hole in it
       const what = sys ? `a ${sys}` : `${b.placed.item.id}, of no system`;
-      const how = isThrough ? ", and no fastener set of the connector sets a sleeve in it" : "";
+      const how = isThrough
+        ? `, and no fastener set of the connector sets a sleeve in it${screw ? `, nor does a screw through it hold it: ${screw.why}` : ""}`
+        : "";
       this.error("fit", `${itemId} fits ${fits.join(", ")}; ${b.placed.id} is ${what}${how}`, {
         field: "connector",
         refs: [b.placed.id],
       });
+    }
+    // A stack's bars (X2) are clamped between the through bar and the butting end, by a screw
+    // that passes them; their system does not hold them. Judged, as the through bar is, only when
+    // some fastener set can apply.
+    if (!anyFitted) return;
+    const T = through?.placed.id ?? "the through body";
+    for (const S of this.roles.stack?.bars ?? []) {
+      const screw = screwThrough(this.ctx, item, home, sets, S, T);
+      if (screw?.holds) continue;
+      const why = screw
+        ? screw.why
+        : `it requires no through-hole in ${T}, so no screw from ${T}'s far side passes the stack`;
+      this.error(
+        "fit",
+        `${itemId}: the stack's ${S.placed.id} is held only by a screw through it into the butting end, and none holds it: ${why}`,
+        { field: "stack", refs: [S.placed.id] },
+      );
     }
   }
 
@@ -577,26 +861,11 @@ class ConnectorGen {
     item: ConnectorItem,
     req: NonNullable<ConnectorItem["requires"]>[number],
   ): Pos[] {
-    if (req.at_mm) return req.at_mm.map((p) => [p[0], p[1]] as const);
-    if (req.at_holes !== undefined) {
-      const holes = item.mounts?.[req.at_holes]?.holes ?? [];
-      if (holes.length > 0) return holes.map((h) => [h.at_mm[0], h.at_mm[1]] as const);
-    }
-    return [undefined];
+    return requirementPositions(item, req);
   }
 
-  /**
-   * Where the connector taps the butting end: every end tap it asks of the butting bar (`on`
-   * butting or each), at its positions, the centre where it gives none. A hole the connector
-   * makes in the through bar at one of these places is the clearance for a screw into that tap.
-   */
   private buttingTaps(item: ConnectorItem): (readonly [number, number])[] {
-    const out: (readonly [number, number])[] = [];
-    for (const req of item.requires ?? []) {
-      if (req.op !== "end-tap" || (req.on !== "butting" && req.on !== "each")) continue;
-      for (const p of this.positions(item, req)) out.push(p ?? [0, 0]);
-    }
-    return out;
+    return buttingTaps(item);
   }
 
   private requires(item: ConnectorItem): void {
@@ -651,6 +920,21 @@ class ConnectorGen {
           );
           continue;
         }
+        // A stack (X2) is drilled for what passes along the joint: a through-hole's screw, or a
+        // screw into an end tap. v1 does not know where an access hole's tool or a counterbore's
+        // head goes through a stack.
+        const stacked = roles.stack !== undefined && roles.stack.at.size > 0;
+        if (stacked && (req.op === "access-hole" || req.op === "counterbore")) {
+          this.error(
+            "connection",
+            `${field}: a ${req.op} in the through bar under a stack: v1 drills a stack only for a through-hole or an end tap, which pass along the joint`,
+            { field: "stack" },
+          );
+          continue;
+        }
+        const clear = d ?? (req.thread ? clearanceHole(req.thread) : undefined);
+        const what = (p: Pos) =>
+          `the ${req.op === "end-tap" ? `tap ${req.thread}` : d !== undefined ? `Ø${mm(d)} hole` : `tap ${req.thread}`} in ${through.bar.placed.id}${p ? ` at ${posText(p)}` : ""}`;
         if (req.op === "end-tap") {
           if (!through.end) {
             this.error(
@@ -664,6 +948,8 @@ class ConnectorGen {
           }
           // Unplaced, it stays at the end's centre (acceptance-gaps decision 14); placed, it
           // stands where each position on the butting bar meets the end face.
+          const T = through.bar.placed;
+          const inward = through.end === "a" ? T.frame.t : neg(T.frame.t);
           if (!placed) {
             through.bar.ops.push({
               op: "end-tap",
@@ -672,18 +958,18 @@ class ConnectorGen {
               ...(depth !== undefined ? { depth } : {}),
               by: id,
             });
+            // At the end face's centre, along the axis: the screw into it passes the stack.
+            const e = through.bar.ends[through.end];
+            const { C, t } = centreLine(through.bar);
+            const Q = addScaled(C, t, dot(sub(e.point, C), e.normal) / dot(t, e.normal));
+            for (const b of roles.butting)
+              this.stackHoles(b, Q, inward, clear, what(undefined), field);
             continue;
           }
           for (const b of roles.butting) {
             for (const p of at) {
-              const off = this.endPlace(
-                through.bar,
-                through.end,
-                b.bar,
-                b.end,
-                this.jointPoint(b.bar, b.end, p),
-                p,
-              );
+              const Q = this.jointPoint(b.bar, b.end, p);
+              const off = this.endPlace(through.bar, through.end, b.bar, b.end, Q, p);
               if (!off) continue;
               through.bar.ops.push({
                 op: "end-tap",
@@ -693,6 +979,7 @@ class ConnectorGen {
                 ...(depth !== undefined ? { depth } : {}),
                 by: id,
               });
+              this.stackHoles(b, Q, inward, clear, what(p), field);
             }
           }
           continue;
@@ -722,16 +1009,23 @@ class ConnectorGen {
           const tilted: { at: Pos; angle: number; face: Face }[] = [];
           for (const p of at) {
             if (through.end) {
-              const op = this.endHole(through.bar, through.end, b.bar, b.end, hole, p, {
+              const r = this.endHole(through.bar, through.end, b.bar, b.end, hole, p, {
                 screw: intoTap(p),
                 field,
               });
-              if (op) through.bar.ops.push(op);
+              if (!r) continue;
+              through.bar.ops.push(r.op);
+              this.stackHoles(b, r.Q, r.u, clear, what(p), field);
               continue;
             }
             const r = this.jointHole(through.bar, b.bar, b.end, hole, p, off, intoTap(p));
             if (r && "tilted" in r) tilted.push({ at: p, angle: r.tilted, face: r.face });
-            else if (r) through.bar.ops.push(r);
+            else if (r) {
+              through.bar.ops.push(r);
+              // Square to the face the end bears on, through the joint point: the stack's axis.
+              const Q = this.jointPoint(b.bar, b.end, p);
+              this.stackHoles(b, Q, b.bar.ends[b.end].normal, clear, what(p), field);
+            }
           }
           if (off.length > 0) {
             this.error(
@@ -809,7 +1103,88 @@ class ConnectorGen {
       add(scale(bar.frame.x, cx + (p?.[0] ?? 0)), scale(bar.frame.y, cy + (p?.[1] ?? 0))),
     );
     const lambda = dot(sub(e.point, C), e.normal) / dot(bar.frame.t, e.normal);
-    return addScaled(addScaled(C, bar.frame.t, lambda), e.normal, this.roles.spacer);
+    return addScaled(addScaled(C, bar.frame.t, lambda), e.normal, this.lift(butting, end));
+  }
+
+  /** A butting end's stand-off from the through bar's face: the spacer, or its stack's depth (X2). */
+  private lift(butting: DerivedBar, end: "a" | "b"): number {
+    const layers = this.stackAt(butting, end);
+    return this.roles.spacer + (layers[layers.length - 1]?.to ?? 0);
+  }
+
+  private stackAt(butting: DerivedBar, end: "a" | "b"): readonly StackLayer[] {
+    return this.roles.stack?.at.get(`${butting.placed.id}.${end}`) ?? [];
+  }
+
+  /**
+   * The holes in a butt's stack (after the alternative frame's acceptance, X2) for one hole the
+   * connector makes in the through bar: each stack bar between the face and the butting end is
+   * drilled through with `d` where the hole's axis (through `Q` on the through bar's face, along
+   * `u` into it) crosses it, as the screw passes it. A hole in a bar's side is drilled square to its
+   * face, so an axis off square to a stack bar's face by more than tol.ang has no hole there, and
+   * one that meets the bar's face off it (across it, or past its cut ends) has no place: each a
+   * `connection` error naming that bar.
+   */
+  private stackHoles(
+    b: { bar: DerivedBar; end: "a" | "b" },
+    Q: V3,
+    u: V3,
+    d: number | undefined,
+    what: string,
+    field: string,
+  ): void {
+    const layers = this.stackAt(b.bar, b.end);
+    if (layers.length === 0) return;
+    if (d === undefined) {
+      this.error("connection", `${field}: ${what} gives no clearance to drill the stack with`, {
+        field: "connector",
+      });
+      return;
+    }
+    for (const layer of layers) {
+      const S = this.roles.stack?.bars.find((x) => x.placed.id === layer.bar);
+      if (!S) continue;
+      const P = S.placed;
+      const face = layer.outer as Face;
+      const pl = facePlane(P, face);
+      const tilt = angleDeg(u, neg(pl.n));
+      if (tilt > TOL.ang) {
+        this.error(
+          "connection",
+          `${field}: ${what} runs ${deg(tilt)}° off square to the stack's ${P.id}, face ${face}; a hole in a bar's side is drilled square to its face, so it cannot be made there`,
+          { field: "connector", refs: [P.id] },
+        );
+        continue;
+      }
+      const X = addScaled(Q, u, dot(sub(pl.p, Q), pl.n) / dot(u, pl.n));
+      const s = dot(sub(X, P.A), P.frame.t);
+      const fl = faceLocal(P.box, face);
+      const v = face === "+x" || face === "-x" ? P.frame.y : P.frame.x;
+      const across = dot(sub(X, onBar(P, s, fl.at[0], fl.at[1])), v);
+      const half =
+        face === "+x" || face === "-x" ? (P.box.y1 - P.box.y0) / 2 : (P.box.x1 - P.box.x0) / 2;
+      if (
+        Math.abs(across) > half - TOL.len ||
+        s < S.lengths.sa + TOL.len ||
+        s > S.lengths.sb - TOL.len
+      ) {
+        this.error(
+          "connection",
+          `${field}: ${what} meets the stack's ${P.id} off its face ${face}: no place for its hole`,
+          { field: "connector", refs: [P.id] },
+        );
+        continue;
+      }
+      S.ops.push({
+        op: "hole",
+        face,
+        from: "a",
+        at: s,
+        ...(Math.abs(across) > TOL.len / 100 ? { across } : {}),
+        d,
+        by: this.id,
+      });
+    }
   }
 
   /**
@@ -859,7 +1234,7 @@ class ConnectorGen {
     fields: Pick<HoleOp, "d" | "thread" | "depth">,
     p: Pos,
     how: { screw: boolean; field: string },
-  ): EndHoleOp | undefined {
+  ): { op: EndHoleOp; Q: V3; u: V3 } | undefined {
     const T = through.placed;
     const face = through.ends[throughEnd];
     const other = throughEnd === "a" ? "b" : "a";
@@ -923,7 +1298,7 @@ class ConnectorGen {
       );
     }
     const exit = path.exit;
-    return {
+    const op: EndHoleOp = {
       op: "end-hole",
       from: throughEnd,
       ...(place.centre ? {} : { off: place.off }),
@@ -933,6 +1308,7 @@ class ConnectorGen {
       ...fields,
       by: this.id,
     };
+    return { op, Q, u };
   }
 
   /**
@@ -1018,6 +1394,178 @@ class ConnectorGen {
       this.endTaps(bar, end, at, sp.tap, depth, "connector splice");
     }
   }
+}
+
+/**
+ * A requirement's positions (acceptance gap A8): its `at_mm`, or the x and y of the holes of the
+ * mount `at_holes` names, in the butting bar's section from its box centre. A requirement with
+ * none makes one op at the centre or at the joint point, as before: `[undefined]`.
+ */
+function requirementPositions(
+  item: ConnectorItem,
+  req: NonNullable<ConnectorItem["requires"]>[number],
+): Pos[] {
+  if (req.at_mm) return req.at_mm.map((p) => [p[0], p[1]] as const);
+  if (req.at_holes !== undefined) {
+    const holes = item.mounts?.[req.at_holes]?.holes ?? [];
+    if (holes.length > 0) return holes.map((h) => [h.at_mm[0], h.at_mm[1]] as const);
+  }
+  return [undefined];
+}
+
+/**
+ * Where the connector taps the butting end: every end tap it asks of the butting bar (`on`
+ * butting or each), at its positions, the centre where it gives none. A hole the connector
+ * makes in the through bar at one of these places is the clearance for a screw into that tap
+ * (after acceptance run 4, call 40).
+ */
+function buttingTaps(item: ConnectorItem): (readonly [number, number])[] {
+  const out: (readonly [number, number])[] = [];
+  for (const req of item.requires ?? []) {
+    if (req.op !== "end-tap" || (req.on !== "butting" && req.on !== "each")) continue;
+    for (const p of requirementPositions(item, req)) out.push(p ?? [0, 0]);
+  }
+  return out;
+}
+
+/**
+ * A solid bar held by a screw through it (after the alternative frame's acceptance, X3): a fourth
+ * way to hold a butt's through bar, beside its system, its bore and `held_by`. It holds when
+ *
+ * 1. the connector requires a `through-hole` in it (`on` through or each) with a `d_mm` and no
+ *    `depth_mm`, so the hole runs through the bar and the head bears on its far side;
+ * 2. at a position where it also taps the butting end (`buttingTaps`, call 40), so the hole is the
+ *    clearance for a screw into that tap;
+ * 3. a chosen fastener set holds a headed fastener (a `screw` or a `bolt`) whose thread's
+ *    nominal diameter is less than that hole's, so its shank passes the hole and its head does not;
+ * 4. and the bar is not hollow: a screw through an RHS's or a tube's two walls would crush them,
+ *    which is what a sleeve in its bore is for (A1).
+ *
+ * A bar of a butt's stack (X2) is held the same way: the same screw passes it, clamping it between
+ * the through bar and the butting end, so 1–3 are read of the through bar's hole (`through`) and 4
+ * of the stack bar. `why` says which condition fails, for the `fit` error; undefined when the
+ * connector requires no hole in the through bar at all, so the A1 error stands as it was.
+ */
+function screwThrough(
+  ctx: Ctx,
+  item: ConnectorItem,
+  home: string,
+  sets: readonly ChosenSet[],
+  bar: DerivedBar,
+  through: string = bar.placed.id,
+): { holds: true } | { holds: false; why: string } | undefined {
+  const id = through;
+  const holes = (item.requires ?? []).filter(
+    (r) => r.op === "through-hole" && (r.on === "through" || r.on === "each"),
+  );
+  if (holes.length === 0) return undefined;
+  if (isHollow(bar)) {
+    return {
+      holds: false,
+      why: `${bar.placed.id} is hollow, and a screw through both its walls needs a sleeve in its bore`,
+    };
+  }
+  const taps = buttingTaps(item);
+  const headed: { id: string; d: number }[] = [];
+  for (const s of sets) {
+    for (const e of s.entries) {
+      if ("inside" in e) continue;
+      const found = ctx.items.item(fullRef(e.item, home));
+      if (!found.ok || found.item.kind !== "fastener") continue;
+      if (found.item.subtype !== "screw" && found.item.subtype !== "bolt") continue;
+      const d = found.item.thread ? threadDiameter(found.item.thread) : undefined;
+      if (d !== undefined) headed.push({ id: found.id, d });
+    }
+  }
+  const reasons: string[] = [];
+  for (const r of holes) {
+    if (r.depth_mm !== undefined || r.d_mm === undefined) {
+      reasons.push(
+        `its hole in ${id} is ${r.d_mm === undefined ? "tapped" : "blind"}, so no head bears on ${id}'s far side`,
+      );
+      continue;
+    }
+    const d = num(r.d_mm);
+    const at = requirementPositions(item, r);
+    if (!at.some((p) => taps.some((q) => samePlace(q, p)))) {
+      reasons.push(
+        `its hole in ${id} is at no place where it taps the butting end, so no screw into the butting end passes it`,
+      );
+      continue;
+    }
+    if (!headed.some((f) => f.d < d - TOL.len)) {
+      reasons.push(
+        headed.length === 0
+          ? `its fastener sets hold no screw or bolt to pass its Ø${mm(d)} hole in ${id}`
+          : `no screw or bolt of its fastener sets passes its Ø${mm(d)} hole in ${id} (${headed.map((f) => `${f.id}, Ø${mm(f.d)}`).join("; ")})`,
+      );
+      continue;
+    }
+    return { holds: true };
+  }
+  return { holds: false, why: [...new Set(reasons)].join("; ") };
+}
+
+const isHollow = (b: DerivedBar) => b.placed.item.shape === "rhs" || b.placed.item.shape === "tube";
+
+/** A fastener of a chosen set, resolved. */
+interface SetPart {
+  id: string;
+  item: FastenerItem;
+}
+
+/** The fasteners of the chosen sets, in set and entry order; sleeves and other kinds left out. */
+function setParts(ctx: Ctx, sets: readonly ChosenSet[], home: string): SetPart[] {
+  const out: SetPart[] = [];
+  for (const s of sets) {
+    for (const e of s.entries) {
+      if ("inside" in e) continue;
+      const found = ctx.items.item(fullRef(e.item, home));
+      if (found.ok && found.item.kind === "fastener") out.push({ id: found.id, item: found.item });
+    }
+  }
+  return out;
+}
+
+const dimOf = (it: FastenerItem, k: string): number | undefined => {
+  const v = it.dims?.[k];
+  return v === undefined ? undefined : num(v);
+};
+
+/** A head's bearing diameter, as F2 reads it (§4.5): `dw_mm`, else `dk_mm`, else `s_mm`. */
+const bearingOf = (it: FastenerItem) =>
+  dimOf(it, "dw_mm") ?? dimOf(it, "dk_mm") ?? dimOf(it, "s_mm");
+const BEARING = "no bearing diameter (dw_mm, dk_mm or s_mm)";
+
+const OPPOSITE: Record<Face, Face> = { "+x": "-x", "-x": "+x", "+y": "-y", "-y": "+y" };
+
+/**
+ * A groove's chamber width `z` below its face (§3.3): its undercut, narrowing straight from
+ * `taper_from_mm` to `bottom_mm` at its depth where it tapers; undefined when not known.
+ */
+export function chamberWidth(g: BarItemInfo["grooves"][number], z: number): number | undefined {
+  if (g.undercut_mm === undefined) return undefined;
+  if (g.taper_from_mm === undefined || g.bottom_mm === undefined || g.depth_mm === undefined) {
+    return g.undercut_mm;
+  }
+  if (z <= g.taper_from_mm) return g.undercut_mm;
+  const f = Math.min(1, (z - g.taper_from_mm) / (g.depth_mm - g.taper_from_mm));
+  return g.undercut_mm - (g.undercut_mm - g.bottom_mm) * f;
+}
+
+/**
+ * The groove of a bar's bounding face whose opening a point of the face lies in, and the point's
+ * offset across the face from its centre line; undefined when none does (a groove whose opening
+ * is not known is taken as tol.len wide).
+ */
+function grooveAt(
+  bar: DerivedBar,
+  face: Face,
+  X: V3,
+): { groove: BarItemInfo["grooves"][number]; off: number } | undefined {
+  return grooveOffsets(bar.placed, face, X).find(
+    ({ groove, off }) => Math.abs(off) <= (groove.opening_mm ?? 2 * TOL.len) / 2,
+  );
 }
 
 /** A splice's studs (its parts that are fasteners of subtype `stud`, by qty), at least one. */

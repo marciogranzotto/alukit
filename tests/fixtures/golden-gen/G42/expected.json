@@ -1,0 +1,98 @@
+{
+  "case": "G42",
+  "rule": "a fastener that cites a standard takes the dimensions it does not state from the standard's row for its thread, when catalogs are linked, so its head's seat is checked; what the item states wins, and one with neither is not checked (an info) (§3.4, §4.5)",
+  "design": "G37's M8 socket head over a 40x40's c8 groove, the screw now giving no dimensions of its own: citing a standard whose M8 row has dk 13, its head bears 45.87 %, a fit warning, whether its maker names the standard or it is read from its type. Stating dk 10 itself, 33.54 %. Citing none, no seat and an info. Its own dk 10 on a flat face: 100 %",
+  "expect": {
+    "seats": {
+      "c1": [
+        {
+          "k": 1,
+          "side": "head",
+          "item": "test-x:SCR-M8x50-STD",
+          "on": "b1 +y",
+          "d_in_mm": 9,
+          "d_out_mm": 13,
+          "bearing_pct": 45.87
+        }
+      ]
+    },
+    "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "the standard read from its type",
+      "patch": { "connections": { "c1": { "fastener": "test-x:SCR-M8x50-EST" } } },
+      "expect": {
+        "seats": {
+          "c1": [
+            {
+              "k": 1,
+              "side": "head",
+              "item": "test-x:SCR-M8x50-EST",
+              "on": "b1 +y",
+              "d_in_mm": 9,
+              "d_out_mm": 13,
+              "bearing_pct": 45.87
+            }
+          ]
+        },
+        "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+        "errors": []
+      }
+    },
+    {
+      "name": "its own head diameter",
+      "patch": { "connections": { "c1": { "fastener": "test-x:SCR-M8x50-OWN" } } },
+      "expect": {
+        "seats": {
+          "c1": [
+            {
+              "k": 1,
+              "side": "head",
+              "item": "test-x:SCR-M8x50-OWN",
+              "on": "b1 +y",
+              "d_in_mm": 9,
+              "d_out_mm": 10,
+              "bearing_pct": 33.54
+            }
+          ]
+        },
+        "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+        "errors": []
+      }
+    },
+    {
+      "name": "no standard",
+      "patch": { "connections": { "c1": { "fastener": "test-x:SCR-M8x50-BARE" } } },
+      "expect": { "seats": { "c1": [] }, "warnings": [], "errors": [] }
+    },
+    {
+      "name": "its own head on a flat face",
+      "patch": {
+        "bars": {
+          "b1": { "item": "test-geo:FB-50x10" },
+          "b2": { "a": [0, 0, -10], "b": [400, 0, -10] }
+        },
+        "connections": { "c1": { "fastener": "test-x:SCR-M8x50-OWN" } }
+      },
+      "expect": {
+        "seats": {
+          "c1": [
+            {
+              "k": 1,
+              "side": "head",
+              "item": "test-x:SCR-M8x50-OWN",
+              "on": "b1 +y",
+              "d_in_mm": 9,
+              "d_out_mm": 10,
+              "bearing_pct": 100
+            }
+          ]
+        },
+        "warnings": [],
+        "errors": []
+      }
+    }
+  ]
+}

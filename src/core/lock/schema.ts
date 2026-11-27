@@ -12,7 +12,8 @@ import type { JsonSchema } from "../schema-walk.ts";
  * derive reads it and never the live catalogs (call 11). It is a frozen slice of the linked
  * catalogs: each item the document resolves, in any variant, as merged and linked (clones'
  * ratings and rails' factory end distances filled), with its offers and its section, and the
- * shared definitions they name (§3.3: materials, groove types, systems). Every entry carries the
+ * shared definitions they name (§3.3: materials, groove types, systems; not a fastener's standard,
+ * whose row linking has already filled into the item). Every entry carries the
  * content hash of its value, and every catalog the hash of its loaded content, so a check can
  * tell cheaply when the lock is behind.
  *

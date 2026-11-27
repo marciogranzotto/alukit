@@ -97,6 +97,22 @@ interface Expect {
     }[]
   >;
   /**
+   * Per butt connection: its connector's screw heads, seated (after the alternative frame's
+   * acceptance, F2b), as `seats` gives a face connection's.
+   */
+  heads?: Record<
+    string,
+    {
+      end: string;
+      side: string;
+      item: string;
+      on: string;
+      d_in_mm: number;
+      d_out_mm: number;
+      bearing_pct: number;
+    }[]
+  >;
+  /**
    * Per face connection: every station's head and nut seats (§4.5, after acceptance run 4), the
    * part that bears, the face, its annulus and the percentage of it on the face's material.
    */
@@ -189,6 +205,18 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
       overlap_mm: r2(e.overlap),
     }));
     expect(got, `${label}: ${id}'s seats`).toEqual(seats);
+  }
+  for (const [id, heads] of Object.entries(want.heads ?? {})) {
+    const got = (d.butts.get(id)?.heads ?? []).map((h) => ({
+      end: h.end,
+      side: h.side,
+      item: h.item,
+      on: h.on,
+      d_in_mm: r2(h.d_in),
+      d_out_mm: r2(h.d_out),
+      bearing_pct: r2(100 * h.bearing),
+    }));
+    expect(got, `${label}: ${id}'s screw heads`).toEqual(heads);
   }
   for (const [id, seats] of Object.entries(want.seats ?? {})) {
     const got = d.fastenings.get(id)?.stations.flatMap((st) =>
@@ -381,7 +409,7 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
 const dirs = subdirs(join(FIXTURES, "golden-gen"));
 
 describe("golden generation cases (design §4.6)", () => {
-  it("has one fixture per case G22–G26, G29–G34 and G38", () => {
+  it("has one fixture per case G22–G26 and G29–G45", () => {
     expect(dirs.map((d) => basename(d))).toEqual([
       "G22",
       "G23",
@@ -398,6 +426,13 @@ describe("golden generation cases (design §4.6)", () => {
       "G36",
       "G37",
       "G38",
+      "G39",
+      "G40",
+      "G41",
+      "G42",
+      "G43",
+      "G44",
+      "G45",
     ]);
   });
 

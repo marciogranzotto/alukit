@@ -1,0 +1,116 @@
+{
+  "schema": "alukit.offers/1",
+  "offers": {
+    "SCR-M8x20": {
+      "item": "SCR-M8x20",
+      "price": {
+        "regular_minor": 100,
+        "per": "unit",
+        "read": "2026-11-27",
+        "src": "src"
+      }
+    },
+    "SCR-M8x20-WIDE": {
+      "item": "SCR-M8x20-WIDE",
+      "price": {
+        "regular_minor": 100,
+        "per": "unit",
+        "read": "2026-11-27",
+        "src": "src"
+      }
+    },
+    "W8": {
+      "item": "W8",
+      "price": {
+        "regular_minor": 100,
+        "per": "unit",
+        "read": "2026-11-27",
+        "src": "src"
+      }
+    },
+    "TNUT-SEAT": {
+      "item": "TNUT-SEAT",
+      "price": {
+        "regular_minor": 100,
+        "per": "unit",
+        "read": "2026-11-27",
+        "src": "src"
+      }
+    },
+    "TNUT-SEAT-THIN": {
+      "item": "TNUT-SEAT-THIN",
+      "price": {
+        "regular_minor": 100,
+        "per": "unit",
+        "read": "2026-11-27",
+        "src": "src"
+      }
+    },
+    "FB-120x12-6000": {
+      "item": "FB-120x12",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 21000, "per": "bar", "read": "2026-11-27", "src": "src" }
+    },
+    "FB-120x25-6000": {
+      "item": "FB-120x25",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 42000, "per": "bar", "read": "2026-11-27", "src": "src" }
+    },
+    "FB-80x8-3000": {
+      "item": "FB-80x8",
+      "supplier": "test-alu",
+      "sale": { "mode": "stock", "length_mm": 3000 },
+      "price": { "regular_minor": 9000, "per": "bar", "read": "2026-11-27", "src": "src" }
+    },
+    "BLOCK-80-1000": {
+      "item": "BLOCK-80",
+      "supplier": "test-alu",
+      "sale": { "mode": "stock", "length_mm": 1000 },
+      "price": { "regular_minor": 26000, "per": "bar", "read": "2026-11-27", "src": "src" }
+    },
+    "TUBE-60x3-6000": {
+      "item": "TUBE-60x3",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 16000, "per": "bar", "read": "2026-11-27", "src": "src" }
+    },
+    "BLIND-M8": {
+      "item": "BLIND-M8",
+      "price": { "regular_minor": 1800, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "SCR-M8x50-STD": {
+      "item": "SCR-M8x50-STD",
+      "price": { "regular_minor": 120, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "SCR-M8x50-EST": {
+      "item": "SCR-M8x50-EST",
+      "price": { "regular_minor": 120, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "SCR-M8x50-OWN": {
+      "item": "SCR-M8x50-OWN",
+      "price": { "regular_minor": 120, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "SCR-M8x50-BARE": {
+      "item": "SCR-M8x50-BARE",
+      "price": { "regular_minor": 120, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "BUSH-16-8": {
+      "item": "BUSH-16-8",
+      "price": { "regular_minor": 450, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "SCR-M8x100": {
+      "item": "SCR-M8x100",
+      "price": { "regular_minor": 300, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "STUD-M8": {
+      "item": "STUD-M8",
+      "price": { "regular_minor": 250, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "BLIND-M8-NH": {
+      "item": "BLIND-M8-NH",
+      "price": { "regular_minor": 1800, "per": "unit", "read": "2026-11-27", "src": "src" }
+    }
+  }
+}

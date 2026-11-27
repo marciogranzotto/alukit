@@ -51,7 +51,8 @@ in `forseti_importer/fetch.py`. `manifest.json` in the snapshot records every re
 date, which becomes the `read` of every shop fact the build emits.
 
 From it come items (name, code, finish options, thread, length, insertion, the dimensions a
-description tabulates), offers (regular and sale price in minor units, pack, kit contents, stock
+description tabulates, and the standard a screw is made to where its type fixes it, from
+`STANDARDS` in `tables.py`, as an estimate: the shop names none), offers (regular and sale price in minor units, pack, kit contents, stock
 length, cut rule, stock and shipping mass) and the material's identity.
 
 **The catalogue**, `catalogo_forsetiA4.pdf` ("Catálogo técnico 2020", 96 pages). The build checks

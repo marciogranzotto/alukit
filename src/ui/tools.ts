@@ -116,7 +116,7 @@ export const pivotOptions = signal<PivotOptions>({ from: "a", axis: "across", co
  * Lists are comma-separated numbers or expressions.
  */
 export interface FaceOptions {
-  fastening: "none" | "bolt" | "tnut" | "screw";
+  fastening: "none" | "bolt" | "tnut" | "screw" | "blind";
   fastener: string;
   /** The fastener is a rod cut from `fastener`'s bar stock, `rodLen` long. */
   rod: boolean;

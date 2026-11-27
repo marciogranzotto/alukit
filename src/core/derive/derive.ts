@@ -200,7 +200,12 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
   const butts = buttSeats(ctx, bars, s3.seats);
 
   // Stage 4: rail holes, parts, face contacts and fastenings, generated machining, hardware.
-  const gen = attach(ctx, bars, runs);
+  const gen = attach(ctx, bars, runs, s3.stacks);
+  // Each butt's connector screw heads, seated in stage 4, join its end seats (F2b).
+  for (const [id, heads] of gen.heads) {
+    const seats = butts.get(id);
+    if (seats) butts.set(id, { ...seats, heads });
+  }
 
   return {
     doc: ctx.doc,

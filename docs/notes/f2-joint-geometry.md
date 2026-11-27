@@ -27,7 +27,7 @@ with no diagnostic.
    position where the same connector requires an `end-tap` `on` the butting bar (or `each`), is
    the clearance for a screw into that tap. The pairing is read from the connector's own
    `requires`, matching positions within `tol.len`, not from a new field naming the fastener (call
-   39): a recipe for screws through a block into a bar's cores already writes both. A hole with no tap at its place keeps A4's rule.
+   40): a recipe for screws through a block into a bar's cores already writes both. A hole with no tap at its place keeps A4's rule.
 2. **Its line.** The butting bar's axis through the position: the box centre's line moved by the
    position in the butting section's x and y, pointing into the joint. The entry is where it meets
    the through bar's end face; the exit where it meets the other end face, or the hole's end at
@@ -201,3 +201,7 @@ and the disc–polygon area.
 Angled side holes, a clash check between members that are not joined, the seats of a butt
 connector's screws, a settable seat threshold, and head diameters from the ISO tables for items
 that name their standard but give no dimensions: each would follow its own request.
+
+*Since closed (2026-11-27):* the seats of a butt connector's screws (F2b) and head diameters from
+the cited standard's table (F2a), in [`x1-x3-f2ab.md`](x1-x3-f2ab.md). A butt through a bar's
+end is still not seat-checked.

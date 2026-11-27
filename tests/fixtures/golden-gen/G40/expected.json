@@ -1,0 +1,75 @@
+{
+  "case": "G40",
+  "rule": "a solid through bar of no system is held by a screw through it into the butting end: a through-hole with no depth, at a place where the connector taps the butting end, passed by a screw or bolt of its fastener set; not when the hole is blind, has no tap at its place, is too small for the screw, the set has no headed fastener, or the bar is hollow (§3.4, fit by role)",
+  "design": "A 40x40 post, its core tapped M16 for a bush, on a plain 80 x 80 block: J1's Ø9 hole through the block under the post's centre, its M8 screw into the bush, holds the block; no fit error. Through the block's end, the same with an end hole along the axis. A 20 deep hole, a hole with no tap at its place, a Ø6 hole for the M8, a stud for the screw, or an RHS for the block: a fit error on c1 naming b1",
+  "expect": {
+    "ops": {
+      "b1": [{ "op": "hole", "face": "+y", "from": "a", "at": 100, "d": 9, "by": "c1" }],
+      "b2": [{ "op": "end-tap", "from": "a", "thread": "M16", "by": "c1" }]
+    },
+    "hardware": { "test-x:BUSH-16-8": 1, "test-x:SCR-M8x100": 1 },
+    "recipes": { "test-x:J1": 1 },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "through the block's end",
+      "patch": {
+        "bars": { "b2": { "a": [700, 0, 0], "b": [200, 0, 0] } },
+        "connections": { "c1": { "through": "b1.b", "ends": ["b2.b"] } }
+      },
+      "expect": {
+        "ops": {
+          "b1": [{ "op": "end-hole", "from": "b", "d": 9, "by": "c1" }],
+          "b2": [{ "op": "end-tap", "from": "b", "thread": "M16", "by": "c1" }]
+        },
+        "recipes": { "test-x:J1": 1 },
+        "errors": []
+      }
+    },
+    {
+      "name": "a blind hole",
+      "patch": { "connections": { "c1": { "connector": "test-x:J1-BLIND" } } },
+      "expect": {
+        "recipes": { "test-x:J1-BLIND": 1 },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "no tap at the hole",
+      "patch": { "connections": { "c1": { "connector": "test-x:J1-HOLE" } } },
+      "expect": {
+        "recipes": { "test-x:J1-HOLE": 1 },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "a hole too small for the screw",
+      "patch": { "connections": { "c1": { "connector": "test-x:J1-PILOT" } } },
+      "expect": {
+        "recipes": { "test-x:J1-PILOT": 1 },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "a stud for the screw",
+      "patch": { "connections": { "c1": { "connector": "test-x:J1-STUD" } } },
+      "expect": {
+        "recipes": { "test-x:J1-STUD": 1 },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "an RHS for the block",
+      "patch": {
+        "bars": {
+          "b1": { "item": "test-stud:RHS-200x100x4.75", "a": [0, 0, -60], "b": [200, 0, -60] }
+        }
+      },
+      "expect": {
+        "recipes": { "test-x:J1": 1 },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G39",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-stud", "../../catalogs/test-x"],
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "item": "test-stud:RHS-200x100x4.75", "a": [0, 0, 0], "b": [1000, 0, 0], "label": "an RHS along +X, 200 tall" },
+    "b2": { "item": "test-x:FB-120x12", "a": [100, 0, 106], "b": [350, 0, 106], "label": "a 12 mm plate on its top wall" }
+  },
+  "connections": {
+    "c1": { "type": "face", "bars": ["b2", "b1"], "fastening": "blind", "fastener": "test-x:BLIND-M8", "stations": { "at_mm": [50, 200] } }
+  }
+}

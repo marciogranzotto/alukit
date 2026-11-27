@@ -1,5 +1,16 @@
 import { z } from "zod";
-import { CatalogId, IsoDate, LocalId, Prov, Ref, SourceRef, Src, Valued } from "./common.ts";
+import {
+  CatalogId,
+  IsoDate,
+  LocalId,
+  Prov,
+  Quantities,
+  Ref,
+  SourceRef,
+  Src,
+  Thread,
+  Valued,
+} from "./common.ts";
 import { Offer } from "./offers.ts";
 
 /**
@@ -71,6 +82,22 @@ export const System = z.discriminatedUnion("type", [
 ]);
 export type System = z.infer<typeof System>;
 
+/**
+ * A standard fasteners are made to (§3.3; after the alternative frame's acceptance, F2a): its
+ * dimensions by size, under the standard's letters, as a table reproduces them. A fastener item
+ * that cites it (`standard`) takes, when catalogs are linked, each dimension it does not state
+ * from the row of its thread (§3.4).
+ */
+export const Standard = z.strictObject({
+  name: z.string().min(1).describe('as the standard is cited, e.g. "ISO 4762"'),
+  title: z.string().min(1).optional(),
+  sizes: z
+    .record(Thread, Quantities)
+    .describe("by thread, e.g. M8: the dimensions the standard gives at that size"),
+  prov: Prov.optional(),
+});
+export type Standard = z.infer<typeof Standard>;
+
 /** An item fragment: checked field by field after the merge (§3.1). */
 export const ItemFragment = z.record(z.string(), z.unknown());
 
@@ -78,6 +105,7 @@ const definitions = {
   materials: z.record(LocalId, Material).optional(),
   grooves: z.record(LocalId, GrooveType).optional(),
   systems: z.record(LocalId, System).optional(),
+  standards: z.record(LocalId, Standard).optional(),
 };
 
 /** catalog.json: the importer's output, regenerated, never edited by hand (layer 1). */
@@ -172,6 +200,7 @@ export const CatalogEnvelope = CatalogFile.extend({
   materials: Entries.optional(),
   grooves: Entries.optional(),
   systems: Entries.optional(),
+  standards: Entries.optional(),
   items: Entries.optional(),
 });
 export const OffersEnvelope = OffersFile.extend({ offers: Entries });
@@ -179,6 +208,7 @@ export const FamilyEnvelope = FamilyFile.extend({
   materials: Entries.optional(),
   grooves: Entries.optional(),
   systems: Entries.optional(),
+  standards: Entries.optional(),
   items: Entries.optional(),
 });
 export const OverridesEnvelope = OverridesFile.extend({ overrides: z.array(z.unknown()) });

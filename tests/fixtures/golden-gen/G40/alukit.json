@@ -1,0 +1,16 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G40",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-stud", "../../catalogs/test-x"],
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "item": "test-x:BLOCK-80", "a": [0, 0, 0], "b": [200, 0, 0], "label": "a plain 80 x 80 block of no system" },
+    "b2": { "item": "test-stud:TS40C", "a": [100, 0, 40], "b": [100, 0, 540], "label": "a 40x40 post on its top face, its core tapped M16" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"], "connector": "test-x:J1" }
+  }
+}
