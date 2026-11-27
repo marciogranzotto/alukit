@@ -1,0 +1,18 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G34",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-stud"],
+  "defaults": {
+    "bar": { "item": "test-stud:TS80" },
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [600, 0, 0], "label": "80x80 along +X" },
+    "b2": { "a": [300, 0, 0], "b": [300, 0, 500], "label": "80x80 post on b1" },
+    "b3": { "a": [300, 0, 500], "b": [300, 0, 1000], "label": "80x80 post spliced on b2" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"], "connector": "test-stud:J4" },
+    "c2": { "type": "splice", "ends": ["b2.b", "b3.a"], "connector": "test-stud:SPLICE4" }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G33",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-stud"],
+  "defaults": {
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "item": "test-stud:RHS-200x100x4.75", "a": [0, 0, 0], "b": [1000, 0, 0], "label": "RHS 200x100x4.75, 200 tall: no system" },
+    "b2": { "item": "test-stud:TS40C", "a": [500, 0, 0], "b": [500, 600, 0], "label": "40x40 butting from +Y" },
+    "b3": { "item": "test-stud:TS40C", "a": [500, -600, 0], "b": [500, 0, 0], "label": "40x40 butting from -Y, coaxial with b2" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"], "connector": "test-stud:STUD-END" },
+    "c2": { "type": "butt", "through": "b1", "ends": ["b3.b"], "held_by": "c1", "connector": "test-stud:BUSH-END" }
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "case": "G33",
+  "rule": "a butting end held by another butt's through-fastener: one stud through the through bar, in one sleeve, into a bush in each of two coaxial opposite ends (§3.4, §4.5)",
+  "design": "an RHS 200x100x4.75 of no system along +X; two 40x40 bars butting into it from +Y and from -Y on one centre line. c1 holds b2.a with a stud end (a stud, a bush, a sleeve cut to the bore, a Ø9 hole through the RHS); c2 holds b3.b with a bush end and is held_by c1. No error; each 40x40 550.00; one stud, two bushes, one sleeve 90.50 (the bore across the RHS's 100, less two 4.75 walls); one Ø9 hole through the RHS, from the face b2 meets; an M16 tap in each butting end. The stud crosses 100.00 between the two butting end faces. One butt with both ends and the stud end on each: two studs and two sleeves, and the hole through the RHS twice, a machining error. Two butts and no held_by: the fit error on c2. b3 moved 20 off b2's centre line: a connection error on c2. Held by a butt whose connector passes nothing through the RHS: a connection error on c2 (and c1's own fit error). The held end's connector passing its own stud: a connection error on c2",
+  "expect": {
+    "lines": {
+      "test-stud:RHS-200x100x4.75": [{ "count": 1, "cut_mm": 1000 }],
+      "test-stud:TS40C": [{ "count": 2, "cut_mm": 550 }],
+      "test-stud:TUBE-16x3": [{ "count": 1, "cut_mm": 90.5 }]
+    },
+    "ops": {
+      "b1": [{ "op": "hole", "face": "+x", "from": "a", "at": 500, "d": 9, "by": "c1" }],
+      "b2": [{ "op": "end-tap", "from": "a", "thread": "M16", "by": "c1" }],
+      "b3": [{ "op": "end-tap", "from": "b", "thread": "M16", "by": "c2" }]
+    },
+    "hardware": { "test-stud:STUD-M8x140": 1, "test-stud:BUSH-M16-M8": 2 },
+    "recipes": { "test-stud:STUD-END": 1, "test-stud:BUSH-END": 1 },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "one butt with both ends, the stud end on each",
+      "patch": { "connections": { "c1": { "ends": ["b2.a", "b3.b"] }, "c2": null } },
+      "expect": {
+        "lines": {
+          "test-stud:TS40C": [{ "count": 2, "cut_mm": 550 }],
+          "test-stud:TUBE-16x3": [{ "count": 2, "cut_mm": 90.5 }]
+        },
+        "ops": {
+          "b1": [
+            { "op": "hole", "face": "+x", "from": "a", "at": 500, "d": 9, "by": "c1" },
+            { "op": "hole", "face": "-x", "from": "a", "at": 500, "d": 9, "by": "c1" }
+          ]
+        },
+        "hardware": { "test-stud:STUD-M8x140": 2, "test-stud:BUSH-M16-M8": 2 },
+        "recipes": { "test-stud:STUD-END": 2 },
+        "errors": [{ "code": "machining", "entity": "b1", "refs": ["c1"] }]
+      }
+    },
+    {
+      "name": "two butts, the bush end not held",
+      "patch": { "connections": { "c2": { "held_by": null } } },
+      "expect": {
+        "lines": { "test-stud:TUBE-16x3": [{ "count": 1, "cut_mm": 90.5 }] },
+        "hardware": { "test-stud:STUD-M8x140": 1, "test-stud:BUSH-M16-M8": 2 },
+        "recipes": { "test-stud:STUD-END": 1, "test-stud:BUSH-END": 1 },
+        "errors": [{ "code": "fit", "entity": "c2", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "the held end 20 off the stud's centre line",
+      "patch": { "bars": { "b3": { "a": [520, -600, 0], "b": [520, 0, 0] } } },
+      "expect": {
+        "lines": { "test-stud:TS40C": [{ "count": 2, "cut_mm": 550 }] },
+        "hardware": { "test-stud:STUD-M8x140": 1, "test-stud:BUSH-M16-M8": 2 },
+        "recipes": { "test-stud:STUD-END": 1, "test-stud:BUSH-END": 1 },
+        "errors": [{ "code": "connection", "entity": "c2", "refs": ["c1"] }]
+      }
+    },
+    {
+      "name": "held by a butt that passes nothing through the RHS",
+      "patch": { "connections": { "c1": { "connector": "test-stud:BUSH-END" } } },
+      "expect": {
+        "lines": {},
+        "hardware": { "test-stud:STUD-M8x140": 0, "test-stud:BUSH-M16-M8": 2 },
+        "recipes": { "test-stud:BUSH-END": 2 },
+        "errors": [
+          { "code": "fit", "entity": "c1", "refs": ["b1"] },
+          { "code": "connection", "entity": "c2", "refs": ["c1"] }
+        ]
+      }
+    },
+    {
+      "name": "the held end's connector passing its own stud",
+      "patch": { "connections": { "c2": { "connector": "test-stud:STUD-END" } } },
+      "expect": {
+        "hardware": { "test-stud:STUD-M8x140": 2, "test-stud:BUSH-M16-M8": 2 },
+        "recipes": { "test-stud:STUD-END": 2 },
+        "errors": [
+          { "code": "machining", "entity": "b1", "refs": ["c1", "c2"] },
+          { "code": "connection", "entity": "c2", "refs": ["c1"] }
+        ]
+      }
+    }
+  ]
+}

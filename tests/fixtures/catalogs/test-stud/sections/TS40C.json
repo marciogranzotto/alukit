@@ -1,0 +1,13 @@
+{
+  "schema": "alukit.section/1",
+  "id": "TS40C",
+  "fidelity": "parametric",
+  "props_ok": false,
+  "generator": "tslot",
+  "params": {
+    "w_mm": 40,
+    "h_mm": 40,
+    "groove": "test:c8",
+    "bores": [{ "at_mm": [0, 0], "d_mm": 13.7 }]
+  }
+}
