@@ -20,8 +20,15 @@ import { typedNumber, typedValue, valueList } from "./typed.ts";
  * the picks make none. Pure: the tools' wiring and forms call them.
  */
 
-/** A face connection's fields from its options, or why they make none. */
-function faceFields(f: FaceOptions): { fields: Record<string, unknown> } | { why: string } {
+/**
+ * A face connection's fields from its options, or why they make none. `stationsElsewhere`: the
+ * joint's stations are given another way the form does not show (a pattern's copies), so the form
+ * need not give any.
+ */
+function faceFields(
+  f: FaceOptions,
+  opts: { stationsElsewhere?: boolean } = {},
+): { fields: Record<string, unknown> } | { why: string } {
   const gaps = valueList(f.gaps);
   if (!gaps) return { why: "the gaps are a comma-separated list, one per pair of layers" };
   const common = gaps.length > 0 ? { gaps_mm: gaps } : {};
@@ -40,7 +47,7 @@ function faceFields(f: FaceOptions): { fields: Record<string, unknown> } | { why
   const at = valueList(f.at);
   const across = valueList(f.across);
   if (!at || !across) return { why: "the stations are comma-separated distances in mm" };
-  if (at.length === 0 && !f.railHoles) {
+  if (at.length === 0 && !f.railHoles && !opts.stationsElsewhere) {
     return { why: "give the stations: distances along the first layer, or its rail's holes" };
   }
   const stack = f.stack
@@ -63,6 +70,126 @@ function faceFields(f: FaceOptions): { fields: Record<string, unknown> } | { why
       ...common,
     },
   };
+}
+
+type O = Record<string, unknown>;
+
+const isObject = (x: unknown): x is O => typeof x === "object" && x !== null && !Array.isArray(x);
+
+/** A stack entry in words: an item, a count of one, or a sleeve cut from bar stock. */
+function stackWords(e: unknown): string {
+  if (typeof e === "string") return e;
+  if (!isObject(e)) return String(e);
+  if (typeof e.inside === "string") return `a ${String(e.item)} sleeve in ${e.inside}`;
+  return typeof e.qty === "number" ? `${e.qty} × ${String(e.item)}` : String(e.item);
+}
+
+/** A rail-hole selection in words: `along r2, every 2, plus first, last, joint`. */
+function railHolesWords(s: O): string {
+  const plus = Array.isArray(s.plus) ? s.plus.map(String) : [];
+  return [
+    `along ${String(s.along)}`,
+    ...(typeof s.every === "number" ? [`every ${s.every}`] : []),
+    ...(plus.length > 0 ? [`plus ${plus.join(", ")}`] : []),
+  ].join(", ");
+}
+
+/** A written list as the form types it, or undefined when a member holds a comma it would split. */
+function listText(v: unknown): string | undefined {
+  if (!Array.isArray(v)) return "";
+  const parts = v.map(String);
+  return parts.some((p) => p.includes(",")) ? undefined : parts.join(", ");
+}
+
+/**
+ * The face form filled from a written face connection (the editing audit's E5.1, E-UX-14): the
+ * options the Connect tool's form would need to write it, and the fields written in a form the
+ * form cannot show (a sleeve in the stack, a rail-hole selection, a list member with a comma),
+ * each in words, to be shown read only and kept as written.
+ */
+export function faceOptionsOf(c: O): {
+  options: FaceOptions;
+  fixed: Partial<Record<keyof FaceOptions, string>>;
+} {
+  const fixed: Partial<Record<keyof FaceOptions, string>> = {};
+  const st = isObject(c.stations) ? c.stations : {};
+  const fastener = c.fastener;
+  const rod = isObject(fastener);
+  const stack = Array.isArray(c.stack) ? c.stack : [];
+  const stackText = stack.map(stackWords).join(", ");
+  if (stack.some((e) => typeof e !== "string")) fixed.stack = stackText;
+  const rail = st.rail_holes;
+  if (isObject(rail)) fixed.railHoles = railHolesWords(rail);
+  const list = (k: "at" | "across" | "gaps", v: unknown): string => {
+    const t = listText(v);
+    if (t !== undefined) return t;
+    const words = (v as unknown[]).map(String).join("; ");
+    fixed[k] = words;
+    return words;
+  };
+  const fastening = typeof c.fastening === "string" ? c.fastening : "none";
+  return {
+    options: {
+      fastening: (["none", "bolt", "tnut", "screw", "blind"].includes(fastening)
+        ? fastening
+        : "none") as FaceOptions["fastening"],
+      fastener: rod ? String(fastener.bar) : typeof fastener === "string" ? fastener : "",
+      rod,
+      rodLen: rod && fastener.len_mm !== undefined ? String(fastener.len_mm) : "",
+      stack: stackText,
+      at: list("at", st.at_mm),
+      across: list("across", st.across_mm),
+      railHoles: rail !== undefined,
+      gaps: list("gaps", c.gaps_mm),
+      tapDepth: c.tap_depth_mm === undefined ? "" : String(c.tap_depth_mm),
+    },
+    fixed,
+  };
+}
+
+/**
+ * A JSON merge patch (RFC 7396) that takes `from` to `to`: each changed key, nested objects
+ * patched in turn, and a key `to` drops written as null.
+ */
+function mergeDiff(from: O, to: O): O {
+  const out: O = {};
+  for (const k of new Set([...Object.keys(from), ...Object.keys(to)])) {
+    const a = from[k];
+    const b = to[k];
+    if (JSON.stringify(a) === JSON.stringify(b)) continue;
+    if (b === undefined) out[k] = null;
+    else if (isObject(a) && isObject(b)) out[k] = mergeDiff(a, b);
+    else out[k] = b;
+  }
+  return out;
+}
+
+/**
+ * The one `setConnection` that edits a written face connection to the form's options (E-UX-14):
+ * the difference between what the form wrote when filled from the joint and what it writes now,
+ * as a merge patch, so a field the person did not touch, or one the form cannot show, stays as
+ * written. `layers`, when given, are the joint's layers re-picked in Connect. `same` when nothing
+ * changed.
+ */
+export function faceEditCommand(
+  id: string,
+  c: O,
+  edited: FaceOptions,
+  layers?: readonly string[],
+): { cmd: "setConnection"; args: { id: string; set: O } } | { why: string } | { same: true } {
+  const opts = {
+    stationsElsewhere: isObject(c.stations) && typeof c.stations.pattern === "string",
+  };
+  const before = faceFields(faceOptionsOf(c).options, opts);
+  const after = faceFields(edited, opts);
+  if ("why" in after) return after;
+  const set = mergeDiff("why" in before ? {} : before.fields, after.fields);
+  const was = Array.isArray(c.bars) ? c.bars : [];
+  const bars =
+    layers && JSON.stringify([...layers]) !== JSON.stringify(was) ? { bars: [...layers] } : {};
+  const patch = { ...bars, ...set };
+  if (Object.keys(patch).length === 0) return { same: true };
+  return { cmd: "setConnection", args: { id, set: patch } };
 }
 
 /** The batch a connection's picks make, or why they make none. */
