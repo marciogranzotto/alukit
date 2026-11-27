@@ -127,7 +127,8 @@ anything, and each has a default in place.
 | X7 / X8 / F7: quick connectors | **done**, merged (06:59), pushed | G46–G48, calls 52–56; `docs/notes/x7-x8-f7.md` |
 | UX S5: tools, inspector, command bar | **done**, merged (09:18), pushed | `docs/ux/s5-decisions.md` |
 | UX integration pass (bundle split, one call for corner rules, built-in catalogs, README and guide, design §8) | running (Opus, worktree), launched 09:20 | `docs/ux/integration-decisions.md` |
-| UX phase 4: designer review of the running app | running (Opus, worktree, read-only), launched 09:20 | `docs/ux/review-phase4.md`; then a polish pass on its findings |
+| UX phase 4: designer review of the running app | **done**, merged (09:46), pushed | `docs/ux/review-phase4.md`: 1 blocker, 8 major, plus minor items |
+| UX polish pass on the review's findings | running (Opus, worktree), launched 09:47 | `docs/ux/polish-decisions.md` |
 | X9 / F8 / F9: cross-hole faces, bearing on the hook, per-profile grooves | running (Opus, worktree), launched 08:39 | G49+, calls 57+ | task flows and IA; heuristics and first run; visual design and 3D readability |
 | F2: end-hole axis, butt end-face coverage, head seats | **done**, merged (03:30), pushed | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
 | X1–X3, X5, X6 plus F2a/F2b: blind fasteners, a butt's stack of bodies, plain bars held by a drilled-hole screw, taps over groove openings, sleeves through both walls, head sizes from standards, butt screws seat-checked | **done**, merged (05:00), pushed | Goldens G39–G45; calls 45–51. Note: `docs/notes/x1-x3-f2ab.md`. |
@@ -809,3 +810,21 @@ anything, and each has a default in place.
 - **09:18**: S5 merged; gate PASS (1,075 tests). All six streams are on `main` (`f264ea5`).
   - From the screenshots, for the designer review: the box-frame form shows in two places, the command bar covers part of the model, the status line repeats the prompt, one label is cut off, and warning outlines look close to the selection's amber.
 - **09:20**: The integration pass and the phase-4 designer review were launched in parallel. The review is read-only, and its findings feed a final polish pass.
+- **09:44**: The phase-4 designer review is in (`docs/ux/review-phase4.md`).
+  - **Verdict:** much friendlier than the app the first three reviews walked.
+  - **First bar:** 3 clicks, 4 keys, about 22 s (target 30; before, 5 clicks, 7 keys and a dead end).
+  - **Box frame:** 5 clicks, 17 keys, about 43 s (target 60; before, 16 clicks and 35 keys).
+  - **One blocker:** a box frame reads "Ready to order" with nothing to join it, because a butt with no connector buys nothing and no rule says so.
+  - **Eight major findings:**
+    - the start card's frame can't choose its profile;
+    - a typed length with no direction is silently ignored;
+    - the Problems badge counts the order's warnings rather than the sheet's;
+    - overlays collide at the top of the view;
+    - the command bar covers the model and Fit ignores it;
+    - the frame has two forms that disagree;
+    - outline rows hide the cut length;
+    - a size chip preselects the wrong profile family.
+  - Four of the coordinator's five screenshot items were confirmed. "Anchor c" is a code for centre, not a cut-off word.
+- **09:47**: The polish pass was launched on every finding, failing tests first for each behaviour bug.
+  - For the blocker: a fit-filtered "Joined with" choice in the frame template, a `butt-no-connector` problem, and an order rule (warn by default, which can be made to block).
+  - The coordinator added one rule: the readiness pill never shows plain green READY while such a problem stands.
