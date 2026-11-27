@@ -1,5 +1,12 @@
 import { quantize } from "#core/quantum.ts";
-import type { CheckReport, Compared, PropertyRow } from "./check.ts";
+import {
+  type CheckReport,
+  type Compared,
+  MISMATCH,
+  type PropertyRow,
+  TRACED_AREA,
+  TRACED_INERTIA,
+} from "./check.ts";
 import type { Diagnostic } from "./diagnostics.ts";
 
 /**
@@ -88,7 +95,7 @@ export function reportText(r: CheckReport): string {
   if (r.rows.length > 0) {
     out.push(
       "",
-      "Computed against published (design §3.6; beyond 1 % is a mismatch unless accepted)",
+      `Computed against published (design §3.6; beyond ${MISMATCH * 100} % is a mismatch unless accepted; a traced section's beyond ${TRACED_AREA * 100} % of area and mass or ${TRACED_INERTIA * 100} % of inertia, and never accepted)`,
     );
     out.push(
       ...table(
