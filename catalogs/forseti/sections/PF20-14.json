@@ -8,7 +8,7 @@
     "method": "vector",
     "scale": "width 20 mm",
     "read": "2026-11-26",
-    "note": "vector path of 212 segments; the outline is the stroke centreline. Centred on its box, coordinates rounded to 0.0001 mm. Cores: the holes whose inscribed circle is a bore the page prints (Ø4.6 ×3, each within 0.15 mm), centred on the hole to 0.1 mm."
+    "note": "vector path of 212 segments; the outline is the stroke centreline. Centred on its box, coordinates rounded to 0.0001 mm. Cores: the holes whose inscribed circle is a bore the page prints (Ø4.6 ×3, each within 0.15 mm), centred on the hole to 0.1 mm. The cores are labelled M5 by the drawing on p. 11."
   },
   "bbox_mm": [[-10, -30], [10, 30]],
   "grooves": [
@@ -22,9 +22,9 @@
     { "face": "-x", "at_mm": 20, "type": "c6-20" }
   ],
   "cores": [
-    { "at_mm": [0, -20], "d_mm": 4.6 },
-    { "at_mm": [0, 0], "d_mm": 4.6 },
-    { "at_mm": [0, 20], "d_mm": 4.6 }
+    { "at_mm": [0, -20], "d_mm": 4.6, "threads": ["M5"] },
+    { "at_mm": [0, 0], "d_mm": 4.6, "threads": ["M5"] },
+    { "at_mm": [0, 20], "d_mm": 4.6, "threads": ["M5"] }
   ],
   "outline": [
     [4.7973, -29.9914],

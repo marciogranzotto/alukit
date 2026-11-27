@@ -8,7 +8,7 @@
     "method": "vector",
     "scale": "width 40 mm",
     "read": "2026-11-26",
-    "note": "vector path of 856 segments; the outline is the stroke centreline. Centred on its box, coordinates rounded to 0.0001 mm. Cores: the holes whose inscribed circle is a bore the page prints (Ø13.7 ×1, Ø5 ×4, each within 0.15 mm), centred on the hole to 0.1 mm."
+    "note": "vector path of 856 segments; the outline is the stroke centreline. Centred on its box, coordinates rounded to 0.0001 mm. Cores: the holes whose inscribed circle is a bore the page prints (Ø13.7 ×1, Ø5 ×4, each within 0.15 mm), centred on the hole to 0.1 mm. The module cores are labelled M16 by the shop's description, the corner holes M6 by the drawing on p. 20."
   },
   "bbox_mm": [[-20, -20], [20, 20]],
   "grooves": [
@@ -18,11 +18,11 @@
     { "face": "-x", "at_mm": 0, "type": "c8-40" }
   ],
   "cores": [
-    { "at_mm": [0, 0], "d_mm": 13.7 },
-    { "at_mm": [-15.5, -15.5], "d_mm": 5 },
-    { "at_mm": [15.5, -15.5], "d_mm": 5 },
-    { "at_mm": [-15.5, 15.5], "d_mm": 5 },
-    { "at_mm": [15.5, 15.5], "d_mm": 5 }
+    { "at_mm": [0, 0], "d_mm": 13.7, "threads": ["M16"] },
+    { "at_mm": [-15.5, -15.5], "d_mm": 5, "threads": ["M6"] },
+    { "at_mm": [15.5, -15.5], "d_mm": 5, "threads": ["M6"] },
+    { "at_mm": [-15.5, 15.5], "d_mm": 5, "threads": ["M6"] },
+    { "at_mm": [15.5, 15.5], "d_mm": 5, "threads": ["M6"] }
   ],
   "outline": [
     [12.7513, -10.6527],

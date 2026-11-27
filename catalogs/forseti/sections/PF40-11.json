@@ -7,13 +7,13 @@
     "ref": "url:https://loja.forsetisolucoes.com.br/produto/perfil-estrutural-em-aluminio-40x40-centro-m8-canal-t-slot-8/",
     "method": "generator",
     "read": "2026-11-26",
-    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the catalogue does not draw this profile. The catalogue does not list this profile; the 6.8 mm bore is the M8 centre of the 30x30 economy profile (p. 12)"
+    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the catalogue does not draw this profile. The cores are labelled M8 by the shop's description. The catalogue does not list this profile; the 6.8 mm bore is the M8 centre of the 30x30 economy profile (p. 12)"
   },
   "generator": "tslot",
   "params": {
     "w_mm": 40,
     "h_mm": 40,
     "groove": "c8-40",
-    "bores": [{ "at_mm": [0, 0], "d_mm": 6.8 }]
+    "bores": [{ "at_mm": [0, 0], "d_mm": 6.8, "threads": ["M8"] }]
   }
 }

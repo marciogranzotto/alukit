@@ -8,7 +8,7 @@
     "method": "vector",
     "scale": "width 30 mm",
     "read": "2026-11-26",
-    "note": "vector path of 915 segments; the outline is the stroke centreline. Centred on its box, coordinates rounded to 0.0001 mm. Cores: the holes whose inscribed circle is a bore the page prints (Ø12.1 ×1, each within 0.15 mm), centred on the hole to 0.1 mm."
+    "note": "vector path of 915 segments; the outline is the stroke centreline. Centred on its box, coordinates rounded to 0.0001 mm. Cores: the holes whose inscribed circle is a bore the page prints (Ø12.1 ×1, each within 0.15 mm), centred on the hole to 0.1 mm. The cores are labelled M16 by the shop's description."
   },
   "bbox_mm": [[-15, -15], [15, 15]],
   "grooves": [
@@ -17,7 +17,7 @@
     { "face": "+y", "at_mm": 0, "type": "c8-30" },
     { "face": "-x", "at_mm": 0, "type": "c8-30" }
   ],
-  "cores": [{ "at_mm": [0, 0], "d_mm": 12.1 }],
+  "cores": [{ "at_mm": [0, 0], "d_mm": 12.1, "threads": ["M16"] }],
   "outline": [
     [14.9791, 14.8059],
     [14.9457, 14.8602],

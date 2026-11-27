@@ -7,13 +7,13 @@
     "ref": "pdf:catalogo_forsetiA4.pdf#p20",
     "method": "generator",
     "read": "2026-11-26",
-    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the page draws this profile as a raster image. P. 20 prints this profile's table with the 45x90 economy's values, so none is taken; it draws the centre core Ø13,70 (M16)"
+    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the page draws this profile as a raster image. The cores are labelled M16 by the drawing on p. 20. P. 20 prints this profile's table with the 45x90 economy's values, so none is taken; it draws the centre core Ø13,70 (M16)"
   },
   "generator": "tslot",
   "params": {
     "w_mm": 50,
     "h_mm": 50,
     "groove": "c8-40",
-    "bores": [{ "at_mm": [0, 0], "d_mm": 13.7 }]
+    "bores": [{ "at_mm": [0, 0], "d_mm": 13.7, "threads": ["M16"] }]
   }
 }

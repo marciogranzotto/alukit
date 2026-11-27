@@ -216,7 +216,10 @@ PROFILES: dict[str, dict] = {
     # - `page`: the catalogue page that draws the profile, or None.
     # - `bore`: None when the core is not known. `bores` defaults to one bore at the centre.
     # - `approx`: what the envelope leaves out; it goes into the section's note.
-    "PF20-11": {"page": 10, "w": 20, "h": 20, "bore": 5},
+    "PF20-11": {
+        "page": 10, "w": 20, "h": 20, "bore": 5,
+        "approx": "p. 10 prints the core Ø5 (M6); the shop's description gives a 4,6 mm centre for M5",
+    },
     "PF20-11C": {
         "page": None, "w": 20, "h": 20, "bore": 4.6, "printed": None,
         "approx": "the catalogue has no drawing or table of the corner (de canto) variant; modelled as the plain 20x20 V-slot",
@@ -272,7 +275,45 @@ PROFILES: dict[str, dict] = {
 #: and 20, and 31 between the 40x40 básico's on p. 16 (40 − 2 × 4.5). The build measures them on
 #: the exact outlines `measured_on` and fails unless they are there; the profiles marked `corners`
 #: take them.
-CORNER_HOLES = {"d": 5, "inset": 4.5, "measured_on": ["PF40-01", "PF40-03"]}
+CORNER_HOLES = {"d": 5, "inset": 4.5, "measured_on": ["PF40-01", "PF40-03"], "threads": ["M6"]}
+
+#: The threads the vendor labels each profile's module cores with (design §5.5: a labelled thread
+#: fits its core), and where it says so: a page whose drawing prints the label ("Ø13,7 (M16)"),
+#: else "shop", the product description ("Centro permite rosca: M16"; the build checks each such
+#: label is in it). A drawing's label wins over the shop's: PF20-11's and PF20-12's drawings print
+#: Ø5 (M6) where the shop says M5, and the 20x20's description gives a 4,6 mm centre, not the
+#: drawing's core. PF20-21's description names two, "M5 / M6"; its drawing (PF20-01's, p. 10)
+#: prints Ø6 and no thread. The base-40 corner holes take CORNER_HOLES' "(M6)", printed on p. 20.
+#: Every profile with a bore has an entry.
+CORE_THREADS: dict[str, tuple[list[str], str]] = {
+    "PF20-11": (["M6"], "p. 10"),
+    "PF20-11C": (["M5"], "shop"),
+    "PF20-11F": (["M5"], "shop"),
+    "PF20-12": (["M6"], "p. 11"),
+    "PF20-13": (["M5"], "shop"),
+    "PF20-14": (["M5"], "p. 11"),
+    "PF20-15": (["M5"], "shop"),
+    "PF20-21": (["M5", "M6"], "shop"),
+    "PF30-01": (["M14"], "p. 13"),
+    "PF30-01C": (["M14"], "shop"),
+    "PF30-01F": (["M14"], "shop"),
+    "PF30-01R": (["M14"], "p. 15"),
+    "PF30-02": (["M14"], "p. 15"),
+    "PF30-04": (["M16"], "shop"),
+    "PF30-11": (["M8"], "p. 12"),
+    "PF40-00": (["M16"], "shop"),
+    "PF40-01": (["M16"], "shop"),
+    "PF40-02": (["M16"], "shop"),
+    "PF40-03": (["M16"], "shop"),
+    "PF40-03B": (["M16"], "p. 20"),
+    "PF40-04": (["M16"], "shop"),
+    "PF40-11": (["M8"], "shop"),
+    "PF45-01": (["M16"], "shop"),
+    "PF45-02": (["M16"], "p. 18"),
+    "PF45-11": (["M8"], "shop"),
+    "PF45-12": (["M8"], "shop"),
+    "PF50-01": (["M16"], "p. 20"),
+}
 
 #: A hole of an exact outline is a printed core when its inscribed circle (about its centroid) is
 #: within this of the printed diameter, in mm. The outlines are their strokes' centre lines and

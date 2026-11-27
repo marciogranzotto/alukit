@@ -197,6 +197,15 @@ class Build:
         m = re.search(r"Canal (\d+)", store.name(main))
         slot = tables.SLOT_BY_STEM.get(stem) or (int(m.group(1)) if m else None)
         tap = re.search(r"Centro permite rosca:\s*(M\d+)", desc)
+        if spec["bore"] is not None:
+            # Every core's thread labels come from the table; one said to be the shop's must be in
+            # the description.
+            if stem not in tables.CORE_THREADS:
+                raise ValueError(f"{stem}: a bore with no CORE_THREADS entry")
+            labels, said = tables.CORE_THREADS[stem]
+            missing = [t for t in labels if said == "shop" and not re.search(rf"\b{re.escape(t)}\b", desc)]
+            if missing:
+                raise ValueError(f"{stem}: the shop's description does not name {missing}")
         series = int(stem[2:4])
         if (series, slot) not in tables.SYSTEMS:
             raise ValueError(f"{stem}: no system for series {series}, slot {slot}")
@@ -298,7 +307,8 @@ class Build:
         printed = ", ".join(f"Ø{num(Decimal(str(d)))} ×{n}" for d, n in spec["cores"].items())
         note += (f" Cores: the holes whose inscribed circle is a bore the page prints ({printed}, "
                  f"each within {tables.CORE_MATCH_MM} mm), centred on the hole to "
-                 f"{tables.CORE_GRID_MM} mm.")
+                 f"{tables.CORE_GRID_MM} mm. "
+                 + self.labels_note(stem, tables.CORNER_HOLES["d"] in spec["cores"]) + ".")
         self.sections[stem] = {
             "schema": "alukit.section/1",
             "id": stem,
@@ -337,7 +347,23 @@ class Build:
         if counts != spec["cores"]:
             raise ValueError(f"{stem}: the outline's holes give cores {counts}; the page prints {spec['cores']}")
         found.sort(key=lambda f: (-f[0], f[2], f[1]))
-        return [{"at_mm": [num(x) + 0, num(y) + 0], "d_mm": num(Decimal(str(d)))} for d, x, y in found]
+        # The module cores take the profile's labels, the base-40 corner holes the series'.
+        labels = {spec["bore"]: tables.CORE_THREADS[stem][0], tables.CORNER_HOLES["d"]: tables.CORNER_HOLES["threads"]}
+        if set(spec["cores"]) - set(labels):
+            raise ValueError(f"{stem}: no thread label for the cores {sorted(set(spec['cores']) - set(labels))}")
+        return [{"at_mm": [num(x) + 0, num(y) + 0], "d_mm": num(Decimal(str(d))), "threads": labels[d]}
+                for d, x, y in found]
+
+    @staticmethod
+    def labels_note(stem: str, corners: bool) -> str:
+        """Where a section's core thread labels come from, for its note."""
+        labels, said = tables.CORE_THREADS[stem]
+        where = "the shop's description" if said == "shop" else f"the drawing on {said}"
+        out = f"The {'module ' if corners else ''}cores are labelled {' and '.join(labels)} by {where}"
+        if corners:
+            out += (f", the corner holes {' and '.join(tables.CORNER_HOLES['threads'])} by the "
+                    f"drawing on p. 20")
+        return out
 
     def parametric_section(self, stem: str, spec: dict, grooves: list[dict], gid: str, url: str) -> None:
         w, h = spec["w"], spec["h"]
@@ -347,7 +373,8 @@ class Build:
             params["grooves"] = grooves
         bores = spec.get("bores") or ([(0, 0)] if spec["bore"] is not None else [])
         if bores:
-            params["bores"] = [{"at_mm": [x, y], "d_mm": spec["bore"]} for x, y in bores]
+            labels = tables.CORE_THREADS[stem][0]
+            params["bores"] = [{"at_mm": [x, y], "d_mm": spec["bore"], "threads": labels} for x, y in bores]
         note = ("a T-slot envelope from the printed overall size and core bore, with the groove type "
                 "measured on the series' vector outline")
         note += ("; the page draws this profile as a raster image" if spec["page"]
@@ -357,10 +384,13 @@ class Build:
             d, inset = num(Decimal(str(c["d"]))), Decimal(str(c["inset"]))
             x, y = Decimal(str(w)) / 2 - inset, Decimal(str(h)) / 2 - inset
             params.setdefault("bores", []).extend(
-                {"at_mm": [num(sx * x), num(sy * y)], "d_mm": d} for sy in (-1, 1) for sx in (-1, 1))
+                {"at_mm": [num(sx * x), num(sy * y)], "d_mm": d, "threads": c["threads"]}
+                for sy in (-1, 1) for sx in (-1, 1))
             note += (f". The Ø{d} corner holes the page draws are {num(inset)} mm in from both faces, "
                      f"as printed and as the vector outlines of {' and '.join(c['measured_on'])} "
                      f"measure them")
+        if bores:
+            note += ". " + self.labels_note(stem, bool(spec.get("corners")))
         if spec.get("approx"):
             note += ". " + spec["approx"][0].upper() + spec["approx"][1:]
         self.sections[stem] = {
