@@ -114,7 +114,8 @@ anything, and each has a default in place.
 | Gaps A9 (one through-fastener shared by two butting ends) and A8 (positions for a connector's machining) | **done**, merged (22:52), pushed | Goldens G33, G34. Note: `docs/notes/acceptance-gaps-2.md`; design 2.3, "After acceptance run 2". |
 | Acceptance run 3, internal | **PASS** (23:09) | Tests 1–4 pass with no exceptions; no AluKit failures. Design §13 records the verdict. |
 | v1 limits: the stamp on every output, `bbox()` over parts, end taps on cores | **done**, merged (00:17), pushed | Note: `docs/notes/v1-limits-closed.md`. |
-| Forseti sections: secondary cores, and the tap's thread against the core | running (Opus, worktree), launched 00:30 | |
+| Forseti sections: secondary cores, and the tap's thread against the core | **built** (01:07); merge held until the acceptance re-runs finish | Note: `docs/notes/section-cores.md`. |
+| Acceptance re-runs on the reference project's new heads (internal) | running (2 × Opus), launched 01:05 | its decided frame (run 4) and, for the first time, its alternative all-extrusion frame |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -165,6 +166,12 @@ anything, and each has a default in place.
   - Tapped end holes count as end taps for the core check.
   - A placed part whose item gives no box makes `bbox()` an error, as `mass()` does.
   - A section with `bores: []` has no cores, so every end tap on it errors.
+- **Core thread labels (`docs/notes/section-cores.md`; call 39 in the design).**
+  - **PF20-11 and PF20-12:** the drawings print Ø5 (M6), the shop says M5. The drawing's label is
+    kept, so an M5 tap there is judged as a cut thread and errors.
+  - **PF20-21's Ø6 core:** it accepts M5 and M6 only because the shop text says so; a cut M6 in Ø6
+    has no thread.
+  - **The drill-up limit** for unlabelled cores: one pitch, a judgement, not a source.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
@@ -489,3 +496,17 @@ anything, and each has a default in place.
 - **00:30**: An Opus agent launched to complete every Forseti section's cores from the drawings
   (through the importer, not by hand). It also makes the core check match a tap's thread to the
   core's diameter: an M16 in a Ø5 hole is an error, M6 there is fine.
+- **01:07**: Forseti sections completed from the catalogue drawings (11 commits).
+  - Ø5 (M6) corner holes on PF40-02, PF40-03B and PF40-04.
+  - Exact sections derive their cores from the outline, checked against the printed diameters.
+  - Two data errors fixed: PF20-12's cores are Ø5, and PF50-01 has a Ø13.7 centre core.
+  - Every core carries the vendor's thread labels (`threads`), from the drawing or the shop text,
+    and the build fails if the label isn't in the source.
+  - `tapFit`: a labelled thread always fits; any other thread is judged as a cut thread (ISO 965-3
+    6H minor diameter, at most one pitch of drill-up).
+  - No golden moved; the importer still reproduces the catalog byte for byte.
+- **01:05**: The reference project's owner session sent its fixed commits (its J1 joints now in the
+  M16 cores, R1 still open as options) and asked for re-acceptance.
+  - Two Opus agents read the record only via `git show` at the exact heads, into snapshots: run 4 on
+    the decided frame, and a first acceptance of the alternative frame (two variants).
+  - The sections merge waits so the code under them doesn't change.
