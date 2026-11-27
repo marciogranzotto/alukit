@@ -646,8 +646,8 @@ const MinorInt = z.int().nonnegative();
 
 /*
  * A cost line's fields in the design's order (§4.11): id, label, kind, supplier, the amounts,
- * provenance, blocks, then what it covers. The canonical form (§2) writes keys in the order the
- * schema declares them, so this order is the file's.
+ * provenance, blocks, then what it covers, then the variants it belongs to. The canonical form
+ * (§2) writes keys in the order the schema declares them, so this order is the file's.
  */
 const CostHead = {
   id: CostId,
@@ -657,6 +657,11 @@ const CostSupplier = { supplier: SupplierId.optional() };
 const CostTail = {
   ...ProvFields,
   blocks: z.literal("order").nullable().optional().describe('"order": hold its supplier\'s order'),
+};
+/** A cost line's variants (§4.10; acceptance gap A5), as an entity's: written last. */
+const CostScope = {
+  only_in: Common.only_in,
+  not_in: Common.not_in,
 };
 
 /** A cost line that is not a part (§4.11): low, likely and high in minor units. */
@@ -675,6 +680,7 @@ export const CostAmounts = z
       .describe("absent: the project's"),
     ...CostTail,
     covers: Covers.optional(),
+    ...CostScope,
   })
   .refine((c) => c.low_minor <= c.likely_minor && c.likely_minor <= c.high_minor, {
     message: "a cost line needs low_minor <= likely_minor <= high_minor",
@@ -688,6 +694,7 @@ export const CostPct = z.strictObject({
   pct: z.number().nonnegative(),
   of: z.literal("subtotal"),
   ...CostTail,
+  ...CostScope,
 });
 
 export const CostLine = z.union([CostPct, CostAmounts]);

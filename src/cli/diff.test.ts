@@ -155,6 +155,127 @@ describe("alukit diff", () => {
     );
   });
 
+  it("shows a cost line scoped to a variant, across variants and revisions (acceptance gap A5)", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "cart");
+    // The cart's cost lines are K1–K5 (K5 the contingency, 10 % of the subtotal). K6 prices a
+    // lump job for the base option, K7 the same job for steel.
+    const job = (likely: number, scope: Record<string, string[]>) => ({
+      label: "sleeves cut to the wall",
+      kind: "machining",
+      low_minor: likely,
+      likely_minor: likely,
+      high_minor: likely,
+      ...scope,
+    });
+    const made = await capture([
+      "do",
+      dir,
+      JSON.stringify([
+        { cmd: "addVariant", args: { name: "base", variant: {}, default: true } },
+        { cmd: "addVariant", args: { name: "steel", variant: {} } },
+        { cmd: "addCost", args: { cost: job(41311, { not_in: ["steel"] }) } },
+        { cmd: "addCost", args: { cost: job(41023, { only_in: ["steel"] }) } },
+      ]),
+    ]);
+    expect(made.err).toBe("");
+    expect(made.code).toBe(0);
+
+    const costsOf = async (variant: string) => {
+      const r = await capture([
+        "costs",
+        dir,
+        "--variant",
+        variant,
+        "--as-of",
+        AS_OF,
+        "--format",
+        "json",
+      ]);
+      return JSON.parse(r.out) as { costs: { id: string }[] };
+    };
+    expect((await costsOf("base")).costs.map((c) => c.id)).toEqual([
+      "K1",
+      "K2",
+      "K3",
+      "K4",
+      "K5",
+      "K6",
+    ]);
+    expect((await costsOf("steel")).costs.map((c) => c.id)).toEqual([
+      "K1",
+      "K2",
+      "K3",
+      "K4",
+      "K5",
+      "K7",
+    ]);
+
+    const across = JSON.parse(
+      (
+        await capture([
+          "diff",
+          dir,
+          "--variant",
+          "base",
+          "--variant",
+          "steel",
+          "--as-of",
+          AS_OF,
+          "--json",
+        ])
+      ).out,
+    );
+    expect(across.entities).toEqual(
+      expect.arrayContaining([
+        { id: "K6", change: "removed" },
+        { id: "K7", change: "added" },
+      ]),
+    );
+    // The cost lines move by 41023 − 41311 = −288 before the contingency.
+    const costs = across.totals.find((t: { what: string }) => t.what === "costs");
+    expect(costs.likely_minor[1] - costs.likely_minor[0]).toBe(-288);
+
+    // A revision stores every variant; a change to steel's line shows in steel only.
+    await capture(["revision", "save", dir, "Rev 1", "--as-of", AS_OF]);
+    await capture([
+      "do",
+      dir,
+      JSON.stringify({
+        cmd: "setCost",
+        args: { id: "K7", set: { low_minor: 42000, likely_minor: 42000, high_minor: 42000 } },
+      }),
+    ]);
+    await capture(["revision", "save", dir, "Rev 2", "--as-of", AS_OF]);
+    const revs = (variant: string) =>
+      capture([
+        "diff",
+        join(dir, "revisions", "rev-1.json"),
+        join(dir, "revisions", "rev-2.json"),
+        "--variant",
+        variant,
+        "--json",
+      ]);
+    const steel = JSON.parse((await revs("steel")).out);
+    expect(steel.entities).toEqual([
+      {
+        id: "K7",
+        change: "changed",
+        fields: [
+          { path: "high_minor", was: 41023, now: 42000 },
+          { path: "likely_minor", was: 41023, now: 42000 },
+          { path: "low_minor", was: 41023, now: 42000 },
+        ],
+      },
+    ]);
+    const moved = steel.totals.find((t: { what: string }) => t.what === "costs");
+    expect(moved.likely_minor[1] - moved.likely_minor[0]).toBe(977);
+    const base = JSON.parse((await revs("base")).out);
+    expect(base.entities).toEqual([]);
+    expect(base.totals).toEqual([]);
+    expect(base.same).toBe(true);
+  });
+
   it("refuses what it cannot compare", async () => {
     const root = await scratchFixtures();
     const dir = join(root, "cart");

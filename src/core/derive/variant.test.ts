@@ -193,6 +193,46 @@ describe("variants (§4.10)", () => {
     ]);
   });
 
+  it("scopes cost lines with only_in and not_in, as it scopes entities (acceptance gap A5)", () => {
+    const cost = (id: string, likely: number, scope: Record<string, string[]> = {}) => ({
+      id,
+      label: `line ${id}`,
+      kind: "machining",
+      low_minor: likely,
+      likely_minor: likely,
+      high_minor: likely,
+      ...scope,
+    });
+    const doc = {
+      ...DOC,
+      costs: [
+        cost("K1", 41311, { not_in: ["steel"] }),
+        cost("K2", 41023, { only_in: ["steel"] }),
+        cost("K3", 5000),
+      ],
+      open: [{ id: "O1", text: "the steel quote", blocks: "order", scope: ["K2", "supplier:x"] }],
+    };
+    const costIds = (v?: string) =>
+      derive(doc, items, v ? { variant: v } : {}).doc.costs.map((c) => c.id);
+    expect(costIds()).toEqual(["K1", "K3"]);
+    expect(costIds("steel")).toEqual(["K2", "K3"]);
+    // What names a left-out cost line follows §6's cascade: an open item's scope loses it.
+    const alu = derive(doc, items);
+    expect(alu.doc.open[0]?.scope).toEqual(["supplier:x"]);
+    expect(shown(alu.diagnostics, "info")).toContainEqual(
+      expect.objectContaining({ code: "variant", entity: "O1", refs: ["K2"] }),
+    );
+    // A cost line naming no variant of the document is an error, as an entity's scope is.
+    const typo = { ...doc, costs: [cost("K1", 1, { only_in: ["stele"] })] };
+    expect(shown(derive(typo, items).diagnostics, "error")).toContainEqual(
+      expect.objectContaining({
+        code: "variant",
+        entity: "K1",
+        message: expect.stringContaining("only_in names no variant stele"),
+      }),
+    );
+  });
+
   it("leaves a document with no variants and no scopes as it is", () => {
     const doc = mergePatch(DOC, {
       variants: null,
