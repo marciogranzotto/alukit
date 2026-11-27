@@ -111,6 +111,11 @@ export class MarkerLayer {
     this.sizePx = sizePx;
     this.pixelRatio = pixelRatio;
     this.order = order;
+    // A hidden point for each program the layer's materials take (the plain points, behind and
+    // emphasised, and the lifted ones in front), so the viewer's startup compile links both: the
+    // first marker a tab draws (a problem badge, a joint) then links nothing, as the gizmo's and
+    // the x-ray's first showing do (E-UX-19). Every glyph's material shares these two programs.
+    for (const v of ["behind", "front"] as const) this.group.add(this.primer(v));
   }
 
   /** How far markers rise toward the eye to clear the bars they sit in, mm. */
@@ -231,6 +236,19 @@ export class MarkerLayer {
     m.map = this.glyphs.get(glyph);
     m.opacity = v === "behind" ? BEHIND * this.fade : v === "front" ? this.fade : 1;
     return m;
+  }
+
+  /** A hidden one-point object drawn with the variant's material, for the startup compile. */
+  private primer(v: Variant): Points {
+    const geometry = new BufferGeometry();
+    // Position and an RGB colour, as `make` gives every layer: three keys a program by both.
+    geometry.setAttribute("position", new Float32BufferAttribute([0, 0, 0], 3));
+    geometry.setAttribute("color", new Float32BufferAttribute([1, 1, 1], 3));
+    const o = new Points(geometry, this.material("dot", v));
+    o.visible = false;
+    o.raycast = () => {};
+    o.frustumCulled = false;
+    return o;
   }
 
   private drop(l: Layer): void {

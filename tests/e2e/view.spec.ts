@@ -678,8 +678,8 @@ test("context draws translucent, apart from the build; marking it or not links n
     expect(r.code, r.err).toBe(0);
   };
   // The wall unmarked before the tab opens: a placeholder to buy, so the tab draws a problem
-  // badge from the start, as on any project with a problem. (Badges follow the model by their own
-  // request, and the first one a tab draws links the markers' programs once, whatever the model.)
+  // badge from the start, as on any project with a problem. (The markers' programs are linked at
+  // startup, so neither this first badge nor the later ones link anything: tested below.)
   await step([{ cmd: "setPart", args: { id: "p3", set: { context: null } } }]);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -723,4 +723,41 @@ test("context draws translucent, apart from the build; marking it or not links n
   expect(await stats()).toMatchObject({ bars: 5, parts: 3, context: 3 });
   expect(await links()).toBe(before);
   expect(errors).toEqual([]);
+});
+
+test("the first problem badge a tab draws links no shader program (markers compiled at startup)", async ({
+  page,
+}) => {
+  // The markers' materials (problem badges, joints) take two programs, the plain points and the
+  // lifted ones; each layer holds a hidden point of each, so the viewer's startup compile links
+  // them and the first badge links nothing, whenever it comes (E-UX-19).
+  await page.addInitScript(() => {
+    const w = window as unknown as { __links: number };
+    w.__links = 0;
+    const link = WebGL2RenderingContext.prototype.linkProgram;
+    WebGL2RenderingContext.prototype.linkProgram = function (p) {
+      w.__links++;
+      link.call(this, p);
+    };
+  });
+  // Every context member marked: nothing to buy that cannot be, so no problem and no badge.
+  served = await serve("golden-gen/G51");
+  await openTab(page, served, 0);
+  const links = () => page.evaluate(() => (window as unknown as { __links: number }).__links);
+  const badges = async () => (await page.evaluate(() => window.__alukit?.stats()))?.badges;
+  const badgeFrame = () => page.evaluate(() => window.__alukit?.frames()?.badgeFrame ?? 0);
+  expect(await badges()).toBe(0);
+  const before = await links();
+  expect(before).toBeGreaterThan(0);
+  // The wall unmarked: a placeholder to buy, a problem, its badge the first the tab draws.
+  const r = await cli([
+    "do",
+    served.dir,
+    JSON.stringify([{ cmd: "setPart", args: { id: "p3", set: { context: null } } }]),
+  ]);
+  expect(r.code, r.err).toBe(0);
+  await waitDrawn(page, 1);
+  await expect.poll(badges).toBeGreaterThan(0);
+  await expect.poll(badgeFrame).toBeGreaterThan(0);
+  expect(await links()).toBe(before);
 });

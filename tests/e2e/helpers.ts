@@ -227,10 +227,16 @@ export async function openTab(page: Page, s: Served, rev = 0): Promise<void> {
 }
 
 export async function waitDrawn(page: Page, rev: number, timeout = 15_000): Promise<void> {
-  await page.waitForFunction((r) => window.__alukit?.drawnRev() === r, rev, {
-    timeout,
-    polling: 10,
-  });
+  // Drawn means rendered: the tab has handed revision `rev` to the viewer (`drawnRev`) and a frame
+  // has drawn it (`modelFrame`, the frame that first drew the current model; the viewer sets it
+  // back to 0 when it takes a new model). The view renders on demand, so the hand-over comes
+  // before that frame, and a check made in between (a shader-link count, a pixel, a pick) raced
+  // the frame: under load, the model's programs linked after a count read "after the revision".
+  await page.waitForFunction(
+    (r) => window.__alukit?.drawnRev() === r && (window.__alukit?.frames()?.modelFrame ?? 0) > 0,
+    rev,
+    { timeout, polling: 10 },
+  );
 }
 
 /**

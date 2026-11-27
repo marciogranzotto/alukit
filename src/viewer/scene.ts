@@ -126,6 +126,11 @@ export interface RenderStats {
    * linked by then. (A revision is the app's as soon as `setModel` takes it, before it is drawn.)
    */
   modelFrame: number;
+  /**
+   * The frame that first drew the problem badges given last, 0 until one has (as `modelFrame` is
+   * for the model): badges follow the problems by their own request, apart from the model.
+   */
+  badgeFrame: number;
 }
 
 export type SelectMode = "replace" | "toggle" | "add";
@@ -666,7 +671,16 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   let fitted = false;
   /** The model's bounding sphere's radius (mm), cached per revision for the fog. */
   let radius = 1000;
-  const stats: RenderStats = { frames: 0, renderMs: 0, hovers: 0, hoverMs: 0, modelFrame: 0 };
+  const stats: RenderStats = {
+    frames: 0,
+    renderMs: 0,
+    hovers: 0,
+    hoverMs: 0,
+    modelFrame: 0,
+    badgeFrame: 0,
+  };
+  /** Whether a frame has drawn the badges given last. */
+  let badgesDrawn = true;
 
   const applyThemeMaterials = () => {
     capMaterial.color.setRGB(...theme.cut);
@@ -1849,6 +1863,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     }
     badges.set(pts);
     counts.badges = pts.length;
+    badgesDrawn = false;
+    stats.badgeFrame = 0;
     paint();
   }
 
@@ -1906,6 +1922,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     // The model drawn has taken its programs; the generation it replaced can go.
     if (!ownedDrawn && model) stats.modelFrame = stats.frames;
     ownedDrawn = true;
+    if (!badgesDrawn) stats.badgeFrame = stats.frames;
+    badgesDrawn = true;
     if (retired.length > 0) {
       release(retired);
       retired = [];
