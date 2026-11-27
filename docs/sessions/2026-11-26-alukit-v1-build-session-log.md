@@ -786,3 +786,4 @@ anything, and each has a default in place.
   - The shader-link test now answers the decided "undo another source's step?" question.
 - **07:36**: Both merged with the integration fixes; gate PASS (1,049 tests), and `live.spec` passes under load. Pushed `c9dc0c5`; the S2, S3 and baseline worktrees are removed.
 - **07:38**: S5 launched: the command bar, place on click, keys, inspector editing with Delete and its cascade, the joint preview (a dry run on snap or after a pause), and the box-frame tool on `addFrame`.
+- **08:02**: The reference project's next heads arrived. The decided frame's run 7 and the alternative frame's run 4 launched, with the quick connector written natively. The CLI runs from a frozen worktree at `5b9c70b`.
