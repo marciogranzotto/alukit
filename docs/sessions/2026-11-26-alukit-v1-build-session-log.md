@@ -129,7 +129,7 @@ anything, and each has a default in place.
 | UX integration pass (bundle split, one call for corner rules, built-in catalogs, README and guide, design §8) | running (Opus, worktree), launched 09:20 | `docs/ux/integration-decisions.md` |
 | UX phase 4: designer review of the running app | **done**, merged (09:46), pushed | `docs/ux/review-phase4.md`: 1 blocker, 8 major, plus minor items |
 | UX polish pass on the review's findings | running (Opus, worktree), launched 09:47 | `docs/ux/polish-decisions.md` |
-| X9 / F8 / F9: cross-hole faces, bearing on the hook, per-profile grooves | running (Opus, worktree), launched 08:39 | G49+, calls 57+ | task flows and IA; heuristics and first run; visual design and 3D readability |
+| X9 / F8 / F9: cross-hole faces, bearing on the hook, per-profile grooves | **done**, merged (10:24), pushed | G49, calls 57–62; `docs/notes/x9-f8-f9.md` | task flows and IA; heuristics and first run; visual design and 3D readability |
 | F2: end-hole axis, butt end-face coverage, head seats | **done**, merged (03:30), pushed | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
 | X1–X3, X5, X6 plus F2a/F2b: blind fasteners, a butt's stack of bodies, plain bars held by a drilled-hole screw, taps over groove openings, sleeves through both walls, head sizes from standards, butt screws seat-checked | **done**, merged (05:00), pushed | Goldens G39–G45; calls 45–51. Note: `docs/notes/x1-x3-f2ab.md`. |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
@@ -828,3 +828,12 @@ anything, and each has a default in place.
 - **09:47**: The polish pass was launched on every finding, failing tests first for each behaviour bug.
   - For the blocker: a fit-filtered "Joined with" choice in the frame template, a `butt-no-connector` problem, and an order rule (warn by default, which can be made to block).
   - The coordinator added one rule: the readiness pill never shows plain green READY while such a problem stands.
+- **10:15**: The decided frame's run 8 (internal): **pass**, and byte-identical to run 7.
+  - A per-hole comparison of drilling faces showed that the project counts a face as covered when anything stands within a 30 mm tool zone in front of it, not only on contact. Members standing 2 mm off a face are covers. That shaped X9's model.
+- **10:18**: Gap batch X9 / F8 / F9 finished, failing tests first.
+  - **X9:** a member (a bar's body or a placed part's box) covers a hole's mouth if it stands in front of it within the tool's room, 30 mm by default and `access_mm` per requirement. Derive takes the nearest clear face, and a named face is checked. The machining sheet names the face.
+  - **F8:** bearing is read on the lips' underside, out to the hooks. A quick connector's head on a 40 mm groove now bears on about 37–42 %, and warns.
+  - **F9:** each section can state its own groove, printed dimensions first, else read off the drawing at about ±0.3 mm. What can't be read is marked unread and reported, not borrowed.
+  - Golden case G49; no golden value or fixture diagnostic moved across 167 cases.
+  - It also corrected an earlier reading: a printed "4,5" beside a profile's opening is a corner hole's inset, not its lip.
+- **10:24**: Merged; gate PASS (1,098 tests). The alternative frame's run 5 launched on the same project head.
