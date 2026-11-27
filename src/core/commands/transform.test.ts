@@ -189,6 +189,47 @@ describe("transform: what joins the moved set to the rest", () => {
     expect(t.state.doc.connections).toEqual({});
   });
 
+  it("keeps or frees an end a failing joint claims exactly as one whose joint derives", () => {
+    // G01 plus b3, butted at an angle on b1's side by c2: its axis (0.6, 0.8, 0) meets b1's
+    // +y face at 36.87°. With no cut declared, c2 fails for b3.a (`by: "default"`) and still
+    // claims it; with `cut: "angle"` it derives.
+    const angled = (declared: boolean) =>
+      withDoc(g01(), {
+        bars: {
+          ...(g01().doc.bars as object),
+          b3: {
+            a: [300, 0, 0],
+            b: [600, 400, 0],
+            ...(declared ? { ends: { a: { cut: "angle" } } } : {}),
+          },
+        },
+        connections: {
+          ...(g01().doc.connections as object),
+          c2: { type: "butt", through: "b1", ends: ["b3.a"], through_end: "none" },
+        },
+      });
+    expect(derived(angled(false)).bars.get("b3")?.ends.a.by).toBe("default");
+    expect(derived(angled(false)).claims.get("b3.a")).toEqual(["c2"]);
+    expect(derived(angled(true)).bars.get("b3")?.ends.a.by).toBe("c2");
+    for (const declared of [false, true]) {
+      const s = angled(declared);
+      // Follow: b1 moves 100 toward −y and b3.a slides along b3, 125 outward, to stay on it.
+      const f = run(s, move(["b1"], [0, -100, 0]));
+      expect(bars(f.state).b3?.a, `declared ${declared}`).toEqual([225, -100, 0]);
+      expect(f.state.doc.connections).toEqual(s.doc.connections);
+      expect(f.results[0]?.info).toMatchObject({ followed: ["b2.a", "b3.a"], freed: [] });
+      // Moving b3 off b1's plane would leave the bar c2 butts it on: follow refuses, naming c2.
+      const [e] = refused(s, move(["b3"], [0, 0, 50]));
+      expect(e?.code, `declared ${declared}`).toBe("geometry");
+      expect(e?.refs).toContain("c2");
+      // Detach frees b3.a from c2, which goes with its last end.
+      const d = run(s, move(["b3"], [0, 0, 50], "detach"));
+      expect(d.state.doc.connections).toEqual(g01().doc.connections);
+      expect(d.results[0]?.info).toMatchObject({ freed: ["c2"] });
+      expect(d.text).toBe("move b3 by [0, 0, 50], freed from c2");
+    }
+  });
+
   it("refuses what it cannot move, saying why", () => {
     const [e] = refused(cart(), move(["p2"], [10, 0, 0]));
     expect(e?.message).toBe("p2 is not placed: there is nothing to move");

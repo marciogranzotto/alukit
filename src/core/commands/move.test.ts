@@ -156,7 +156,7 @@ describe("moveEnd", () => {
     // c1 had no other end, so it goes with it.
     expect((r.state.doc.connections as object) ?? {}).not.toHaveProperty("c1");
     expect(r.results[0]).toMatchObject({ removed: ["c1"] });
-    expect(r.results[0]?.info).toMatchObject({ detached: "c1", len_mm: 700 });
+    expect(r.results[0]?.info).toMatchObject({ detached: ["c1"], len_mm: 700 });
     expect(r.text).toBe("lengthen b2 at end a to 700 mm, freed from c1");
   });
 
@@ -226,17 +226,132 @@ describe("moveEnd", () => {
   });
 });
 
+/**
+ * The editing audit's brace (tests/fixtures/brace; src/core/brace.test.ts): a box frame and a
+ * diagonal b13 in its back plane, butted through the posts b3 (c9) and b4 (c10) by `autoConnect`,
+ * which declares both cuts an angle. Undeclared, each butt makes a 36.87° end that declares no
+ * cut: the joint fails and the end falls back to its default plane (`by: "default"`), though the
+ * document still joins it (E4's D2).
+ */
+function brace(declared: boolean): State {
+  const dir = join(FIXTURES, "brace");
+  const { commands } = readJson(join(dir, "brace.json")) as { commands: object[] };
+  const undeclare = { cmd: "setBar", args: { id: "b13", set: { ends: null } } };
+  return run(stateOf(dir), ...commands, ...(declared ? [] : [undeclare])).state;
+}
+const g10 = () => stateOf(join(FIXTURES, "golden-ends", "G10"));
+const g11 = () => stateOf(join(FIXTURES, "golden-ends", "G11"));
+
+describe("moveEnd: an end a failing joint claims is held by that joint", () => {
+  it("refuses the brace's end that c9 claims though c9 fails, as when c9 holds it", () => {
+    const failing = brace(false);
+    // The premise: c9 fails for b13.a, and still claims it.
+    expect(derived(failing).bars.get("b13")?.ends.a.by).toBe("default");
+    expect(derived(failing).claims.get("b13.a")).toEqual(["c9"]);
+    const move = { cmd: "moveEnd", args: { end: "b13.a", by_mm: 10 } };
+    const [e] = refused(failing, move);
+    expect(e).toMatchObject({ code: "held", entity: "b13", field: "a", refs: ["c9"] });
+    expect(e?.message).toBe(
+      "b13.a butts on b3 (c9), and the joint fails: give detach: true to free it and move it",
+    );
+    // The same end, its cut declared, so c9 derives: refused alike.
+    const [w] = refused(brace(true), move);
+    expect(w).toMatchObject({ code: "held", entity: "b13", field: "a", refs: ["c9"] });
+    expect(w?.message).toBe("b13.a butts on b3 (c9): give detach: true to free it and move it");
+  });
+
+  it("detaches the brace's end from c9 though c9 fails, as when c9 holds it", () => {
+    const move = { cmd: "moveEnd", args: { end: "b13.a", by_mm: 10, detach: true } };
+    const failing = run(brace(false), move);
+    const working = run(brace(true), move);
+    for (const r of [failing, working]) {
+      // 10 outward along −t = (−0.8, 0, −0.6) from [0, 600, 0]; c9 goes with its last end.
+      expect(bars(r.state).b13?.a).toEqual([-8, 600, -6]);
+      expect(r.state.doc.connections).not.toHaveProperty("c9");
+      expect(r.state.doc.connections).toHaveProperty("c10");
+      expect(r.results[0]).toMatchObject({ removed: ["c9"] });
+      expect(r.results[0]?.info).toMatchObject({ detached: ["c9"], len_mm: 1260 });
+      expect(r.text).toBe("lengthen b13 at end a to 1260 mm, freed from c9");
+    }
+  });
+
+  it("refuses an end a failing miter claims, as a miter that derives sets it (G10)", () => {
+    // G10: a miter of a 40 × 40 and a 40 × 80 cannot be cut; b1.b is still c1's.
+    expect(derived(g10()).bars.get("b1")?.ends.b.by).toBe("default");
+    const [e] = refused(g10(), { cmd: "moveEnd", args: { end: "b1.b", by_mm: 10, detach: true } });
+    expect(e).toMatchObject({ code: "held", entity: "b1", refs: ["c1"] });
+    expect(e?.message).toBe(
+      "b1.b is held by c1 (miter), and the joint fails: edit or delete c1 to move it",
+    );
+  });
+
+  it("holds an end two butts claim by both, and detaching frees it from both (G11)", () => {
+    // G11: c1 and c2 both butt b2.a through b1, so neither derives for it.
+    expect(derived(g11()).bars.get("b2")?.ends.a.by).toBe("default");
+    const [e] = refused(g11(), { cmd: "moveEnd", args: { end: "b2.a", by_mm: 10 } });
+    expect(e).toMatchObject({ code: "held", refs: ["c1", "c2"] });
+    expect(e?.message).toBe(
+      "b2.a butts on b1 (c1) and butts on b1 (c2), and two joints claim it: give detach: true to free it and move it",
+    );
+    const r = run(g11(), { cmd: "moveEnd", args: { end: "b2.a", by_mm: 10, detach: true } });
+    expect(bars(r.state).b2?.a).toEqual([1000, -10, 0]);
+    // Each butt had only b2.a, so both go with it.
+    expect(r.state.doc.connections).toEqual({});
+    expect(r.results[0]).toMatchObject({ removed: ["c1", "c2"] });
+    expect(r.results[0]?.info).toMatchObject({ detached: ["c1", "c2"] });
+    expect(r.text).toBe("lengthen b2 at end a to 610 mm, freed from c1 and c2");
+  });
+});
+
 describe("endHold", () => {
-  it("names what holds each kind of end", () => {
+  it("names what holds each kind of end, from the providers that claim it", () => {
     const doc = g01().doc as Record<string, unknown>;
-    expect(endHold(doc, "b2", "a", "c1")).toEqual({
+    expect(endHold(doc, "b2", "a", { claims: ["c1"], by: "c1" })).toEqual({
       kind: "detach",
       words: ["butts on b1 (c1)"],
-      conn: "c1",
+      conns: ["c1"],
       refs: ["c1"],
     });
-    expect(endHold(doc, "b1", "b", "c1")).toEqual({ kind: "free", corner: "c1" });
-    expect(endHold(doc, "b2", "b", "default")).toEqual({ kind: "free" });
-    expect(endHold(doc, "b2", "b", "plane").kind).toBe("fixed");
+    expect(endHold(doc, "b1", "b", { claims: ["c1"], by: "c1" })).toEqual({
+      kind: "free",
+      corner: "c1",
+    });
+    expect(endHold(doc, "b2", "b", { claims: [], by: "default" })).toEqual({ kind: "free" });
+    expect(endHold(doc, "b2", "b", { claims: ["b2.ends.b.plane"], by: "plane" }).kind).toBe(
+      "fixed",
+    );
+  });
+
+  it("holds an end by the joint that claims it whether or not the joint derives", () => {
+    const doc = g01().doc as Record<string, unknown>;
+    expect(endHold(doc, "b2", "a", { claims: ["c1"], by: "default" })).toEqual({
+      kind: "detach",
+      words: ["butts on b1 (c1)"],
+      fails: "the joint fails",
+      conns: ["c1"],
+      refs: ["c1"],
+    });
+    // A plane of its own beside the butt: two providers, and the plane sets the end.
+    expect(endHold(doc, "b2", "a", { claims: ["b2.ends.a.plane", "c1"], by: "default" })).toEqual({
+      kind: "fixed",
+      words:
+        "b2.a is cut on its own plane (ends.a.plane), which does not follow the end, and two joints claim it",
+      fails: "two joints claim it",
+      refs: [],
+    });
+    // A free end counted from end a's cut (G21) is a provider, not a hold: as derive names it.
+    const s = withDoc(g01(), {
+      bars: {
+        ...(g01().doc.bars as object),
+        b2: { a: [1000, 0, 0], b: { len_mm: 580, dir: "+y", from: "a.cut" } },
+      },
+    });
+    const d = derived(s);
+    const claims = d.claims.get("b2.b") ?? [];
+    expect(claims).toEqual(["b2.b (free end from a.cut)"]);
+    const by = d.bars.get("b2")?.ends.b.by ?? "";
+    expect(endHold(s.doc as Record<string, unknown>, "b2", "b", { claims, by })).toEqual({
+      kind: "free",
+    });
   });
 });

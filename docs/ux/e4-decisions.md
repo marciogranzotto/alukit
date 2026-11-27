@@ -8,7 +8,7 @@ handles ([drag-ends-decisions.md](drag-ends-decisions.md), cited as "drag n"). E
 command the core already had (`setBar`, `setConnection`, `removeEntity`, `splitBar`,
 `reverseBar`, `moveNode`, `label`, `tag`), sent as `alukit do` would send it: nothing new in the
 commands or the CLI, so CLI parity is the existing commands' (§7.5's rule). The one change in the
-core is the BOM's Markdown (e4 22). Decisions are cited as "e4 n". Labels: **measured** (a test or
+core is the BOM's Markdown (e4 22); after the stream, the end hold reads the claims (e4 23, 24). Decisions are cited as "e4 n". Labels: **measured** (a test or
 a run says so), **read** (from the code or the page cited), **inferred**.*
 
 ## Done
@@ -95,11 +95,22 @@ a run says so), **read** (from the code or the page cited), **inferred**.*
 | 21 | **A choice's state is keyed by what is written** (the plane select, the form's prefill), not reset by an effect after drawing | **Measured**: an effect that reset the plane select after the step's revision overrode a choice made since |
 | 22 | **The BOM's Markdown marks an `est` mass as it marks a `calc` one**, and its heading says what `est` means; CSV and JSON already carried `mass_src` | An estimate read as if published (§3.5's fidelity table); the brief's core item, failing test first |
 
+## An end a failing joint claims (after the stream)
+
+The defect left for E1 below: an end whose joint fails was held by nothing. Fixed in the core,
+failing tests first.
+
+| # | Decision | Why |
+|---|---|---|
+| 23 | **What holds an end is the providers that claim it, not the one whose plane it got.** Core `endHold` takes the end's claims (derive's, the view model's `claims` in the app) and its `by`, which only says whether the claim fails. A joint that fails (an angled end that declares no cut, a miter of two sections) holds its end as a joint that derives does: `moveEnd` refuses it without `detach` and frees it from the joint with it; a failing miter, splice, pivot or plane fixes it. The words add why, in D2's terms: "b13.a butts on b3 (c9), and the joint fails: give detach: true to free it and move it"; the end handle says "…: dragging frees it". The handles and the length label call the same `endHold`, so nothing in the app computes holding apart from it | **Measured**: before, `moveEnd { end: "b13.a", by_mm: 10 }` on the audit's brace with its cuts undeclared moved the end and left c9 listing it, and the handle read `free` (`move.test.ts`, `ends.test.ts`, failing first). The claims are the rule `autoConnect`, the checks and D2's words already apply (e4 1), so the hold now agrees with them. `transform`'s follow and detach read the document's connections, never `by`, so they already kept or freed such an end as a working one's (**measured**: `transform.test.ts`'s case passed before the fix and guards it now) |
+| 24 | **Two joints on one end hold it by both.** A provider that fixes the end (its own plane, a miter, a pivot, a splice, a named `through_end`) wins; otherwise `detach` drops it from every butt that lists it, each going with its last end, and `moveEnd`'s answer lists them (`detached: ["c1", "c2"]`, a list now, as `transform`'s `freed` is). A claim name the hold does not know fixes the end rather than freeing it | A butt left listing the end would still claim it, and would be its only provider wherever it lands; the inspector's Free already drops it from every connection that lists it (e4 6). G11 is the case: c1 and c2 both butt b2.a. Refusing an unknown provider is the safe side: a move never lets go of what it cannot name. Call 110 |
+
 ## Not changed, for E1
 
-- `hold.ts`'s `endHold` reads the derived plane's `by`, so an end whose claim fails (`by:
-  "default"`) is held by nothing: `moveEnd` and the end handles treat it as free, though derive's
-  claims say a joint claims it. The words now read the claims (e4 1); the hold could read them too.
+- `hold.ts`'s `endHold` read the derived plane's `by`, so an end whose claim fails (`by:
+  "default"`) was held by nothing: `moveEnd` and the end handles treated it as free, though
+  derive's claims say a joint claims it. **Fixed after the stream: the hold reads the claims too
+  (e4 23, 24).**
 
 ## Screenshots
 
