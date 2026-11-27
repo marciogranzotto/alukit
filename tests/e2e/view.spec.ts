@@ -608,9 +608,11 @@ test("a revision draws with the shader programs it has: none is compiled again",
   // The revision's frame has drawn (the view draws on demand: nothing else asked for one).
   await expect.poll(frames).toBeGreaterThan(idle);
   expect(await links()).toBe(before);
-  // Undo, a second revision: the bar and its corners go, and still nothing is linked.
+  // Undo, a second revision: the bar and its corners go, and still nothing is linked. The step
+  // was the CLI's, so the tab asks first (D-UX-14).
   const drawn = await frames();
   await page.getByTestId("undo").click();
+  await page.getByTestId("undo-confirm").click();
   await waitDrawn(page, 2);
   await expect.poll(frames).toBeGreaterThan(drawn);
   expect(await links()).toBe(before);

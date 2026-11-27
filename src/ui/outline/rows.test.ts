@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Problem } from "#core/problems/types.ts";
 import type { Corner } from "../corners.ts";
 import type { Model } from "../model.ts";
-import { groupsOf, problemsByEntity, rowsOf } from "./rows.ts";
+import { groupsOf, placesOf, problemsByEntity, rowsOf } from "./rows.ts";
 
 /** The outline's rows and groups (rows.ts): entities in words, Joints by corner. */
 
@@ -81,6 +81,19 @@ describe("groupsOf", () => {
       ["(untagged)", ["c1", "p1"]],
       ["leg", ["b1"]],
     ]);
+  });
+});
+
+describe("placesOf", () => {
+  it("finds every ref wanted, in the tree's order: a connection inside its corner's group", () => {
+    const g = groupsOf(M, { byTag: false, filter: "", corners: [corner("0,0,900", ["c1"])] });
+    const places = placesOf(g, new Set(["c1", "b2", "corner:0,0,900"]));
+    expect(places.map((p) => [p.key, p.trail.map((t) => t.key)])).toEqual([
+      ["r:bars:b2", ["bars"]],
+      ["g:corner:0,0,900", ["connections"]],
+      ["r:corner:0,0,900:c1", ["connections", "corner:0,0,900"]],
+    ]);
+    expect(placesOf(g, new Set(["nothing"]))).toEqual([]);
   });
 });
 
