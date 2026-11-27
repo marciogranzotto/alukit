@@ -176,10 +176,11 @@ test("Delete: an unreferenced bar goes at once; a referenced one lists what the 
   await pick(page, "b11");
   await page.keyboard.press("Delete");
   await waitDrawn(page, 2);
+  // The toast goes after 5 s (TOAST_MS.own): read it before the CLI's slower checks.
+  await expect(page.getByTestId("step-toast").getByTestId("toast-undo")).toBeVisible();
   await expect(page.getByTestId("delete-dialog")).toHaveCount(0);
   expect((await written(served.dir)).bars?.b11).toBeUndefined();
   expect(await lastStepWords(served.dir)).toBe("remove b11");
-  await expect(page.getByTestId("step-toast").getByTestId("toast-undo")).toBeVisible();
 
   // b9, the front base rail, holds c3's and c4's only ends: the dialog lists the dry run's list.
   const doc = await written(served.dir);
