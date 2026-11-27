@@ -327,6 +327,14 @@ export interface Viewer {
   onRender(cb: () => void): () => void;
   /** A tool's label at a world point (S5's joint preview); undefined `at` takes it away. */
   setLabel(key: string, at: V3 | undefined, text?: string): void;
+  /**
+   * The size box (E2.5): a box's edges in world coordinates (Z up, mm), over every body, with
+   * the words for its width, depth and height by its edges along X, Y and Z (labels `size-w`,
+   * `size-d`, `size-h`); undefined takes it away.
+   */
+  setDimensions(
+    d: { box: readonly [V3, V3]; words: readonly [string, string, string] } | undefined,
+  ): void;
   /** The camera in world coordinates: for the orientation gizmo, and for tests. */
   camera(): CameraState;
   /** What drawing has cost so far (frames, CPU ms): S3.13's measure. */
@@ -575,6 +583,25 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   xray.raycast = () => {};
   xray.frustumCulled = false;
   world.add(xray);
+  /**
+   * The size box (E2.5): the edges of a box in world coordinates, over every body, with its three
+   * sizes as labels. Built here with its material, so the viewer links its program before the
+   * first frame and showing it links nothing (E-UX-19).
+   */
+  const dimensionMaterial = new LineBasicMaterial({
+    transparent: true,
+    opacity: 0.9,
+    depthTest: false,
+    depthWrite: false,
+    fog: false,
+  });
+  const dimensions = new LineSegments(emptyGeometry(), dimensionMaterial);
+  dimensions.name = "size box";
+  dimensions.renderOrder = 805;
+  dimensions.raycast = () => {};
+  dimensions.frustumCulled = false;
+  dimensions.visible = false;
+  world.add(dimensions);
 
   let counts: ViewerStats = {
     bars: 0,
@@ -615,6 +642,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     capMaterial.color.setRGB(...theme.cut);
     xrayMaterial.color.setHex(theme.selection);
     xrayMaterial.opacity = theme.edge.xray;
+    dimensionMaterial.color.setHex(theme.tool);
   };
   applyThemeMaterials();
 
@@ -1979,6 +2007,34 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     setLabel(key, at, text) {
       labels.set(key, at, text);
     },
+    setDimensions(d) {
+      if (!d) {
+        dimensions.visible = false;
+        for (const k of ["size-w", "size-d", "size-h"]) labels.set(k, undefined);
+        invalidate();
+        return;
+      }
+      const [lo, hi] = d.box;
+      const pts: number[] = [];
+      const corner = (i: number): V3 => [
+        i & 1 ? hi[0] : lo[0],
+        i & 2 ? hi[1] : lo[1],
+        i & 4 ? hi[2] : lo[2],
+      ];
+      // The twelve edges: each pair of corners that differ along one axis.
+      for (let i = 0; i < 8; i++)
+        for (const bit of [1, 2, 4]) if (!(i & bit)) pts.push(...corner(i), ...corner(i | bit));
+      dimensions.geometry.dispose();
+      const g = new BufferGeometry();
+      g.setAttribute("position", new Float32BufferAttribute(pts, 3));
+      dimensions.geometry = g;
+      dimensions.visible = true;
+      const mid = (a: number, b: number) => (a + b) / 2;
+      labels.set("size-w", [mid(lo[0], hi[0]), lo[1], lo[2]], d.words[0]);
+      labels.set("size-d", [hi[0], mid(lo[1], hi[1]), lo[2]], d.words[1]);
+      labels.set("size-h", [hi[0], lo[1], mid(lo[2], hi[2])], d.words[2]);
+      invalidate();
+    },
     camera() {
       const pos = controls.getPosition(new Vector3());
       const target = controls.getTarget(new Vector3());
@@ -2017,6 +2073,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       glyphs.dispose();
       labels.dispose();
       xray.geometry.dispose();
+      dimensions.geometry.dispose();
+      dimensionMaterial.dispose();
       for (const m of [capMaterial, sideMaterial, outlineMaterial, detailMaterial, xrayMaterial]) {
         m.dispose();
       }

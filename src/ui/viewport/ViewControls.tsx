@@ -6,6 +6,7 @@ import { Icon, type IconName } from "../icons/Icons.tsx";
 import { chord, onKey } from "../keys.ts";
 import { model } from "../store.ts";
 import { viewActions } from "./actions.ts";
+import { connectSizeBox } from "./size.ts";
 import {
   colourBy,
   type JointMarkers,
@@ -210,7 +211,7 @@ function Toggle({
 export function ViewControls() {
   const v = viewer.value;
   useEffect(() => {
-    const offs = [onKey("app", viewKey), viewActions()];
+    const offs = [onKey("app", viewKey), viewActions(), connectSizeBox()];
     return () => {
       for (const off of offs) off();
     };

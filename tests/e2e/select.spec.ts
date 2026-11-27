@@ -133,6 +133,42 @@ test("a box right to left takes what it touches, left to right only what lies in
   expect(crossing).toEqual(["b2", "b4", "b5", "b6", "b8", "b9", "b10", "b12"]);
 });
 
+test("the size readout: the model's W × D × H, or the selection's; Alt shows it in the view", async ({
+  page,
+}) => {
+  // Count the WebGL program links: the size box is built once, with the viewer (E-UX-19).
+  await page.addInitScript(() => {
+    const w = window as unknown as { __links: number };
+    w.__links = 0;
+    const link = WebGL2RenderingContext.prototype.linkProgram;
+    WebGL2RenderingContext.prototype.linkProgram = function (p) {
+      w.__links++;
+      link.call(this, p);
+    };
+  });
+  served = await serve("brace");
+  await openTab(page, served, 0);
+  const links = () => page.evaluate(() => (window as unknown as { __links: number }).__links);
+  await expect
+    .poll(() => page.evaluate(() => window.__alukit?.frames()?.modelFrame ?? 0))
+    .toBeGreaterThan(0);
+  const before = await links();
+  const readout = page.getByTestId("size-readout");
+  await expect(readout).toHaveText("1000 × 600 × 750 mm");
+  await selectByIds(page, ["b1"]);
+  await expect(readout).toHaveText("40 × 40 × 750 mm");
+  // Alt held: the selection's box in the view, its three sizes by its edges; let go, it goes.
+  await page.mouse.move(10, 10);
+  await page.keyboard.down("Alt");
+  await expect(page.locator('.view-label[data-label="size-w"]')).toHaveText("W 40");
+  await expect(page.locator('.view-label[data-label="size-d"]')).toHaveText("D 40");
+  await expect(page.locator('.view-label[data-label="size-h"]')).toHaveText("H 750");
+  await page.keyboard.up("Alt");
+  await expect(page.locator('.view-label[data-label="size-w"]')).toHaveCount(0);
+  // Shown and taken away, and no shader program linked for it.
+  expect(await links()).toBe(before);
+});
+
 const middle = (b: DerivedBar): V3 => [
   (b.a[0] + b.b[0]) / 2,
   (b.a[1] + b.b[1]) / 2,
