@@ -10,6 +10,7 @@ import {
   FrontSide,
   Group,
   InstancedMesh,
+  type Intersection,
   LineBasicMaterial,
   LineLoop,
   LineSegments,
@@ -64,6 +65,7 @@ import { CORNER_PREFIX, MarkerLayer, type MarkerPoint } from "./markers.ts";
 export { CORNER_PREFIX };
 
 import { type HandlesState, Overlay, type OverlayState } from "./overlay.ts";
+import { hitOn } from "./pick.ts";
 import type { P2, Ray } from "./snap.ts";
 import type { Hex, ViewTheme } from "./theme.ts";
 import { type DocView, fromThree, isStandard, viewFrom } from "./views.ts";
@@ -229,8 +231,20 @@ export interface Viewer {
   ray(clientX: number, clientY: number): Ray;
   /** A world point's position on the page, in CSS pixels; undefined behind the camera. */
   project(p: V3): P2 | undefined;
-  /** The entity under the pointer, and where its body was hit, in world coordinates. */
-  pickAt(clientX: number, clientY: number): { id: string; p: V3 } | undefined;
+  /**
+   * The entity under the pointer, where its body was hit, in world coordinates, and on a bar the
+   * face and station there (`Hit`). What `skip` holds (hidden entities, by id) is passed over:
+   * the ray goes on to what is behind it.
+   */
+  pickAt(clientX: number, clientY: number, skip?: ReadonlySet<string>): Hit | undefined;
+  /**
+   * Calls back on a right-click that did not move (4 px or less, as a click), with what is under
+   * the pointer (a joint marker as `corner:<key>`, else a body) and where; a right-drag still
+   * pans. Returns the undo.
+   */
+  onContextMenu(cb: (hit: Hit | undefined, client: readonly [number, number]) => void): () => void;
+  /** The entities hidden from the view (E-UX-9). A no-op until E2.4 builds hiding. */
+  setHidden(ids: ReadonlySet<string>): void;
   /**
    * Looks from a standard view (iso, top, front, right or side, left, back, bottom), fitted to
    * the model, or from one of the document's named views (§4.2). False for an unknown name.
@@ -1191,7 +1205,20 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     raycaster.setFromCamera(ndc, camera);
   }
 
-  function pickAt(clientX: number, clientY: number): { id: string; p: V3 } | undefined {
+  const instanceMatrix = new Matrix4();
+  /** A raycast's face normal in the world (Z up): through the instance's and the object's matrix. */
+  function worldNormal(h: Intersection): V3 {
+    const n = h.face?.normal.clone() ?? new Vector3(0, 1, 0);
+    const m = h.object.matrixWorld.clone();
+    if (h.object instanceof InstancedMesh && h.instanceId !== undefined) {
+      h.object.getMatrixAt(h.instanceId, instanceMatrix);
+      m.multiply(instanceMatrix);
+    }
+    n.transformDirection(m);
+    return fromThree([n.x, n.y, n.z]);
+  }
+
+  function pickAt(clientX: number, clientY: number, skip?: ReadonlySet<string>): Hit | undefined {
     castFrom(clientX, clientY);
     const hits = raycaster.intersectObjects(content.children as Object3D[], false);
     for (const h of hits) {
@@ -1200,7 +1227,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       const g = instanced.find((x) => x.mesh === h.object);
       const s = single.find((x) => x.mesh === h.object);
       const id = g && h.instanceId !== undefined ? g.ids[h.instanceId] : s?.id;
-      if (id) return { id, p: fromThree([h.point.x, h.point.y, h.point.z]) };
+      if (!id || skip?.has(id)) continue;
+      const r = raycaster.ray;
+      const ray: Ray = {
+        o: fromThree([r.origin.x, r.origin.y, r.origin.z]),
+        d: fromThree([r.direction.x, r.direction.y, r.direction.z]),
+      };
+      const p = fromThree([h.point.x, h.point.y, h.point.z]);
+      return hitOn(model?.bars ?? {}, id, ray, p, worldNormal(h));
     }
     return undefined;
   }
@@ -1211,6 +1245,17 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     if (corner !== undefined) return `${CORNER_PREFIX}${corner}`;
     return pickAt(clientX, clientY)?.id;
   }
+
+  /** What a right-click is on: a joint marker, facing the camera, else a body. */
+  function hitUnder(clientX: number, clientY: number): Hit | undefined {
+    const corner = joints.pickAt(clientX, clientY, project, hiddenWorld);
+    const at = corner !== undefined ? corners.find((c) => c.key === corner)?.at : undefined;
+    if (corner === undefined || !at) return pickAt(clientX, clientY);
+    const d = ray(clientX, clientY).d;
+    return { id: `${CORNER_PREFIX}${corner}`, p: at, normal: [-d[0], -d[1], -d[2]] };
+  }
+
+  const menuCbs = new Set<(hit: Hit | undefined, client: readonly [number, number]) => void>();
 
   function ray(clientX: number, clientY: number): Ray {
     castFrom(clientX, clientY);
@@ -1276,8 +1321,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     hoverId = id;
     hoverCb(id);
   };
+  /** A right press, until it comes up: a click there opens the context menu, a drag pans. */
+  let rightDown: { x: number; y: number } | undefined;
   const el = renderer.domElement;
   const onDown = (e: PointerEvent) => {
+    if (e.button === 2) {
+      rightDown = { x: e.clientX, y: e.clientY };
+      return;
+    }
     if (e.button !== 0) return;
     // A drag the app takes (a handle, Move) goes first: the camera lets go of this press.
     if (grab?.press(e)) {
@@ -1332,6 +1383,16 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     rectEl.style.height = `${Math.abs(e.clientY - down.y)}px`;
   };
   const onUp = (e: PointerEvent) => {
+    if (e.button === 2) {
+      const r = rightDown;
+      rightDown = undefined;
+      // The same click threshold as a left click (E-UX-2): a right-drag panned the camera.
+      if (r && Math.hypot(e.clientX - r.x, e.clientY - r.y) <= 4 && menuCbs.size > 0) {
+        const hit = hitUnder(e.clientX, e.clientY);
+        for (const cb of menuCbs) cb(hit, [e.clientX, e.clientY]);
+      }
+      return;
+    }
     if (grabbing) {
       grabbing = false;
       controls.enabled = true;
@@ -1588,6 +1649,13 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     ray,
     project,
     pickAt,
+    onContextMenu(cb) {
+      menuCbs.add(cb);
+      return () => menuCbs.delete(cb);
+    },
+    setHidden() {
+      // E2.4 draws hidden bodies hidden, and Select's own pick passes them over.
+    },
     setView,
     setProjection,
     projection: () => (camera === ortho ? "orthographic" : "perspective"),

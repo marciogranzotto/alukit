@@ -1,6 +1,8 @@
 import { signal } from "@preact/signals";
+import { compareIds } from "#core/ids.ts";
 import type { Ref } from "#core/problems/types.ts";
 import type { SelectMode } from "../viewer/scene.ts";
+import { extendHook } from "./hook.ts";
 import { model } from "./store.ts";
 import { resolveTargets } from "./targets.ts";
 
@@ -85,6 +87,30 @@ export function show(req: ShowRequest): void {
 export function clearShow(): void {
   shown.value = undefined;
 }
+
+/**
+ * What the view hides and isolates (docs/ux/editing-audit.md E-UX-9): view state, like the
+ * section plane, never a step, per tab. `hidden` are the entities not drawn; picks and snaps pass
+ * them over (the tools give it as their `skip`). `isolated` is what Isolate keeps, the rest
+ * hidden; undefined when nothing is isolated. Nothing sets them until E2.4 builds hide and
+ * isolate.
+ */
+export const hidden = signal<ReadonlySet<string>>(new Set());
+export const isolated = signal<ReadonlySet<string> | undefined>(undefined);
+
+declare module "./hook.ts" {
+  interface AlukitHook {
+    /** The selected refs, in id order. */
+    selection(): string[];
+    /** The entities the view hides, in id order. */
+    hidden(): string[];
+  }
+}
+
+extendHook({
+  selection: () => [...selection.value].sort(compareIds),
+  hidden: () => [...hidden.value].sort(compareIds),
+});
 
 /**
  * Esc first leaves Show, and the dimming of what it did not show, before it steps back any

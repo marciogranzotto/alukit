@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -259,4 +259,41 @@ export async function lastStepWords(dir: string): Promise<string> {
 export async function derivedBarCount(dir: string): Promise<number> {
   const r = await cli(["derive", dir, "--json"]);
   return Object.keys((JSON.parse(r.out) as { bars: Record<string, unknown> }).bars).length;
+}
+
+/** The project's document as it is on disk (`alukit.json`): what a step wrote, read by the test. */
+export async function docOf(dir: string): Promise<Record<string, unknown>> {
+  return JSON.parse(await readFile(join(dir, "alukit.json"), "utf8")) as Record<string, unknown>;
+}
+
+/**
+ * Selects entities by id, from the outline: a click on the first one's row, Ctrl+click on the
+ * others', as a person would. Waits until the selection is exactly them.
+ */
+export async function selectByIds(page: Page, ids: readonly string[]): Promise<void> {
+  const tree = page.getByTestId("tree");
+  for (const [i, id] of ids.entries()) {
+    await tree
+      .locator(`[data-id="${id}"]`)
+      .first()
+      .click(i > 0 ? { modifiers: ["ControlOrMeta"] } : {});
+  }
+  const want = [...ids].sort();
+  await page.waitForFunction(
+    (w) => JSON.stringify([...(window.__alukit?.selection() ?? [])].sort()) === JSON.stringify(w),
+    want,
+  );
+}
+
+/**
+ * Opens the context menu with a right-click (a press and release that do not move) at a world
+ * point, Z up, mm; returns the menu, once it shows.
+ */
+export async function contextMenu(page: Page, at: readonly [number, number, number]) {
+  const s = await page.evaluate((p) => window.__alukit?.screen(p), at as [number, number, number]);
+  if (!s) throw new Error(`${at} is not on the screen`);
+  await page.mouse.click(s[0], s[1], { button: "right" });
+  const menu = page.getByTestId("context-menu");
+  await menu.waitFor({ state: "visible" });
+  return menu;
 }

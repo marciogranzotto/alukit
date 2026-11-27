@@ -10,7 +10,7 @@ import { lazy } from "./lazy.tsx";
 import { Outline } from "./outline/Outline.tsx";
 import { activeSheet, sheetsOpen } from "./sheets/registry.ts";
 import { Sheets } from "./sheets/Sheets.tsx";
-import { ContextMenu } from "./shell/ContextMenu.tsx";
+import { ContextMenu, connectMenu } from "./shell/ContextMenu.tsx";
 import { Help } from "./shell/Help.tsx";
 import { settingsOpen } from "./shell/open.ts";
 import { isNumber, readPref, writePref } from "./shell/prefs.ts";
@@ -81,6 +81,7 @@ function useWiring(): void {
       onKey("app", undoKey),
       onKey("app", showKey, 10),
       connectTools(),
+      connectMenu(),
       keepPalette(),
       wirePresence(),
       model.subscribe((m) => {

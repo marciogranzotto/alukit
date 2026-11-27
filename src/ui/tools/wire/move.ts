@@ -1,7 +1,7 @@
 import { idList } from "#core/commands/words.ts";
 import type { V3 } from "../../../mesh/model.ts";
 import type { GhostBar, MarkerKind } from "../../../viewer/overlay.ts";
-import type { Grab, ToolHandler, ToolPointer, Viewer } from "../../../viewer/scene.ts";
+import type { Grab, Hit, ToolHandler, ToolPointer, Viewer } from "../../../viewer/scene.ts";
 import { rayLineParams, type Snap, type SnapTargets } from "../../../viewer/snap.ts";
 import { rayPlane } from "../../../viewer/workplane.ts";
 import { select, selection } from "../../focus.ts";
@@ -53,6 +53,8 @@ export interface MoveTool {
 export interface MoveDeps {
   /** The snap under the pointer, in targets the filter keeps. */
   snap(e: ToolPointer, filter?: (t: SnapTargets) => SnapTargets): Snap | undefined;
+  /** The body under the pointer, passing over what the view hides. */
+  pick(e: ToolPointer): Hit | undefined;
 }
 
 const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -251,7 +253,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
   const grab: Grab = {
     press(e) {
       if (gestures.live()) return gestures.press(e);
-      const hit = viewer.pickAt(e.clientX, e.clientY);
+      const hit = deps.pick(e);
       const sel = selection.peek();
       let ids: Iterable<string> = sel;
       if (hit && !sel.has(hit.id)) {

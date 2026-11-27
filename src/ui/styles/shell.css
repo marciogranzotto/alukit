@@ -1709,7 +1709,7 @@
   background: var(--hover-wash);
 }
 
-.context-menu-item kbd {
+.context-menu-item .keys {
   margin-left: auto;
 }
 

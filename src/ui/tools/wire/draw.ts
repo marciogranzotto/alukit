@@ -82,7 +82,7 @@ export function createDrawTool(ctx: WireContext): Wire {
   /** W: the next click on a bar sets the work plane to the face it hits (§8, review m11). */
   function pickPlane(e: ToolPointer): void {
     const m = model.value;
-    const hit = viewer.pickAt(e.clientX, e.clientY);
+    const hit = ctx.pickAt(e);
     const bar = hit && m ? m.derived.bars[hit.id] : undefined;
     const face = bar ? rayFace(rayAt(e), bar) : undefined;
     workPlane.value = bar && face && hit ? facePlane(bar, hit.id, face.face) : GROUND;

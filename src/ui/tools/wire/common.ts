@@ -1,7 +1,7 @@
 import type { V3 } from "../../../mesh/model.ts";
 import type { DrawPoint } from "../../../viewer/draw.ts";
 import type { MarkerKind } from "../../../viewer/overlay.ts";
-import type { ToolHandler, ToolPointer, Viewer } from "../../../viewer/scene.ts";
+import type { Hit, ToolHandler, ToolPointer, Viewer } from "../../../viewer/scene.ts";
 import type { Ray, Snap, SnapTargets } from "../../../viewer/snap.ts";
 import { type CommandOutcome, model } from "../../store.ts";
 import { lastResult, type ToolName } from "../state.ts";
@@ -59,8 +59,13 @@ export interface WireContext {
   targets(): SnapTargets;
   /** The pointer's ray in world coordinates. */
   rayAt(e: ToolPointer): Ray;
-  /** The snap under the pointer, in the targets `filter` keeps; the section's far side never snaps. */
+  /**
+   * The snap under the pointer, in the targets `filter` keeps; the section's far side and what
+   * the view hides never snap.
+   */
   snapAt(e: ToolPointer, filter?: (s: SnapTargets) => SnapTargets): Snap | undefined;
+  /** The body under the pointer, passing over what the view hides (focus.ts `hidden`). */
+  pickAt(e: ToolPointer): Hit | undefined;
   /** The text by the pointer, and the machine label of what it is on (`hint`). */
   show(e: ToolPointer | undefined, text: string | undefined, snap?: string): void;
   /** Where the pointer was last seen over the view, while a tool had it. */

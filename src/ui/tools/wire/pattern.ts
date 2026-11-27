@@ -8,11 +8,11 @@ import type { Wire, WireContext } from "./common.ts";
  * form in the right column takes the pitch and count and sends the pattern. Owner: E5.
  */
 export function createPatternTool(ctx: WireContext): Wire {
-  const { viewer, show } = ctx;
+  const { show } = ctx;
   const handler: ToolHandler = {
     move(e) {
       ctx.track(e);
-      const hit = viewer.pickAt(e.clientX, e.clientY);
+      const hit = ctx.pickAt(e);
       const copy = hit?.id.includes("@") ? hit.id : undefined;
       const along = hit && !copy && hit.id.startsWith("b") ? hit.id : undefined;
       show(
@@ -26,7 +26,7 @@ export function createPatternTool(ctx: WireContext): Wire {
       );
     },
     click(e) {
-      const hit = viewer.pickAt(e.clientX, e.clientY);
+      const hit = ctx.pickAt(e);
       if (!hit || hit.id.includes("@") || !hit.id.startsWith("b")) return;
       patternState.value = { ...patternState.value, along: hit.id };
     },

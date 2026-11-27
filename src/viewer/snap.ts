@@ -41,6 +41,8 @@ export interface SnapPoint {
   ref: SnapRef;
   label: string;
   rank: number;
+  /** The entity it belongs to: its node, bar (a copy by its own id) or part. */
+  of: string;
 }
 
 /** A line along a bar, from its design point a (s = 0) to b (s = len). */
@@ -216,7 +218,7 @@ export function snapTargets(m: SnapModel): SnapTargets {
   const lines: SnapLine[] = [];
   for (const [id, p] of Object.entries(m.nodes)) {
     if (id.includes("@")) continue;
-    points.push({ p, ref: { kind: "node", node: id }, label: `node ${id}`, rank: 0 });
+    points.push({ p, ref: { kind: "node", node: id }, label: `node ${id}`, rank: 0, of: id });
   }
   for (const [id, bar] of Object.entries(m.bars)) {
     const copy = id.includes("@");
@@ -231,6 +233,7 @@ export function snapTargets(m: SnapModel): SnapTargets {
         ref: copy ? { kind: "free" } : { kind: "end", bar: id, end },
         label: `end ${id}.${end}`,
         rank: 0,
+        of: id,
       });
     }
     const at = (lx: number, ly: number): V3 =>
@@ -245,6 +248,7 @@ export function snapTargets(m: SnapModel): SnapTargets {
         ref: copy ? { kind: "free" } : { kind: "station", bar: id, at_mm: q(len / 2), face },
         label: `${id} ${face} face centre`,
         rank: 1,
+        of: id,
       });
     }
     if (section && view) {
@@ -272,6 +276,7 @@ export function snapTargets(m: SnapModel): SnapTargets {
         ref: { kind: "part", part: id },
         label: `${id} ${lp.name}`,
         rank: lp.rank,
+        of: id,
       });
     }
   }
@@ -313,8 +318,11 @@ export interface SnapOptions {
   project: Project;
   /** Grid step along lines (mm). */
   step?: number;
-  /** Bars to ignore (the one being edited). */
-  skipBars?: ReadonlySet<string>;
+  /**
+   * Entities nothing of snaps to, by id (hidden ones, E-UX-9): a bar's ends, faces and lines, a
+   * part's points, a node. A pattern copy is skipped when its own id is in the set.
+   */
+  skip?: ReadonlySet<string>;
   /** Points the view does not show (the section plane's far side): nothing snaps there. */
   hidden?: (p: V3) => boolean;
 }
@@ -351,13 +359,12 @@ const TIE_PX2 = 0.25;
  */
 export function findSnap(targets: SnapTargets, o: SnapOptions): Snap | undefined {
   const step = o.step ?? GRID_MM;
-  const skip = o.skipBars ?? new Set<string>();
+  const skip = o.skip ?? new Set<string>();
   const radius2 = (rank: number) => (rank === 0 ? SNAP_PX.point : SNAP_PX.centre) ** 2;
   const depth = (p: V3) => dot(sub(p, o.ray.o), o.ray.d);
   let best: { snap: Snap; score: number; depth: number } | undefined;
   for (const pt of targets.points) {
-    const bar = "bar" in pt.ref ? pt.ref.bar : undefined;
-    if (bar && skip.has(bar)) continue;
+    if (skip.has(pt.of)) continue;
     if (o.hidden?.(pt.p)) continue;
     const sp = o.project(pt.p);
     if (!sp) continue;

@@ -1,6 +1,6 @@
 import type { ToolPointer, Viewer } from "../../viewer/scene.ts";
 import { findSnap, type SnapTargets, snapTargets } from "../../viewer/snap.ts";
-import { select } from "../focus.ts";
+import { hidden, select } from "../focus.ts";
 import { chord, describeKeys, onKey } from "../keys.ts";
 import { model, summary } from "../store.ts";
 import { viewer } from "../viewport/viewer.ts";
@@ -67,9 +67,11 @@ export function createTools(viewer: Viewer): Tools {
         at: [e.clientX, e.clientY],
         ray: rayAt(e),
         project: viewer.project,
-        // The section plane's far side is not drawn, so nothing there snaps.
+        // The section plane's far side is not drawn, so nothing there snaps; nor what is hidden.
         hidden: viewer.clipped,
+        skip: hidden.peek(),
       }),
+    pickAt: (e) => viewer.pickAt(e.clientX, e.clientY, hidden.peek()),
     show(e, text, snap) {
       hint.value =
         e && text
@@ -93,7 +95,7 @@ export function createTools(viewer: Viewer): Tools {
   const gestures = createGestures(viewer);
   const ends = createEndHandles(viewer, gestures);
   /** The Move tool (wire/move.ts), on the same drag machinery as the end handles. */
-  const mover = createMoveTool(viewer, gestures, { snap: ctx.snapAt });
+  const mover = createMoveTool(viewer, gestures, { snap: ctx.snapAt, pick: ctx.pickAt });
   const draw = createDrawTool(ctx);
   const frame = createFrameTool(ctx);
   const connect = createConnectTool(ctx);

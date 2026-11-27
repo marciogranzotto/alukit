@@ -48,7 +48,7 @@ export function createConnectTool(ctx: WireContext): Wire {
   /** What a click on the body under the pointer picks: a bar or its end; a plate as a layer. */
   function connectPickAt(e: ToolPointer): ConnectPick | undefined {
     const m = model.value;
-    const hit = viewer.pickAt(e.clientX, e.clientY);
+    const hit = ctx.pickAt(e);
     if (!m || !hit) return undefined;
     if (m.derived.bars[hit.id]) return barPick(m, hit.id, hit.p);
     // A part holding a plate is a face connection's layer (§4.5); a copy is not an entity.

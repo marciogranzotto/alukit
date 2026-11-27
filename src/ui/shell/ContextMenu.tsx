@@ -9,9 +9,12 @@ import {
   runAction,
   titleOf,
 } from "../actions/registry.ts";
+import { select, selection } from "../focus.ts";
 import { extendHook } from "../hook.ts";
 import { onKey } from "../keys.ts";
 import { model, tell } from "../store.ts";
+import { activeTool, gesture } from "../tools/state.ts";
+import { viewer } from "../viewport/viewer.ts";
 
 /**
  * The context menu (docs/ux/editing-audit.md E-UX-1, E-UX-2, E0.4): the actions that belong to
@@ -19,8 +22,8 @@ import { model, tell } from "../store.ts";
  * run now is greyed and says why. WAI-ARIA's menu pattern: it takes focus when it opens and gives
  * it back when it closes; ↑ ↓ Home End move, a typed letter jumps to the next entry starting with
  * it, Enter or Space runs one, Esc or Tab closes it, and so does a press outside it or a new
- * revision (what it was opened on may have changed). `openMenu` opens it; the view opens it on a
- * right-click that did not move (viewport/Viewport.tsx). Owner: E2.
+ * revision (what it was opened on may have changed). `openMenu` opens it; `connectMenu` has the
+ * view open it on a right-click that did not move. Owner: E2.
  */
 
 export interface MenuRequest {
@@ -113,7 +116,7 @@ function MenuBox({ r }: { r: MenuRequest }) {
   };
   const activate = (i: number) => {
     const e = entries[i];
-    if (!e || e.enabled !== true) return;
+    if (e?.enabled !== true) return;
     closeMenu();
     const ran = runAction(e.id, r.ctx);
     if (ran !== true) tell(`${e.title}: ${ran}`, true);
@@ -235,7 +238,7 @@ function MenuBox({ r }: { r: MenuRequest }) {
               onClick={() => activate(i)}
             >
               <span class="label">{e.title}</span>
-              {e.keys[0] && <kbd>{e.keys[0].join("+")}</kbd>}
+              {e.keys[0] && <kbd class="keys">{e.keys[0].join("+")}</kbd>}
               {why && <span class="why">{why}</span>}
             </button>
           </Fragment>
@@ -243,6 +246,28 @@ function MenuBox({ r }: { r: MenuRequest }) {
       })}
     </div>
   );
+}
+
+/**
+ * Opens the menu from the view (E-UX-2): a right-click that did not move, in Select with no drag
+ * on, opens it on what is under the pointer, selecting that first when it is not selected; on
+ * empty space, on the selection. Returns the undo.
+ */
+export function connectMenu(): () => void {
+  let offView: (() => void) | undefined;
+  const off = viewer.subscribe((v) => {
+    offView?.();
+    offView = v?.onContextMenu((hit, at) => {
+      const m = model.peek();
+      if (!m || activeTool.peek() !== "select" || gesture.peek()) return;
+      if (hit && !selection.peek().has(hit.id)) select([hit.id], "replace");
+      openMenu({ m, selection: selection.peek(), ...(hit ? { hit } : {}), from: "view" }, at);
+    });
+  });
+  return () => {
+    off();
+    offView?.();
+  };
 }
 
 export function ContextMenu() {
