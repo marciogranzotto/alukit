@@ -7,15 +7,21 @@ import { readOnly } from "./Fields.tsx";
 import { isObject, written } from "./words.ts";
 
 /**
- * A bar's actions (docs/ux/editing-audit.md E4.3, E-UX-21, E-UX-24): Split here, at the station
- * the view's menu was opened on, to the whole millimetre; Split at a typed distance, which opens
- * the inspector's split form; Reverse. Registered while the inspector is shown, as its other
+ * A bar's actions (docs/ux/editing-audit.md E4.3, E4.4, E-UX-21, E-UX-22, E-UX-24): Split here,
+ * at the station the view's menu was opened on, to the whole millimetre; Split at a typed
+ * distance, which opens the inspector's split form; Reverse; Add a hole here, which opens the
+ * inspector's hole form on that face and station. Registered while the inspector is shown, as its other
  * actions are; no single letter (E-UX-24). Each sends one existing command, as `alukit do` would.
  * Owner: E4.
  */
 
 /** The bar the inspector's Split form is open for, as the Split at… action asks. */
 export const splitAsked = signal<string | undefined>(undefined);
+
+/** The hole the inspector's hole form is open for, prefilled where the menu was opened. */
+export const holeAsked = signal<{ bar: string; face: Face; at_mm: number } | undefined>(undefined);
+
+type Face = "+x" | "-x" | "+y" | "-y";
 
 /** The one bar the context is about, a pattern copy being no bar of its own. */
 export function oneBar(c: ActionContext): string | undefined {
@@ -110,9 +116,37 @@ const REVERSE: Action = {
   },
 };
 
+/** Where Add a hole here drills: the side face and station the view's menu opened on. */
+export function holeHere(c: ActionContext): { bar: string; face: Face; at_mm: number } | undefined {
+  const bar = oneBar(c);
+  const hit = c.hit;
+  const face = hit?.face;
+  if (!bar || hit?.id !== bar || !hit.station || hit.station.bar !== bar) return undefined;
+  if (face !== "+x" && face !== "-x" && face !== "+y" && face !== "-y") return undefined;
+  return { bar, face, at_mm: Math.round(hit.station.at_mm) };
+}
+
+const ADD_HOLE: Action = {
+  id: "add-hole",
+  title: (c) => {
+    const h = holeHere(c);
+    return h
+      ? `Add a hole on ${h.bar}'s face ${h.face}, ${h.at_mm} mm from end a…`
+      : "Add a hole here…";
+  },
+  group: "bar",
+  help: "A hole a person adds (§4.4), on the face and at the station the menu was opened on",
+  applies: (c) => holeHere(c) !== undefined,
+  when: () => (readOnly() ? "the project is read-only" : true),
+  run(c) {
+    const h = holeHere(c);
+    if (h) holeAsked.value = h;
+  },
+};
+
 /** Registers a bar's actions; returns the undo. */
 export function barActions(): () => void {
-  const offs = [SPLIT_HERE, SPLIT_AT, REVERSE].map(registerAction);
+  const offs = [SPLIT_HERE, SPLIT_AT, REVERSE, ADD_HOLE].map(registerAction);
   return () => {
     for (const off of offs) off();
   };

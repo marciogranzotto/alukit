@@ -398,3 +398,98 @@ test("several selected: four legs set to finish black in one step, which one Und
   await waitDrawn(page, 2);
   expect(await bomLines(served.dir)).toEqual(was);
 });
+
+type V3 = [number, number, number];
+
+/**
+ * A point in the middle of one of a bar's side faces, `at` along it, that the view shows on top
+ * (found by hovering each, as menu.spec does).
+ */
+async function sideOf(page: Page, dir: string, id: string, at: number): Promise<V3> {
+  const r = await cli(["derive", dir, "--json"]);
+  const b = (
+    JSON.parse(r.out) as {
+      bars: Record<
+        string,
+        { a: V3; frame: { x: V3; y: V3; z: V3 }; box_mm: [[number, number], [number, number]] }
+      >;
+    }
+  ).bars[id];
+  if (!b) throw new Error(`no ${id}`);
+  const [[x0, y0], [x1, y1]] = b.box_mm;
+  const point = (lx: number, ly: number): V3 =>
+    [0, 1, 2].map(
+      (i) =>
+        (b.a[i] as number) +
+        (b.frame.x[i] as number) * lx +
+        (b.frame.y[i] as number) * ly +
+        (b.frame.z[i] as number) * at,
+    ) as V3;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  for (const p of [point(x1, cy), point(x0, cy), point(cx, y1), point(cx, y0)]) {
+    const s = await page.evaluate((q) => window.__alukit?.screen(q), p);
+    if (!s) continue;
+    await page.mouse.move(s[0], s[1]);
+    const shown = await expect
+      .poll(() => page.evaluate(() => window.__alukit?.hovered()), { timeout: 1_000 })
+      .toEqual([id])
+      .then(
+        () => true,
+        () => false,
+      );
+    if (shown) return p;
+  }
+  throw new Error(`no side of ${id} is on top in this view`);
+}
+
+/** `alukit machining` as Markdown: the sheet a shop reads, one line per bar's holes. */
+async function machining(dir: string): Promise<string> {
+  const r = await cli(["machining", dir]);
+  expect(r.code, r.err).toBe(0);
+  return r.out;
+}
+
+test("holes (E-UX-22): a Ø7 hole 20 from end a on b1's +x face, as the CLI's setBar ops; edited, removed", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  served = await serve("base-frame/cli");
+  const oracle = await scratchProject("base-frame/cli");
+  await cliDo(oracle.dir, {
+    cmd: "setBar",
+    args: { id: "b1", set: { ops: [{ op: "hole", face: "+x", at_mm: 20, d_mm: 7 }] } },
+  });
+  await openTab(page, served, 0);
+
+  // The menu on b1's side offers a hole there; its form opens prefilled with the face and the
+  // station, which typed values then set exactly.
+  await pick(page, "b1");
+  const menu = await contextMenu(page, await sideOf(page, served.dir, "b1", 300));
+  await menu
+    .getByRole("menuitem", { name: /^Add a hole on b1's face [+-][xy], \d+ mm from end a…/ })
+    .click();
+  const form = page.getByTestId("hole-form");
+  await form.getByTestId("hole-face").selectOption("+x");
+  await form.getByTestId("hole-at").fill("20");
+  await form.getByTestId("hole-size").fill("7");
+  await form.getByTestId("hole-add").click();
+  await waitDrawn(page, 1);
+  expect((await written(served.dir)).bars?.b1).toMatchObject({
+    ops: [{ op: "hole", face: "+x", at_mm: 20, d_mm: 7 }],
+  });
+  expect(await machining(served.dir)).toEqual(await machining(oracle.dir));
+  await oracle.remove();
+  await expect(page.getByTestId("hole-0")).toContainText("Ø7 on face +x, 20 mm from end a");
+
+  // Edited in its row: a tapped M6 instead, one step; then removed, one step.
+  await page.getByTestId("hole-0-size").fill("M6");
+  await page.getByTestId("hole-0-size").press("Enter");
+  await waitDrawn(page, 2);
+  expect((await written(served.dir)).bars?.b1).toMatchObject({
+    ops: [{ op: "hole", face: "+x", at_mm: 20, thread: "M6" }],
+  });
+  await page.getByTestId("hole-0-remove").click();
+  await waitDrawn(page, 3);
+  expect((await written(served.dir)).bars?.b1).not.toHaveProperty("ops");
+});

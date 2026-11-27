@@ -78,6 +78,7 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
     /^Split b1 here, \d+ mm from end a/,
     /^Split b1 at…/,
     /^Reverse b1/,
+    /^Add a hole on b1's face [+-][xy], \d+ mm from end a…/,
     /^Fit to the selection\s*F/,
     /^Show/,
   ]);
@@ -90,6 +91,7 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
     ["split-here", true],
     ["split-at", true],
     ["reverse", true],
+    ["add-hole", true],
     ["fit", true],
     ["show", true],
   ]);

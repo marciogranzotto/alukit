@@ -18,6 +18,7 @@ import { useReplaceAsked } from "./actions.ts";
 import { runOf, splitAsked } from "./barActions.ts";
 import { EndRows } from "./Ends.tsx";
 import { CommitInput, Row, RowErrors, readOnly, useSend, WordsRow } from "./Fields.tsx";
+import { HoleRows } from "./Holes.tsx";
 import { type LengthEnd, lengthMode, lengthPatch } from "./length.ts";
 import { barsLike, chosenOption, replaceBatch } from "./replace.ts";
 import { isObject, written } from "./words.ts";
@@ -40,6 +41,7 @@ const SHOWN = new Set([
   "off_mm",
   "roll_deg",
   "ends",
+  "ops",
   "label",
   "tags",
 ]);
@@ -714,6 +716,7 @@ export function BarFields({ m, id }: { m: Model; id: string }) {
           <OffsetRow m={m} id={id} />
           <RollRow m={m} id={id} />
           <EndRows m={m} id={id} />
+          <HoleRows m={m} id={id} />
           <LabelRows m={m} id={id} />
           {rest.map(([k, v]) => (
             <WordsRow key={k} label={k.replace(/_/g, " ")} v={v} fields={[k]} />
