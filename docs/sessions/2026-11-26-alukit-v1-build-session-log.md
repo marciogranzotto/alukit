@@ -122,8 +122,10 @@ anything, and each has a default in place.
 | UX redesign, phase 3, S0: shared contracts | **done**, merged (04:33), pushed | `docs/ux/contracts.md`; no visible change (32 app states pixel-compared) |
 | UX S4: visual system and sheets | **done**, merged (05:27), pushed | Tokens at WCAG 2.2 AA in both themes, IBM Plex bundled (OFL), one table system, the order's verdict strip with an action per blocker, Problems grouped by consequence. `docs/ux/s4-decisions.md` |
 | UX S1: core, server, CLI | **done**, merged (06:11), pushed | The problem model (`/api/problems`, `alukit problems`), dry run, `addFrame`, the corner rule (call 6 decided), `setProject`, steps in words, restore keeping what it overwrites, and the plain bugs. No golden value moved. `docs/ux/s1-decisions.md` |
-| UX S3: 3D view | **built** (06:29); merge **held**: it regresses the live update 10× (06:41); back with its agent for a root-cause fix | `docs/ux/s3-decisions.md` |
-| UX S2: app shell and IA | running (Opus, worktree), launched 05:30 | S5 tools follows S3 | task flows and IA; heuristics and first run; visual design and 3D readability |
+| UX S3: 3D view | **done**, merged (07:36), pushed. The live-update regression was fixed at its cause (shader programs relinked on each revision, which also made `main`'s `live.spec` flaky); the update now takes 4–19 ms | `docs/ux/s3-decisions.md` |
+| UX S2: app shell and IA | **done**, merged (07:36), pushed | `docs/ux/s2-decisions.md` |
+| X7 / X8 / F7: quick connectors | **done**, merged (06:59), pushed | G46–G48, calls 52–56; `docs/notes/x7-x8-f7.md` |
+| UX S5: tools, inspector, command bar | running (Opus, worktree), launched 07:38 | Then the integration pass and the designer review | task flows and IA; heuristics and first run; visual design and 3D readability |
 | F2: end-hole axis, butt end-face coverage, head seats | **done**, merged (03:30), pushed | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
 | X1–X3, X5, X6 plus F2a/F2b: blind fasteners, a butt's stack of bodies, plain bars held by a drilled-hole screw, taps over groove openings, sleeves through both walls, head sizes from standards, butt screws seat-checked | **done**, merged (05:00), pushed | Goldens G39–G45; calls 45–51. Note: `docs/notes/x1-x3-f2ab.md`. |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
@@ -779,3 +781,8 @@ anything, and each has a default in place.
   - Fixed: the old model is disposed after the frame that draws the new one, and marker layers keep their materials.
   - The update now takes 4–19 ms at load 31–51 (`main` before: 125–324). A new test counts shader links across a revision and expects none.
 - **07:20**: S2 and then S3 merged locally. `live.spec` now passes under load. Two tests fail only in combination (selecting a problem's connection in the outline, and a revision drawn under the new layout), so they went back to S3's agent to fix at the cause. Nothing is pushed until the gate passes.
+- **07:30**: The integration fixes came back.
+  - The outline had been built against the corners placeholder. With real corners, connections sit in closed corner groups, so Show now opens every selected target's group. That is a product fix.
+  - The shader-link test now answers the decided "undo another source's step?" question.
+- **07:36**: Both merged with the integration fixes; gate PASS (1,049 tests), and `live.spec` passes under load. Pushed `c9dc0c5`; the S2, S3 and baseline worktrees are removed.
+- **07:38**: S5 launched: the command bar, place on click, keys, inspector editing with Delete and its cascade, the joint preview (a dry run on snap or after a pause), and the box-frame tool on `addFrame`.
