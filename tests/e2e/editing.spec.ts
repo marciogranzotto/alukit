@@ -202,6 +202,13 @@ async function derived(dir: string): Promise<Derived> {
   return JSON.parse(r.out) as Derived;
 }
 
+/** The served project's steps, as `alukit log --json` lists them. */
+async function logEntries(dir: string): Promise<{ what: string; text: string }[]> {
+  const r = await cli(["log", dir, "--json"]);
+  expect(r.code, r.err).toBe(0);
+  return (JSON.parse(r.out) as { entries: { what: string; text: string }[] }).entries;
+}
+
 const diagnosticsOf = async (dir: string) =>
   (await derived(dir)).diagnostics.map((d) => `${d.severity} ${d.code} ${d.entity ?? ""}`).sort();
 
@@ -245,24 +252,28 @@ test("A1: a 1000 × 600 × 750 table frame of 40 × 40, a shelf ring 250 up, W, 
   await openTab(page, served, 0);
   const u = new User(page);
   // The start card: the 40 × 40 size (its commonest profile, PF40-01, anodised), then the box
-  // frame's form: W, D, H, and under More options the shelf and "as params"; the corners joined
-  // with the bracket that fits first.
+  // frame's form, every field of A1 up front: W, D, H, the shelf and "as params"; the corners
+  // joined with the bracket it suggests, one click (docs/ux/polish-editing-ui-decisions.md).
   const card = page.getByTestId("start-card");
   await u.click(card.locator('.profile-chip[data-size="40 × 40"]'));
   const form = card.getByTestId("frame-form");
   await u.fill(form.getByTestId("frame-w"), "1000");
   await u.fill(form.getByTestId("frame-d"), "600");
   await u.fill(form.getByTestId("frame-h"), "750");
-  await u.click(form.locator("summary"));
   await u.fill(form.getByTestId("frame-shelf"), "250");
   await u.check(form.getByTestId("frame-params"));
-  await u.select(form.getByTestId("frame-joint"), "forseti:CT38-06");
+  const suggested = form.getByTestId("frame-joint-suggested");
+  await expect(suggested).toHaveAttribute("value", "forseti:CT38-06");
+  await u.check(suggested);
   await expect(form.getByTestId("frame-numbers")).toContainText("posts 4 × 750");
   await u.click(form.getByTestId("frame-create"));
   await waitDrawn(page, 1);
   u.done();
   u.report("A1", 1);
-  // One step, the batch FRAME holds for the scenarios after this one.
+  // §12's targets: at most 8 clicks and 20 keys, one step: the batch FRAME holds for the
+  // scenarios after this one.
+  expect(u.clicks).toBeLessThanOrEqual(8);
+  expect(u.keys).toBeLessThanOrEqual(20);
   expect(sent).toEqual([FRAME]);
   expect((await docOf(served.dir)).params).toEqual({ D: 600, H: 750, W: 1000 });
 
@@ -428,24 +439,24 @@ test("A4: all four legs to 40 × 80, the 80 along X", async ({ page }) => {
   await u.select(form.getByTestId("replace-item"), "forseti:PF40-02");
   await u.click(form.getByTestId("replace-apply"));
   await waitDrawn(page, 1);
-  // A 40 × 80 standing up has its 80 along Y (its section's y). A quarter roll turns it to X, and
-  // each leg's anchor, a corner of the section, has to follow it round to keep the leg inside the
-  // footprint: the roll for the four is one field, the anchors differ by leg, so §12's two steps
-  // are six here. Each anchor is chosen in the row's list: on a 40 × 80 the section's dots sit
-  // 6.5 px apart, and the face dot's press area covers the corner dot (measured: the press goes
-  // to `+y`), so the dots cannot pick a corner of the narrow face.
+  // A 40 × 80 standing up has its 80 along Y (its section's y). A quarter roll in the shared Roll
+  // field turns it to X, and keeps each leg on its side of its line: each anchor, a corner of the
+  // section, turns with the roll, so every leg stays inside the footprint
+  // (docs/ux/polish-editing-ui-decisions.md). One step for the four.
   await u.fill(props.getByTestId("many-roll"), "90");
   await u.press("Enter");
   await waitDrawn(page, 2);
-  const anchors: Record<string, string> = { b1: "-x+y", b2: "-x-y", b3: "+x+y", b4: "+x-y" };
-  let r = 2;
-  for (const [id, anchor] of Object.entries(anchors)) {
-    await u.click(page.getByTestId("tree").locator(`[data-id="${id}"]`).first());
-    await u.select(props.getByTestId("field-anchor"), anchor);
-    await waitDrawn(page, ++r);
-  }
   u.done();
-  u.report("A4", r, `the legs selected in ${legClicks} clicks`);
+  const steps = (await logEntries(served.dir)).length;
+  u.report("A4", steps, `the legs selected in ${legClicks} clicks`);
+  // §12's targets: at most 2 steps, the legs selected in at most 2 clicks.
+  expect(steps).toBeLessThanOrEqual(2);
+  expect(legClicks).toBeLessThanOrEqual(2);
+  // Each leg's anchor turned a quarter with it, a different corner per leg, as by hand: the
+  // body that lay toward +X +Y of b1's line still does.
+  const anchors: Record<string, string> = { b1: "-x+y", b2: "-x-y", b3: "+x+y", b4: "+x-y" };
+  const bars = (await docOf(served.dir)).bars as Record<string, { anchor?: string }>;
+  for (const [id, anchor] of Object.entries(anchors)) expect(bars[id]?.anchor).toBe(anchor);
   const d = await derived(served.dir);
   // By hand: each leg 80 along X, so the front and back rails lose 80 more (840), the side rails
   // gain back 40 (520).
@@ -478,10 +489,12 @@ test("A5: a diagonal brace in the back plane, 100 above the bottom-left corner t
   await openTab(page, served, 0);
   const u = new User(page);
   // Draw (B): the start typed, the anchor on the section's face +x (the brace's section x runs
-  // along world +Y, so its body lies in the posts' plane, y 560 to 600), then the end typed.
+  // along world +Y, so its body lies in the posts' plane, y 560 to 600), picked on the dots the
+  // command bar's Anchor opens, then the end typed.
   await u.press("b");
   await u.type("[0, 600, 100]");
   await u.press("Enter");
+  await u.click(page.getByTestId("draw-anchor-open"));
   await u.click(page.getByTestId("draw-anchor").locator('[data-anchor="+x"]'));
   await u.type("[1000, 600, 650]");
   await expect(page.getByTestId("joint-preview")).toContainText("butt");
@@ -584,26 +597,28 @@ test("A8: four slats across the shelf, evenly spaced; then five, by editing the 
   const sent = sentSteps(page);
   await openTab(page, served, 0);
   const u = new User(page);
-  // A slat from the front shelf rail to the back one, its top face on their tops (anchor +y).
-  await u.press("b");
+  // Pattern (X) with nothing selected: along the front shelf rail, pitch 150, four in all; then
+  // the slat it repeats, drawn: from the front shelf rail to the back one, its top face on their
+  // tops (anchor +y). The slat and its pattern are one step
+  // (docs/ux/polish-editing-ui-decisions.md).
+  await u.press("x");
+  await expect(page.getByTestId("pattern-template")).toHaveText("nothing");
+  await u.fill(page.getByTestId("pattern-along"), "b9");
+  await u.fill(page.getByTestId("pattern-pitch"), "150");
+  await u.fill(page.getByTestId("pattern-count"), "4");
+  await u.click(page.getByTestId("pattern-draw"));
+  await expect(page.getByTestId("draw-repeat")).toContainText("4 along b9");
   await u.type("[200, 0, 250]");
   await u.press("Enter");
+  await u.click(page.getByTestId("draw-anchor-open"));
   await u.click(page.getByTestId("draw-anchor").locator('[data-anchor="+y"]'));
   await u.type("[200, 600, 250]");
   await u.press("Enter");
   await waitDrawn(page, 1);
-  // Pattern (X) of the slat along the front shelf rail: pitch 150, four in all.
-  await u.press("Escape");
-  await u.click(page.getByTestId("tree").locator('[data-id="b17"]').first());
-  await u.press("x");
-  await expect(page.getByTestId("pattern-template")).toHaveText("b17");
-  await u.fill(page.getByTestId("pattern-along"), "b9");
-  await u.fill(page.getByTestId("pattern-pitch"), "150");
-  await u.fill(page.getByTestId("pattern-count"), "4");
-  await u.click(page.getByTestId("pattern-apply"));
-  await waitDrawn(page, 2);
   u.done();
-  u.report("A8, four", 2);
+  u.report("A8, four", sent.length);
+  // §12: one step.
+  expect(sent).toHaveLength(1);
   const spacing = async (n: number) => {
     const bars = (await derived(served?.dir as string)).bars;
     const xs = ["b17", ...Array.from({ length: n - 1 }, (_, i) => `b17@${i + 1}`)].map(
@@ -614,18 +629,19 @@ test("A8: four slats across the shelf, evenly spaced; then five, by editing the 
     for (const g of gaps) expect(Math.abs(g - (gaps[0] as number))).toBeLessThan(0.01);
   };
   await spacing(4);
-  // Five: the pattern's count in its inspector, one step.
+  // Five: the pattern, selected by the step that made it, its count in its inspector; one step.
+  await expect.poll(() => selection(page)).toEqual(["pt1"]);
   const v = new User(page);
-  await v.click(page.getByTestId("tree").locator('[data-id="pt1"]').first());
   const count = page.getByTestId("properties").getByTestId("field-count");
   await expect(count).toHaveValue("4");
   await v.fill(count, "5");
   await v.press("Enter");
-  await waitDrawn(page, 3);
+  await waitDrawn(page, 2);
   v.done();
-  v.report("A8, five", 1);
+  v.report("A8, five", sent.length - 1);
   await spacing(5);
-  expect(sent).toHaveLength(3);
+  expect(sent).toHaveLength(2);
+  // The CLI's batch: the slat, a join at each end and its pattern, in one step.
   await sameAsCli(served.dir, (dir) =>
     doAll(
       dir,
@@ -637,8 +653,8 @@ test("A8: four slats across the shelf, evenly spaced; then five, by editing the 
         },
         { cmd: "autoConnect", args: { at: [200, 0, 250], optional: true } },
         { cmd: "autoConnect", args: { at: [200, 600, 250], optional: true } },
+        { cmd: "addPattern", args: { template: ["b17"], along: "b9", pitch_mm: 150, count: 4 } },
       ],
-      [{ cmd: "addPattern", args: { template: ["b17"], along: "b9", pitch_mm: 150, count: 4 } }],
       [{ cmd: "setPattern", args: { id: "pt1", set: { count: 5 } } }],
     ),
   );
@@ -947,6 +963,7 @@ test("A15: agent parity: the session's commands replayed with alukit do give the
   await page.keyboard.press("b");
   await page.keyboard.type("[0, 600, 100]");
   await page.keyboard.press("Enter");
+  await page.getByTestId("draw-anchor-open").click();
   await page.getByTestId("draw-anchor").locator('[data-anchor="+x"]').click();
   await page.keyboard.type("[1000, 600, 650]");
   await page.keyboard.press("Enter");

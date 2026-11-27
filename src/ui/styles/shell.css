@@ -1227,10 +1227,23 @@
   color: var(--warn);
 }
 
+/*
+ * The ways side by side, wrapping when the card is narrow. The box frame's form is the fuller
+ * way, so it takes three parts of the width to the first bar's two, which keeps its Joined with
+ * on one row and the card unscrolled at 1280 × 800 (docs/ux/polish-editing-ui-decisions.md 3).
+ */
 .start-ways {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-5);
+}
+
+/* The profile and its options on one row when they fit. */
+.start-profile-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--sp-6);
 }
 
 .start-way {
@@ -1292,6 +1305,15 @@
 
 .start-way {
   min-width: 0;
+}
+
+/* Each way's share of the row (.start-ways, above): three parts to the box frame, two to the rest. */
+.start-ways > .start-way {
+  flex: 2 1 220px;
+}
+
+.start-ways > .start-way-frame {
+  flex: 3 1 300px;
 }
 
 .start-way .cd-row {

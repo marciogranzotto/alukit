@@ -12,7 +12,9 @@ import {
   pivotBatch,
   placeCommand,
   placeFrom,
+  repeatBatch,
   runOf,
+  suggestedJoint,
 } from "./commands.ts";
 import { JOIN_NONE, wayKnown } from "./state.ts";
 import { valueList } from "./typed.ts";
@@ -282,6 +284,24 @@ describe("place part", () => {
 });
 
 describe("pattern", () => {
+  // docs/ux/polish-editing-ui-decisions.md 4: a bar drawn and its pattern in one step.
+  it("repeats the bar the draw step makes, named as the document will name it", () => {
+    const drawn = [
+      { cmd: "addBar", args: { a: [200, 0, 250], b: [200, 600, 250] } },
+      { cmd: "autoConnect", args: { at: [200, 0, 250], optional: true } },
+    ];
+    const repeat = { along: "b9", pitch_mm: 150, count: 4 };
+    // The counter, or the highest id the document holds, whichever is higher, plus one.
+    expect(repeatBatch(drawn, { ids: { b: 16 }, bars: { b1: {}, b16: {} } }, repeat)).toEqual([
+      ...drawn,
+      { cmd: "addPattern", args: { template: ["b17"], along: "b9", pitch_mm: 150, count: 4 } },
+    ]);
+    expect(repeatBatch(drawn, { ids: { b: 20 }, bars: { b3: {} } }, repeat).at(-1)).toMatchObject({
+      args: { template: ["b21"] },
+    });
+    expect(repeatBatch(drawn, {}, repeat).at(-1)).toMatchObject({ args: { template: ["b1"] } });
+  });
+
   it("repeats the selection along a bar at a pitch, leaving pattern copies out (§4.7)", () => {
     expect(
       patternCommand({ template: ["p6", "b26@1"], along: "b9", pitch: "150", count: "4" }),
@@ -435,6 +455,22 @@ describe("box frame (S5.7, BE-6)", () => {
     expect(
       frameCommand({ ...draft, at: [0, 0, 0] }, { ...opts, qty: "1.5" }, bar40, bare, { W: 1200 }),
     ).toEqual({ why: "connectors per end: a whole number, 1 or more" });
+  });
+
+  // docs/ux/polish-editing-ui-decisions.md 3: one click for the common bracket, never chosen.
+  it("offers the bracket that fits the most systems, the catalog's order between equals", () => {
+    const c = (id: string, family: string, fits: string[]) => ({ id, family, fits });
+    const fit = [
+      c("f:CA40-01", "plate", ["s30", "s40", "s45"]),
+      c("f:CBF40-01", "bracket", ["s40"]),
+      c("f:CN40-01", "end-connector", ["s40"]),
+      c("f:CT38-06", "bracket", ["s30", "s40", "s45", "s50"]),
+      c("f:CT38-07", "bracket", ["s30", "s40", "s45", "s50"]),
+      c("f:CT75-05", "bracket", ["s30", "s40"]),
+    ];
+    expect(suggestedJoint(fit)?.id).toBe("f:CT38-06");
+    expect(suggestedJoint(fit.filter((e) => e.family !== "bracket"))).toBeUndefined();
+    expect(suggestedJoint([])).toBeUndefined();
   });
 
   // docs/ux/review-phase4.md B1: a box frame never leaves its corners unjoined unasked.

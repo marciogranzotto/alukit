@@ -1,9 +1,10 @@
 import { computed, signal } from "@preact/signals";
 import type { CornerRule } from "#core/project/schema.ts";
 import type { V3 } from "../../mesh/model.ts";
-import type { Axis, DrawEnd, DrawPoint } from "../../viewer/draw.ts";
+import { type Axis, type DrawEnd, type DrawPoint, nextRoll } from "../../viewer/draw.ts";
 import type { Snap } from "../../viewer/snap.ts";
 import { GROUND, type WorkPlane } from "../../viewer/workplane.ts";
+import { turnedAnchor } from "../edit/roll.ts";
 import { extendHook } from "../hook.ts";
 
 /**
@@ -80,6 +81,24 @@ export const drawOptions = signal<DrawOptions>({
   anchor: "c",
   autoConnect: true,
 });
+
+/**
+ * R, or the command bar's Roll: a quarter turn that keeps the bar drawn on its anchor's side of
+ * the line, the anchor turned with it, as the inspector's Roll does
+ * (docs/ux/polish-editing-ui-decisions.md 1).
+ */
+export function rollDrawn(): void {
+  const o = drawOptions.value;
+  drawOptions.value = { ...o, roll: nextRoll(o.roll), anchor: turnedAnchor(o.anchor, 1) };
+}
+
+/**
+ * Pattern's "Draw the bar to repeat" (docs/ux/polish-editing-ui-decisions.md 4): the pattern the
+ * next bar drawn is repeated by, in the same step; the draw tool drops it when it is left.
+ */
+export const drawRepeat = signal<
+  { along: string; pitch_mm: number | string; count: number } | undefined
+>(undefined);
 
 /** The corner rules, in the order Tab flips through them. */
 export const CORNER_RULES: readonly CornerRule[] = ["vertical", "x", "y", "first"];

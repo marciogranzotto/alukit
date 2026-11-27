@@ -276,8 +276,9 @@ draws that length toward the pointer. While drawing:
 - The line follows the world X, Y or Z axis nearest your pointer. `→ ← ↑` lock it to X, Y or Z
   (again, or `↓`, frees it); hold **Shift** to leave the axes and move freely in the work plane.
 - Once you type, nothing pulls the line.
-- `R` rolls the section a quarter turn; `A` cycles the anchor (centre, corners, faces, datums), or
-  click a dot on the section in the command bar.
+- `R` rolls the section a quarter turn, its anchor turned with it so the bar stays on the same
+  side of the line; `A` cycles the anchor (centre, corners, faces, datums), or click **Anchor** in
+  the command bar and a dot on the section it opens.
 - `W` sets the work plane to a face: press it, then click a bar's face; press it again for the
   ground. The plane defaults to the ground.
 - `Space` draws the next bar from the last one's end.
@@ -291,9 +292,11 @@ type the height and `Enter`: four posts, a base and a top ring, every corner but
 The form beside the inspector (and on the start card) sets the rings, a shelf, the corner rule,
 the connector, and whether W, D and H become params; it shows the cut lengths before you make it.
 On the start card, for a table frame of 40 × 40 with a shelf: click the **40 × 40** size, type
-`1000`, `600` and `750` in W, D and H, open **More options**, type `250` in **shelf at** (its top
-face that high above the base) and tick **as params**, choose a bracket under **Joined with**,
-then **Make a box frame**.
+`1000`, `600` and `750` in W, D and H, `250` in **Shelf at** (its top face that high above the
+base), tick **W, D and H as params**, click the bracket offered beside **Joined with** (CT38-06,
+the bracket made for the most profile series; the list beside it holds every connector that fits,
+and Nothing), then **Make a box frame**. **More options** holds the corner, the rings and the
+corner rule.
 
 **Placing a part.** Arm it first: `/` opens the catalog, search (`CT38-06`, `bracket`), open its
 card and press **Use for placing**; Place (`P`) is then on. Click a face or a groove: the part goes
@@ -437,8 +440,9 @@ is hidden.
   face** (the faces its line meets, nearest first), **flush with an end**, or **Pick in the view**
   and click the face. **Free from c9** takes the end out of its joint.
 - **A diagonal brace.** Draw it with its ends on the posts' lines and it butts on both, its ends
-  declared cut at an angle: `B`, type `[0, 600, 100]`, `Enter`, click the section's dot on its face
-  `+x` in the command bar (so the brace lies in the posts' plane, not half outside it), type
+  declared cut at an angle: `B`, type `[0, 600, 100]`, `Enter`, click **Anchor** in the command
+  bar and the section's dot on its face `+x` (so the brace lies in the posts' plane, not half
+  outside it), type
   `[1000, 600, 650]`, `Enter`. If one sits off the plane, its **Offset** row moves it along its
   section's x and y, each labelled with the world direction it runs in.
 - **Split and Reverse.** Right-click a bar where it should be cut: **Split b9 here, 400 mm from end
@@ -454,13 +458,16 @@ is hidden.
 - **Several bars** share fields in the inspector: options (when they are one profile), anchor,
   roll, label and tags, each showing the value they share or "varies". A change is one step for
   all of them.
+- **The anchor** is picked on the section's dots beside its list (or from the list): each dot is
+  a press of its own on any section, a 40 × 80 drawn to scale.
+- **A roll by a quarter turn keeps the bar on its anchor's side**: the anchor turns with it, so a
+  40 × 80 on a corner stays in that corner and swaps its long side for its short one. Another
+  angle turns the bar about its anchor.
 - **Replace…** changes the profile, for the selected bars or all like the one selected. To make the
   four legs 40 × 80 with the 80 along X: select the `post` heading, **Replace…**, find `40x80`,
-  choose the profile, **Replace 4 bars**; then type `90` in **Roll** and `Enter`. A rolled 40 × 80
-  then needs each leg's **Anchor** turned with it, one leg at a time from the anchor's list, to
-  stay inside the footprint (front left `-x+y`, front right `-x-y`, back left `+x+y`, back right
-  `+x-y`). On a 40 × 80 the section's dots beside the list sit too close together to pick a
-  corner of the narrow face: use the list.
+  choose the profile, **Replace 4 bars**; then type `90` in **Roll** and `Enter`. Each leg turns
+  in its own corner, its anchor turned with it (front left `-x+y`, front right `-x-y`, back left
+  `+x+y`, back right `+x-y`): two steps.
 - **A node** (a point several bar ends share) moves by its x, y and z fields, and every bar end at
   it follows.
 
@@ -479,11 +486,13 @@ is hidden.
   gives, the current one marked "now"; where two ends meet, a **Mitre** or a **Splice** too.
   **Apply** rearranges the corner as one step; **Apply to n matching corners** does the same at
   every corner built the same way. `alukit arrangements <dir> --at x,y,z` gives the same answer.
-- **A pattern.** For four slats across the shelf: draw one (`B`, `[200, 0, 250]`, `Enter`, the
-  section's dot `+y` so its top is flush with the rails', `[200, 600, 250]`, `Enter`), select it,
-  press `X`, type `b9` as the bar to repeat along (or click it), pitch `150`, count `4`, **Apply**.
-  To make it five, select the pattern (`pt1` in the outline) and type `5` in its **Count**. Its
-  pitch (`W / 8` keeps following W), offsets, skips (`3, 5`) and along edit the same way, and
+- **A pattern.** For four slats across the shelf, in one step: press `X` with nothing selected,
+  type `b9` as the bar to repeat along (or click it), pitch `150`, count `4`, then **Draw the bar
+  to repeat**; draw the slat (`[200, 0, 250]`, `Enter`, **Anchor** in the command bar and the
+  section's dot `+y` so its top is flush with the rails', `[200, 600, 250]`, `Enter`). The slat and
+  its pattern are made together, and the pattern is selected: type `5` in its **Count** to make it
+  five. To repeat what exists, select it first and press **Create** instead. A pattern's pitch
+  (`W / 8` keeps following W), offsets, skips (`3, 5`) and along edit the same way, and
   **Explode** turns the copies into plain bars, selected.
 - **A part**: **Replace…** picks another item of its kind, for this part or all like it; its bar,
   face or groove, distance, offset and roll edit in place. **Context** (also on a bar) marks it

@@ -49,7 +49,7 @@ a run says so), **read** (from the code or the page cited), **inferred**.*
 | # | Decision | Why |
 |---|---|---|
 | 7 | **The Offset row edits `off_mm` along the section's x and y, each labelled with the world direction it runs in** ("x (world +Y)"), a param written as typed; both nought removes it | Which way a section's x points is not obvious: on the audit's brace the offset that brings it into the frame's plane is [−20, 0], along its section x (world +Y), not the [0, 20] the audit names (**measured**: `alukit do --dry-run`, and `edit.spec`'s oracle) |
-| 8 | **The anchor row shows the section's dots beside its list: the command bar's picker, now one component** (`AnchorDots`) both use; the command bar's markup and its tests are unchanged | E4.2's "reuse the command bar's picker"; one picker, so one look and one set of keys |
+| 8 | **The anchor row shows the section's dots beside its list: the command bar's picker, now one component** (`AnchorDots`) both use; the command bar's markup and its tests are unchanged. *Since the editing polish ([pe](polish-editing-ui-decisions.md) 2): each dot a 24 px target that overlaps no other, the several-bars row shows the dots too, and the command bar's picker opens above the bar* | E4.2's "reuse the command bar's picker"; one picker, so one look and one set of keys |
 
 ## Split and Reverse (E4.3)
 
@@ -69,7 +69,7 @@ a run says so), **read** (from the code or the page cited), **inferred**.*
 
 | # | Decision | Why |
 |---|---|---|
-| 13 | **With several bars selected, the inspector edits their options (when they share one profile), anchor and roll; with any of the document's entities, their label and tags. Each shows the value they share, or "varies"; a change is one step, one patch per entity** | E-UX-15; Revit's palette. Options need one item's choices, so they show only when the profile is shared |
+| 13 | **With several bars selected, the inspector edits their options (when they share one profile), anchor and roll; with any of the document's entities, their label and tags. Each shows the value they share, or "varies"; a change is one step, one patch per entity**. *Since the editing polish ([pe](polish-editing-ui-decisions.md) 1): a quarter roll also turns each bar's anchor and offset, so each keeps its side of its line* | E-UX-15; Revit's palette. Options need one item's choices, so they show only when the profile is shared |
 | 14 | **The tags field shows the tags all of them carry; one `tag` command adds a new tag to all and removes a shared tag left out from all; a tag only some carry is left as it is**, and said below the field | A tag on two of five is not lost by an edit that never showed it |
 | 15 | **Length is not among the shared fields** | Each bar's length has its own end and driver (e4 16, 17); one typed value would move different ends. **Inferred**; a later round can add it with a "which end" for all |
 

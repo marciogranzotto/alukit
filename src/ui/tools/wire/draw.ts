@@ -7,7 +7,6 @@ import {
   type DrawPoint,
   endUnder,
   nextAnchor,
-  nextRoll,
   previewPlacement,
   typedEnd,
   writtenPoint,
@@ -17,20 +16,23 @@ import { q, type Snap } from "../../../viewer/snap.ts";
 import { facePlane, GROUND, gridSnap, rayFace } from "../../../viewer/workplane.ts";
 import type { DryRun } from "../../client/dryrun.ts";
 import { cornerKey, cornersOf } from "../../corners.ts";
-import { selection } from "../../focus.ts";
+import { select, selection } from "../../focus.ts";
 import { describeKeys } from "../../keys.ts";
 import { palette } from "../../palette.ts";
 import { model, sendCommands } from "../../store.ts";
+import { repeatBatch } from "../commands.ts";
 import { type JointWords, jointWords, touchesBars } from "../joint.ts";
 import { type Cmd, createPreviewer } from "../preview.ts";
 import {
   activeTool,
   drawOptions,
+  drawRepeat,
   drawState,
   hint,
   jointPreview,
   lastResult,
   pickingPlane,
+  rollDrawn,
   typed,
   workPlane,
 } from "../state.ts";
@@ -204,19 +206,40 @@ export function createDrawTool(ctx: WireContext): Wire {
     scheduleJoint(start ? end : undefined);
   }
 
-  /** Commits the gesture; with `chain`, the next bar starts where this one ends (Space). */
+  /**
+   * Commits the gesture; with `chain`, the next bar starts where this one ends (Space). With a
+   * repeat pending (Pattern's "Draw the bar to repeat"), the bar's pattern is in the same step,
+   * and the step selects it in Select, where its fields are.
+   */
   async function commitBar(end: DrawEnd, chain = false): Promise<void> {
-    const cmds = gestureCommands(end);
-    if (!cmds) return;
+    const drawn = gestureCommands(end);
+    const m = model.peek();
+    if (!drawn || !m) return;
+    const repeat = drawRepeat.peek();
+    const cmds = repeat ? repeatBatch(drawn, m.doc, repeat) : drawn;
     drawState.value = {};
     current = undefined;
     joint.reset();
     viewer.setOverlay({});
     if (drawOptions.peek().lock) drawOptions.value = { ...drawOptions.peek(), lock: undefined };
     used();
-    const o = await sendCommands(cmds, "draw bar", { inline: true });
+    // A batch that names the bar it makes is sent strict, as a pivot's is: a step made by anyone
+    // first refuses it rather than repeating another bar.
+    const o = await sendCommands(cmds, repeat ? "draw and repeat" : "draw bar", {
+      inline: true,
+      ...(repeat ? { strict: true } : {}),
+    });
     noteResult(o);
     if (!o.ok) return;
+    if (repeat) {
+      drawRepeat.value = undefined;
+      activeTool.value = "select";
+      select(
+        o.created.filter((x) => /^pt\d+$/.test(x)),
+        "replace",
+      );
+      return;
+    }
     const id = o.created.find((x) => /^b\d+$/.test(x));
     lastEnd = { p: end.p, written: end.written, label: id ? `end ${id}.b` : end.label };
     if (chain && activeTool.peek() === "draw") {
@@ -382,7 +405,7 @@ export function createDrawTool(ctx: WireContext): Wire {
       return true;
     }
     if (k === "r" || k === "R") {
-      drawOptions.value = { ...drawOptions.value, roll: nextRoll(drawOptions.value.roll) };
+      rollDrawn();
       refresh();
       return true;
     }
@@ -442,7 +465,7 @@ export function createDrawTool(ctx: WireContext): Wire {
       { keys: ["→", "←", "↑"], does: "Lock the line to X, Y or Z (again, or ↓, to free it)" },
       { keys: ["Space"], does: "Draw the next bar from the last one's end" },
       { keys: ["Tab"], does: "Flip the previewed joint: which bar runs through" },
-      { keys: ["R"], does: "Roll the profile 90°" },
+      { keys: ["R"], does: "Roll the profile 90°, keeping its anchor's side" },
       { keys: ["A"], does: "Next anchor on the section" },
       { keys: ["W"], does: "Pick a face as the work plane" },
       { keys: ["Shift"], does: "Hold to draw off the axes" },
@@ -461,6 +484,10 @@ export function createDrawTool(ctx: WireContext): Wire {
     reset() {
       current = undefined;
       joint.reset();
+    },
+    switched(next) {
+      // A repeat waits for the next bar drawn; leaving the tool drops it.
+      if (next !== "draw") drawRepeat.value = undefined;
     },
     dispose() {
       offPalette();

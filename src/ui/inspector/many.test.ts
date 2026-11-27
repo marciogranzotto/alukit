@@ -70,8 +70,17 @@ describe("several selected (E-UX-15)", () => {
       { cmd: "setBar", args: { id: "b1", set: { anchor: null } } },
       { cmd: "setBar", args: { id: "b2", set: { anchor: null } } },
     ]);
-    expect(rollBatch(["b5", "b6"], 0)[0]?.args).toEqual({ id: "b5", set: { roll_deg: null } });
-    expect(rollBatch(["b5", "b6"], "A")[1]?.args).toEqual({ id: "b6", set: { roll_deg: "A" } });
+    // The top rails, rolled 90°, back to nought: a quarter turn, so each anchor turns with it and
+    // each rail keeps its side of its line (roll.ts), a different corner each.
+    expect(rollBatch(frame, ["b5", "b6"], { value: 0, written: 0 })).toEqual([
+      { cmd: "setBar", args: { id: "b5", set: { roll_deg: null, anchor: "-x+y" } } },
+      { cmd: "setBar", args: { id: "b6", set: { roll_deg: null, anchor: "+x+y" } } },
+    ]);
+    // A param written as typed; 30° more is no quarter turn, so it rolls about the anchor.
+    expect(rollBatch(frame, ["b6"], { value: 120, written: "A" })[0]?.args).toEqual({
+      id: "b6",
+      set: { roll_deg: "A" },
+    });
     expect(labelBatch(["b1", "b2"], " leg ")).toEqual([
       { cmd: "label", args: { id: "b1", label: "leg" } },
       { cmd: "label", args: { id: "b2", label: "leg" } },

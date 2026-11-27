@@ -26,7 +26,7 @@ test, a run or the CLI says so), **read** (from the code), **inferred**. After-s
 | m2 | The status bar shows the tool's prompt only in Select; the command bar says it (and announces it) while a tool is on | `shell/StatusBar.tsx`, `tools/CommandBar.tsx` | read |
 | m3 | "Anchor: centre"; the Corners select reads "post through", its long words in each option's title | `tools/CommandBar.tsx` | read |
 | m4 | Arming an item from the catalog closes the start card | `catalog/state.ts` (`arm`) | read |
-| m5 | W, D, H, Joined with and Make up front; corner, rings, shelf, corners and params under "More options"; the example is a one-line way under the two | `tools/forms/FrameForm.tsx`, `shell/StartCard.tsx` | `frame.spec.ts` |
+| m5 | W, D, H, Joined with and Make up front; corner, rings, shelf, corners and params under "More options"; the example is a one-line way under the two. *Changed by the editing polish ([pe](polish-editing-ui-decisions.md) 3): the shelf and params are up front too, and Joined with offers the common bracket as one click* | `tools/forms/FrameForm.tsx`, `shell/StartCard.tsx` | `frame.spec.ts` |
 | m6 | `.connector-select` is at most the column's width; the fit-first grouping of B1 (4) | `styles/inspector.css` | read |
 | m7 | Show's callout: no Show inside it, the diagnostic's own words (its measurement) under the title, the stepper "target 1 of 3" | `problems/ProblemRow.tsx`, `viewport/Overlays.tsx` | read |
 | m8 | Joint markers: by default the open and failed corners, and a joined one while hovered or selected; the Joints button steps to none, then to every corner | `viewer/markers.ts` (`setQuiet`), `viewer/scene.ts`, `viewport/ViewControls.tsx`, `viewport/viewer.ts` | `view.spec.ts` (markers, off, hover) |

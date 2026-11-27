@@ -8,6 +8,7 @@ import {
   connectionCommand,
   faceEditCommand,
   patternCommand,
+  patternRepeat,
   pivotBatch,
   runOf,
 } from "./commands.ts";
@@ -19,6 +20,7 @@ import {
   type ConnectType,
   connectPicks,
   connectType,
+  drawRepeat,
   faceOptions,
   type PivotOptions,
   patternState,
@@ -351,6 +353,11 @@ function PatternPanel() {
   const s = patternState.value;
   const params = model.value?.derived.params ?? {};
   const c = patternCommand(s, params);
+  const repeat = patternRepeat(s, params);
+  const bar = palette.value.bar;
+  // A new bar as the template, drawn next: the bar and its pattern are one step
+  // (docs/ux/polish-editing-ui-decisions.md 4).
+  const drawWhy = "why" in repeat ? repeat.why : bar ? undefined : "arm a bar to draw first";
   const pitch = typedNumber(s.pitch, params);
   const field = (k: "pitch" | "count" | "along", label: string) => (
     <label>
@@ -391,18 +398,37 @@ function PatternPanel() {
           pitch {typedWords(pitch)}
         </p>
       )}
-      <button
-        type="button"
-        class="tp-btn"
-        data-testid="pattern-apply"
-        disabled={"why" in c || busy.value}
-        onClick={async () => {
-          if ("why" in c) return;
-          patternOutcome.value = await sendCommands([c], "pattern", { inline: true });
-        }}
-      >
-        Create
-      </button>
+      <div class="tp-row">
+        <button
+          type="button"
+          class="tp-btn"
+          data-testid="pattern-apply"
+          disabled={"why" in c || busy.value}
+          onClick={async () => {
+            if ("why" in c) return;
+            patternOutcome.value = await sendCommands([c], "pattern", { inline: true });
+          }}
+        >
+          Create
+        </button>
+        <button
+          type="button"
+          class="tp-btn"
+          data-testid="pattern-draw"
+          disabled={drawWhy !== undefined || busy.value}
+          title={
+            drawWhy ??
+            `Draw a ${bar?.name ?? "bar"}: it and its pattern are made in one step (B draws it)`
+          }
+          onClick={() => {
+            if ("why" in repeat) return;
+            activeTool.value = "draw";
+            drawRepeat.value = repeat;
+          }}
+        >
+          Draw the bar to repeat
+        </button>
+      </div>
       {"why" in c && <p class="hint-text">{c.why}</p>}
       <Errors outcome={patternOutcome.value} />
     </div>

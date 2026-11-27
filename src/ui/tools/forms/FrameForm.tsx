@@ -9,7 +9,7 @@ import { optionsText } from "../../options.ts";
 import { palette } from "../../palette.ts";
 import { type FrameProfile, frameWay } from "../../shell/start.ts";
 import { busy, type CommandOutcome, model, sendCommands } from "../../store.ts";
-import { type frameBatch, frameSizing, JOINT_UNCHOSEN } from "../commands.ts";
+import { type frameBatch, frameSizing, JOINT_UNCHOSEN, suggestedJoint } from "../commands.ts";
 import {
   activeTool,
   CORNER_RULES,
@@ -26,9 +26,11 @@ import {
 import { parseTyped } from "../typed.ts";
 
 /**
- * The box frame's form (S5.7, D-UX-8): W, D and H (expressions with params), how the corners are
- * joined, and under More options the corner, the rings, a shelf, the corner rule and the params
- * switch; the frame's numbers from a dry run of the step it would send; one step. The box frame
+ * The box frame's form (S5.7, D-UX-8): W, D and H (expressions with params), a shelf and the
+ * params switch, how the corners are joined (the common bracket one click beside the full list),
+ * and under More options the corner, the rings and the corner rule
+ * (docs/ux/polish-editing-ui-decisions.md 3); the frame's numbers from a dry run of the step it
+ * would send; one step. The box frame
  * tool shows it above the inspector, sharing its draft with the gesture: a click fills a field,
  * and what is typed in the command bar shows in the fields as it is typed (review M6). The start
  * card shows it as its first way in (`frameWay`), with the profile its first step chose. Owner: S5.
@@ -40,6 +42,10 @@ import { parseTyped } from "../typed.ts";
 
 /** How long the form waits after a change before it asks for the numbers: a dry run. */
 const NUMBERS_MS = 300;
+
+/** Why the suggested connector is offered, in its title. */
+const SUGGESTED_WHY =
+  "the bracket that fits the most profile series, as one click; the list beside it holds every connector that fits, and Nothing";
 
 /** What the frame would come to, from its dry run: each part's cut lengths, or why not. */
 type Numbers = { lines: string[]; problems?: string } | { why: string } | undefined;
@@ -176,6 +182,8 @@ export function FrameForm({
   const system = useSystem(item);
   const systems = system ? [system] : [];
   const connectors = useConnectors(systems);
+  // One click for the common bracket while the project names no default (polish-editing 3).
+  const suggested = defaultButt ? undefined : suggestedJoint(connectors.fit);
   const at: V3 = d.at ?? [0, 0, 0];
   const project = { hasDefaultBar: hasDefault, defaultButt };
   // `batch` is what Make sends; `asked` is what the numbers come from, which while the joint is
@@ -272,8 +280,44 @@ export function FrameForm({
         {text("d", "D", "The outside depth, along Y")}
         {text("h", "H", "The outside height, along Z")}
       </div>
+      <div class="tp-row">
+        <label title="A shelf ring, its top face this high above the base">
+          Shelf at{" "}
+          <input
+            class="frame-size"
+            data-testid="frame-shelf"
+            inputMode="decimal"
+            placeholder="none"
+            value={o.shelf}
+            onInput={(e) => setOptions({ shelf: (e.currentTarget as HTMLInputElement).value })}
+          />
+        </label>
+        <label title="Write W, D and H as params, and the frame's points from them">
+          <input
+            type="checkbox"
+            data-testid="frame-params"
+            checked={o.params}
+            onChange={() => setOptions({ params: !o.params })}
+          />{" "}
+          W, D and H as params
+        </label>
+      </div>
       <div class="tp-row frame-joint">
         <label for="frame-joint">Joined with</label>
+        {suggested && (
+          <label class="frame-joint-chip" title={`${connectorLabel(suggested)}: ${SUGGESTED_WHY}`}>
+            <input
+              type="radio"
+              name="frame-joint-suggested"
+              data-testid="frame-joint-suggested"
+              value={suggested.id}
+              checked={joint === suggested.id}
+              disabled={busy.value}
+              onChange={() => setOptions({ joint: suggested.id })}
+            />{" "}
+            <span class="frame-joint-name">{connectorLabel(suggested)}</span>
+          </label>
+        )}
         <ConnectorSelect
           id="frame-joint"
           testid="frame-joint"
@@ -345,16 +389,6 @@ export function FrameForm({
             />{" "}
             top ring
           </label>
-          <label title="A shelf ring, its top face this high above the base">
-            shelf at{" "}
-            <input
-              data-testid="frame-shelf"
-              inputMode="decimal"
-              placeholder="none"
-              value={o.shelf}
-              onInput={(e) => setOptions({ shelf: (e.currentTarget as HTMLInputElement).value })}
-            />
-          </label>
         </div>
         <div class="tp-row">
           <label>
@@ -374,15 +408,6 @@ export function FrameForm({
                 </option>
               ))}
             </select>
-          </label>
-          <label title="Write W, D and H as params, and the frame's points from them">
-            <input
-              type="checkbox"
-              data-testid="frame-params"
-              checked={o.params}
-              onChange={() => setOptions({ params: !o.params })}
-            />{" "}
-            as params
           </label>
         </div>
       </details>

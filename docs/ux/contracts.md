@@ -626,7 +626,8 @@ marked with another owner, whose files E4 changed by the smallest addition.*
 - **The anchor dots** (`src/ui/common/AnchorDots.tsx`, new): `AnchorDots({ bbox, datums, anchors,
   value, onPick, disabled?, size? })`, the section's dots on the `.cb-anchor-pad` classes. The
   command bar's `AnchorPicker` (`src/ui/tools/CommandBar.tsx`, E3's) renders it; its markup is
-  unchanged.
+  unchanged. *Since the editing polish: no `size`, every dot a 24 px target, and the command bar's
+  picker opens above the bar (below, "Editing polish changes").*
 - **Holes** (`src/ui/inspector/holes.ts`, new, pure): `holesOf`, `holeWords`, `sizeText`,
   `parseSize`, `parseLength`, `holeOp`, `addHole`, `changeHole`, `removeHole`, `FACES`; the rows
   (`Holes.tsx`: `HoleRows`) carry `hole-{i}` with `-face`, `-at`, `-from`, `-size`, `-depth`,
@@ -719,3 +720,33 @@ drawn and checked against but not built or bought. Each adds.*
 - **The inspector** (`src/ui/inspector/context.ts`): `contextOf(model, id)` (whether the entity can
   be marked, whether it is, and the command) and `contextBatch(model, id, on)`; the Context row
   (`ContextRow`, in `BarFields.tsx`) on a bar's and a placed part's fields, one step.
+
+## Editing polish changes (the app)
+
+*The editing polish's app side ([polish-editing-ui-decisions.md](polish-editing-ui-decisions.md),
+"pe"). Each adds to an interface above; the owner stays the stream that made it.*
+
+- **The roll** (`src/ui/edit/roll.ts`, new, pure; the polish's): `rollSet(bar, next, params)`, the
+  `setBar` patch of a bar's roll field, turning the anchor and offset back with a quarter turn;
+  `turnedAnchor`, `turnedOffset`, `quarterTurns`, `ROLL_WORDS`. The inspector's Roll rows
+  (E4's `BarFields.tsx`, `ManyFields.tsx`) and the draw tool's R send it; `rollBatch(m, ids, roll)`
+  (E4's `many.ts`) now takes the model and the typed value (pe 1).
+- **The anchor dots** (E4's `AnchorDots.tsx`): `AnchorDots({ bbox, datums, anchors, value, onPick,
+  disabled? })`, `size` gone; `anchorLayout(bbox, datums, anchors)` (pure: the pad, the dots'
+  centres, the datums' marks), `TARGET` (24 px), and `AnchorGlyph({ bbox, datums, value })`, the
+  chosen anchor drawn small. Each dot is a `button.cb-dot` 24 × 24 px with `data-anchor`; a datum
+  is a `button.cb-datum`. The several-bars anchor row shows it too (pe 2).
+- **The draw tool's anchor picker** (E3's `CommandBar.tsx`): a `details.cb-more.cb-anchor`
+  (`draw-anchor`, `data-anchor` the chosen one) whose summary is `draw-anchor-open`; the dots in
+  its panel. Its `A` key is unchanged (pe 2).
+- **Tool state** (S5's `tools/state.ts`): `rollDrawn()`, R's and the Roll button's quarter turn
+  with the anchor turned; `drawRepeat`, Pattern's repeat waiting for the next bar drawn, which the
+  draw wire clears when the tool changes (it now hears `switched`, in `wiring.ts`'s order) (pe 1,
+  4).
+- **Commands** (S5's `tools/commands.ts`, pure): `patternRepeat(s, params)` (along, pitch, count, or
+  why not; `patternCommand` builds on it), `repeatBatch(drawn, doc, repeat)` (the draw step and
+  the `addPattern` of the bar it makes, by `nextIdNumber`), `suggestedJoint(fit)` (the box frame's
+  one-click bracket) (pe 3, 4).
+- **Test ids**: `frame-joint-suggested` (the box frame's bracket, a radio), `pattern-draw` (Pattern's
+  Draw the bar to repeat), `draw-repeat` (the command bar's pending repeat); `frame-shelf` and
+  `frame-params` are now outside More options (pe 3, 4).
