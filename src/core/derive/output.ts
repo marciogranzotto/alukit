@@ -206,6 +206,21 @@ export function derivedJson(d: Derived, stamp: { lock?: string } = {}): Record<s
     pivots: sortedObject(
       [...d.pivots].map(([id, p]) => [id, { point: pt(p.P), normal: dir(p.n) }]),
     ),
+    butts: sortedObject(
+      [...d.butts].map(([id, b]) => [
+        id,
+        {
+          ends: b.ends.map((e) => ({
+            end: e.end,
+            on: e.on,
+            area_mm2: len(e.area),
+            overhang_mm: len(e.overhang),
+            overhang_mm2: len(e.overhang_area),
+            overlap_mm: len(e.overlap),
+          })),
+        },
+      ]),
+    ),
     parts: sortedObject([...d.parts].map(([id, p]) => [id, partJson(p)] as [string, unknown])),
     fastenings: sortedObject(
       [...d.fastenings].map(([id, f]) => [id, fasteningJson(f)] as [string, unknown]),

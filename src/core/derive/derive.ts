@@ -10,6 +10,7 @@ import { Ctx } from "./context.ts";
 import { resolveEnds } from "./ends.ts";
 import { expandPatterns } from "./patterns.ts";
 import { nodePoint, placeBar, placePivot, placeRun } from "./place.ts";
+import { type ButtSeats, buttSeats } from "./seats.ts";
 import type {
   BarLengths,
   DerivedPart,
@@ -119,6 +120,11 @@ export interface Derived {
   runs: ReadonlyMap<string, PlacedRun>;
   pivots: ReadonlyMap<string, PlacedPivot>;
   faces: ReadonlyMap<string, EndFace>;
+  /**
+   * Per butt connection, each butting end's seat on the face it bears on (§4.5, after acceptance
+   * run 4), in the order of its `ends`.
+   */
+  butts: ReadonlyMap<string, ButtSeats>;
   /** Parts, placed or counted only (§4.7), in id order. */
   parts: ReadonlyMap<string, DerivedPart>;
   /** Face connections' contacts and fastenings (§4.5), in id order. */
@@ -190,6 +196,8 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
     const l = s3.lengths.get(id);
     if (l) bars.set(id, { placed: pb, ...l, ops: resolveOps(ctx, id) });
   }
+  // Last, each butt's end faces on the faces they bear on, on the trimmed bars.
+  const butts = buttSeats(ctx, bars, s3.seats);
 
   // Stage 4: rail holes, parts, face contacts and fastenings, generated machining, hardware.
   const gen = attach(ctx, bars, runs);
@@ -203,6 +211,7 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
     runs,
     pivots,
     faces: s3.faces,
+    butts,
     parts: gen.parts,
     fastenings: gen.fastenings,
     pieces: gen.pieces,

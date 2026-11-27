@@ -64,6 +64,24 @@ interface Expect {
     lines: Record<string, MoneyOut & { range?: "quote" | "band" }>;
     total: MoneyOut;
   };
+  /**
+   * Per butt connection: each butting end's seat on the face it bears on (§4.5, after acceptance
+   * run 4): the end face's area, the greatest distance and the area of it past the face, and how
+   * far the bar goes into the through bar beyond the face.
+   */
+  butts?: Record<
+    string,
+    {
+      end: string;
+      on: string;
+      area_mm2: number;
+      overhang_mm: number;
+      overhang_mm2: number;
+      overlap_mm: number;
+    }[]
+  >;
+  /** Every warning derive reports, by code and entity (and refs), where the case gives them. */
+  warnings?: { code: string; entity: string; refs?: string[] }[];
   errors: { code: string; entity: string; refs?: string[] }[];
 }
 
@@ -110,6 +128,24 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
     if (!e.refs) continue;
     const match = errors.find((x) => x.code === e.code && x.entity === e.entity);
     expect(match?.refs, `${label}: refs of ${e.code} on ${e.entity}`).toEqual(e.refs);
+  }
+  if (want.warnings) {
+    const warns = shown(d.diagnostics, "warn");
+    expect(
+      warns.map((w) => ({ code: w.code, entity: w.entity, ...(w.refs ? { refs: w.refs } : {}) })),
+      `${label}: warnings ${JSON.stringify(warns, null, 1)}`,
+    ).toEqual(want.warnings);
+  }
+  for (const [id, seats] of Object.entries(want.butts ?? {})) {
+    const got = d.butts.get(id)?.ends.map((e) => ({
+      end: e.end,
+      on: e.on,
+      area_mm2: r2(e.area),
+      overhang_mm: r2(e.overhang),
+      overhang_mm2: r2(e.overhang_area),
+      overlap_mm: r2(e.overlap),
+    }));
+    expect(got, `${label}: ${id}'s seats`).toEqual(seats);
   }
 
   for (const [id, r] of Object.entries(want.rails ?? {})) {
@@ -265,6 +301,7 @@ describe("golden generation cases (design §4.6)", () => {
       "G33",
       "G34",
       "G35",
+      "G36",
     ]);
   });
 

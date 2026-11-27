@@ -218,6 +218,9 @@ export const ConnectorItem = z
       .optional(),
     requires: z.array(Requirement).optional().describe("machining on the joined bars"),
     spacer_mm: Valued.optional(),
+    overhang_mm: Valued.optional().describe(
+      "how far a butting end face may reach past the face it bears on before a connection warning (after acceptance run 4)",
+    ),
     body: z.strictObject({ size_mm: Vec3 }).optional().describe("a cube's box"),
     pivot: z
       .strictObject({

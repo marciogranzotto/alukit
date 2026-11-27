@@ -417,7 +417,17 @@ export const Defaults = z.strictObject({
     })
     .optional(),
   butt: z
-    .strictObject({ connector: ItemRef.optional(), qty: z.int().min(1).optional() })
+    .strictObject({
+      connector: ItemRef.optional(),
+      qty: z.int().min(1).optional(),
+      overhang_mm: z
+        .number()
+        .nonnegative()
+        .optional()
+        .describe(
+          "how far a butting end face may reach past the face it bears on before a connection warning, where its connector gives none",
+        ),
+    })
     .optional(),
   cutting: Cutting.optional(),
 });

@@ -20,6 +20,14 @@
         { "op": "through-hole", "on": "through", "d_mm": 9, "at_mm": [[0, -20], [0, 20]] }
       ]
     },
+    "OV5": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "A butt joint whose end may overhang its face by 5 (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "overhang_mm": 5
+    },
     "J2-H": {
       "kind": "connector",
       "subtype": "end-connector",

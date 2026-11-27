@@ -29,6 +29,7 @@ import {
   outlineFaces,
 } from "./outline.ts";
 import { boxCentre, faceLocal, facePlane, localOf, onBar } from "./place.ts";
+import { area2, ccw, clip, type P2 } from "./polygon.ts";
 import { holePoint, selectHoles } from "./rails.ts";
 import type {
   DerivedPart,
@@ -342,49 +343,9 @@ function partBody(p: PlacedPart, item: AnyItem): Body | undefined {
 // ---------------------------------------------------------------------------------------------
 // Plane polygons: overlap and containment
 
-type P2 = readonly [number, number];
-
 function to2(f: BodyFace, P: V3): P2 {
   const v = sub(P, f.p);
   return [dot(v, f.u), dot(v, cross(f.n, f.u))];
-}
-
-function area2(poly: readonly P2[]): number {
-  let a = 0;
-  for (let i = 0; i < poly.length; i++) {
-    const [x0, y0] = poly[i] as P2;
-    const [x1, y1] = poly[(i + 1) % poly.length] as P2;
-    a += x0 * y1 - x1 * y0;
-  }
-  return a / 2;
-}
-
-function ccw(poly: readonly P2[]): P2[] {
-  return area2(poly) < 0 ? [...poly].reverse() : [...poly];
-}
-
-/** Sutherland–Hodgman: a convex polygon clipped by a convex counter-clockwise one. */
-function clip(subject: readonly P2[], clipper: readonly P2[]): P2[] {
-  let out: P2[] = [...subject];
-  for (let i = 0; i < clipper.length && out.length > 0; i++) {
-    const [ax, ay] = clipper[i] as P2;
-    const [bx, by] = clipper[(i + 1) % clipper.length] as P2;
-    const side = ([px, py]: P2) => (bx - ax) * (py - ay) - (by - ay) * (px - ax);
-    const input = out;
-    out = [];
-    for (let j = 0; j < input.length; j++) {
-      const p = input[j] as P2;
-      const q = input[(j + 1) % input.length] as P2;
-      const sp = side(p);
-      const sq = side(q);
-      if (sp >= 0) out.push(p);
-      if (sp >= 0 !== sq >= 0) {
-        const r = sp / (sp - sq);
-        out.push([p[0] + (q[0] - p[0]) * r, p[1] + (q[1] - p[1]) * r]);
-      }
-    }
-  }
-  return out;
 }
 
 /** The area two faces share, the second projected onto the first's plane. */

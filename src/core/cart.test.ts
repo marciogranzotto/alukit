@@ -5,13 +5,14 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { type Bom, bom } from "./bom/bom.ts";
 import { bomCsv, bomJson, bomMarkdown } from "./bom/format.ts";
+import { checkedBom, checkedCutList, checkedMachining, modelOutputs } from "./check/outputs.ts";
 import { type CutList, cutList } from "./cutlist/cutlist.ts";
 import { cutListCsv, cutListJson, cutListMarkdown } from "./cutlist/format.ts";
 import { derive } from "./derive/derive.ts";
 import { derivedJson, jsonText } from "./derive/output.ts";
 import { sortDiagnostics } from "./diagnostics.ts";
 import { machiningJson, machiningMarkdown } from "./machining/format.ts";
-import { type MachiningSheet, machiningSheet } from "./machining/machining.ts";
+import type { MachiningSheet } from "./machining/machining.ts";
 import {
   costsCsv,
   costsJson,
@@ -57,14 +58,10 @@ function cartOrder(project: OpenedProject, raw: unknown = project.raw): Order {
   });
 }
 
+/** The machining sheet as `alukit machining` builds it, with every problem met on the way. */
 function cartSheet(project: OpenedProject): MachiningSheet {
   const derived = derive(project.raw, project.items);
-  return machiningSheet({
-    derived,
-    items: project.items,
-    bom: bom({ derived, items: project.items }),
-    cutList: cutList({ derived, items: project.items }),
-  });
+  return checkedMachining(derived, modelOutputs(derived, project.items));
 }
 
 interface Expected {
@@ -131,9 +128,15 @@ describe("the cart", () => {
     expect(project.diagnostics).toEqual([]);
   });
 
-  it("derives with no problems", () => {
+  it("derives with no errors, and warns of the three end faces that overhang their faces", () => {
     const d = derive(project.raw, project.items);
-    expect(d.diagnostics).toEqual([]);
+    // The beam's ends stand 30 past the base rails' faces above and below, and the grip's 45° end
+    // 16.28 past the arm's end (§4.5, after acceptance run 4): worked in hand/cart_by_hand.py.
+    expect(d.diagnostics.map((x) => [x.severity, x.code, x.entity])).toEqual([
+      ["warn", "connection", "c21"],
+      ["warn", "connection", "c22"],
+      ["warn", "connection", "c33"],
+    ]);
     expect(d.bars.size).toBe(39);
     // The grip bears on the arm's end (an end provider reading a placement provider's end),
     // through the end plate's 8 mm, measured along the face's normal: 8·√2 along the grip.
@@ -349,12 +352,11 @@ describe("the cart", () => {
     // canonical lock file.
     const lock = lockStamp(CART);
     const d = derive(project.raw, project.items);
+    const outputs = modelOutputs(d, project.items, { lock });
     expect(run(["cutlist", CART, "--format", "json"])).toBe(
-      cutListJson(cutList({ derived: d, items: project.items, lock })),
+      cutListJson(checkedCutList(d, outputs)),
     );
-    expect(run(["bom", CART, "--format", "json"])).toBe(
-      bomJson(bom({ derived: d, items: project.items, lock })),
-    );
+    expect(run(["bom", CART, "--format", "json"])).toBe(bomJson(checkedBom(d, outputs)));
     // The machining sheet from another process is the golden worked by hand, plus the stamp.
     expect(run(["machining", CART, "--format", "json"])).toBe(
       withStamp(readFileSync(join(CART, "expected-machining.json"), "utf8"), "schema", { lock }),

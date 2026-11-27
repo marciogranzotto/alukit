@@ -41,7 +41,10 @@ Rules used, from docs/design.md:
   entered; a placeholder blocks only its own line's group;
 - the machining sheet lists each custom part's holes from its datum: a plate's outline origin, an
   angle's heel (and, on its flat blank, leg a's free edge); bars' machining stays on the cut list,
-  which the sheet only points to.
+  which the sheet only points to;
+- a butting end face that reaches past the face it bears on, both seen along the face's normal, is
+  a `connection` warning that says how far and how much of it: the sheet and the order list carry
+  derive's warnings (§4.5, §5.5, after acceptance run 4).
 
 Run with python3 -I; then Biome formats expected-cutlist.json and expected-bom.json, while
 expected-order.json and expected-machining.json are left exactly as written (they are compared
@@ -287,6 +290,40 @@ t, x, y = frame(pa, pb)
 centre = (350 - 158) * math.sqrt(2)
 ends = ("square", angled((-1, 0, 0), t, x, y))  # the plane's normal, out of the grip's end b
 piece(TS40, "b32", centre + half, ends, centre, centre - half)
+
+# --- Butt seats (§4.5, after acceptance run 4) ---------------------------------------------------
+# A butting end face that reaches past the face it bears on is a `connection` warning: the
+# greatest distance of its outline past the face, and the area of it that bears on nothing, both
+# seen along the face's normal. Three of the cart's butts do; every other end face lies on its
+# face, and none goes into the bar it bears on.
+# - The beam's ends (c21, c22) on the base rails' inner faces (b9's +x, which its local x turns to
+#   +y; b10's -x, to -y): the RHS's end face is 50 wide in x and 100 tall, z 50..150, its corners
+#   rounded to the outer radius 6; a rail's face is 40 tall, z 80..120, and runs past the beam on
+#   both sides. The end face reaches 30 past it above and below; of its 50·100 − (4 − π)·6² mm²,
+#   the 50 x 40 on the face bear and the rest does not.
+# - The grip's end b (c33) on the arm's end, through the 8 mm end plate (as big as the arm's end):
+#   its centre line meets the plate's face, x = W + 158, at z = 600 + 192 = 792. Its end, cut at
+#   45°, is 40 wide in y and 40·√2 tall, z 792 ∓ 20·√2, on the arm's end, z 780..820, y 0..40:
+#   it reaches 780 − (792 − 20·√2) past it, and all of it but the 40 x 40 bears on nothing.
+
+
+def overhang(conn, end, refs, on, by, area, bearing):
+    outside = area - bearing
+    pct = 100 * outside / area
+    message = (
+        f"{end}'s end face overhangs {on} by {by:.2f} mm: {outside:.2f} of its {area:.2f} mm² "
+        f"({pct:.1f} %) bear on nothing"
+    )
+    return {"severity": "warn", "code": "connection", "entity": conn, "refs": refs, "message": message}
+
+
+beam_end = 50 * 100 - (4 - math.pi) * 6**2
+grip_end = T40 * T40 * math.sqrt(2)
+SEATS = [
+    overhang("c21", "b18.a", ["b18", "b9"], "b9's face +x", (100 - T40) / 2, beam_end, 50 * T40),
+    overhang("c22", "b18.b", ["b18", "b10"], "b10's face -x", (100 - T40) / 2, beam_end, 50 * T40),
+    overhang("c33", "b32.b", ["b32", "b31"], "b31's end b", 780 - (792 - 20 * math.sqrt(2)), grip_end, T40 * T40),
+]
 
 # --- Id order, the canonical orientation and grouping ---------------------------------------
 
@@ -1211,7 +1248,7 @@ order_out = {
         "share": share,
         "unpriced": sum(1 for e in order_lines if e.get("missing")),
     },
-    "diagnostics": [],
+    "diagnostics": SEATS,
 }
 
 
@@ -1306,7 +1343,7 @@ bar_refs = [
     for l in g["lines"]
     if l.get("machining")
 ]
-machining = {"schema": "alukit.machining/1", "parts": [angle_part, plate_part], "bars": bar_refs, "diagnostics": []}
+machining = {"schema": "alukit.machining/1", "parts": [angle_part, plate_part], "bars": bar_refs, "diagnostics": SEATS}
 
 expected = {
     "about": "The cart's cut list worked by hand: see hand/cart_by_hand.py, which wrote this.",
