@@ -72,6 +72,10 @@ function CutListTab({ m }: { m: Model }) {
   if (cl.groups.length === 0) return <p class="panel-empty">No pieces.</p>;
   return (
     <div data-testid="cutlist">
+      <p class="sub">
+        Prices on the {cl.price_basis} basis; the oldest was read {cl.oldest_read ?? "(none)"}.{" "}
+        <Stamp lock={cl.lock} />
+      </p>
       {cl.groups.map((g) => (
         <section key={`${g.item}${optText(g.opt)}`}>
           <h4>
@@ -138,7 +142,8 @@ function BomTab({ m }: { m: Model }) {
     <div data-testid="bom">
       <p class="sub">
         Total mass {b.mass_kg.toFixed(3)} kg
-        {b.mass_unknown.length > 0 && `, without ${b.mass_unknown.join(", ")} (no mass given)`}
+        {b.mass_unknown.length > 0 && `, without ${b.mass_unknown.join(", ")} (no mass given)`}.{" "}
+        <Stamp lock={b.lock} />
       </p>
       {b.groups.map((g) => (
         <section key={g.kind}>
@@ -419,6 +424,11 @@ function MachiningTab({ m }: { m: Model }) {
       class={stale ? "stale" : undefined}
       aria-busy={stale}
     >
+      {s.lock !== undefined && (
+        <p class="sub">
+          <Stamp lock={s.lock} />
+        </p>
+      )}
       {s.parts.length === 0 && <p class="sub">No custom parts.</p>}
       {s.parts.map((p) => (
         <section key={p.item} data-item={p.item}>

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { cp, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -62,6 +63,57 @@ export function mergePatch(target: unknown, patch: unknown): unknown {
     else out[k] = mergePatch(out[k], v);
   }
   return out;
+}
+
+/**
+ * The lock a project's outputs state (design §5.4, §4.13): sha256 of its lock file's bytes, which
+ * any sha256 tool gives for a canonical lock. Taken here on the file, not through AluKit.
+ */
+export function lockStamp(dir: string): string {
+  const bytes = readFileSync(join(dir, "alukit.lock.json"));
+  return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+}
+
+/**
+ * A golden output's JSON text with the stamp's lines added after the top-level line of `after`:
+ * what AluKit prints for it when it derives from a lock. The golden file holds the values; the
+ * stamp (the lock, and the oldest price read date where the output carries prices) says where
+ * they came from, so it is added here rather than written into the golden.
+ */
+export function withStamp(
+  golden: string,
+  after: string,
+  stamp: Readonly<Record<string, string | null>>,
+): string {
+  const line = new RegExp(`^( {2}"${after}": .*\\n)`, "m");
+  if (!line.test(golden)) throw new Error(`the golden has no top-level "${after}"`);
+  const lines = Object.entries(stamp)
+    .map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)},\n`)
+    .join("");
+  return golden.replace(line, `$1${lines}`);
+}
+
+/**
+ * By hand, with no AluKit: the oldest read date of the offers a cut list chose (a supplier-cut
+ * group's offer, a nested group's stock bars), as the project's lock file pins them; null when it
+ * chose none.
+ */
+export function oldestCutRead(
+  cutlist: { groups: readonly { offer?: string; stock?: readonly { sku: string }[] }[] },
+  dir: string,
+): string | null {
+  const lock = JSON.parse(readFileSync(join(dir, "alukit.lock.json"), "utf8")) as {
+    offers: Record<string, { offer: { price: { read?: string } } }>;
+  };
+  const skus = cutlist.groups.flatMap((g) => [
+    ...(g.offer ? [g.offer] : []),
+    ...(g.stock ?? []).map((s) => s.sku),
+  ]);
+  const reads = skus.flatMap((s) => {
+    const read = lock.offers[s]?.offer.price.read;
+    return read ? [read] : [];
+  });
+  return reads.sort()[0] ?? null;
 }
 
 /** Diagnostics of one severity as comparable `{ code, entity, refs }` records. */

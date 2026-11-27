@@ -1,14 +1,14 @@
 import { resolve } from "node:path";
-import { bom } from "#core/bom/bom.ts";
 import { bomCsv, bomJson, bomMarkdown } from "#core/bom/format.ts";
 import { checkModel } from "#core/check/check.ts";
 import {
+  checkedBom,
+  checkedCutList,
   checkedMachining,
   checkedOrder,
   modelOutputs,
   outputAccessors,
 } from "#core/check/outputs.ts";
-import { cutList } from "#core/cutlist/cutlist.ts";
 import { cutListCsv, cutListJson, cutListMarkdown } from "#core/cutlist/format.ts";
 import { isDate, localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
@@ -145,12 +145,15 @@ export async function projectCommand(
   });
   if (loaded === 1) return 1;
   const { derived, items } = loaded;
+  // Every output states the lock it was derived from (the stamp, §5.4, §4.13).
+  const stamp = loaded.project.lock ? { lock: lockHash(loaded.project.lock) } : {};
+  const outputs = modelOutputs(derived, items, stamp);
 
   if (cmd === "derive") {
     const hasErrors = derived.diagnostics.some((d) => d.severity === "error");
     if (selected) {
-      // --select answers JSON: the members named, where they sit (§7.3).
-      const s = selectDerived(derivedJson(derived) as Record<string, unknown>, selected.paths);
+      // --select answers JSON: the members named, where they sit (§7.3), and the stamp.
+      const s = selectDerived(derivedJson(derived, stamp), selected.paths);
       if (!s.ok) {
         for (const m of s.missing) io.err(`alukit derive: the derived model has no ${m}`);
         return 1;
@@ -159,7 +162,7 @@ export async function projectCommand(
       return hasErrors ? 1 : 0;
     }
     if (args.values.json) {
-      io.out(jsonText(derivedJson(derived)).trimEnd());
+      io.out(jsonText(derivedJson(derived, stamp)).trimEnd());
     } else {
       const rows = [...derived.bars].map(
         ([id, b]) =>
@@ -173,20 +176,19 @@ export async function projectCommand(
   }
 
   if (cmd === "bom") {
-    const b = bom({ derived, items });
-    const all = sortDiagnostics([...derived.diagnostics, ...b.diagnostics]);
+    const b = checkedBom(derived, outputs);
     if (format === "json") {
-      io.out(bomJson({ ...b, diagnostics: all }).trimEnd());
+      io.out(bomJson(b).trimEnd());
     } else {
       const shown = { ...b, diagnostics: [] };
       io.out((format === "csv" ? bomCsv(shown) : bomMarkdown(shown)).trimEnd());
-      for (const d of all) io.err(diagnosticLine(d));
+      for (const d of b.diagnostics) io.err(diagnosticLine(d));
     }
-    return all.some((d) => d.severity === "error") ? 1 : 0;
+    return b.diagnostics.some((d) => d.severity === "error") ? 1 : 0;
   }
 
   if (cmd === "machining") {
-    const sheet = checkedMachining(derived, modelOutputs(derived, items));
+    const sheet = checkedMachining(derived, outputs);
     if (format === "json") io.out(machiningJson(sheet).trimEnd());
     else {
       io.out(machiningMarkdown({ ...sheet, diagnostics: [] }).trimEnd());
@@ -198,17 +200,13 @@ export async function projectCommand(
   if (priced) {
     // §5.1: the outputs, then the built-in and project checks (whose cost() and mass() read
     // them), then the order rules, which take every error so far (check-error, §5.5).
-    const outputs = modelOutputs(derived, items);
     const checked = checkModel({
       raw: loaded.project.raw,
       derived,
       items,
       accessors: outputAccessors(outputs),
     });
-    const o = checkedOrder(outputs, checked.diagnostics, {
-      asOf: asOf ?? localDate(),
-      ...(loaded.project.lock ? { lock: lockHash(loaded.project.lock) } : {}),
-    });
+    const o = checkedOrder(outputs, checked.diagnostics, { asOf: asOf ?? localDate(), ...stamp });
     if (cmd === "order") {
       if (format === "json") io.out(orderJson(o).trimEnd());
       else {
@@ -230,14 +228,13 @@ export async function projectCommand(
     return c.diagnostics.some((d) => d.severity === "error") ? 1 : 0;
   }
 
-  const cl = cutList({ derived, items });
-  const all = sortDiagnostics([...derived.diagnostics, ...cl.diagnostics]);
+  const cl = checkedCutList(derived, outputs);
   if (format === "json") {
-    io.out(cutListJson({ ...cl, diagnostics: all }).trimEnd());
+    io.out(cutListJson(cl).trimEnd());
   } else {
     const shown = { ...cl, diagnostics: [] };
     io.out((format === "csv" ? cutListCsv(shown) : cutListMarkdown(shown)).trimEnd());
-    for (const d of all) io.err(diagnosticLine(d));
+    for (const d of cl.diagnostics) io.err(diagnosticLine(d));
   }
-  return all.some((d) => d.severity === "error") ? 1 : 0;
+  return cl.diagnostics.some((d) => d.severity === "error") ? 1 : 0;
 }

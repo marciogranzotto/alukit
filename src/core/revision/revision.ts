@@ -7,6 +7,7 @@ import { type Lock, LockFile, lockText } from "../lock/schema.ts";
 import { lockItems } from "../lock/source.ts";
 import { projectText } from "../project/canonical.ts";
 import { PROJECT_SCHEMA } from "../project/schema.ts";
+import { STAMP_FIELDS } from "../stamp.ts";
 import { type Outputs, projectOutputs } from "./outputs.ts";
 
 /**
@@ -198,7 +199,7 @@ export function verifyRevision(r: Revision, version: string): Verification {
       asOf: r.as_of,
     });
     for (const key of OUTPUT_KEYS) {
-      const changes = fieldChanges(old[key], now[key]);
+      const changes = fieldChanges(old[key], storedStamp(old[key], now[key]));
       if (changes.length > 0) {
         drift.push({
           ...(old.variant !== undefined ? { variant: old.variant } : {}),
@@ -214,6 +215,21 @@ export function verifyRevision(r: Revision, version: string): Verification {
     variants: { missing, extra },
     drift,
   };
+}
+
+/**
+ * An output as re-derived, without the stamp fields the stored one does not state (§5.4): an
+ * earlier AluKit stamped only the order and the costs. The stamp says where the numbers came
+ * from (the lock, whose hash the revision's own stamp covers, and the oldest price read date);
+ * it is not one of them, so a stamp the store never had is not drift. A stamp it has is compared.
+ */
+function storedStamp(stored: unknown, now: unknown): unknown {
+  if (typeof stored !== "object" || stored === null || typeof now !== "object" || now === null) {
+    return now;
+  }
+  const out = { ...(now as Record<string, unknown>) };
+  for (const k of STAMP_FIELDS) if (!Object.hasOwn(stored, k)) delete out[k];
+  return out;
 }
 
 /** No drift, nothing missing, and the file as it was saved. */

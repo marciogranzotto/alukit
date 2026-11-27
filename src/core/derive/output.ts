@@ -184,10 +184,16 @@ function hardwareJson(hw: readonly HardwareUse[]) {
   );
 }
 
-export function derivedJson(d: Derived): Record<string, unknown> {
+/**
+ * The derived model as `alukit.derived/1`. With `lock`, the content hash of the lock it was
+ * derived from, it states it (the stamp, §5.4, §9); it carries no prices, so no basis and no read
+ * date. The view model (§8) draws from it without one.
+ */
+export function derivedJson(d: Derived, stamp: { lock?: string } = {}): Record<string, unknown> {
   return {
     schema: DERIVED_SCHEMA,
     ...(d.variant !== undefined ? { variant: d.variant } : {}),
+    ...(stamp.lock !== undefined ? { lock: stamp.lock } : {}),
     params: Object.fromEntries([...d.params].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
     nodes: sortedObject([...d.nodes].map(([id, v]) => [id, pt(v)] as [string, number[]])),
     bars: sortedObject([...d.bars].map(([id, b]) => [id, barJson(b)] as [string, unknown])),

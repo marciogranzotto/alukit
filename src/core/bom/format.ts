@@ -1,3 +1,4 @@
+import { lockLines, stampRow } from "../stamp.ts";
 import type { Bom, BomLine } from "./bom.ts";
 
 /** The BOM as Markdown, CSV or JSON (design §5.4: "Output as Markdown, CSV or JSON"). */
@@ -34,6 +35,7 @@ export function bomMarkdown(b: Bom): string {
   out.push(
     "Masses as the catalog publishes them, else computed from the section's area and the material's density (calc). Bars: pieces and their cut lengths added.",
     "",
+    ...lockLines(b.lock),
   );
   for (const g of b.groups) {
     out.push(`## ${TITLES[g.kind] ?? g.kind}`, "");
@@ -90,7 +92,10 @@ function csvCell(s: string | number | undefined): string {
   return /[",\n]/.test(t) ? `"${t.replaceAll('"', '""')}"` : t;
 }
 
-/** One row per line. */
+/**
+ * One row per line. Derived from a lock, a first `stamp` row names the `lock` and gives its hash
+ * in `sources`, where a row says what it comes from (§5.4).
+ */
 export function bomCsv(b: Bom): string {
   const head = [
     "kind",
@@ -106,6 +111,8 @@ export function bomCsv(b: Bom): string {
     "unplaced",
   ];
   const rows: string[] = [head.join(",")];
+  if (b.lock !== undefined)
+    rows.push(stampRow(head, { kind: "stamp", item: "lock", sources: b.lock }));
   for (const g of b.groups) {
     for (const l of g.lines) {
       rows.push(

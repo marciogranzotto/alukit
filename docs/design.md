@@ -21,7 +21,8 @@ below as dvb), so that the design again describes the system as built. A recorde
 proved the better choice is now the rule; a feature v1 does not have is stated as a **v1 limit**,
 with the version that takes it up. Calls left for the owner's review are marked *open* (§14, call 6
 and calls 31–34; after the second acceptance run, 36–38). Changed text is marked *2.3*. The build
-was not changed for this draft, except as "After acceptance run 2" below records. Notes are cited by
+was not changed for this draft, except as "After acceptance run 2" and "After acceptance run 3"
+below record. Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -82,8 +83,8 @@ name and decision number ("m4a 13" is decision 13 of
 - §5.3: kerf and trim defaults; end holes listed from their end; identity by where machining
   physically is; a rail's holes as one record (m3a 33; m3b-gen 5, 6, 32; acceptance-gaps A4).
 - §5.4: a bar's mass from its centre-line length; joint recipes listed apart; the **machining
-  sheet**; a v1 limit: only the order and the costs state the lock's hash (m3b-gen 35, 36;
-  acceptance-gaps A2; m6 18–22; m3b-doc 40; m3b-order).
+  sheet**; a v1 limit: only the order and the costs state the lock's hash, *closed after
+  acceptance run 3* (m3b-gen 35, 36; acceptance-gaps A2; m6 18–22; m3b-doc 40; m3b-order).
 - §5.5: fit by role; the order's date, `as_of`; a placeholder holds its own group; the cover does
   not avoid an out-of-stock offer (m3b-doc 41; m3b-order 5, 10; m6 16; dvb 16).
 
@@ -117,7 +118,7 @@ name and decision number ("m4a 13" is decision 13 of
 **§9 Exports, §10 Stack, §11 Forseti**
 
 - §9: the GLB's root node, its hole children and extras; the machining sheet; which outputs carry
-  the lock's hash (m5 22–27, 40; m6 18).
+  the lock's hash, every one *after acceptance run 3* (m5 22–27, 40; m6 18).
 - §10: `serve` does not rebuild `dist/`, a v1 limit; the API in Vite's dev server; the pins as M0
   kept them, with vite's release-age exclusion still open (m4a 43, 44; the
   [build session log](sessions/2026-11-26-alukit-v1-build-session-log.md)).
@@ -158,6 +159,19 @@ value of G1–G32 moved.
   and connections (acceptance-gaps-2 13, 15, 16).
 - §12–§14: the second run's gaps row and fixtures; §13's second run (tests 1–4 passed with no
   exception; failed on A9; both gaps fixed); calls 36–38, all open.
+
+### After acceptance run 3
+
+The third run passed. Three v1 limits the design named are closed in the build, each with tests
+written first, and the design no longer calls them limits
+([`notes/v1-limits-closed.md`](notes/v1-limits-closed.md), cited as "v1-limits"). No golden value
+moved.
+
+- §4.11, §5.4, §9, §4.13: **every output states the stamp**. The cut list, the BOM, the machining
+  sheet and `derive --json` state the lock's hash as the order and the costs did; the cut list
+  and the costs state the oldest price read date beside the basis, and the order's and the costs'
+  CSV the basis and the date as `stamp` rows; the server answers as the CLI, byte for byte;
+  `revision verify` does not count a stamp a stored output lacks as drift (v1-limits 1–9).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1200,8 +1214,9 @@ any two.
 - **`currency`**: the project's. Offers keep their catalog's currency. `fx` holds dated rates as
   valued fields (`"fx": { "EUR": { "v": 6.2, "src": "src", "ref": "…", "read": "…" } }`). Lines are
   converted per line; a line with no rate is a missing price (§5.5).
-- **`price_basis`**: `regular` (default), `sale` or `lowest`. The order list states the basis and
-  the oldest read date.
+- **`price_basis`**: `regular` (default), `sale` or `lowest`. Every output that carries prices
+  (the cut list, the order list, the costs) states the basis and the oldest read date of a price
+  it uses (§5.4; *2.3*).
 - **`costs`**: lines that are not parts: `{ "id", "label", "kind", "supplier"?, "low_minor",
   "likely_minor", "high_minor", "currency"?, provenance, "blocks"?, "covers"?, "only_in"?,
   "not_in"? }`, with `kind` one of `machining`, `fabrication`, `labour`, `freight`, `lifting`,
@@ -1290,7 +1305,8 @@ the folder never changes the next stamp (*2.3*).
 - Opening a revision shows the stored outputs: what was published, whatever the tool does now.
 - `alukit revision verify <name>` re-derives with the current tool, from the stored document and
   lock and no catalog, and reports any drift, a broken hash, and a tool-version difference as a
-  note.
+  note. Each stored output carries its stamp (§5.4); a stamp field the stored output does not
+  have, saved before that output was stamped, is not drift (*2.3*).
 - Old schema versions are read through migrations kept forever; stored outputs are never
   migrated.
 
@@ -1414,10 +1430,23 @@ along the box's centre line from each end face (*2.3*).
   price band, §4.11), cut pieces and machining services. Services are priced
   from the supplier's `services.json`, or by a cost line that covers them; in v1 only by a cost
   line (§3.1, §4.11).
-- Every output states the lock hash, the price basis and the oldest price read date. **v1 limit**
-  (*2.3*): the order list and the costs state the lock's sha256 in every format, and the GLB
-  carries the full stamp (§9); the cut list, the BOM and the machining sheet do not state the lock
-  yet (v1.1).
+- Every output states the lock hash, the price basis and the oldest price read date: **the
+  stamp** (*2.3*). Each output derived from a lock (the cut list, the BOM, the machining sheet,
+  the order list, the costs and `derive --json`) states the lock's sha256, taken of its canonical
+  text, so `shasum -a 256 alukit.lock.json` gives it: `lock` in JSON, a line "Derived from the
+  lock …" in Markdown, a first `stamp` row in CSV. An output that carries prices also states the
+  basis and the oldest read date of the prices it uses: the cut list, those of the offers it chose
+  (each cut-to-length group's, each stock bar's); the order list, those of its priced lines; the
+  costs, the order's. In JSON these are `price_basis`, `oldest_read` and `lock`, in that order; in
+  CSV, `stamp` rows after the lock's, where the CSV has prices (the order list and the costs; the
+  cut list's CSV gives none). The BOM, the machining sheet and the derived model carry no prices,
+  so they state the lock alone, and `derive --select` keeps it as it keeps `schema`. The server's
+  `/api/*` answers are the CLI's, byte for byte; the GLB carries the full stamp (§9). Called from
+  code without a lock, an output states no lock, which keeps the hand goldens statements about the
+  values: a test compares an output with its golden plus the stamp's lines. A revision stores each
+  output with its stamp; `revision verify` compares a stored stamp field, and one the store does
+  not have (an output saved before it was stamped) is not drift, since the revision's own stamp
+  already covers the lock (§4.13).
 - Output as Markdown, CSV or JSON.
 
 ### 5.5 Checks and what blocks the order (review M8)
@@ -1750,9 +1779,10 @@ selection; fitting keeps the view's direction, since `fitToBox` turns it to the 
     revision, variant, and the git commit and dirty flag as a second field (review M5). This
     answers the "published page traced to no commit" lesson.
 - **Cut list, BOM, machining sheet (*2.3*), order list and costs** as Markdown, CSV or JSON (the
-  machining sheet without CSV), with the same stamp; in v1 only the order list and the costs carry
-  the lock's hash (§5.4).
-- **`derive --json`**, the full derived model for external report builders.
+  machining sheet without CSV), each stating the lock's hash, and where it prices the basis and
+  the oldest read date (§5.4; *2.3*).
+- **`derive --json`**, the full derived model for external report builders, stating the lock's
+  hash (*2.3*).
 
 STEP, DXF flats and a self-contained report come in v2 (D6).
 

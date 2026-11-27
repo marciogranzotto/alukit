@@ -6,6 +6,7 @@ import { type Diagnostic, Diagnostics, sortDiagnostics } from "../diagnostics.ts
 import { compareIds } from "../ids.ts";
 import type { ItemSource } from "../items.ts";
 import { type CostLine, ORDER_RULES, type OrderRule, type RuleAction } from "../project/schema.ts";
+import { oldestRead } from "../stamp.ts";
 import { orderLines } from "./lines.ts";
 import { addMoney, convert, type Money, ZERO } from "./price.ts";
 import { priceLines, projectCurrency, rateFor } from "./pricing.ts";
@@ -170,18 +171,14 @@ export function orderOf(priced: PricedOrder, input: RulesInput): Order {
     };
   });
 
-  const reads = works
-    .flatMap((w) => {
-      const read = readOf(w);
-      return read !== undefined && w.money ? [read] : [];
-    })
-    .sort(cmp);
+  // The oldest read of a price the order uses: priced lines only.
+  const reads = works.map((w) => (w.money ? readOf(w) : undefined));
   return {
     schema: ORDER_SCHEMA,
     currency: pc ?? null,
     price_basis: doc.price_basis,
     as_of: asOf,
-    oldest_read: reads[0] ?? null,
+    oldest_read: oldestRead(reads),
     ...(input.lock !== undefined ? { lock: input.lock } : {}),
     status: suppliers.some((s) => s.status === "BLOCKED") ? "BLOCKED" : "READY",
     rules,

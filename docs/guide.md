@@ -282,6 +282,11 @@ lines that carry some.
 
 `--format md|csv|json` works on the output commands (`md|json` for `machining`).
 
+Every output says which lock it came from: `lock` in JSON, a line "Derived from the lock
+sha256:…" in Markdown, a first `stamp` row in CSV. The hash is the sha256 of the lock file, so
+`shasum -a 256 alukit.lock.json` gives it too. The cut list, the order and the costs carry prices,
+so they also state the price basis and the oldest date a price they use was read.
+
 ## Locks
 
 A new item you name is pinned into the lock automatically. To take in what a vendor changed since,

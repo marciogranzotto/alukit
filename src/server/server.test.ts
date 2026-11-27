@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
@@ -6,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DOCUMENT } from "#core/project/open.ts";
 import { acquireEditLock, EditLockHeld, STATE_DIR } from "#core/project/store.ts";
-import { FIXTURES, scratchFixtures } from "#core/testing.ts";
+import { FIXTURES, lockStamp, scratchFixtures, withStamp } from "#core/testing.ts";
 import { capture } from "../cli/testing.ts";
 import { SseParser } from "../ui/sse.ts";
 import { ownerPath, readOwner } from "./owner.ts";
@@ -368,14 +367,8 @@ describe("the order and the costs (§5.4, §4.11)", () => {
     // The cart's order is the hand golden plus the stamp: the hash of the lock the server holds.
     const order = await text(r, `api/order?as_of=${AS_OF}`);
     expect(order).toMatchObject({ status: 200, rev: "0" });
-    const lock = createHash("sha256").update(await readFile(join(cart, "alukit.lock.json")));
     const golden = await readFile(join(FIXTURES, "cart", "expected-order.json"), "utf8");
-    expect(order.body).toBe(
-      golden.replace(
-        /^( {2}"oldest_read": .*\n)/m,
-        `$1  "lock": "sha256:${lock.digest("hex")}",\n`,
-      ),
-    );
+    expect(order.body).toBe(withStamp(golden, "oldest_read", { lock: lockStamp(cart) }));
     for (const cmd of ["order", "costs"]) {
       const served = await text(r, `api/${cmd}?as_of=${AS_OF}`);
       const cli = await capture([cmd, cart, "--format", "json", "--as-of", AS_OF]);
@@ -388,13 +381,31 @@ describe("the order and the costs (§5.4, §4.11)", () => {
     const cart = join(f.dir, "..", "..", "cart");
     const r = await serve({ ...f, dir: cart });
 
-    // The cart's sheet is the golden worked by hand (M6): the plate's and the bent angle's holes.
+    // The cart's sheet is the golden worked by hand (M6): the plate's and the bent angle's holes,
+    // stamped with the lock the server holds.
     const served = await text(r, "api/machining");
     expect(served).toMatchObject({ status: 200, rev: "0" });
     const golden = await readFile(join(FIXTURES, "cart", "expected-machining.json"), "utf8");
-    expect(served.body).toBe(golden);
+    expect(served.body).toBe(withStamp(golden, "schema", { lock: lockStamp(cart) }));
     const cli = await capture(["machining", cart, "--format", "json"]);
     expect(served.body).toBe(`${cli.out}\n`);
+  });
+
+  it("answers the derived model, the cut list and the BOM as the CLI prints them, byte for byte", async () => {
+    const f = await fixture();
+    const cart = join(f.dir, "..", "..", "cart");
+    const r = await serve({ ...f, dir: cart });
+    const outputs: [string, string[]][] = [
+      ["api/derived", ["derive", cart, "--json"]],
+      ["api/cutlist", ["cutlist", cart, "--format", "json"]],
+      ["api/bom", ["bom", cart, "--format", "json"]],
+    ];
+    for (const [path, argv] of outputs) {
+      const served = await text(r, path);
+      expect(served.status, path).toBe(200);
+      expect(JSON.parse(served.body).lock, path).toBe(lockStamp(cart));
+      expect(served.body, path).toBe(`${(await capture(argv)).out}\n`);
+    }
   });
 
   it("follows the revision, takes today by default, and refuses a date that is not one", async () => {
@@ -553,11 +564,13 @@ describe("variants, the GLB and revisions through the server (§4.10, §4.13, §
     expect(tall.derived.bars.b1?.len_mm).toBe(1100);
     expect(tall.derived.bars.b13).toBeUndefined();
 
-    // Each output as the CLI prints it with --variant: the order, costs and sheet byte for byte.
+    // Each output as the CLI prints it with --variant, byte for byte.
     const outputs: [string, string[]][] = [
       [`api/order?variant=tall&as_of=${AS_OF}`, ["order", r.dir, "--as-of", AS_OF]],
       [`api/costs?variant=tall&as_of=${AS_OF}`, ["costs", r.dir, "--as-of", AS_OF]],
       ["api/machining?variant=tall", ["machining", r.dir]],
+      ["api/cutlist?variant=tall", ["cutlist", r.dir]],
+      ["api/bom?variant=tall", ["bom", r.dir]],
     ];
     for (const [path, argv] of outputs) {
       const served = await get(r, path);
@@ -565,11 +578,9 @@ describe("variants, the GLB and revisions through the server (§4.10, §4.13, §
       const cli = await capture([...argv, "--variant", "tall", "--format", "json"]);
       expect(await served.res.text(), path).toBe(`${cli.out}\n`);
     }
-    const cut = (await (await get(r, "api/cutlist?variant=tall")).res.json()) as {
-      groups: unknown;
-    };
-    const cliCut = await capture(["cutlist", r.dir, "--variant", "tall", "--format", "json"]);
-    expect(cut.groups).toEqual(JSON.parse(cliCut.out).groups);
+    const derived = await get(r, "api/derived?variant=tall");
+    const cliDerived = await capture(["derive", r.dir, "--variant", "tall", "--json"]);
+    expect(await derived.res.text()).toBe(`${cliDerived.out}\n`);
     const check = (await (await get(r, "api/check?variant=tall")).res.json()) as {
       variant: string;
       checks: unknown;

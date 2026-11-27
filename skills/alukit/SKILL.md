@@ -43,6 +43,10 @@ then read the output.
 - **The lock pins catalog data.** Derive reads the lock, never the live catalogs. A command
   that names a new item pins it; `alukit lock update <dir>` refreshes entries and prints what
   moved (prices, sections, cut lengths). `--frozen` on any output makes a missing entry an error.
+  Every output states the lock it came from: `lock` in JSON (the sha256 of the canonical lock
+  file), a "Derived from the lock" line in Markdown, a first `stamp` row in CSV; one that
+  prices (the cut list, the order, the costs) also states its price basis and its oldest price
+  read date.
 - **Exit codes**: 0 fine; 1 the project has errors, an edit was refused, the order is blocked,
   or a revision drifted; 2 a usage error.
 

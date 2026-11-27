@@ -5,14 +5,15 @@ import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import type { CatalogSet } from "#catalog/link.ts";
+import { bomJson } from "#core/bom/format.ts";
 import { CHECK_SCHEMA } from "#core/check/check.ts";
-import { checkedMachining, checkedOrder } from "#core/check/outputs.ts";
+import { checkedBom, checkedCutList, checkedMachining, checkedOrder } from "#core/check/outputs.ts";
+import { cutListJson } from "#core/cutlist/format.ts";
 import { isDate } from "#core/dates.ts";
 import { derivedJson, jsonText } from "#core/derive/output.ts";
 import { unknownVariant } from "#core/derive/variant.ts";
 import { sortDiagnostics } from "#core/diagnostics.ts";
 import { compareIds } from "#core/ids.ts";
-import { lockHash } from "#core/lock/pin.ts";
 import type { Lock } from "#core/lock/schema.ts";
 import { machiningJson } from "#core/machining/format.ts";
 import { costsJson, costsOf, orderJson } from "#core/order/format.ts";
@@ -443,22 +444,23 @@ async function api(
         sendJson(res, 200, text, snap.rev);
         return;
       }
+      // As the CLI prints them, byte for byte, each stating the lock the server holds (§5.4).
       case "/api/derived": {
         const snap = snapshotFor(p, query, res);
         if (!snap) return;
-        sendJson(res, 200, derivedJson(snap.derived), snap.rev);
+        sendJson(res, 200, jsonText(derivedJson(snap.derived, snap.stamp)), snap.rev);
         return;
       }
       case "/api/cutlist": {
         const snap = snapshotFor(p, query, res);
         if (!snap) return;
-        sendJson(res, 200, snap.outputs.cutList(), snap.rev);
+        sendJson(res, 200, cutListJson(checkedCutList(snap.derived, snap.outputs)), snap.rev);
         return;
       }
       case "/api/bom": {
         const snap = snapshotFor(p, query, res);
         if (!snap) return;
-        sendJson(res, 200, snap.outputs.bom(), snap.rev);
+        sendJson(res, 200, bomJson(checkedBom(snap.derived, snap.outputs)), snap.rev);
         return;
       }
       case "/api/machining": {
@@ -500,10 +502,7 @@ async function api(
         }
         const snap = snapshotFor(p, query, res);
         if (!snap) return;
-        const o = checkedOrder(snap.outputs, snap.check.diagnostics, {
-          asOf,
-          lock: lockHash(snap.state.lock),
-        });
+        const o = checkedOrder(snap.outputs, snap.check.diagnostics, { asOf, ...snap.stamp });
         sendJson(res, 200, path === "/api/order" ? orderJson(o) : costsJson(costsOf(o)), snap.rev);
         return;
       }

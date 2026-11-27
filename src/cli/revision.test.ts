@@ -102,6 +102,37 @@ describe("alukit revision", () => {
     expect(w.out).toContain("CHANGED: the stored document or lock no longer hashes to the stamp");
   });
 
+  it("verifies a revision stored before every output stated its stamp with zero drift", async () => {
+    const { dir } = await cart();
+    await capture(["revision", "save", dir, "r1", "--as-of", AS_OF]);
+    const path = join(dir, "revisions", "r1.json");
+    const rev = JSON.parse(readFileSync(path, "utf8"));
+    const lock = rev.outputs[0].order.lock;
+    expect(lock).toMatch(/^sha256:[0-9a-f]{64}$/);
+    for (const k of ["derived", "cutlist", "bom", "machining"])
+      expect(rev.outputs[0][k].lock).toBe(lock);
+    expect(rev.outputs[0].cutlist.oldest_read).toBe("2026-11-26");
+    expect(rev.outputs[0].costs.oldest_read).toBe(rev.outputs[0].order.oldest_read);
+    // As an earlier AluKit stored it: only the order and the costs stated the lock, and only the
+    // order its oldest read date. The stamp is not a derived value: absent, it is not drift.
+    await editJson(path, (r) => {
+      const o = r.outputs[0];
+      for (const k of ["derived", "cutlist", "bom", "machining"]) delete o[k].lock;
+      delete o.cutlist.oldest_read;
+      delete o.costs.oldest_read;
+    });
+    const v = await capture(["revision", "verify", dir, "r1"]);
+    expect(v.code).toBe(0);
+    expect(v.out).toContain("verified: zero drift in 1 variant");
+    // A stamp that is stored is compared: one that no longer matches is drift.
+    await editJson(path, (r) => {
+      r.outputs[0].cutlist.oldest_read = "2026-01-01";
+    });
+    const w = await capture(["revision", "verify", dir, "r1"]);
+    expect(w.code).toBe(1);
+    expect(w.out).toMatch(/drift: \(no variant\), cutlist: 1 field\n {6}oldest_read: /);
+  });
+
   it("verifies by replay: the live catalogs and the project's files are not read", async () => {
     const { root, dir } = await cart();
     await capture(["revision", "save", dir, "r1", "--as-of", AS_OF]);

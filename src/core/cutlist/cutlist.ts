@@ -5,6 +5,7 @@ import type { ItemSource, OfferInfo, SaleInfo } from "../items.ts";
 import { amount, type Basis, barPrice, basisPrice } from "../order/price.ts";
 import type { Face } from "../project/schema.ts";
 import { QUANTUM, quantize, roundHalfAway, snapCeil } from "../quantum.ts";
+import { oldestRead } from "../stamp.ts";
 import { add, dot, scale, sub, type V3 } from "../vec.ts";
 import { type NestStock, nest } from "./nesting.ts";
 
@@ -21,6 +22,10 @@ import { type NestStock, nest } from "./nesting.ts";
  * the quantum, same end cuts and the same machining. A piece and its end-for-end flip are the
  * same piece; the canonical orientation is the one whose sorted machining list, then end cuts,
  * compare first.
+ *
+ * It prices on the project's basis (the stock bars it nests, and the cheapest of several cut
+ * offers), so it states that basis and the oldest read date of the offers it chose, and, derived
+ * from a lock, the lock's hash (§5.4, `stamp.ts`).
  */
 
 export const CUTLIST_SCHEMA = "alukit.cutlist/1";
@@ -151,6 +156,10 @@ export interface CutGroup {
 export interface CutList {
   schema: typeof CUTLIST_SCHEMA;
   price_basis: string;
+  /** The oldest read date of the offers it chose: each cut group's, each stock bar's. */
+  oldest_read: string | null;
+  /** The stamp (§5.4, §4.13): the content hash of the lock it was derived from, when it was. */
+  lock?: string;
   groups: CutGroup[];
   diagnostics: Diagnostic[];
 }
@@ -558,6 +567,8 @@ function cheapestCut(offers: readonly OfferInfo[], lines: readonly CutLine[], ba
 export interface CutListInput {
   derived: Derived;
   items: ItemSource;
+  /** The content hash of the lock the items come from: the cut list states it. */
+  lock?: string;
 }
 
 export function cutList(input: CutListInput): CutList {
@@ -565,6 +576,8 @@ export function cutList(input: CutListInput): CutList {
   const doc = derived.doc;
   const basis = doc.price_basis;
   const d = new Diagnostics();
+  /** The read dates of the offers chosen. */
+  const reads: (string | undefined)[] = [];
   const pieces = derivedPieces(derived).map(canonical);
 
   const byGroup = new Map<string, Piece[]>();
@@ -630,6 +643,7 @@ export function cutList(input: CutListInput): CutList {
         (chosen?.sale?.mode === "cut" ? chosen : undefined) ??
         (cheapestCut(cutOffers, lines, basis) as OfferInfo);
       const sale = offer.sale as SaleInfo;
+      reads.push(offer.price.read);
       group.offer = offer.sku;
       group.supplier = offer.supplier;
       if (offer.currency) group.currency = offer.currency;
@@ -692,6 +706,7 @@ export function cutList(input: CutListInput): CutList {
         );
       }
       group.stock = res.bars.map((b) => {
+        reads.push(supplierOf.get(b.stock.sku)?.price.read);
         const sum = b.pieces.reduce((s, p) => s + p.len, 0);
         return {
           sku: b.stock.sku,
@@ -716,7 +731,14 @@ export function cutList(input: CutListInput): CutList {
     }
     groups.push(group);
   }
-  return { schema: CUTLIST_SCHEMA, price_basis: basis, groups, diagnostics: d.sorted() };
+  return {
+    schema: CUTLIST_SCHEMA,
+    price_basis: basis,
+    oldest_read: oldestRead(reads),
+    ...(input.lock !== undefined ? { lock: input.lock } : {}),
+    groups,
+    diagnostics: d.sorted(),
+  };
 }
 
 /** Groups identical pieces (in canonical orientation) into lines: longest first. */
