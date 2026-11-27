@@ -125,7 +125,10 @@ anything, and each has a default in place.
 | UX S3: 3D view | **done**, merged (07:36), pushed. The live-update regression was fixed at its cause (shader programs relinked on each revision, which also made `main`'s `live.spec` flaky); the update now takes 4–19 ms | `docs/ux/s3-decisions.md` |
 | UX S2: app shell and IA | **done**, merged (07:36), pushed | `docs/ux/s2-decisions.md` |
 | X7 / X8 / F7: quick connectors | **done**, merged (06:59), pushed | G46–G48, calls 52–56; `docs/notes/x7-x8-f7.md` |
-| UX S5: tools, inspector, command bar | running (Opus, worktree), launched 07:38 | Then the integration pass and the designer review | task flows and IA; heuristics and first run; visual design and 3D readability |
+| UX S5: tools, inspector, command bar | **done**, merged (09:18), pushed | `docs/ux/s5-decisions.md` |
+| UX integration pass (bundle split, one call for corner rules, built-in catalogs, README and guide, design §8) | running (Opus, worktree), launched 09:20 | `docs/ux/integration-decisions.md` |
+| UX phase 4: designer review of the running app | running (Opus, worktree, read-only), launched 09:20 | `docs/ux/review-phase4.md`; then a polish pass on its findings |
+| X9 / F8 / F9: cross-hole faces, bearing on the hook, per-profile grooves | running (Opus, worktree), launched 08:39 | G49+, calls 57+ | task flows and IA; heuristics and first run; visual design and 3D readability |
 | F2: end-hole axis, butt end-face coverage, head seats | **done**, merged (03:30), pushed | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
 | X1–X3, X5, X6 plus F2a/F2b: blind fasteners, a butt's stack of bodies, plain bars held by a drilled-hole screw, taps over groove openings, sleeves through both walls, head sizes from standards, butt screws seat-checked | **done**, merged (05:00), pushed | Goldens G39–G45; calls 45–51. Note: `docs/notes/x1-x3-f2ab.md`. |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
@@ -797,3 +800,12 @@ anything, and each has a default in place.
   - a clear face chosen for each cross hole, a face that can be named, and covered faces reported;
   - bearing clipped to the lips' underside;
   - each profile's own groove from its own drawing, printed dimensions first, else a stated estimate.
+- **09:08**: S5 finished (S5.1–S5.11).
+  - A command bar with typed expressions and params, place on click, and keys (axis lock, chaining, `X` Pattern, `G` box frame).
+  - Inspector editing in place, where a param-driven length points at its param.
+  - Delete lists its cascade first.
+  - A joint preview that dry-runs 60 ms after a snap or 250 ms after a pause (2–8 dry runs per 61 pointer moves) and says what will butt and which cuts change.
+  - A box-frame tool whose cut list matches `alukit add frame` byte for byte.
+- **09:18**: S5 merged; gate PASS (1,075 tests). All six streams are on `main` (`f264ea5`).
+  - From the screenshots, for the designer review: the box-frame form shows in two places, the command bar covers part of the model, the status line repeats the prompt, one label is cut off, and warning outlines look close to the selection's amber.
+- **09:20**: The integration pass and the phase-4 designer review were launched in parallel. The review is read-only, and its findings feed a final polish pass.
