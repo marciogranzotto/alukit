@@ -117,6 +117,21 @@ export function machiningMarkdown(s: MachiningSheet): string {
       "",
     );
   }
+  if (s.in_place && s.in_place.length > 0) {
+    out.push(
+      "## In place",
+      "",
+      "Members marked context are not cut or bought: the build machines them where they stand, each from its own ends:",
+      "",
+      "| Bar | Item | Options | Ops | Machining |",
+      "|---|---|---|---:|---|",
+      ...s.in_place.map(
+        (b) =>
+          `| ${b.bar} | ${b.item} | ${optText(b.opt)} | ${b.ops} | ${b.machining.join("; ")} |`,
+      ),
+      "",
+    );
+  }
   if (s.diagnostics.length > 0) {
     out.push("## Problems", "");
     for (const d of s.diagnostics)

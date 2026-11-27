@@ -1,10 +1,12 @@
 import { basename, join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
+import { modelExtent } from "../mesh/extent.ts";
 import { bom } from "./bom/bom.ts";
 import { cutList } from "./cutlist/cutlist.ts";
 import { machiningText } from "./cutlist/format.ts";
 import { type Derived, derive } from "./derive/derive.ts";
 import type { ItemSource } from "./items.ts";
+import { machiningSheet } from "./machining/machining.ts";
 import { type MoneyOut, order } from "./order/order.ts";
 import { type OpenedProject, openProject } from "./project/open.ts";
 import { FIXTURES, mergePatch, readJson, shown, subdirs } from "./testing.ts";
@@ -18,7 +20,9 @@ import { FIXTURES, mergePatch, readJson, shown, subdirs } from "./testing.ts";
  * its second run found, `docs/notes/acceptance-gaps-2.md`) and G35–G37 (the joint geometry its
  * fourth run found, `docs/notes/f2-joint-geometry.md`) each have a hand calculation beside
  * them, `by_hand.py`, that imports nothing from AluKit, and so does G38 (a piece's span, the length
- * of stock it is cut from: `docs/notes/x4-stock-length.md`).
+ * of stock it is cut from: `docs/notes/x4-stock-length.md`), and each case after it, to G51
+ * (members marked context, drawn and checked against but not built or bought:
+ * `docs/notes/x11.md`).
  */
 
 interface Expect {
@@ -71,13 +75,30 @@ interface Expect {
     per_bar: Record<string, number>;
     ops?: Record<string, HoleOut[]>;
   };
-  /** The order list: per item, its one line's (or, as a list, its lines') low, likely and high; and the total. */
+  /**
+   * The order list: per item, its one line's (or, as a list, its lines') low, likely and high; and
+   * the total; where the case gives it, whether it is READY or BLOCKED (X11).
+   */
   order?: {
-    lines: Record<string, LineMoney | LineMoney[]>;
-    total: MoneyOut;
+    status?: "READY" | "BLOCKED";
+    lines?: Record<string, LineMoney | LineMoney[]>;
+    total?: MoneyOut;
   };
   /** Per item: its total length in the BOM. */
   bom?: Record<string, { length_mm: number }>;
+  /**
+   * Every line the BOM counts, in its order: item and quantity, and where the case gives them,
+   * the length and the mass (X11: what a member marked context leaves out).
+   */
+  bom_lines?: { item: string; qty: number; length_mm?: number; mass_kg?: number }[];
+  /** The members the BOM lists apart as context, by id and item (X11). */
+  bom_context?: { id: string; item: string }[];
+  /** The BOM's total mass, what `mass()` reads (X11). */
+  mass_kg?: number;
+  /** `bbox()`: the build's extent along each world axis, to 0.01 (X11). */
+  bbox_mm?: [number, number, number];
+  /** The machining sheet's machining made in place, on context members, in its words (X11). */
+  in_place?: { bar: string; machining: string[] }[];
   /** Every error the cut list reports, by code and entity. */
   cut_errors?: { code: string; entity: string }[];
   /**
@@ -395,6 +416,41 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
     const line = b.groups.flatMap((g) => g.lines).find((l) => l.item === item);
     expect(line?.length_mm, `${label}: ${item}'s length in the BOM`).toBe(x.length_mm);
   }
+  if (want.bom_lines) {
+    // Each line's length and mass are compared only where the case gives them.
+    const lines = b.groups.flatMap((g) => g.lines);
+    expect(
+      lines.map((l, i) => ({
+        item: l.item,
+        qty: l.qty,
+        ...(want.bom_lines?.[i]?.length_mm !== undefined ? { length_mm: l.length_mm } : {}),
+        ...(want.bom_lines?.[i]?.mass_kg !== undefined ? { mass_kg: l.mass_kg } : {}),
+      })),
+      `${label}: the BOM's lines`,
+    ).toEqual(want.bom_lines);
+  }
+  if (want.bom_context) {
+    expect(
+      (b.context ?? []).map((c) => ({ id: c.id, item: c.item })),
+      `${label}: the members the BOM lists apart as context`,
+    ).toEqual(want.bom_context);
+  }
+  if (want.mass_kg !== undefined) expect(b.mass_kg, `${label}: the BOM's mass`).toBe(want.mass_kg);
+  if (want.bbox_mm) {
+    const box = modelExtent(d, items);
+    const e = box.ok ? box.extent : undefined;
+    expect(
+      e && [0, 1, 2].map((k) => r2((e.max[k] as number) - (e.min[k] as number))),
+      `${label}: bbox()`,
+    ).toEqual(want.bbox_mm);
+  }
+  if (want.in_place) {
+    const sheet = machiningSheet({ derived: d, items, bom: b, cutList: cl });
+    expect(
+      (sheet.in_place ?? []).map((x) => ({ bar: x.bar, machining: x.machining })),
+      `${label}: the machining made in place`,
+    ).toEqual(want.in_place);
+  }
   if (want.order) {
     const o = order({
       derived: d,
@@ -404,32 +460,37 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
       diagnostics: [...d.diagnostics, ...cl.diagnostics, ...b.diagnostics],
       asOf: "2026-11-26",
     });
+    if (want.order.status) expect(o.status, `${label}: the order`).toBe(want.order.status);
     const lines = o.suppliers.flatMap((s) => s.lines);
-    for (const [item, m] of Object.entries(want.order.lines)) {
-      const got = lines.filter((l) => l.item === item);
-      expect(
-        got.map((l) => ({
-          low_minor: l.low_minor,
-          likely_minor: l.likely_minor,
-          high_minor: l.high_minor,
-          range: l.range,
-        })),
-        `${label}: ${item}'s order lines`,
-      ).toEqual(Array.isArray(m) ? m : [m]);
+    if (want.order.lines) {
+      for (const [item, m] of Object.entries(want.order.lines)) {
+        const got = lines.filter((l) => l.item === item);
+        expect(
+          got.map((l) => ({
+            low_minor: l.low_minor,
+            likely_minor: l.likely_minor,
+            high_minor: l.high_minor,
+            range: l.range,
+          })),
+          `${label}: ${item}'s order lines`,
+        ).toEqual(Array.isArray(m) ? m : [m]);
+      }
+      const count = Object.values(want.order.lines).reduce(
+        (n, m) => n + (Array.isArray(m) ? m.length : 1),
+        0,
+      );
+      expect(lines.length, `${label}: order lines`).toBe(count);
     }
-    const count = Object.values(want.order.lines).reduce(
-      (n, m) => n + (Array.isArray(m) ? m.length : 1),
-      0,
-    );
-    expect(lines.length, `${label}: order lines`).toBe(count);
-    expect(o.totals.total, `${label}: the total`).toEqual(want.order.total);
+    if (want.order.total) {
+      expect(o.totals.total, `${label}: the total`).toEqual(want.order.total);
+    }
   }
 }
 
 const dirs = subdirs(join(FIXTURES, "golden-gen"));
 
 describe("golden generation cases (design §4.6)", () => {
-  it("has one fixture per case G22–G26 and G29–G49", () => {
+  it("has one fixture per case G22–G26 and G29–G51", () => {
     expect(dirs.map((d) => basename(d))).toEqual([
       "G22",
       "G23",
@@ -458,6 +519,7 @@ describe("golden generation cases (design §4.6)", () => {
       "G48",
       "G49",
       "G50",
+      "G51",
     ]);
   });
 

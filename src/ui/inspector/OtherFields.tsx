@@ -4,7 +4,7 @@ import { cornersOf } from "../corners.ts";
 import type { Model } from "../model.ts";
 import { busy } from "../store.ts";
 import { typedValue } from "../tools/typed.ts";
-import { LabelRows } from "./BarFields.tsx";
+import { ContextRow, LabelRows } from "./BarFields.tsx";
 import { CommitInput, Row, RowErrors, readOnly, useSend, WordsRow } from "./Fields.tsx";
 import { pointRefWords } from "./length.ts";
 import { isObject, labelOf, listWords, pointWords, written } from "./words.ts";
@@ -150,7 +150,7 @@ function RollRow({ m, id, cmd }: { m: Model; id: string; cmd: string }) {
   );
 }
 
-const PART_SHOWN = new Set(["item", "on", "roll_deg", "label", "tags"]);
+const PART_SHOWN = new Set(["item", "on", "roll_deg", "label", "tags", "context"]);
 
 export function PartFields({ m, id }: { m: Model; id: string }) {
   const w = written(m, id) as O;
@@ -174,6 +174,7 @@ export function PartFields({ m, id }: { m: Model; id: string }) {
             </Row>
           )}
           <LabelRows m={m} id={id} />
+          <ContextRow m={m} id={id} />
           {Object.entries(w)
             .filter(([k]) => !PART_SHOWN.has(k) && k !== "at")
             .map(([k, v]) => (

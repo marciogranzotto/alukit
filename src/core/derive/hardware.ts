@@ -221,11 +221,21 @@ function rolesOf(
         const b = bars.get(bar);
         if (b) through = { bar: b, ...(end ? { end } : {}) };
       } else {
-        // A body as the through member is counted with the connection (§4.5). A joint recipe
-        // has no box to bear on; stage 3 reports it, and it is not counted.
+        // A body as the through member is counted with the connection (§4.5), unless it is
+        // context (a wall the ends bear on, X11). A joint recipe has no box to bear on; stage 3
+        // reports it, and it is not counted.
         const found = ctx.items.item(spec.through.body);
         const recipe = found.ok && found.item.kind === "connector" && found.item.recipe === true;
-        if (found.ok && !recipe) body = { item: found.id, opt: {}, qty: 1, source: id };
+        if (found.ok && !recipe) {
+          body = {
+            item: found.id,
+            opt: {},
+            qty: 1,
+            source: id,
+            body: true,
+            ...(spec.through.context === true ? { context: true as const } : {}),
+          };
+        }
       }
       let spacer = 0;
       if (spec.spacer_mm !== undefined) spacer = ctx.num(id, "spacer_mm", spec.spacer_mm) ?? 0;

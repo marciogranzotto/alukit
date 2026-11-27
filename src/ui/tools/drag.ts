@@ -1,4 +1,5 @@
 import type { ToolPointer, Viewer } from "../../viewer/scene.ts";
+import { chord, typingIn } from "../keys.ts";
 import { type CommandOutcome, model, sendCommands } from "../store.ts";
 import type { Cmd } from "./preview.ts";
 import { fieldDone, fieldWanted, type Gesture, gesture, lastResult, typed } from "./state.ts";
@@ -16,7 +17,8 @@ import { fieldDone, fieldWanted, type Gesture, gesture, lastResult, typed } from
  * Esc steps back one level (D-UX-18): what is typed, then the gesture, which leaves the document
  * as it was. Tab flips the previewed joint. The whole gesture is one batch, one step (§7.1: a
  * tab holds no unsaved state; a drag is a local preview, committed as one command on release).
- * What a gesture moves and how it reads the pointer is its `GestureSpec`'s. Owner: S5.
+ * What a gesture moves and how it reads the pointer is its `GestureSpec`'s: an end handle, Move,
+ * Duplicate and Paste, Rotate, Mirror and Align (docs/ux/e3-decisions.md). Owner: E3 (S5 built it).
  */
 
 /** A press that moves less than this, px, is a click: the gesture keeps following the pointer. */
@@ -32,6 +34,13 @@ export interface GestureSpec {
   key?(e: KeyboardEvent): boolean;
   /** Tab: the previewed joint's next arrangement. */
   flip?(): void;
+  /**
+   * A press while the gesture is on, asked before it commits there (docs/ux/e3-decisions.md):
+   * `"drag"` when the spec took it as a new start (a base point picked: a drag from here commits
+   * on release, a click keeps following), `"taken"` when it took it otherwise (a centre moved);
+   * undefined to commit where it was pressed.
+   */
+  press?(e: ToolPointer): "drag" | "taken" | undefined;
   /** Takes what the gesture draws away. */
   stop(): void;
   /** After a step it sent, with what came of it. */
@@ -60,6 +69,8 @@ export interface Gestures {
   key(e: KeyboardEvent): boolean;
   /** Ends any gesture without a step. */
   cancel(): void;
+  /** Draws the gesture again where the pointer was last: after an option it reads changed. */
+  refresh(): void;
   dispose(): void;
 }
 
@@ -106,7 +117,27 @@ export function createGestures(_viewer: Viewer): Gestures {
   // What is typed moves the gesture, pointer or not.
   const offTyped = typed.subscribe(() => spec?.update(last));
 
-  return {
+  /**
+   * While a gesture is on, its keys are its own wherever the focus is (docs/ux/e3-decisions.md):
+   * a gesture started from the outline (Ctrl+D on a row) or from the menu, which gives the focus
+   * back to the row, would otherwise lose its arrows and Enter to the row, which takes them for
+   * itself before the window hears them. Asked in the capture phase, only with the focus on an
+   * element (with it on the page, the window's keys route as always), and never in a text field,
+   * a dialog or a menu, whose keys are theirs.
+   */
+  const capture = (e: KeyboardEvent) => {
+    if (!spec || chord(e) || typingIn(e.target)) return;
+    const t = e.target as HTMLElement | null;
+    if (!t || typeof t.closest !== "function" || t === document.body) return;
+    if (t.closest('[role="dialog"], [role="menu"]')) return;
+    if (api.key(e)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+  if (typeof window !== "undefined") window.addEventListener("keydown", capture, true);
+
+  const api: Gestures = {
     live: () => spec !== undefined,
     start(s, e, isHeld) {
       if (spec) end();
@@ -136,8 +167,14 @@ export function createGestures(_viewer: Viewer): Gestures {
     press(e) {
       if (!spec) return false;
       last = e;
+      const took = spec.press?.(e);
+      if (took === "drag") {
+        held = true;
+        from = [e.clientX, e.clientY];
+        moved = false;
+      }
       spec.update(e);
-      void commit();
+      if (!took) void commit();
       return true;
     },
     back() {
@@ -174,9 +211,14 @@ export function createGestures(_viewer: Viewer): Gestures {
     cancel() {
       if (spec) end();
     },
+    refresh() {
+      spec?.update(last);
+    },
     dispose() {
       offTyped();
+      if (typeof window !== "undefined") window.removeEventListener("keydown", capture, true);
       if (spec) end();
     },
   };
+  return api;
 }

@@ -13,9 +13,18 @@ import { createTools } from "./wiring.ts";
  * method does nothing. What it proves is the order of the wiring, not what the tools draw.
  */
 
-/** A viewer whose methods all do nothing and return nothing. */
+/**
+ * A viewer whose methods all do nothing and return nothing, but for its `on…` subscriptions,
+ * which return their undo, as the viewer's do.
+ */
 const quietViewer = (): Viewer =>
-  new Proxy({}, { get: () => () => undefined }) as unknown as Viewer;
+  new Proxy(
+    {},
+    {
+      get: (_, k) =>
+        typeof k === "string" && /^on[A-Z]/.test(k) ? () => () => undefined : () => undefined,
+    },
+  ) as unknown as Viewer;
 
 const scratch: string[] = [];
 afterEach(async () => {

@@ -79,6 +79,21 @@ export function bomMarkdown(b: Bom): string {
       out.push(`| ${r.item} | ${r.name} | ${r.qty} | ${r.sources.join(", ")} |`);
     out.push("");
   }
+  if (b.context && b.context.length > 0) {
+    out.push(
+      "## Context",
+      "",
+      "Members marked context: drawn and checked against, not built or bought, so in no total. Machining the build makes on them is on the machining sheet, made in place.",
+      "",
+      "| Member | Item | Name | Options |",
+      "|---|---|---|---|",
+    );
+    for (const c of b.context) {
+      const what = c.kind === "body" ? `${c.id}'s through body` : c.id;
+      out.push(`| ${what} | ${c.item} | ${c.name} | ${optText(c.opt)} |`);
+    }
+    out.push("");
+  }
   out.push(`Total mass: ${kg(b.mass_kg)} kg.`);
   if (b.mass_unknown.length > 0) {
     out.push(`No mass for ${b.mass_unknown.join(", ")}: left out of the totals.`);
@@ -145,6 +160,14 @@ export function bomCsv(b: Bom): string {
   for (const r of b.recipes ?? []) {
     rows.push(
       ["recipe", r.item, r.name, "", r.qty, "", "", "", "", r.sources.join(" "), ""]
+        .map(csvCell)
+        .join(","),
+    );
+  }
+  // Context members: kind `context`, no quantity and no mass; not built or bought (X11).
+  for (const c of b.context ?? []) {
+    rows.push(
+      ["context", c.item, c.name, optText(c.opt), "", "", "", "", "", c.id, ""]
         .map(csvCell)
         .join(","),
     );

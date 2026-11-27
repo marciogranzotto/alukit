@@ -41,6 +41,8 @@ export interface BarJson {
   frame: { x: V3; y: V3; z: V3 };
   box_mm: [P2, P2];
   ends: { a: EndJson; b: EndJson };
+  /** Context, not part of the build (gap X11): drawn translucent, not in `bbox()`. */
+  context?: boolean;
 }
 
 export interface PartJson {
@@ -57,6 +59,8 @@ export interface PartJson {
   point?: V3;
   frame?: { x: V3; y: V3; z: V3 };
   origin?: V3;
+  /** Context, not part of the build (gap X11). */
+  context?: boolean;
 }
 
 export interface ViewSection {
@@ -83,10 +87,15 @@ export interface ViewBar {
 export interface ViewPart {
   /** The item's bounding box in its own frame (§3.2), when its catalog or the project gives one. */
   box?: [V3, V3];
-  /** Drawn translucent: a placeholder (§4.8), or an item with no box, drawn as a marker. */
+  /**
+   * Drawn translucent: a placeholder (§4.8), a part marked context (X11), or an item with no box,
+   * drawn as a marker.
+   */
   translucent: boolean;
   /** A placeholder (§4.8): its box drawn translucent and outlined. */
   placeholder?: boolean;
+  /** Context, not part of the build (gap X11): drawn translucent in the context tone, outlined. */
+  context?: boolean;
   /** A plate or a bent angle of the project's own (§4.8): drawn from its shape, not its box. */
   shape?: ViewShape;
   /** A project item's mass, computed from its material or entered, and its source (§3.3). */
@@ -144,6 +153,8 @@ export interface ViewFastener {
   axis: V3;
   len: number;
   d: number;
+  /** A connection whose every layer is context (gap X11): drawn as context, not in `bbox()`. */
+  context?: boolean;
 }
 
 export interface MeshInput {

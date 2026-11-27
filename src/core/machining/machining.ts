@@ -1,5 +1,5 @@
 import type { Bom } from "../bom/bom.ts";
-import type { CutList } from "../cutlist/cutlist.ts";
+import { type CutList, inPlace } from "../cutlist/cutlist.ts";
 import { machiningText } from "../cutlist/format.ts";
 import type { Derived } from "../derive/derive.ts";
 import type { Diagnostic } from "../diagnostics.ts";
@@ -15,7 +15,8 @@ import { QUANTUM, quantize } from "../quantum.ts";
  * size. A fabricator works from it. A bar's machining is on the cut list, measured from a named
  * end (§5.3); the sheet lists the cut-list lines that carry some, each with its machining in the
  * cut list's words, which name the face a hole in a bar's side is drilled from (after the round-4
- * acceptance, X9: the face is what the shop reads).
+ * acceptance, X9: the face is what the shop reads). A bar marked context is on no cut-list line;
+ * the machining the build makes on it is listed apart, made in place, from its own ends (X11).
  *
  * Datums: a plate's is its outline's origin, (0, 0), with x and y as the outline is drawn. A bent
  * angle's is its heel at end 0: x along its length, y from the heel's outside face up each leg;
@@ -99,6 +100,19 @@ export interface SheetBarRef {
   sources: string[];
 }
 
+/**
+ * Machining made in place, on a member marked context (gap X11): a bar that is not cut or bought,
+ * where it stands (a hole the build drills in a wall to fix itself to it).
+ */
+export interface SheetInPlace {
+  bar: string;
+  item: string;
+  opt: Readonly<Record<string, string>>;
+  ops: number;
+  /** In the cut list's words, measured from the bar's own ends. */
+  machining: string[];
+}
+
 export interface MachiningSheet {
   schema: typeof MACHINING_SCHEMA;
   /**
@@ -109,6 +123,8 @@ export interface MachiningSheet {
   parts: SheetPart[];
   /** The bars' machining is on the cut list: these lines carry some. */
   bars: SheetBarRef[];
+  /** Present when the build machines a context member (X11): made in place, in bar id order. */
+  in_place?: SheetInPlace[];
   diagnostics: Diagnostic[];
 }
 
@@ -206,11 +222,19 @@ export function machiningSheet(input: MachiningInput): MachiningSheet {
         sources: l.sources,
       })),
   );
+  const here: SheetInPlace[] = inPlace(input.derived).map((x) => ({
+    bar: x.bar,
+    item: x.item,
+    opt: x.opt,
+    ops: x.machining.length,
+    machining: x.machining.map(machiningText),
+  }));
   return {
     schema: MACHINING_SCHEMA,
     ...(input.lock !== undefined ? { lock: input.lock } : {}),
     parts,
     bars,
+    ...(here.length > 0 ? { in_place: here } : {}),
     diagnostics: [],
   };
 }

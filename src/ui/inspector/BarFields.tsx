@@ -16,6 +16,7 @@ import { typedNumber, typedValue } from "../tools/typed.ts";
 import { ActionRow } from "./ActionRow.tsx";
 import { useReplaceAsked } from "./actions.ts";
 import { runOf, splitAsked } from "./barActions.ts";
+import { contextBatch, contextOf } from "./context.ts";
 import { EndRows } from "./Ends.tsx";
 import { CommitInput, Row, RowErrors, readOnly, useSend, WordsRow } from "./Fields.tsx";
 import { HoleRows } from "./Holes.tsx";
@@ -44,6 +45,7 @@ const SHOWN = new Set([
   "ops",
   "label",
   "tags",
+  "context",
 ]);
 
 /** An item's card, fetched once per item; undefined while it loads or when it cannot be had. */
@@ -561,6 +563,38 @@ function RollRow({ m, id }: { m: Model; id: string }) {
   );
 }
 
+/**
+ * Context (gap X11): a bar's or a placed part's checkbox. Context is drawn and checked against (a
+ * wall, a floor, a bench it stands beside), but not cut, counted, bought or weighed. One step.
+ */
+export function ContextRow({ m, id }: { m: Model; id: string }) {
+  const { outcome, send } = useSend();
+  const f = contextOf(m, id);
+  if (!f.can) return null;
+  return (
+    <>
+      <Row label="Context" fields={["context"]} testid="row-context">
+        <label>
+          <input
+            type="checkbox"
+            data-testid="field-context"
+            checked={f.on}
+            disabled={readOnly() || busy.value}
+            onChange={(e) =>
+              void send(
+                contextBatch(m, id, (e.currentTarget as HTMLInputElement).checked),
+                `context ${id}`,
+              )
+            }
+          />{" "}
+          not built or bought: drawn and checked against
+        </label>
+      </Row>
+      <RowErrors outcome={outcome} />
+    </>
+  );
+}
+
 /** A label and tags: any taggable entity's. */
 export function LabelRows({ m, id }: { m: Model; id: string }) {
   const w = written(m, id);
@@ -718,6 +752,7 @@ export function BarFields({ m, id }: { m: Model; id: string }) {
           <EndRows m={m} id={id} />
           <HoleRows m={m} id={id} />
           <LabelRows m={m} id={id} />
+          <ContextRow m={m} id={id} />
           {rest.map(([k, v]) => (
             <WordsRow key={k} label={k.replace(/_/g, " ")} v={v} fields={[k]} />
           ))}

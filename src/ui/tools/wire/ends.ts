@@ -1,7 +1,11 @@
 import { effect, signal } from "@preact/signals";
 import type { CornerRule } from "#core/project/schema.ts";
 import type { V3 } from "../../../mesh/model.ts";
-import { type GizmoHandle, handleAt as handleUnder } from "../../../viewer/gizmo.ts";
+import {
+  type GizmoHandle,
+  type GizmoSpec,
+  handleAt as handleUnder,
+} from "../../../viewer/gizmo.ts";
 import type { MarkerKind, OverlayState } from "../../../viewer/overlay.ts";
 import type { Grab, ToolPointer, Viewer } from "../../../viewer/scene.ts";
 import { rayLineParams } from "../../../viewer/snap.ts";
@@ -166,8 +170,11 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
 
   current = () => handles;
 
-  /** Whether the view's gizmo shows these handles: only then do they take it away. */
-  let showing = false;
+  /**
+   * The gizmo these handles showed, while the view still shows it: only then do they take it
+   * away, so another tool's gizmo shown since (Rotate's rings, a part's arrow) stays.
+   */
+  let showing: GizmoSpec | undefined;
   const draw = () => {
     const edit = labelEdit.peek();
     const grips: GizmoHandle[] = handles.map((h) => ({
@@ -183,11 +190,11 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
           ? handles[hot]?.end
           : undefined;
     if (grips.length > 0) {
-      viewer.setGizmo({ handles: grips, ...(focus ? { hot: focus } : {}) });
-      showing = true;
+      showing = { handles: grips, ...(focus ? { hot: focus } : {}) };
+      viewer.setGizmo(showing);
     } else if (showing) {
-      viewer.setGizmo(undefined);
-      showing = false;
+      if (viewer.gizmo() === showing) viewer.setGizmo(undefined);
+      showing = undefined;
     }
   };
 
@@ -437,8 +444,8 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
       offPickKey();
       endPick.value = undefined;
       preview.reset();
-      if (showing) viewer.setGizmo(undefined);
-      showing = false;
+      if (showing && viewer.gizmo() === showing) viewer.setGizmo(undefined);
+      showing = undefined;
       endNote.value = undefined;
       current = () => [];
     },

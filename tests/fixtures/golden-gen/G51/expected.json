@@ -1,0 +1,177 @@
+{
+  "case": "G51",
+  "rule": "a member marked context (context: true on a bar or a placed part: a wall, a floor, an existing bench) is drawn and checked against, but is not built or bought: no cut-list piece, no BOM line (the BOM lists it apart), no order line, no mass, and it is not in bbox(). A connection whose every member is context is the context's own: what it brings is not counted and its machining is not listed. Machining the build makes on a context member is listed in place on the machining sheet. A part on a context bar's station is not context unless it says so (gap X11)",
+  "design": "A frame of two 1000 posts (b1, b2) and a bracket on b1 (p1), beside a bench marked context: its 1200 post b3, drilled in place for the frame (a hole Ø8.5 on +x, 500 from end a), and its top rail in two 500 pieces (b4, b5) joined by their own splice (c1, SPL-40). A floor slab 30 thick under z = 0 (p2) and a wall (p3), placeholders, marked context. The cut list: 2 × 1000. The BOM: 2 TS40 (2000, 2.986 kg) and the bracket (0.15 kg), 3.136 kg; b3, b4, b5, p2 and p3 listed apart. The order: TS40-c7 253.00 and BRK-40 8.90, 261.90, READY. bbox() 440 × 40 × 1000. The machining sheet: b3's hole, in place. With nothing marked: the BOM gains 3 TS40, the splice, its stud and both placeholders (6.486 kg, the placeholders without mass), the order is blocked, bbox() 3000 × 3000 × 2530. With only the floor unmarked: bbox().z 1030, the 30 mm slab. With the rail's first piece new: the splice is the build's, bought, its tap in b4 on the cut list and its tap in b5 in place. With b1 marked context: its bracket is still bought",
+  "expect": {
+    "bars": {
+      "b1": { "cut_mm": 1000 },
+      "b3": { "cut_mm": 1200 },
+      "b4": { "cut_mm": 500 },
+      "b5": { "cut_mm": 500 }
+    },
+    "lines": {
+      "test:TS40": [
+        { "count": 2, "cut_mm": 1000, "ordered_mm": 1000, "billed_mm": 1000, "machining": [] }
+      ]
+    },
+    "hardware": { "test:SPL-40": 1, "test:SPL-STUD": 1 },
+    "bom_lines": [
+      { "item": "test:TS40", "qty": 2, "length_mm": 2000, "mass_kg": 2.986 },
+      { "item": "test:BRK-40", "qty": 1, "mass_kg": 0.15 }
+    ],
+    "bom_context": [
+      { "id": "b3", "item": "test:TS40" },
+      { "id": "b4", "item": "test:TS40" },
+      { "id": "b5", "item": "test:TS40" },
+      { "id": "p2", "item": "project:FLOOR" },
+      { "id": "p3", "item": "project:WALL" }
+    ],
+    "mass_kg": 3.136,
+    "bbox_mm": [440, 40, 1000],
+    "in_place": [{ "bar": "b3", "machining": ["Ø8.50 hole 500.00 mm from end a on face +x"] }],
+    "order": {
+      "status": "READY",
+      "lines": {
+        "test:TS40": { "low_minor": 25300, "likely_minor": 25300, "high_minor": 25300 },
+        "test:BRK-40": { "low_minor": 890, "likely_minor": 890, "high_minor": 890 }
+      },
+      "total": { "low_minor": 26190, "likely_minor": 26190, "high_minor": 26190 }
+    },
+    "warnings": [],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "nothing marked context",
+      "patch": {
+        "bars": { "b3": { "context": null }, "b4": { "context": null }, "b5": { "context": null } },
+        "parts": { "p2": { "context": null }, "p3": { "context": null } }
+      },
+      "expect": {
+        "lines": {
+          "test:TS40": [
+            {
+              "count": 1,
+              "cut_mm": 1200,
+              "machining": ["Ø8.50 hole 500.00 mm from end a on face +x"]
+            },
+            { "count": 2, "cut_mm": 1000, "machining": [] },
+            { "count": 2, "cut_mm": 500, "machining": ["tap M8 in end a, 20.00 deep"] }
+          ]
+        },
+        "hardware": { "test:SPL-40": 1, "test:SPL-STUD": 1 },
+        "bom_lines": [
+          { "item": "test:TS40", "qty": 5, "length_mm": 4200, "mass_kg": 6.271 },
+          { "item": "test:BRK-40", "qty": 1, "mass_kg": 0.15 },
+          { "item": "test:SPL-40", "qty": 1, "mass_kg": 0.05 },
+          { "item": "test:SPL-STUD", "qty": 1, "mass_kg": 0.015 },
+          { "item": "project:FLOOR", "qty": 1 },
+          { "item": "project:WALL", "qty": 1 }
+        ],
+        "bom_context": [],
+        "mass_kg": 6.486,
+        "bbox_mm": [3000, 3000, 2530],
+        "in_place": [],
+        "order": { "status": "BLOCKED" },
+        "warnings": [],
+        "errors": []
+      }
+    },
+    {
+      "name": "the floor not marked",
+      "patch": { "parts": { "p2": { "context": null } } },
+      "expect": {
+        "lines": {
+          "test:TS40": [{ "count": 2, "cut_mm": 1000, "machining": [] }]
+        },
+        "hardware": { "test:SPL-40": 1, "test:SPL-STUD": 1 },
+        "bom_lines": [
+          { "item": "test:TS40", "qty": 2, "length_mm": 2000, "mass_kg": 2.986 },
+          { "item": "test:BRK-40", "qty": 1, "mass_kg": 0.15 },
+          { "item": "project:FLOOR", "qty": 1 }
+        ],
+        "bom_context": [
+          { "id": "b3", "item": "test:TS40" },
+          { "id": "b4", "item": "test:TS40" },
+          { "id": "b5", "item": "test:TS40" },
+          { "id": "p3", "item": "project:WALL" }
+        ],
+        "mass_kg": 3.136,
+        "bbox_mm": [3000, 3000, 1030],
+        "in_place": [{ "bar": "b3", "machining": ["Ø8.50 hole 500.00 mm from end a on face +x"] }],
+        "order": { "status": "BLOCKED" },
+        "warnings": [],
+        "errors": []
+      }
+    },
+    {
+      "name": "the rail's first piece new, its second left in place",
+      "patch": { "bars": { "b4": { "context": null } } },
+      "expect": {
+        "lines": {
+          "test:TS40": [
+            { "count": 2, "cut_mm": 1000, "machining": [] },
+            { "count": 1, "cut_mm": 500, "machining": ["tap M8 in end a, 20.00 deep"] }
+          ]
+        },
+        "hardware": { "test:SPL-40": 1, "test:SPL-STUD": 1 },
+        "bom_lines": [
+          { "item": "test:TS40", "qty": 3, "length_mm": 2500, "mass_kg": 3.733 },
+          { "item": "test:BRK-40", "qty": 1, "mass_kg": 0.15 },
+          { "item": "test:SPL-40", "qty": 1, "mass_kg": 0.05 },
+          { "item": "test:SPL-STUD", "qty": 1, "mass_kg": 0.015 }
+        ],
+        "bom_context": [
+          { "id": "b3", "item": "test:TS40" },
+          { "id": "b5", "item": "test:TS40" },
+          { "id": "p2", "item": "project:FLOOR" },
+          { "id": "p3", "item": "project:WALL" }
+        ],
+        "mass_kg": 3.948,
+        "bbox_mm": [1420, 540, 1000],
+        "in_place": [
+          { "bar": "b3", "machining": ["Ø8.50 hole 500.00 mm from end a on face +x"] },
+          { "bar": "b5", "machining": ["tap M8 in end a, 20.00 deep"] }
+        ],
+        "order": { "status": "BLOCKED" },
+        "warnings": [],
+        "errors": []
+      }
+    },
+    {
+      "name": "the post b1 marked context: its bracket is still bought",
+      "patch": { "bars": { "b1": { "context": true } } },
+      "expect": {
+        "lines": {
+          "test:TS40": [{ "count": 1, "cut_mm": 1000, "machining": [] }]
+        },
+        "hardware": { "test:SPL-40": 1, "test:SPL-STUD": 1 },
+        "bom_lines": [
+          { "item": "test:TS40", "qty": 1, "length_mm": 1000, "mass_kg": 1.493 },
+          { "item": "test:BRK-40", "qty": 1, "mass_kg": 0.15 }
+        ],
+        "bom_context": [
+          { "id": "b1", "item": "test:TS40" },
+          { "id": "b3", "item": "test:TS40" },
+          { "id": "b4", "item": "test:TS40" },
+          { "id": "b5", "item": "test:TS40" },
+          { "id": "p2", "item": "project:FLOOR" },
+          { "id": "p3", "item": "project:WALL" }
+        ],
+        "mass_kg": 1.643,
+        "bbox_mm": [400, 40, 1000],
+        "in_place": [{ "bar": "b3", "machining": ["Ø8.50 hole 500.00 mm from end a on face +x"] }],
+        "order": {
+          "status": "READY",
+          "lines": {
+            "test:TS40": { "low_minor": 12650, "likely_minor": 12650, "high_minor": 12650 },
+            "test:BRK-40": { "low_minor": 890, "likely_minor": 890, "high_minor": 890 }
+          },
+          "total": { "low_minor": 13540, "likely_minor": 13540, "high_minor": 13540 }
+        },
+        "warnings": [],
+        "errors": []
+      }
+    }
+  ]
+}
