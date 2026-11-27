@@ -81,8 +81,9 @@ A14 (A6) (the outline row's menu, 500 typed, a click in the view) each make p2 o
 - **Golden values, fixtures' diagnostics**: none. Every fixture project's `alukit check --json`
   and `alukit problems --json` are the same before and after, on all 58 (**measured**). No derive
   code changed.
-- **The log's entries** gain `commands`: `commands.test.ts`'s `addFrame` step compares its entry
-  whole, and now with its command.
+- **The log's entries** gain `commands`: `commands.test.ts`'s `addFrame` step and `host.test.ts`'s
+  undo and redo compare entries whole, and now with each step's command (an undo or a redo names
+  its step instead, as before).
 - **`transform`'s and `mirror`'s answers** gain `stretched` and `onto`, each only when it applies,
   so every existing answer compared whole is unchanged; `mirror`'s words gain "on b2" only when a
   copy was re-homed.
