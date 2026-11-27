@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { cornersOf } from "../../src/ui/corners.ts";
 import type { Model } from "../../src/ui/model.ts";
+import { resolveTargets } from "../../src/ui/targets.ts";
 import { cli, derivedBarCount, openTab, raw, type Served, serve, waitDrawn } from "./helpers.ts";
 import { decodePng } from "./png.ts";
 
@@ -13,7 +14,7 @@ import { decodePng } from "./png.ts";
  * The UX redesign's view (docs/ux/plan.md §5.7, S3): hover tints what a click would select and
  * names it; a selection hidden behind another bar shows through (x-ray); a black profile's
  * edges stand out from the background; every corner has a marker by its state; Show frames its
- * targets and dims the rest; colour by item has a legend of the BOM's items; the gizmo turns the
+ * targets and dims the rest (a problem's, or an item's from the legend); colour by item has a legend of the BOM's items; the gizmo turns the
  * view.
  */
 
@@ -212,9 +213,12 @@ test("the section plane cuts the view along an axis, and nothing else", async ({
   await page.getByTestId("section-y").click();
   expect(await page.evaluate(() => window.__alukit?.section()?.axis)).toBe("y");
 
-  // Off again: the same picture as before, and the document never changed.
+  // Off again: the same picture as before, and the document never changed. The pointer leaves
+  // the viewport first, so no hover tint differs (§5.10).
   await page.getByTestId("section").click();
   await expect(page.getByTestId("section-tools")).toHaveCount(0);
+  await page.mouse.move(0, 0);
+  await expect.poll(() => page.evaluate(() => window.__alukit?.hovered())).toBeUndefined();
   expect(differing(whole, await viewportPng(page))).toBe(0);
   expect(await page.evaluate(() => window.__alukit?.rev())).toBe(0);
 });
@@ -352,6 +356,8 @@ test("a selected bar hidden behind another shows through it; its label gives its
   served = await serve("cart");
   await openTab(page, served, 0);
   const b9 = (await derivedBars(served.dir)).b9 as DerivedBar;
+  // The problem badges off: the warning on b9 tints its outline a yellow near the selection's.
+  await page.getByTestId("toggle-problems").click();
   // From the top, the base rail b9 lies under the top rail b5 and the flat bar on it.
   await page.getByTestId("projection").click();
   await page.getByTestId("view-top").click();
@@ -383,6 +389,8 @@ test("a black profile's edges stand out from the background, at 3:1 or more", as
   const r = await cli(["do", served.dir, JSON.stringify(black)]);
   expect(r.code, r.err).toBe(0);
   await waitDrawn(page, 1);
+  // The problem badges off, so the edge measured is the edge's colour, not a badge's tint.
+  await page.getByTestId("toggle-problems").click();
   // From the front, b9's underside is a silhouette against the background, between the slats.
   await page.getByTestId("projection").click();
   await page.getByTestId("view-front").click();
@@ -420,16 +428,23 @@ test("every corner has a marker by its state: a rectangle drawn unconnected has 
   const expected = cornersOf(JSON.parse(answer.body) as Model);
   expect(expected.map((c) => c.state)).toEqual(["open", "open", "open", "open"]);
   expect(await page.evaluate(() => window.__alukit?.corners())).toEqual(expected);
-  // Each is drawn: the open ring in the warning's yellow, at its corner.
+  // Each is drawn: the open ring in the warning's yellow, at its corner. (The problem badges
+  // off: the unconnected ends' warnings would tint the bars the same yellow.)
+  await page.getByTestId("toggle-problems").click();
   const yellow = ([r, g, b]: RGB) => r > 170 && g > 130 && b < 120;
-  for (const c of expected) {
-    const s = await screen(page, [...c.at] as V3);
-    const px = await canvasPixels(page, around(s, 7));
-    expect(px.filter(yellow).length, c.key).toBeGreaterThan(4);
-  }
+  const drawn = async () => {
+    const n: number[] = [];
+    for (const c of expected) {
+      const s = await screen(page, [...c.at] as V3);
+      n.push((await canvasPixels(page, around(s, 7))).filter(yellow).length);
+    }
+    return n;
+  };
+  for (const n of await drawn()) expect(n).toBeGreaterThan(4);
   // Off, none is drawn; on again, hovering one names it.
   await page.getByTestId("toggle-joints").click();
   expect((await page.evaluate(() => window.__alukit?.stats()))?.joints.open).toBe(0);
+  expect(await drawn()).toEqual([0, 0, 0, 0]);
   await page.getByTestId("toggle-joints").click();
   const s = await screen(page, [1000, 600, 0]);
   await page.mouse.move(s[0], s[1]);
@@ -437,6 +452,58 @@ test("every corner has a marker by its state: a rectangle drawn unconnected has 
     .poll(() => page.evaluate(() => window.__alukit?.hovered()))
     .toEqual(["corner:1000,600,0"]);
   await expect(page.getByTestId("hover-label")).toContainText("open");
+});
+
+test("Show on a problem frames its targets, keeping the direction, and dims the rest", async ({
+  page,
+}) => {
+  served = await serve("cart");
+  await openTab(page, served, 0);
+  // The order's reason O1 is about c35, the rail's screws: Show from its row.
+  const answer = await raw(served.port, "/api/model", {
+    headers: { authorization: `Bearer ${served.token}` },
+  });
+  const box = resolveTargets(JSON.parse(answer.body) as Model, ["c35"]).box as [V3, V3];
+  const before = await page.evaluate(() => window.__alukit?.camera());
+  await page.getByRole("tab", { name: "Order & costs" }).click();
+  await page
+    .getByTestId("order")
+    .locator('li.problem[data-problem*="O1"]')
+    .first()
+    .getByTestId("show")
+    .click();
+  await expect(page.getByTestId("callout")).toBeVisible();
+  await expect(page.getByTestId("callout")).toContainText("Others dimmed");
+  await settle(page);
+  const after = await page.evaluate(() => window.__alukit?.camera());
+  for (let i = 0; i < 3; i++) {
+    expect(after?.target[i]).toBeGreaterThanOrEqual((box[0][i] as number) - 1);
+    expect(after?.target[i]).toBeLessThanOrEqual((box[1][i] as number) + 1);
+  }
+  const dir = (c: typeof before) => {
+    const d = [0, 1, 2].map((i) => (c?.position[i] as number) - (c?.target[i] as number));
+    const n = Math.hypot(...d);
+    return d.map((x) => x / n);
+  };
+  for (let i = 0; i < 3; i++) expect(dir(after)[i]).toBeCloseTo(dir(before)[i] as number, 3);
+  // Ghosting: with the pulse over, leaving Show (Esc) changes only the dimmed bodies, and each
+  // pixel that changes gets brighter.
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(1200);
+  const all = { x0: 0, y0: 0, x1: 4000, y1: 4000 };
+  const dim = await canvasPixels(page, all);
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("callout")).toHaveCount(0);
+  const lit = await canvasPixels(page, all);
+  let brighter = 0;
+  let darker = 0;
+  for (let i = 0; i < lit.length; i++) {
+    const d = mean([lit[i] as RGB]) - mean([dim[i] as RGB]);
+    if (d > 8) brighter++;
+    else if (d < -8) darker++;
+  }
+  expect(brighter).toBeGreaterThan(2000);
+  expect(darker).toBeLessThan(brighter / 50);
 });
 
 test("colour by item lists the BOM's items; an entry shows what uses it, the rest dimmed", async ({
