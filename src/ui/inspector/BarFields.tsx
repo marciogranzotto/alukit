@@ -11,6 +11,7 @@ import { optionFields } from "../options.ts";
 import { pointParam } from "../records/Params.tsx";
 import { busy } from "../store.ts";
 import { typedValue } from "../tools/typed.ts";
+import { useReplaceAsked } from "./actions.ts";
 import { CommitInput, Row, RowErrors, readOnly, useSend, WordsRow } from "./Fields.tsx";
 import { lengthMode, lengthPatch } from "./length.ts";
 import { barsLike, chosenOption, replaceBatch } from "./replace.ts";
@@ -127,6 +128,7 @@ function ProfileRow({ m, id }: { m: Model; id: string }) {
   const item = m.derived.bars[id]?.item;
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [id]);
+  useReplaceAsked([id], () => setOpen(true));
   const name = item ? m.items[item]?.name : undefined;
   return (
     <>

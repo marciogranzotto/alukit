@@ -1656,3 +1656,83 @@
   gap: var(--sp-2) var(--sp-5);
   align-items: center;
 }
+
+/* The context menu (editing audit E0.4): at the pointer, over everything, in the popover's look */
+.context-menu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  max-width: 340px;
+  padding: var(--sp-2);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-float);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-1);
+}
+
+.context-menu:focus {
+  outline: none;
+}
+
+.context-menu-head {
+  padding: var(--sp-2) var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+
+.context-menu-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--sp-4);
+  width: 100%;
+  min-height: 28px;
+  padding: var(--sp-1) var(--sp-4);
+  background: none;
+  border: none;
+  border-radius: var(--radius-control);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-menu-item:focus {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+  background: var(--hover-wash);
+}
+
+.context-menu-item .keys {
+  margin-left: auto;
+}
+
+.context-menu-item[aria-disabled="true"] {
+  color: var(--text-3);
+  cursor: default;
+}
+
+.context-menu-item .why {
+  flex-basis: 100%;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--text-3);
+}
+
+.context-menu-sep {
+  width: 100%;
+  margin: var(--sp-2) 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+.context-menu-empty {
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--text-3);
+}

@@ -2,6 +2,7 @@ import { effect, signal } from "@preact/signals";
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 import type { V3 } from "../../mesh/model.ts";
+import type { GizmoSpec } from "../../viewer/gizmo.ts";
 import {
   type CameraState,
   createViewer,
@@ -89,8 +90,13 @@ declare module "../hook.ts" {
     corners(): readonly Corner[];
     /** The camera, in world coordinates. */
     camera(): CameraState | undefined;
-    /** What drawing has cost so far: frames, CPU ms in render calls and hover picks. */
+    /**
+     * What drawing has cost so far (frames, CPU ms in render calls and hover picks), and the
+     * frame that first drew the model given last.
+     */
     frames(): RenderStats | undefined;
+    /** The gizmo the view shows (src/viewer/gizmo.ts): axes at a point, or handles. */
+    gizmo(): GizmoSpec | undefined;
   }
 }
 
@@ -104,6 +110,7 @@ extendHook({
   corners: () => drawnCorners.value,
   camera: () => viewer.value?.camera(),
   frames: () => viewer.value?.renderStats(),
+  gizmo: () => viewer.value?.gizmo(),
 });
 
 /** Esc first leaves Show (and its dimming), before it clears the selection. */

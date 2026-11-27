@@ -2,9 +2,10 @@ import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { scratchFixtures } from "#core/testing.ts";
 import type { DryRun } from "../client/dryrun.ts";
+import { transformBatch } from "../edit/batches.ts";
 import type { Model } from "../model.ts";
 import { hostOf, viewOf } from "../testing.ts";
-import { moveCommands, moveSet, moveWords, slideAxis, typedOffset } from "./moves.ts";
+import { moveSet, moveWords, slideAxis, typedOffset } from "./moves.ts";
 
 /**
  * The Move tool's rules (docs/ux/drag-ends-decisions.md, "The Move tool") on tests/fixtures/ux/move:
@@ -72,7 +73,7 @@ describe("the Move tool", () => {
   it("is one step: transform, then autoConnect at each moved bar's end; Alt detaches", () => {
     const set = moveSet(m, ["b3"]);
     if ("why" in set) throw new Error(set.why);
-    expect(moveCommands(set, [0, -280, 0], true, "x")).toEqual([
+    expect(transformBatch(set, [0, -280, 0], true, "x")).toEqual([
       { cmd: "transform", args: { ids: ["b3"], by: [0, -280, 0], joined: "detach" } },
       { cmd: "autoConnect", args: { end: "b3.a", optional: true, prefer: "x" } },
       { cmd: "autoConnect", args: { end: "b3.b", optional: true, prefer: "x" } },
@@ -84,16 +85,16 @@ describe("the Move tool", () => {
     try {
       const set = moveSet(m, ["b1"]);
       if ("why" in set) throw new Error(set.why);
-      const follow = await h.dry(moveCommands(set, [0, -100, 0], false, undefined));
+      const follow = await h.dry(transformBatch(set, [0, -100, 0], false, undefined));
       if (!follow.ok) throw new Error(follow.why);
       expect(moveWords(follow as DryRun, false).text).toBe("b2.a, p1 follow · cut b2 580 → 680");
       const two = moveSet(m, ["b2"]);
       if ("why" in two) throw new Error(two.why);
-      const up = await h.dry(moveCommands(two, [0, 0, 100], false, undefined));
+      const up = await h.dry(transformBatch(two, [0, 0, 100], false, undefined));
       expect(moveWords(up as DryRun, false).text).toMatch(
         /^this move would break a joint: .* · Alt: detach$/,
       );
-      const freed = await h.dry(moveCommands(two, [0, 0, 100], true, undefined));
+      const freed = await h.dry(transformBatch(two, [0, 0, 100], true, undefined));
       // b1 no longer covers b2's end at the corner, so it loses its 20 too.
       expect(moveWords(freed as DryRun, true).text).toBe(
         "frees c1 · cut b1 1020 → 1000, b2 580 → 600",

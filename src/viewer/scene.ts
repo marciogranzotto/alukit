@@ -10,6 +10,7 @@ import {
   FrontSide,
   Group,
   InstancedMesh,
+  type Intersection,
   LineBasicMaterial,
   LineLoop,
   LineSegments,
@@ -63,7 +64,17 @@ import { CORNER_PREFIX, MarkerLayer, type MarkerPoint } from "./markers.ts";
 
 export { CORNER_PREFIX };
 
-import { type HandlesState, Overlay, type OverlayState } from "./overlay.ts";
+import {
+  Gizmo,
+  type GizmoDrag,
+  type GizmoPart,
+  type GizmoSpec,
+  gizmoDrag,
+  gizmoPartAt,
+  mmPerPx,
+} from "./gizmo.ts";
+import { Overlay, type OverlayState } from "./overlay.ts";
+import { hitOn } from "./pick.ts";
 import type { P2, Ray } from "./snap.ts";
 import type { Hex, ViewTheme } from "./theme.ts";
 import { type DocView, fromThree, isStandard, viewFrom } from "./views.ts";
@@ -107,6 +118,11 @@ export interface RenderStats {
   renderMs: number;
   hovers: number;
   hoverMs: number;
+  /**
+   * The frame that first drew the model given last, 0 until one has: the model's programs are
+   * linked by then. (A revision is the app's as soon as `setModel` takes it, before it is drawn.)
+   */
+  modelFrame: number;
 }
 
 export type SelectMode = "replace" | "toggle" | "add";
@@ -163,6 +179,20 @@ export interface Grab {
   busy(): boolean;
 }
 
+/**
+ * What is under the pointer (docs/ux/editing-audit.md §7.3): the entity, where its body was hit,
+ * in world coordinates, the outward normal there, and on a bar the face (a side of its placed
+ * box, or an end, `a` or `b`) and the station along it, both found from the derived model, as
+ * snapping finds them.
+ */
+export interface Hit {
+  id: string;
+  p: V3;
+  normal: V3;
+  face?: "+x" | "-x" | "+y" | "-y" | "a" | "b";
+  station?: { bar: string; at_mm: number };
+}
+
 /** A corner as the view draws it (D-UX-10; src/ui/corners.ts derives the rest of it). */
 export interface CornerMarker {
   key: string;
@@ -209,14 +239,38 @@ export interface Viewer {
   setOverlay(state: OverlayState): void;
   /** The press the app takes as a drag, before the camera; undefined: none. */
   setGrab(g: Grab | undefined): void;
-  /** Grips over the model, through every body (end handles); undefined takes them away. */
-  setHandles(h: HandlesState | undefined): void;
+  /**
+   * The gizmo (src/viewer/gizmo.ts): axes at a point, or grips (a selected bar's end handles),
+   * drawn over every body, built once; undefined takes it away. One at a time.
+   */
+  setGizmo(spec: GizmoSpec | undefined): void;
+  /** The gizmo shown now. */
+  gizmo(): GizmoSpec | undefined;
+  /**
+   * Calls back while an axes gizmo's part is dragged: at the press (`start`), as the pointer
+   * moves, and as it comes up (`end`), with how far along the part and, on a ring, how far
+   * round. A press on a part is the gizmo's, before a grab, a tool or the camera. Returns the
+   * undo. (Handles are dragged through `setGrab`.)
+   */
+  onGizmoDrag(cb: (e: GizmoDrag) => void): () => void;
   /** The pointer's ray in world coordinates (Z up, mm), for analytic snapping (§8). */
   ray(clientX: number, clientY: number): Ray;
   /** A world point's position on the page, in CSS pixels; undefined behind the camera. */
   project(p: V3): P2 | undefined;
-  /** The entity under the pointer, and where its body was hit, in world coordinates. */
-  pickAt(clientX: number, clientY: number): { id: string; p: V3 } | undefined;
+  /**
+   * The entity under the pointer, where its body was hit, in world coordinates, and on a bar the
+   * face and station there (`Hit`). What `skip` holds (hidden entities, by id) is passed over:
+   * the ray goes on to what is behind it.
+   */
+  pickAt(clientX: number, clientY: number, skip?: ReadonlySet<string>): Hit | undefined;
+  /**
+   * Calls back on a right-click that did not move (4 px or less, as a click), with what is under
+   * the pointer (a joint marker as `corner:<key>`, else a body) and where; a right-drag still
+   * pans. Returns the undo.
+   */
+  onContextMenu(cb: (hit: Hit | undefined, client: readonly [number, number]) => void): () => void;
+  /** The entities hidden from the view (E-UX-9). A no-op until E2.4 builds hiding. */
+  setHidden(ids: ReadonlySet<string>): void;
   /**
    * Looks from a standard view (iso, top, front, right or side, left, back, bottom), fitted to
    * the model, or from one of the document's named views (§4.2). False for an unknown name.
@@ -304,6 +358,17 @@ function geometryOf(d: MeshData): BufferGeometry {
   return g;
 }
 
+/**
+ * A geometry with no points yet, for a lasting object filled later. It has its position
+ * attribute from the start: three keys a program by whether there is one, so the program the
+ * viewer links before its first frame is the one the object draws with.
+ */
+function emptyGeometry(): BufferGeometry {
+  const g = new BufferGeometry();
+  g.setAttribute("position", new Float32BufferAttribute([], 3));
+  return g;
+}
+
 /** A body's material: Lambert (cheapest on SwiftShader), pushed back so its edges always win. */
 function bodyMaterial(opts: ConstructorParameters<typeof MeshLambertMaterial>[0] = {}) {
   return new MeshLambertMaterial({
@@ -359,6 +424,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   const glyphs = new Glyphs(theme.overlay.ring);
   const overlay = new Overlay(theme, glyphs, dpr);
   world.add(overlay.group);
+  const gizmo = new Gizmo(theme, glyphs, dpr);
+  world.add(gizmo.group);
   const joints = new MarkerLayer("joints", glyphs, JOINT_PX, dpr, 900);
   // Joined corners are drawn while hovered or selected, until the view asks for every one (m8).
   joints.setQuiet(JOINED_QUIET);
@@ -463,7 +530,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     depthWrite: false,
     fog: false,
   });
-  const xray = new LineSegments(new BufferGeometry(), xrayMaterial);
+  const xray = new LineSegments(emptyGeometry(), xrayMaterial);
   xray.name = "selection x-ray";
   xray.renderOrder = 800;
   xray.raycast = () => {};
@@ -501,7 +568,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   let fitted = false;
   /** The model's bounding sphere's radius (mm), cached per revision for the fog. */
   let radius = 1000;
-  const stats: RenderStats = { frames: 0, renderMs: 0, hovers: 0, hoverMs: 0 };
+  const stats: RenderStats = { frames: 0, renderMs: 0, hovers: 0, hoverMs: 0, modelFrame: 0 };
 
   const applyThemeMaterials = () => {
     capMaterial.color.setRGB(...theme.cut);
@@ -524,7 +591,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     opacity: 0.8,
     fog: false,
   });
-  const sectionLine = new LineLoop(new BufferGeometry(), sectionMaterial);
+  const sectionLine = new LineLoop(emptyGeometry(), sectionMaterial);
   sectionLine.name = "section outline";
   sectionLine.raycast = () => {};
   sectionLine.visible = false;
@@ -603,6 +670,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     } else release(owned);
     owned = [];
     ownedDrawn = false;
+    stats.modelFrame = 0;
     instanced = [];
     single = [];
     outline = undefined;
@@ -1177,7 +1245,20 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     raycaster.setFromCamera(ndc, camera);
   }
 
-  function pickAt(clientX: number, clientY: number): { id: string; p: V3 } | undefined {
+  const instanceMatrix = new Matrix4();
+  /** A raycast's face normal in the world (Z up): through the instance's and the object's matrix. */
+  function worldNormal(h: Intersection): V3 {
+    const n = h.face?.normal.clone() ?? new Vector3(0, 1, 0);
+    const m = h.object.matrixWorld.clone();
+    if (h.object instanceof InstancedMesh && h.instanceId !== undefined) {
+      h.object.getMatrixAt(h.instanceId, instanceMatrix);
+      m.multiply(instanceMatrix);
+    }
+    n.transformDirection(m);
+    return fromThree([n.x, n.y, n.z]);
+  }
+
+  function pickAt(clientX: number, clientY: number, skip?: ReadonlySet<string>): Hit | undefined {
     castFrom(clientX, clientY);
     const hits = raycaster.intersectObjects(content.children as Object3D[], false);
     for (const h of hits) {
@@ -1186,7 +1267,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       const g = instanced.find((x) => x.mesh === h.object);
       const s = single.find((x) => x.mesh === h.object);
       const id = g && h.instanceId !== undefined ? g.ids[h.instanceId] : s?.id;
-      if (id) return { id, p: fromThree([h.point.x, h.point.y, h.point.z]) };
+      if (!id || skip?.has(id)) continue;
+      const r = raycaster.ray;
+      const ray: Ray = {
+        o: fromThree([r.origin.x, r.origin.y, r.origin.z]),
+        d: fromThree([r.direction.x, r.direction.y, r.direction.z]),
+      };
+      const p = fromThree([h.point.x, h.point.y, h.point.z]);
+      return hitOn(model?.bars ?? {}, id, ray, p, worldNormal(h));
     }
     return undefined;
   }
@@ -1197,6 +1285,17 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     if (corner !== undefined) return `${CORNER_PREFIX}${corner}`;
     return pickAt(clientX, clientY)?.id;
   }
+
+  /** What a right-click is on: a joint marker, facing the camera, else a body. */
+  function hitUnder(clientX: number, clientY: number): Hit | undefined {
+    const corner = joints.pickAt(clientX, clientY, project, hiddenWorld);
+    const at = corner !== undefined ? corners.find((c) => c.key === corner)?.at : undefined;
+    if (corner === undefined || !at) return pickAt(clientX, clientY);
+    const d = ray(clientX, clientY).d;
+    return { id: `${CORNER_PREFIX}${corner}`, p: at, normal: [-d[0], -d[1], -d[2]] };
+  }
+
+  const menuCbs = new Set<(hit: Hit | undefined, client: readonly [number, number]) => void>();
 
   function ray(clientX: number, clientY: number): Ray {
     castFrom(clientX, clientY);
@@ -1262,9 +1361,63 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     hoverId = id;
     hoverCb(id);
   };
+  /** A right press, until it comes up: a click there opens the context menu, a drag pans. */
+  let rightDown: { x: number; y: number } | undefined;
+  /** An axes gizmo's part being dragged: which, through which point, and the press's ray. */
+  let gizmoDragging: { part: GizmoPart; at: V3; from: Ray } | undefined;
+  const gizmoCbs = new Set<(e: GizmoDrag) => void>();
+  /** Millimetres per CSS pixel at a world point (Z up), as the camera sees it now. */
+  function mmPerPxAt(at: V3): number {
+    if (camera === ortho) return mmPerPx({ perspective: false, zoom: ortho.zoom }, at, 1);
+    const p = new Vector3(...at).applyMatrix4(world.matrixWorld);
+    const f = persp.getWorldDirection(new Vector3());
+    return mmPerPx(
+      {
+        perspective: true,
+        eye: [persp.position.x, persp.position.y, persp.position.z],
+        forward: [f.x, f.y, f.z],
+        fovDeg: persp.fov,
+      },
+      [p.x, p.y, p.z],
+      container.clientHeight,
+    );
+  }
+  /** The axes gizmo's part under the pointer, if one is shown there. */
+  function gizmoPartUnder(clientX: number, clientY: number): GizmoPart | undefined {
+    const g = gizmo.shown();
+    if (!g || !("parts" in g)) return undefined;
+    return gizmoPartAt(g, {
+      at: [clientX, clientY],
+      ray: ray(clientX, clientY),
+      project,
+      mmPerPx: mmPerPxAt(g.at),
+    });
+  }
+  function emitGizmo(phase: GizmoDrag["phase"], e: { clientX: number; clientY: number }): void {
+    const d = gizmoDragging;
+    if (!d) return;
+    const r = gizmoDrag(d.part, d.at, d.from, ray(e.clientX, e.clientY));
+    for (const cb of gizmoCbs) cb({ part: d.part, phase, ...r });
+  }
   const el = renderer.domElement;
   const onDown = (e: PointerEvent) => {
+    if (e.button === 2) {
+      rightDown = { x: e.clientX, y: e.clientY };
+      return;
+    }
     if (e.button !== 0) return;
+    // A gizmo's part under the pointer is what the press is on, before anything else.
+    const part = gizmoPartUnder(e.clientX, e.clientY);
+    const shown = gizmo.shown();
+    if (part && shown && "parts" in shown) {
+      gizmoDragging = { part, at: shown.at, from: ray(e.clientX, e.clientY) };
+      down = undefined;
+      controls.enabled = false;
+      el.setPointerCapture(e.pointerId);
+      emitGizmo("start", e);
+      invalidate();
+      return;
+    }
     // A drag the app takes (a handle, Move) goes first: the camera lets go of this press.
     if (grab?.press(e)) {
       grabbing = true;
@@ -1285,6 +1438,13 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     }
   };
   const onMove = (e: PointerEvent) => {
+    if (gizmoDragging) {
+      emitGizmo("move", e);
+      invalidate();
+      return;
+    }
+    // The part a press would take is drawn lit.
+    if (e.buttons === 0 && gizmo.setHover(gizmoPartUnder(e.clientX, e.clientY))) invalidate();
     if (grabbing) {
       grab?.move(e, true);
       invalidate();
@@ -1318,6 +1478,24 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     rectEl.style.height = `${Math.abs(e.clientY - down.y)}px`;
   };
   const onUp = (e: PointerEvent) => {
+    if (e.button === 2) {
+      const r = rightDown;
+      rightDown = undefined;
+      // The same click threshold as a left click (E-UX-2): a right-drag panned the camera.
+      if (r && Math.hypot(e.clientX - r.x, e.clientY - r.y) <= 4 && menuCbs.size > 0) {
+        const hit = hitUnder(e.clientX, e.clientY);
+        for (const cb of menuCbs) cb(hit, [e.clientX, e.clientY]);
+      }
+      return;
+    }
+    if (gizmoDragging) {
+      emitGizmo("end", e);
+      gizmoDragging = undefined;
+      controls.enabled = true;
+      if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+      invalidate();
+      return;
+    }
     if (grabbing) {
       grabbing = false;
       controls.enabled = true;
@@ -1472,6 +1650,9 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     }
     detailMaterial.opacity = opacity;
     if (detail) detail.lines.visible = opacity > 0.004;
+    // The axes keep their size on the screen wherever the camera goes.
+    const g = gizmo.shown();
+    if (g && "parts" in g) gizmo.fit(mmPerPxAt(g.at));
   }
 
   const renderCbs = new Set<() => void>();
@@ -1482,6 +1663,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     stats.renderMs += performance.now() - t0;
     stats.frames++;
     // The model drawn has taken its programs; the generation it replaced can go.
+    if (!ownedDrawn && model) stats.modelFrame = stats.frames;
     ownedDrawn = true;
     if (retired.length > 0) {
       release(retired);
@@ -1519,6 +1701,12 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     }
     frame = requestAnimationFrame(tick);
   };
+  // Every lasting object is in the scene now, shown or not: link their programs before the first
+  // frame. three's compile prepares the material of every object, hidden ones too (it gathers
+  // only the lights from the visible ones), so what is first shown later (the gizmo's handles or
+  // axes, the selection's x-ray, the section's outline) draws with a program it has: selecting a
+  // bar links nothing (E-UX-19). The model's materials link on the frame that first draws it.
+  renderer.compile(scene, camera);
   frame = requestAnimationFrame(tick);
 
   return {
@@ -1567,13 +1755,26 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     setGrab(g) {
       grab = g;
     },
-    setHandles(h) {
-      overlay.setHandles(h);
+    setGizmo(spec) {
+      gizmo.set(spec);
+      if (!spec || !("parts" in spec)) gizmoDragging = undefined;
       invalidate();
+    },
+    gizmo: () => gizmo.shown(),
+    onGizmoDrag(cb) {
+      gizmoCbs.add(cb);
+      return () => gizmoCbs.delete(cb);
     },
     ray,
     project,
     pickAt,
+    onContextMenu(cb) {
+      menuCbs.add(cb);
+      return () => menuCbs.delete(cb);
+    },
+    setHidden() {
+      // E2.4 draws hidden bodies hidden, and Select's own pick passes them over.
+    },
     setView,
     setProjection,
     projection: () => (camera === ortho ? "orthographic" : "perspective"),
@@ -1652,6 +1853,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       look.setTheme(t);
       ground.setTheme(t);
       overlay.setTheme(t);
+      gizmo.setTheme(t);
       glyphs.setRing(t.overlay.ring);
       sectionMaterial.color.setHex(t.tool);
       applyThemeMaterials();
@@ -1700,6 +1902,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       release(owned);
       release(retired);
       overlay.dispose();
+      gizmo.dispose();
       joints.dispose();
       badges.dispose();
       ground.dispose();

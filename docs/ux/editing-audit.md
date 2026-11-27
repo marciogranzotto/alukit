@@ -670,38 +670,46 @@ e2e passes with no assertion changed.
 
 ### 7.3 The interfaces between streams
 
-E0 creates each of these. Afterwards only its owner changes it, and only by adding.
+E0 creates each of these. Afterwards only its owner changes it, and only by adding. *As built
+(2026-11-27): where E0 or E1 built a member differently from this sketch, the line says so and
+names the decision (e0 n, [e0-decisions.md](e0-decisions.md); e1 n, [e1-decisions.md](e1-decisions.md));
+[contracts.md](contracts.md), "Editing round: E0", lists every interface E0 built.*
 
 ```ts
 // src/ui/actions/registry.ts (owner E2)
-interface ActionContext { m: Model; selection: ReadonlySet<string>; hit?: Hit; from: "view" | "outline" | "key" | "button" }
+interface ActionContext { m: Model; selection: ReadonlySet<string>; hit?: Hit; ref?: string; from: "view" | "outline" | "key" | "button" } // ref added (e0 4)
 interface Action {
   id: string; title: string | ((c: ActionContext) => string);
   group: "select" | "view" | "edit" | "transform" | "bar" | "connection" | "pattern" | "part";
-  keys?: readonly string[];                       // "mod+d", "h", "shift+h"
+  keys?: readonly string[];                       // "mod+d", "h", "shift+h": exactly these modifiers (e0 5)
+  scope?: KeyScope; help?: string; applies?(c: ActionContext): boolean; // added (e0 4)
   when(c: ActionContext): true | string;          // true, or why it cannot run (shown greyed)
   run(c: ActionContext): void | Promise<void>;
 }
-registerAction(a: Action): () => void;
+registerAction(a: Action): () => void;            // a key another action holds in the scope throws (e0 7)
 actionsFor(c: ActionContext): { action: Action; enabled: true | string }[];
+runAction(id: string, c: ActionContext): true | string;
 
 // src/viewer/scene.ts (owner E2), added to Viewer
-interface Hit { id: string; point: V3; normal: V3; face?: "+x" | "-x" | "+y" | "-y" | "a" | "b"; station?: { bar: string; at_mm: number } }
-pickAt(x: number, y: number): Hit | undefined;
-onContextMenu(cb: (hit: Hit | undefined, client: [number, number]) => void): () => void;
+interface Hit { id: string; p: V3; normal: V3; face?: "+x" | "-x" | "+y" | "-y" | "a" | "b"; station?: { bar: string; at_mm: number } } // p, the built pick's name, not point (e0 12)
+pickAt(x: number, y: number, skip?: ReadonlySet<string>): Hit | undefined; // skip added (e0 14)
+onContextMenu(cb: (hit: Hit | undefined, client: readonly [number, number]) => void): () => void;
 setHidden(ids: ReadonlySet<string>): void;
 
 // src/viewer/gizmo.ts (owner E3)
 type GizmoSpec = { at: V3; parts: ("move-x" | "move-y" | "move-z" | "ring-x" | "ring-y" | "ring-z" | "plane-xy" | "plane-xz" | "plane-yz")[] }
-  | { handles: { key: string; at: V3; axis?: V3 }[] };
+  | { handles: { key: string; at: V3; axis?: V3; locked?: boolean }[]; hot?: string }; // locked, hot added (e0 17)
 setGizmo(spec: GizmoSpec | undefined): void;
-onGizmoDrag(cb: (e: { part: string; phase: "start" | "move" | "end"; delta: V3; angle?: number }) => void): () => void;
+gizmo(): GizmoSpec | undefined;                   // added (e0 17)
+onGizmoDrag(cb: (e: { part: GizmoPart; phase: "start" | "move" | "end"; delta: V3; angle?: number }) => void): () => void;
 
 // src/ui/focus.ts (owner E2)
 hidden: Signal<ReadonlySet<string>>; isolated: Signal<ReadonlySet<string> | undefined>;
 
-// src/core/commands/transform.ts (owner E1); E0 freezes the arguments
-{ ids: string[]; by?: [Expr, Expr, Expr]; rotate?: { axis: "x" | "y" | "z"; deg: Expr; about: [Expr, Expr, Expr] }; joined?: "follow" | "detach" }
+// src/core/commands/transform.ts (owner E1), as built: deg and about are numbers, and exactly
+// one of by and rotate is given (a turn writes numbers but at quarter turns, so an expression
+// angle would have nothing to keep)
+{ ids: string[]; by?: [Expr, Expr, Expr]; rotate?: { axis: "x" | "y" | "z"; deg: number; about: [number, number, number] }; joined?: "follow" | "detach" }
 
 // src/core/query.ts (owner E1): pure, used by the app's selection verbs and `alukit query`
 similarTo(doc, derived, id, by: "item" | "tag"): string[];
@@ -718,7 +726,11 @@ connectedTo(doc, ids, opts?: { transitive?: boolean }): string[]; // as built: n
 | `src/ui/inspector/{BarFields,length,words,replace}.ts(x)`, new `inspector/{Ends,Holes,NodeFields,ManyFields}.tsx`, `src/ui/tools/wire/ends.ts` | **E4** |
 | `src/ui/inspector/{OtherFields,CornerInspector,arrangements}.ts(x)`, new `inspector/{FaceEdit,PatternFields}.tsx`, `src/ui/tools/ToolForm.tsx` (the face form, extracted for reuse), `src/ui/tools/commands.ts` (D5) | **E5** |
 | `src/ui/inspector/Inspector.tsx` | E4 (E5 adds its rows through `PartFields` and `ConnectionFields`) |
-| `docs/design.md` (§6, §8), the decision notes | the coordinator folds them in; each stream writes `docs/notes/ux-eN-decisions.md` |
+| `docs/design.md` (§6, §8), the decision notes | the coordinator folds them in; each stream writes `docs/ux/eN-decisions.md` |
+
+E0 split `wiring.ts` and added modules this table does not name; [contracts.md](contracts.md),
+"Editing round: E0", gives the table with them (the tools' modules by the stream whose tools they
+are, the drag machinery and the batches to E3, the end rules to E4).
 
 Each stream registers its own actions and keys from its own files. A stream that breaks another's
 spec makes the smallest selector fix in that spec, in the same merge, and names it. A semantic

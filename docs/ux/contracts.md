@@ -387,7 +387,7 @@ adds, except the move marked **moved**.*
   Select; a taken press turns the camera off and captures the pointer until the button comes up,
   and makes no click. `setHandles(h)` with `HandlesState` (`src/viewer/overlay.ts`): grips drawn
   over every body, draggable or locked, one hot; three lasting materials, so no state links a
-  program.
+  program. *(Moved in E0: the grips are the gizmo's, `setGizmo({ handles })`, `src/viewer/gizmo.ts`.)*
 - **Moved: the joint preview** is `src/ui/tools/preview.ts` (`createPreviewer(viewer, live, rule)`,
   `PreviewAsk`, `PAUSE_MS`, `SNAP_MS`), shared by the draw tool, the end handles and the length
   label; the draw tool's wiring no longer keeps its own. `jointWords` reads a moved bar's own cut
@@ -396,7 +396,7 @@ adds, except the move marked **moved**.*
   signals `gesture` (a drag on: its title, prompt, reading and snap) and `labelEdit` (the bar and
   end the label's field moves) in `tools/state.ts`. The command bar shows a drag's bar whatever the
   tool (`data-tool="drag-end"`), its `ValueField` taking a `reading` and a `placeholder`.
-- **The end handles** (`src/ui/tools/handles.ts`, `ends.ts`, `LengthEdit.tsx`): `createEndHandles`,
+- **The end handles** (`src/ui/tools/handles.ts`, since E0 `wire/ends.ts`; `ends.ts`, `LengthEdit.tsx`): `createEndHandles`,
   made by the tools' wiring and given the viewer's grab in Select; `endNote` (what holds a locked
   end, by its handle, `EndNoteView`, which the viewport renders); `LengthLabel`, which the
   viewport's `SelectionLabel` renders in place of the label's text.
@@ -414,13 +414,14 @@ tool"). Each adds.*
 
 - **Tools** (`src/ui/tools/state.ts`): `move` in `TOOLS`, its key `D` in `TOOL_KEYS`, "Move" in
   `TOOL_NAMES`, and its prompt; the icon `move` (`src/ui/icons/Icons.tsx`).
-- **The Move tool** (`src/ui/tools/mover.ts`): `createMoveTool(viewer, gestures, { snap })` gives
+- **The Move tool** (`src/ui/tools/mover.ts`, since E0 `wire/move.ts`): `createMoveTool(viewer, gestures, { snap })` gives
   `{ handler, grab, startFromKeyboard, dispose }`; the tools' wiring makes it once, hands the
   viewer its `grab` while Move is the tool, and routes a value key to `startFromKeyboard` when a
   selection waits and no drag is on. Its gesture is a `GestureSpec` of kind `"move"` on
   `drag.ts`, the end handles' machinery; the gesture bar shows it (`data-tool="move"`).
 - **Its rules** (`src/ui/tools/moves.ts`, pure): `moveSet`, `slideAxis`, `typedOffset`,
-  `offsetOf`, `moveCommands`, `moveWords`, `MOVE_LOCKS`, `UNIT`.
+  `offsetOf`, `moveCommands` (since E0 `transformBatch`, `src/ui/edit/batches.ts`), `moveWords`,
+  `MOVE_LOCKS`, `UNIT`.
 - **The overlay** (`src/viewer/overlay.ts`, S3's): `OverlayState.ghosts`, several bars drawn as the
   ghost is, on its one material, from a pool of meshes and a geometry per section, both kept.
 - **Core**: `src/core/commands/transform.ts` (`transform`, `TransformInfo`); `move.ts` exports
@@ -458,3 +459,45 @@ everything below: E1; other streams add to it only.*
   origin }` for a placed part or `{ item, qty }` for a counted one, by id; always present, `{}` when
   none. `explodePattern`'s `info.copies` maps each copy (`b26@2`) to the entity it became (e1 16,
   17).
+
+## Editing round: E0
+
+*Stream E0 of the [editing audit](editing-audit.md) (§7.2) built the shared interfaces the editing
+streams E1 to E5 build on ([e0-decisions.md](e0-decisions.md)). Each adds, except the moves
+marked **moved**. After E0, only an interface's owner changes it, and only by adding; a stream
+registers its own actions and keys from its own files.*
+
+### The interfaces
+
+| Interface | File | Owner | What it is |
+|---|---|---|---|
+| The tools' router | `src/ui/tools/wiring.ts` | E3 | `createTools`, `connectTools`, `toolFieldKey`, as before; it routes the pointer, the gesture and tool keys and the command bar's field to the active tool's `Wire`, and nothing else |
+| A tool's wiring | `src/ui/tools/wire/common.ts` | E3 | `WireContext` (the viewer, `targets`, `rayAt`, `snapAt`, `pickAt`, `show`, `pointer`, `track`, `refresh`, `used`, `typedNow`, `params`), `Wire` (`handler`, `preview?`, `back?`, `enter?`, `key?`, `takesValue?`, `flip?`, `reset?`, `switched?`, `dispose?`), and the shared helpers (`markerOf`, `typedPoint`, `noteResult`, `refuse`, `VALUE_START`) |
+| **Moved:** the tools | `src/ui/tools/wire/{draw,frame,connect,place,pattern,measure,move,ends}.ts` | see the table below | One module per tool, each `create…Tool(ctx)`. **Moved:** `tools/handles.ts` is `wire/ends.ts` (`createEndHandles`, `endNote`, `endGhost`, `endWords`, the hook's `handles()` and `gesture()`), `tools/mover.ts` is `wire/move.ts` (`createMoveTool(viewer, gestures, { snap, pick })`, `MoveDeps` gaining `pick`). `NO_DIRECTION` is `wire/draw.ts`'s |
+| Actions | `src/ui/actions/registry.ts` | E2 | `ActionContext` (`m`, `selection`, `hit?`, `ref?`, `from`), `Action` (`id`, `title`, `group`, `keys?`, `scope?`, `help?`, `applies?`, `when`, `run`), `ActionGroup`, `registerAction(a)` (binds its keys through keys.ts; a key another action holds in the scope throws; the same id replaces), `actionsFor(c)`, `runAction(id, c)` (true, or why not), `titleOf`, `keyMatches`, `keyCaps`, `parseKey`, `GROUP_HELP`, `helpSections` (what the help lists), `actions` |
+| The seeded actions | `src/ui/inspector/actions.ts`; `src/ui/viewport/actions.ts` | E4; E2 | `inspectorActions()`: `delete` (Delete, Backspace), `join-end`, `replace`, with `joinEnd(c)`, `replaceAsked`, `replaceKey`, `useReplaceAsked`; `viewActions()`: `fit` (F) and `show`. Each returns its undo |
+| Key help rows | `src/ui/keys.ts` | E2 | `KeyHelpRow.or`, other keys that do the same. `keyHelp` holds the described sections; the help shows `helpSections` |
+| The context menu | `src/ui/shell/ContextMenu.tsx` | E2 | `menu`, `openMenu(ctx, at)`, `closeMenu()`, `connectMenu()` (the view's right-click, in Select), `menuEntries(ctx)`, `menuTitle(ctx)`, `MenuEntry`, `ContextMenu`. Styles in `shell.css` (`.context-menu…`) |
+| The pick | `src/viewer/scene.ts`; `src/viewer/pick.ts` | E2 | `Hit` (`id`, `p`, `normal`, `face?`, `station?`); `pickAt(x, y, skip?)` gives one; `onContextMenu(cb)` (a right-click within 4 px; returns the undo); `setHidden(ids)` (a no-op until E2.4). `barHit(ray, bar)` and `hitOn(bars, id, ray, p, normal)`, pure |
+| Snaps | `src/viewer/snap.ts` | E3 | `SnapOptions.skip` (ids of bars, parts, nodes) replaces the unused `skipBars`; `SnapPoint.of`, the entity a point belongs to |
+| View state | `src/ui/focus.ts` | E2 | `hidden`, `isolated` signals; the tools pass `hidden` as their picks' and snaps' skip |
+| The gizmo | `src/viewer/gizmo.ts`; `src/viewer/scene.ts` | E3 | `GizmoPart`, `GizmoHandle` (`key`, `at`, `axis?`, `locked?`), `GizmoSpec` (axes `{ at, parts }`, or `{ handles, hot? }`), `GizmoDrag`, `Gizmo` (the scene's, built once; the viewer links its programs, hidden parts too, before its first frame), `gizmoPartAt`, `handleAt`, `gizmoDrag`, `mmPerPx`, `GIZMO_PX`, `GRAB_PX`. Viewer: `setGizmo(spec)`, `gizmo()`, `onGizmoDrag(cb)`. **Moved:** `Viewer.setHandles` and `HandlesState` are gone; the end handles show `{ handles }` |
+| Batches | `src/ui/edit/batches.ts` | E3 (each builder's body: the stream its task names) | `transformBatch` (**moved**: `tools/moves.ts`'s `moveCommands`), `endBatch` (**moved**: `tools/ends.ts`'s `endCommands`), and `duplicateBatch` (E3.3), `mirrorBatch` (E3.2), `arrayBatch` (E3.3), `splitBatch` (E4.3), `alignBatch` (E3.6), each "not available yet" until built; `Batch`, `Vec` |
+| The test hook | `focus.ts`, `ContextMenu.tsx`, `viewport/Viewport.tsx` | the module that adds each | `selection()`, `hidden()`; `menu()` (the open menu's title and entries); `gizmo()`; `frames().modelFrame` (`RenderStats.modelFrame`, `src/viewer/scene.ts`: the frame that first drew the model given last, 0 until one has) |
+| E2E helpers | `tests/e2e/helpers.ts` | any stream adds | `contextMenu(page, at)`, `selectByIds(page, ids)`, `docOf(dir)` |
+
+### Who owns which files (the audit's §7.4, with what E0 added)
+
+| Path | Owner |
+|---|---|
+| `src/core/**`, `src/cli/**`, `src/server/**`, `src/ui/client/**`, `skills/alukit/SKILL.md` (regenerated), new fixtures | **E1** |
+| `src/ui/actions/**`, `src/ui/shell/ContextMenu.tsx`, `src/ui/focus.ts`, `src/ui/outline/**`, `src/ui/catalog/state.ts` (D1), `src/viewer/scene.ts`, `src/viewer/pick.ts`, `src/ui/viewport/ViewControls.tsx`, `src/ui/viewport/actions.ts`, `src/ui/shell/StatusBar.tsx`, `src/ui/shell/Help.tsx`, `src/ui/keys.ts` | **E2** |
+| `src/ui/tools/wiring.ts`, `src/ui/tools/wire/{common,draw,frame,measure,move,rotate,mirror,duplicate,align}.ts`, `src/ui/tools/{drag,preview,moves}.ts`, `src/ui/tools/state.ts`, `src/ui/tools/CommandBar.tsx`, `src/ui/edit/**`, `src/viewer/gizmo.ts`, `src/viewer/snap.ts` | **E3** |
+| `src/ui/inspector/{BarFields,length,words,replace,actions}.ts(x)`, new `inspector/{Ends,Holes,NodeFields,ManyFields}.tsx`, `src/ui/tools/wire/ends.ts`, `src/ui/tools/{ends,LengthEdit}.ts(x)` | **E4** |
+| `src/ui/inspector/{OtherFields,CornerInspector,arrangements}.ts(x)`, new `inspector/{FaceEdit,PatternFields}.tsx`, `src/ui/tools/ToolForm.tsx`, `src/ui/tools/commands.ts` (D5), `src/ui/tools/wire/{connect,place,pattern}.ts` | **E5** |
+| `src/ui/inspector/Inspector.tsx` | E4 (E5 adds its rows through `PartFields` and `ConnectionFields`) |
+| `tests/e2e/menu.spec.ts` | E2 (E0 wrote its first test) |
+| `docs/design.md` (§6, §8), the decision notes | the coordinator folds them in; each stream writes `docs/ux/eN-decisions.md` |
+
+A stream that breaks another's spec makes the smallest selector fix in that spec, in the same
+merge, and names it. A semantic assertion is never weakened.

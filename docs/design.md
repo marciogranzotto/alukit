@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, and 72–77 in "3D editing, E1"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "3D editing, E1". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", and 78–79 in "3D editing, E0"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "3D editing, E0". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -566,6 +566,21 @@ worked by hand in its test.
 - §3.5: **a mass computed from a traced section's area is `est`**, as the fidelity table says; it
   was tagged `calc`. A computed value's provenance follows its section's fidelity. No mass moved:
   each of the eight traced Forseti profiles publishes its mass (e1 18).
+
+### 3D editing, E0
+
+Stream E0 of the [editing audit](ux/editing-audit.md) builds the app's shared contracts for the
+editing streams ([`ux/e0-decisions.md`](ux/e0-decisions.md), cited as "e0"; the interfaces in
+[`ux/contracts.md`](ux/contracts.md)): the tools' wiring split one module per tool, an action
+registry, a pick that names the face and station, a context menu, hidden and isolated view state,
+gizmo primitives and the batch builders' module. Nothing in the document, the commands or the
+outputs changes. §8's text takes these in when the editing round is folded in.
+
+- §8: **every edit is an action in one registry**, which binds its keys and which the help and the
+  context menu read; the help lists each action's keys, then the keys of a gesture or a tool's
+  letter (e0 4–9). Call 78.
+- §8: **a right-click that does not move opens a context menu** in the view, in Select, on what is
+  under the pointer or the selection; a right-drag still pans (e0 10, 11). Call 79.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -3423,6 +3438,15 @@ recipe, so the faces took 8 recipes and 5 split butts (F12). Both are fixed at t
     bars, as derived; a part a step moves or removes is not listed, as a bar's move is not. An
     explode's copies keep their place, and its answer maps each copy (`b26@2`) to its new entity
     (e1 16, 17).
+78. *New in 2.3, 3D editing E0, open.* A key holds exactly the modifiers it names (Ctrl or Cmd,
+    Shift, Alt); a printable symbol carries its own Shift. So H and Shift+H are two keys, as hide
+    and isolate need; Shift+F and Shift+Delete, which the hand-written handlers took as F and
+    Delete, now do nothing. A key whose action cannot run now is left to the next handler, as
+    before (e0 5, 6).
+79. *New in 2.3, 3D editing E0, open.* The view's right-click opens the context menu from E0, not
+    E2.1, because the menu's first test opens it so: on what is under the pointer, selected first
+    when it is not, else on the selection, in Select only. A greyed entry says why it cannot run.
+    The outline's rows, the menu key and Shift+F10 stay E2.1's (e0 10, 11).
 
 ## 15. Review 1 resolution
 

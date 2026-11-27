@@ -323,29 +323,6 @@ export function typedLanding(
 }
 
 /**
- * The step an end's move is (design §6): `moveEnd` onto the bar it lands on, to the cut typed, or
- * to the length dragged, freeing a held end; then `autoConnect` at the end, by the corner rule
- * given or the project's.
- */
-export function endCommands(
-  ref: string,
-  l: Landing,
-  detach: boolean,
-  prefer: string | undefined,
-): { cmd: string; args: Record<string, unknown> }[] {
-  const move: Record<string, unknown> = l.stop?.to
-    ? { end: ref, to: l.stop.to }
-    : l.typed
-      ? { end: ref, cut_mm: l.written ?? q2(l.cut) }
-      : { end: ref, len_mm: q2(l.len) };
-  if (detach) move.detach = true;
-  return [
-    { cmd: "moveEnd", args: move },
-    { cmd: "autoConnect", args: { end: ref, optional: true, ...(prefer ? { prefer } : {}) } },
-  ];
-}
-
-/**
  * Which end the length label's typed value moves (docs/ux/drag-ends-decisions.md): end b, as the
  * inspector's Length field moves it, when it is free; when end b is held, end a if that is free;
  * a coordinate a param drives says so ("driven by H: edit H"), as the inspector does; when both

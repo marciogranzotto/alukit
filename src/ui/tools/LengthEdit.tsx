@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { V3 } from "../../mesh/model.ts";
+import { endBatch } from "../edit/batches.ts";
 import { mm } from "../format.ts";
 import type { Model } from "../model.ts";
 import { pointParam } from "../records/Params.tsx";
 import { sendCommands } from "../store.ts";
 import { viewer } from "../viewport/viewer.ts";
-import { endAxis, endCommands, endStops, labelEnd, typedCut, typedLanding } from "./ends.ts";
-import { endGhost, endNote, endWords } from "./handles.ts";
+import { endAxis, endStops, labelEnd, typedCut, typedLanding } from "./ends.ts";
 import { createPreviewer, type JointPreviewer } from "./preview.ts";
 import { drawOptions, gesture, jointPreview, labelEdit } from "./state.ts";
+import { endGhost, endNote, endWords } from "./wire/ends.ts";
 
 /**
  * The selected bar's length label, and typing a new length into it (docs/ux/drag-ends-decisions.md;
@@ -138,7 +139,7 @@ function LengthField({
     // The bar at the length typed, so the end that moves shows before Enter.
     viewer.peek()?.setOverlay(endGhost(m, id, end, at, l.stop));
     preview.current.ask({
-      commands: (prefer) => endCommands(ref_, l, false, prefer ?? rule()),
+      commands: (prefer) => endBatch(ref_, l, false, prefer ?? rule()),
       at,
       soon: false,
       words: (r) => endWords(r, id, l.stop),
@@ -157,7 +158,7 @@ function LengthField({
       return;
     }
     const l = typedLanding(axis, stops, c.cut, c.written);
-    const o = await sendCommands(endCommands(ref_, l, false, rule()), `set ${id}'s cut length`, {
+    const o = await sendCommands(endBatch(ref_, l, false, rule()), `set ${id}'s cut length`, {
       inline: true,
     });
     if (!alive.current) return;

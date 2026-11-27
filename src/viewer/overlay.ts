@@ -48,9 +48,6 @@ const GLYPH: Readonly<Record<MarkerKind, Glyph>> = {
 /** A snap marker's size, CSS pixels. */
 const MARKER_PX = 13;
 const PIN_PX = 11;
-/** An end handle's size, and the hovered or held one's, CSS pixels: big enough to grab. */
-const HANDLE_PX = 17;
-const HANDLE_HOT_PX = 23;
 
 export interface GhostBar {
   section: ViewSection;
@@ -61,17 +58,6 @@ export interface GhostBar {
   a: V3;
   len: number;
   shift: readonly [number, number];
-}
-
-/**
- * Grips drawn over the model, through every body (the end handles of a selected bar,
- * docs/ux/drag-ends-decisions.md): each draggable, in the tool's colour, or locked, grey; the
- * hovered or held one larger.
- */
-export interface HandlesState {
-  points: readonly { p: V3; locked: boolean }[];
-  /** The index of the hovered or held handle. */
-  hot?: number | undefined;
 }
 
 export interface OverlayState {
@@ -118,14 +104,6 @@ export class Overlay {
   private readonly pinMaterial: PointsMaterial;
   private readonly plane: LineSegments;
   private readonly planeMaterial: LineBasicMaterial;
-  /** The handles: draggable, locked, and the hot one, each with its own lasting material. */
-  private readonly handles: Points;
-  private readonly lockedHandles: Points;
-  private readonly hotHandle: Points;
-  private readonly handleMaterial: PointsMaterial;
-  private readonly lockedMaterial: PointsMaterial;
-  private readonly hotMaterial: PointsMaterial;
-  private handleState: HandlesState | undefined;
   private ghost: { mesh: Mesh; key: string } | undefined;
   private readonly ghostMaterial: MeshBasicMaterial;
   /** The ghosts' meshes, reused; and each section's geometry, made once. */
@@ -149,11 +127,14 @@ export class Overlay {
       fog: false,
     });
     this.group.name = "overlay";
+    // A glyph from the start, so the program the viewer links before its first frame is the one
+    // the marker draws with: a map added later would ask for another.
     this.markerMaterial = new PointsMaterial({
       size: MARKER_PX,
       sizeAttenuation: false,
       depthTest: false,
       transparent: true,
+      map: glyphs.get(GLYPH.point),
       fog: false,
     });
     this.marker = onTop(new Points(new BufferGeometry(), this.markerMaterial));
@@ -183,38 +164,12 @@ export class Overlay {
       fog: false,
     });
     this.plane = onTop(new LineSegments(new BufferGeometry(), this.planeMaterial));
-    const handle = (colour: number) =>
-      new PointsMaterial({
-        size: HANDLE_PX,
-        sizeAttenuation: false,
-        depthTest: false,
-        transparent: true,
-        color: colour,
-        map: glyphs.get("square"),
-        fog: false,
-      });
-    this.handleMaterial = handle(theme.overlay.marker.pick);
-    this.lockedMaterial = handle(theme.overlay.marker.grid);
-    this.hotMaterial = handle(theme.overlay.marker.pick);
-    this.handles = onTop(new Points(new BufferGeometry(), this.handleMaterial));
-    this.lockedHandles = onTop(new Points(new BufferGeometry(), this.lockedMaterial));
-    this.hotHandle = onTop(new Points(new BufferGeometry(), this.hotMaterial));
-    for (const o of [
-      this.plane,
-      this.guide,
-      this.line,
-      this.pins,
-      this.lockedHandles,
-      this.handles,
-      this.hotHandle,
-      this.marker,
-    ]) {
+    for (const o of [this.plane, this.guide, this.line, this.pins, this.marker]) {
       o.frustumCulled = false;
       o.raycast = () => {};
       this.group.add(o);
     }
     this.set({});
-    this.setHandles(undefined);
   }
 
   /** Draws with another theme's colours, keeping what is drawn. */
@@ -224,35 +179,7 @@ export class Overlay {
     this.lineMaterial.color.setHex(t.overlay.line);
     this.pinMaterial.color.setHex(t.overlay.marker.pick);
     this.planeMaterial.color.setHex(t.tool);
-    this.handleMaterial.color.setHex(t.overlay.marker.pick);
-    this.lockedMaterial.color.setHex(t.overlay.marker.grid);
     this.set(this.last);
-    this.setHandles(this.handleState);
-  }
-
-  /** Draws the handles, or takes them away. Only positions and a colour change, never a material. */
-  setHandles(h: HandlesState | undefined): void {
-    this.handleState = h;
-    const dpr = this.pixelRatio();
-    this.handleMaterial.size = HANDLE_PX * dpr;
-    this.lockedMaterial.size = HANDLE_PX * dpr;
-    this.hotMaterial.size = HANDLE_HOT_PX * dpr;
-    const pts = h?.points ?? [];
-    const hot = h?.hot !== undefined ? pts[h.hot] : undefined;
-    setPositions(
-      this.handles,
-      pts.filter((x, i) => !x.locked && i !== h?.hot).map((x) => x.p),
-    );
-    setPositions(
-      this.lockedHandles,
-      pts.filter((x, i) => x.locked && i !== h?.hot).map((x) => x.p),
-    );
-    setPositions(this.hotHandle, hot ? [hot.p] : []);
-    if (hot) {
-      this.hotMaterial.color.setHex(
-        hot.locked ? this.colours.marker.grid : this.colours.marker.pick,
-      );
-    }
   }
 
   set(s: OverlayState): void {
@@ -339,16 +266,7 @@ export class Overlay {
   }
 
   dispose(): void {
-    for (const o of [
-      this.marker,
-      this.line,
-      this.guide,
-      this.pins,
-      this.plane,
-      this.handles,
-      this.lockedHandles,
-      this.hotHandle,
-    ]) {
+    for (const o of [this.marker, this.line, this.guide, this.pins, this.plane]) {
       o.geometry.dispose();
       (o.material as { dispose(): void }).dispose();
     }

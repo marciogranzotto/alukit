@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { compareIds } from "#core/ids.ts";
 import type { Problem } from "#core/problems/types.ts";
 import { EntityChips } from "../common/EntityChip.tsx";
@@ -13,6 +13,7 @@ import { ProjectPanel } from "../shell/ProjectPanel.tsx";
 import { model } from "../store.ts";
 import { resolveTargets } from "../targets.ts";
 import { drawnCorners } from "../viewport/viewer.ts";
+import { inspectorActions, useReplaceAsked } from "./actions.ts";
 import { BarFields, ReplaceForm } from "./BarFields.tsx";
 import { DeleteButton, DeleteFlow } from "./Delete.tsx";
 import { BarDerived, Item, OtherDerived, ProjectItem } from "./Derived.tsx";
@@ -260,6 +261,7 @@ function Many({ m, ids }: { m: Model; ids: string[] }) {
 /** Replace for several bars of one item: the form opens on demand (it asks the catalog). */
 function ReplaceMany({ m, bars, item }: { m: Model; bars: string[]; item: string }) {
   const [open, setOpen] = useState(false);
+  useReplaceAsked(bars, () => setOpen(true));
   return (
     <section>
       <h3>Profile</h3>
@@ -283,6 +285,8 @@ function ReplaceMany({ m, bars, item }: { m: Model; bars: string[]; item: string
 export function Inspector() {
   const m = model.value;
   const sel = [...selection.value];
+  // Delete, Join and Replace, for the keys and the menus, while the inspector is shown.
+  useEffect(() => inspectorActions(), []);
   return (
     <>
       <DeleteFlow />

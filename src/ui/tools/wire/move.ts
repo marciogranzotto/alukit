@@ -1,17 +1,18 @@
 import { idList } from "#core/commands/words.ts";
-import type { V3 } from "../../mesh/model.ts";
-import type { GhostBar, MarkerKind } from "../../viewer/overlay.ts";
-import type { Grab, ToolHandler, ToolPointer, Viewer } from "../../viewer/scene.ts";
-import { rayLineParams, type Snap, type SnapTargets } from "../../viewer/snap.ts";
-import { rayPlane } from "../../viewer/workplane.ts";
-import { select, selection } from "../focus.ts";
-import type { Model } from "../model.ts";
-import { model } from "../store.ts";
-import type { GestureSpec, Gestures } from "./drag.ts";
+import type { V3 } from "../../../mesh/model.ts";
+import type { GhostBar, MarkerKind } from "../../../viewer/overlay.ts";
+import type { Grab, Hit, ToolHandler, ToolPointer, Viewer } from "../../../viewer/scene.ts";
+import { rayLineParams, type Snap, type SnapTargets } from "../../../viewer/snap.ts";
+import { rayPlane } from "../../../viewer/workplane.ts";
+import { transformBatch } from "../../edit/batches.ts";
+import { select, selection } from "../../focus.ts";
+import { chord, describeKeys, onKey } from "../../keys.ts";
+import type { Model } from "../../model.ts";
+import { model } from "../../store.ts";
+import type { GestureSpec, Gestures } from "../drag.ts";
 import {
   MOVE_LOCKS,
   type MoveSet,
-  moveCommands,
   moveSet,
   moveWords,
   type Offset,
@@ -19,9 +20,10 @@ import {
   slideAxis,
   typedOffset,
   UNIT,
-} from "./moves.ts";
-import { createPreviewer } from "./preview.ts";
-import { drawOptions, gesture, hint, lastResult, typed, workPlane } from "./state.ts";
+} from "../moves.ts";
+import { createPreviewer } from "../preview.ts";
+import { activeTool, drawOptions, gesture, hint, lastResult, typed, workPlane } from "../state.ts";
+import { VALUE_START } from "./common.ts";
 
 /**
  * The Move tool, `D` (docs/ux/drag-ends-decisions.md, "The Move tool"; SketchUp's Move): the
@@ -34,6 +36,7 @@ import { drawOptions, gesture, hint, lastResult, typed, workPlane } from "./stat
  * along it. The moved bars are drawn where they would be; after a snap or a pause a dry run of the
  * step says what follows, frees or joins. The release is one step: `transform`, then an
  * `autoConnect` at each moved bar's end. Joined ends follow (the default); Alt frees them.
+ * Owner: E3.
  */
 
 /** At most this many moved bars are drawn as ghosts; the rest show by the marker and the line. */
@@ -50,6 +53,8 @@ export interface MoveTool {
 export interface MoveDeps {
   /** The snap under the pointer, in targets the filter keeps. */
   snap(e: ToolPointer, filter?: (t: SnapTargets) => SnapTargets): Snap | undefined;
+  /** The body under the pointer, passing over what the view hides. */
+  pick(e: ToolPointer): Hit | undefined;
 }
 
 const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -160,7 +165,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
         return;
       }
       preview.ask({
-        commands: (prefer) => moveCommands(set, now.written, detach, prefer ?? rule()),
+        commands: (prefer) => transformBatch(set, now.written, detach, prefer ?? rule()),
         at: dest,
         soon: snapped || label === "typed",
         words: (r) => moveWords(r, detach),
@@ -206,7 +211,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
         if (why) return { why };
         if (norm(now.d) < 0.005) return "nothing";
         return {
-          commands: moveCommands(set, now.written, detach, rule()),
+          commands: transformBatch(set, now.written, detach, rule()),
           what: `move ${idList(set.ids)}`,
         };
       },
@@ -248,7 +253,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
   const grab: Grab = {
     press(e) {
       if (gestures.live()) return gestures.press(e);
-      const hit = viewer.pickAt(e.clientX, e.clientY);
+      const hit = deps.pick(e);
       const sel = selection.peek();
       let ids: Iterable<string> = sel;
       if (hit && !sel.has(hit.id)) {
@@ -291,14 +296,56 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
     },
   };
 
+  function startFromKeyboard(): boolean {
+    if (gestures.live() || selection.peek().size === 0) return false;
+    return begin(selection.peek(), undefined, undefined);
+  }
+
+  const offKeys = [
+    // Move with a selection and no drag on: a value typed moves it from the keyboard (D-UX-17).
+    // Above the drag's own keys (wiring.ts), which take the value once the move is on.
+    onKey(
+      "tool",
+      (e) =>
+        !chord(e) &&
+        activeTool.peek() === "move" &&
+        !gestures.live() &&
+        e.key.length === 1 &&
+        VALUE_START.test(e.key) &&
+        startFromKeyboard() &&
+        gestures.key(e),
+      51,
+    ),
+    describeKeys({
+      id: "moving",
+      title: "While moving (D)",
+      order: 15,
+      rows: [
+        {
+          keys: ["D"],
+          does: "Move: drag the selection or a bar, or click a base point, then where it goes",
+        },
+        {
+          keys: ["0–9", "Enter"],
+          does: "Type the distance (along the lock or the way you dragged), x, y, z, or [x, y, z]",
+        },
+        { keys: ["→", "←", "↑"], does: "Lock the move to X, Y or Z (again, or ↓, to free it)" },
+        { keys: ["Shift"], does: "Hold to move freely, snapping to nothing" },
+        {
+          keys: ["Alt"],
+          does: "Hold to free what joins the selection to the rest, instead of it following",
+        },
+        { keys: ["Tab"], does: "Flip the previewed joint where a moved end lands on a bar" },
+      ],
+    }),
+  ];
+
   return {
     handler,
     grab,
-    startFromKeyboard() {
-      if (gestures.live() || selection.peek().size === 0) return false;
-      return begin(selection.peek(), undefined, undefined);
-    },
+    startFromKeyboard,
     dispose() {
+      for (const off of offKeys) off();
       preview.reset();
     },
   };
