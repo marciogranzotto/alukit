@@ -512,9 +512,10 @@ test("a node's fields: moving the point three legs share moves every leg's end, 
   await cliDo(oracle.dir, { cmd: "moveNode", args: { id: "n1", at: [500, 0, 700] } });
   await openTab(page, served, 1);
 
-  // n1 from the outline's Nodes group: what uses it, and where it is.
+  // n1 from the outline's Nodes group, opened by its twisty (a click on the head selects its
+  // members): what uses it, and where it is.
   const tree = page.getByTestId("tree");
-  await tree.locator('[data-key="g:nodes"]').click();
+  await tree.locator('[data-key="g:nodes"] .twisty').click();
   await tree.locator('[data-id="n1"]').first().click();
   await expect(page.getByTestId("row-node-users")).toContainText("b1.b, b2.b and b3.b");
   await page.getByTestId("field-node-z").fill("700");
