@@ -284,6 +284,9 @@ function perEnd(text: string): { value: number } | { why: string } {
     : { why: "connectors per end: a whole number, 1 or more" };
 }
 
+/** Why a frame is not made while its corners' joint is still to be chosen. */
+export const JOINT_UNCHOSEN = "choose how the corners are joined";
+
 /**
  * The box frame's `addFrame` (BE-6) from the draft and the options, or why it makes none. The
  * size takes expressions with params, as typed, and is sent as the numbers they come to
@@ -323,8 +326,7 @@ export function frameCommand(
     shelf = n.value;
   }
   const rings = [...(o.rings.base ? ["base"] : []), ...(o.rings.top ? ["top"] : [])];
-  if (o.joint === "" && project.defaultButt === undefined)
-    return { why: "choose how the corners are joined: Joined with" };
+  if (o.joint === "" && project.defaultButt === undefined) return { why: JOINT_UNCHOSEN };
   const qty = perEnd(o.qty);
   if ("why" in qty) return qty;
   // The frame's own connector: one other than the project's default, which exists.
@@ -381,4 +383,27 @@ export function frameBatch(
   return Object.keys(defaults).length === 0
     ? { commands: [c] }
     : { commands: [{ cmd: "setProject", args: { defaults } }, c] };
+}
+
+/**
+ * What the frame form asks the dry run, and whether the joint is still to be chosen (review N4).
+ * The cut lengths come from the size, not the joint, so they are shown as soon as W, D and H are
+ * known: while the joint is the only thing missing, the batch is asked as if it were "Nothing",
+ * and `pending` says the real one is not made until a joint is chosen. Anything else missing is
+ * what `frameBatch` says.
+ */
+export function frameSizing(
+  d: FrameDraft,
+  o: FrameOptions,
+  bar: PaletteItem | undefined,
+  project: FrameProject,
+  params: Readonly<Record<string, number>>,
+  defaultBar?: Record<string, unknown>,
+): { batch: ReturnType<typeof frameBatch>; pending: boolean } {
+  const real = frameBatch(d, o, bar, project, params, defaultBar);
+  if ("why" in real && real.why === JOINT_UNCHOSEN) {
+    const sized = frameBatch(d, { ...o, joint: JOIN_NONE }, bar, project, params, defaultBar);
+    if (!("why" in sized)) return { batch: sized, pending: true };
+  }
+  return { batch: real, pending: false };
 }

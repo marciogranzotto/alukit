@@ -3,6 +3,7 @@ import {
   connectionCommand,
   frameBatch,
   frameCommand,
+  frameSizing,
   measured,
   patternCommand,
   pickRefusal,
@@ -11,7 +12,7 @@ import {
   placeFrom,
   runOf,
 } from "./commands.ts";
-import { JOIN_NONE } from "./state.ts";
+import { JOIN_NONE, wayKnown } from "./state.ts";
 import { valueList } from "./typed.ts";
 
 /** What the connect, place and pattern tools send (design §8), from what was picked. */
@@ -334,7 +335,7 @@ describe("box frame (S5.7, BE-6)", () => {
   // docs/ux/review-phase4.md B1: a box frame never leaves its corners unjoined unasked.
   it("asks how the corners are joined while the project has no default butt connector", () => {
     const unchosen = { ...opts, joint: "" };
-    const why = { why: "choose how the corners are joined: Joined with" };
+    const why = { why: "choose how the corners are joined" };
     expect(frameCommand({ ...draft }, unchosen, bar40, bare, { W: 1200 })).toEqual(why);
     expect(frameBatch({ ...draft }, unchosen, bar40, bare, { W: 1200 })).toEqual(why);
     // With a project default, not choosing is choosing it.
@@ -371,5 +372,37 @@ describe("box frame (S5.7, BE-6)", () => {
     expect(frameCommand({ ...draft }, other, bar40, withDefault, { W: 1200 })).toMatchObject({
       args: { connector: "x:CN" },
     });
+  });
+
+  // review N4: the cut lengths do not wait for the joint.
+  it("sizes a frame whose joint is still to be chosen, saying the joint is pending", () => {
+    const unchosen = { ...opts, joint: "" };
+    const sized = frameSizing({ ...draft }, unchosen, bar40, bare, { W: 1200 });
+    expect(sized).toEqual({ batch: { commands: [frame] }, pending: true });
+    // Chosen with nothing, or a project default: the frame's own batch, nothing pending.
+    expect(frameSizing({ ...draft }, opts, bar40, bare, { W: 1200 })).toEqual({
+      batch: { commands: [frame] },
+      pending: false,
+    });
+    const withDefault = { hasDefaultBar: false, defaultButt: "x:CT" };
+    expect(frameSizing({ ...draft }, unchosen, bar40, withDefault, { W: 1200 }).pending).toBe(
+      false,
+    );
+    // Anything else missing is still what is said.
+    const noHeight = frameSizing({ ...draft, h: "" }, unchosen, bar40, bare, {});
+    expect(noHeight.pending).toBe(false);
+    expect("why" in noHeight.batch).toBe(true);
+  });
+});
+
+// review N2: whether a typed length has a way to go.
+describe("wayKnown", () => {
+  const start = { p: [0, 0, 0] as [number, number, number], label: "grid" };
+  const to = (p: [number, number, number]) => ({ p, label: "x" });
+  it("is false at the start with no locked axis, true once the pointer is away or an axis locked", () => {
+    expect(wayKnown(start as never, undefined, undefined)).toBe(false);
+    expect(wayKnown(start as never, to([0, 0, 0]) as never, undefined)).toBe(false);
+    expect(wayKnown(start as never, to([0, 0, 400]) as never, undefined)).toBe(true);
+    expect(wayKnown(start as never, undefined, "z")).toBe(true);
   });
 });

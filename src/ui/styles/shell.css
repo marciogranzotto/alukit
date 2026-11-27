@@ -898,6 +898,14 @@
   border-radius: var(--radius-control);
 }
 
+/* A bar known only by its box: outlined, a light fill, so it does not read as a solid block */
+.thumb.plain path {
+  fill: color-mix(in srgb, var(--text-1) 14%, transparent);
+  stroke: var(--text-2);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+
 .thumb.none {
   width: 44px;
   height: 44px;
@@ -1284,7 +1292,7 @@
 
 /*
  * The tool's steps, in the message lane (review M4): its × in the first column, so it is never
- * cut off; the steps wrap rather than run out of the box.
+ * cut off; the steps are a list, a line each.
  */
 .coach {
   display: grid;
@@ -1306,9 +1314,10 @@
 
 .coach ol {
   grid-column: 2;
+  /* A list, a step to a line (review N7): wrapped as a row, "1. … 2. …" read as one sentence. */
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2) var(--sp-5);
+  flex-direction: column;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;

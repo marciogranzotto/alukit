@@ -94,7 +94,7 @@ const fmt = (x: number) => String(Math.round(x * 100) / 100);
 const VALUE_START = /^[0-9.\-+([=]$/;
 
 /** Enter on a typed length with neither a pointer direction nor a locked axis (review M2). */
-export const NO_DIRECTION = "Which way? Move the pointer, or press → ← ↑";
+export const NO_DIRECTION = "Which way? Point, or press → ← ↑";
 
 /**
  * How long the pointer rests before the joint preview dry-runs a gesture whose end is in open
@@ -525,6 +525,7 @@ export function createTools(viewer: Viewer): Tools {
         rev: model.peek()?.rev ?? 0,
         created: [],
         error: NO_DIRECTION,
+        wayNeeded: true,
       };
     }
     return true;

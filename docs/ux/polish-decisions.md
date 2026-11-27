@@ -116,3 +116,61 @@ test, a run or the CLI says so), **read** (from the code), **inferred**. After-s
   **Measured:** 168 pixels at 6 px, 0 at 24 px; the gizmo stays at 24 px.
 - `view.spec`'s hover-tint test failed on the cart: the new `butt-no-connector` warning badged
   b2 at its middle, over the probe. That led to decision 2; the test is unchanged.
+
+## After the re-check
+
+The designer's re-check ([review-phase4.md](review-phase4.md) §9.4) found seven new things. Each
+was fixed at its cause; the tests are in `tests/e2e/recheck.spec.ts` unless said otherwise.
+
+1. **N1: the problem row.** The row is a grid of glyph, words (`minmax(0, 1fr)`) and actions
+   (`auto`). An `auto` track takes the actions' max-content width, and the actions are buttons that
+   wrap, so in a narrow list ("Show" beside "Set a connector for all 8…") they took nearly all of
+   it and left the words a few pixels: one word to a line, 389 px tall, the buttons over the text.
+   It was never the inspector's compact row; any row in a narrow list did it. The rows now lay out
+   by their *list's* width (`container-type: inline-size` on `.problems`): below 34 rem the actions
+   sit under the words, in the words' column, and wrap there. The test checks every row in the
+   sheet, the inspector and a 1000 px window: height under 180 px, the title wider than 120 px, the
+   buttons not overlapping the title's box. Seen failing first (353 px) on the old CSS.
+2. **N2: "Which way?"** was a sticky `lastResult`. It now carries `wayNeeded`, and the result chip
+   hides it as soon as `wayKnown` (an axis is locked, or the pointer has left the start) holds;
+   moving back to the start shows it again on Enter. One predicate, `wayKnown` in `tools/state.ts`,
+   serves the value's words and this chip (unit test in `commands.test.ts`, e2e N2).
+3. **N3: cut-off words.** At 1440 px the canvas column is only about 840 px, and the row held
+   about 100 characters of words beside about 480 px of controls. Clamping to two lines was not
+   enough, so the words are shorter and the prompt, the value's words and the result get two lines
+   and a floor each; the armed profile's name, which the parts panel states too, gives way first.
+   The prompts lost "From grid (0, 0, 0)" (the start is drawn and labelled in the view) and "and
+   press Enter" (the coach says it): "Click the end, or type a length." The refusal reads "Which
+   way? Point, or press → ← ↑". The test measures that no word is clipped, by width or by the
+   clamp, for Draw and for the frame tool at 1440 px, and that the bar does not scroll.
+4. **N4: cut lengths before the joint.** The lengths come from the size, not the joint, so the
+   form dry-runs the frame as if it were joined with nothing while the joint is the only thing
+   missing (`frameSizing`), and says under the numbers: choosing the joint adds its connectors to
+   the order and does not change these lengths. Make stays disabled until a joint is chosen. The
+   test chooses a bracket afterwards and checks every number is unchanged, so the sentence is
+   measured, not assumed. The dry run's "new problem" line is left out while the joint is open (it
+   would only be the "Nothing" assumption's warning), and the line no longer repeats the field's
+   label. The "N butts" line was always the last of the numbers; the problem line is now kept
+   apart, so the command bar no longer drops the wrong one when a frame has a problem.
+5. **N5: "Choose a profile".** It ticked only for the tab's palette. A box frame from the card
+   writes the project's `defaults.bar` and arms nothing, so either now ticks it (`projectpanel.test.ts`,
+   e2e N5).
+6. **N6: the catalog browser.** With a bar wanted, the order was by kind alone, so the linear
+   guides (also bars) came among the profiles. They now follow every profile and precede the other
+   kinds (`search.ts`, unit and e2e). Their section is a parametric box with no drawn outline;
+   drawn as a solid in `--text-1` it was a black block in the light theme, so a section that is
+   only its box (`isPlainBox`) is outlined with a light fill.
+7. **N7: the coach.** `.coach ol` was a wrapping flex row, so "1. … 2. …" read as a sentence. It
+   is a column; the test checks each item sits below the one before.
+
+Declined: none. The old, interrupted attempt's diff was reviewed hunk by hunk. Kept: the problem
+row's container query, the plain-box thumbnail, the catalog order, the first-steps tick, the
+command-bar CSS (with its floors) and the shorter value words. Dropped or completed: its
+`CommandBar.tsx`, `state.ts` and `commands.ts` changes named `wayKnown` and `frameSizing`, which
+did not exist, and its tests ran against them, so both were written; its coach rule's comment was
+kept, its refusal text was too long to fit and was shortened.
+
+Screenshots after: [N4](img/polish/10-n4-cut-lengths-before-the-joint.png),
+[N5](img/polish/11-n5-first-steps-ticked.png), [N1](img/polish/12-n1-problem-row-in-the-inspector.png),
+[N7](img/polish/13-n7-coach-as-a-list.png), [N3](img/polish/14-n3-command-bar-1440.png),
+[N6](img/polish/15-n6-catalog-light.png).
