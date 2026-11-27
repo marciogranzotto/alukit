@@ -11,8 +11,9 @@ import { dist, type V3 } from "../vec.ts";
 /**
  * The accessors that read the derived model (design §4.9), for project checks only: document
  * values may not read the model they define. `len(b3)`, `cut(b3)`, `pos(n3)`, `dist(n1, n2)`,
- * `bbox()` and `count(tag:leg)` read the geometry: `bbox()` the extent of every body the viewer
- * draws and the GLB holds (`src/mesh/extent.ts`). `mass()` and `cost()` read the bill of
+ * `bbox()` and `count(tag:leg)` read the geometry: `bbox()` the build's extent, every body the
+ * viewer draws and the GLB holds but context (`src/mesh/extent.ts`; gap X11), and `count` every
+ * entity with the tag, context or not. `mass()` and `cost()` read the bill of
  * materials and the prices: the caller supplies them (`outputAccessors` in `outputs.ts`, as
  * `alukit check`, `do`, `order` and `costs` do), and a caller that does not reports a check that
  * uses them as pending, not failed.

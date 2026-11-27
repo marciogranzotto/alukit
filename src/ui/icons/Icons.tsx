@@ -56,6 +56,14 @@ const DRAW = {
       <path d="M6 3.5l2-2 2 2M6 12.5l2 2 2-2M3.5 6l-2 2 2 2M12.5 6l2 2-2 2" />
     </>
   ),
+  // The Rotate tool (E3.1): most of a turn about a centre, the arrowhead at its end
+  rotate: (
+    <>
+      <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" />
+      <path d="M8 .5l2.2 2L8 4.5" />
+      <circle cx="8" cy="8" r="1" fill="currentColor" />
+    </>
+  ),
   // The box frame tool (S5.7): a frame's rings and posts, seen from a corner
   frame: (
     <>

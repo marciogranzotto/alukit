@@ -20,10 +20,12 @@ export interface PartShape {
   shape?: ViewShape;
   /** The part's frame, at its origin; a marker's at its point. */
   matrix: Mat4;
-  /** A placeholder, or a marker. A shape never is. */
+  /** A placeholder, a marker, or context (X11). A shape is only when it is context. */
   translucent: boolean;
   /** A placeholder (§4.8): its box, translucent and outlined. */
   placeholder: boolean;
+  /** Context, not part of the build (gap X11): translucent in the context tone, outlined. */
+  context: boolean;
 }
 
 /**
@@ -38,8 +40,9 @@ export function partShape(p: PartJson, view: ViewPart | undefined): PartShape | 
     box: box ?? MARKER,
     ...(shape ? { shape } : {}),
     matrix: frameMatrix(p.frame.x, p.frame.y, p.frame.z, box || shape ? p.origin : p.point),
-    translucent: !shape && (view?.translucent ?? true),
+    translucent: view?.context === true || (!shape && (view?.translucent ?? true)),
     placeholder: view?.placeholder === true,
+    context: view?.context === true,
   };
 }
 

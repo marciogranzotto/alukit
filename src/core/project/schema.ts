@@ -197,6 +197,18 @@ const AfterAssembly = z
     "placed after the frame's joints are made (a wall it is set against, a panel fitted last): it does not cover a cross hole while a joint made before it is tightened, only afterwards (a warning)",
   );
 
+/**
+ * A member that is context, not part of the build (gap X11): a wall, a floor, a bench the frame
+ * stands beside, an envelope to keep clear. It is drawn and the checks read it (covers, contacts,
+ * the planes it gives), but it is not cut, counted, bought or weighed, nor in `bbox()`.
+ */
+const Context = z
+  .literal(true)
+  .optional()
+  .describe(
+    "context, not part of the build (a wall, a floor, a bench it stands beside): drawn and checked against, but not cut, counted, bought or weighed, nor in bbox()",
+  );
+
 export const Bar = z.strictObject({
   item: ItemRef.optional().describe("a bar item; defaults.bar.item when absent"),
   opt: z.record(z.string(), z.string()).optional().describe("option values: { finish: black }"),
@@ -210,6 +222,7 @@ export const Bar = z.strictObject({
   ops: z.array(Op).optional(),
   holes: RailHoles.optional().describe("rails: the hole layout"),
   after_assembly: AfterAssembly,
+  context: Context,
   ...Common,
 });
 export type Bar = z.infer<typeof Bar>;
@@ -270,7 +283,11 @@ export type HoleFaces = z.infer<typeof HoleFaces>;
 export const Butt = z.strictObject({
   type: z.literal("butt"),
   through: z
-    .union([BarId, EndRef, z.strictObject({ body: ItemRef, at: z.union([Point, Pose]) })])
+    .union([
+      BarId,
+      EndRef,
+      z.strictObject({ body: ItemRef, at: z.union([Point, Pose]), context: Context }),
+    ])
     .describe("a bar, a bar's end, or a body at a point or pose"),
   ends: z.array(EndRef).min(1),
   spacer_mm: Expr.optional().describe("along the through face's outward normal"),
@@ -396,6 +413,7 @@ export const Part = z.union([
     on: Station,
     roll_deg: Expr.optional(),
     after_assembly: AfterAssembly,
+    context: Context,
     ...Common,
   }),
   z.strictObject({
@@ -403,6 +421,7 @@ export const Part = z.union([
     opt: z.record(z.string(), z.string()).optional(),
     at: Pose,
     after_assembly: AfterAssembly,
+    context: Context,
     ...Common,
   }),
   z.strictObject({

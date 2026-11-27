@@ -460,6 +460,48 @@ everything below: E1; other streams add to it only.*
   none. `explodePattern`'s `info.copies` maps each copy (`b26@2`) to the entity it became (e1 16,
   17).
 
+## Editing round: E3 changes
+
+*Stream E3 of the [editing audit](editing-audit.md) ([e3-decisions.md](e3-decisions.md)): the
+transform and copy tools. Each adds; E0's interfaces keep their members. Owner of everything
+below: E3, but the line on `wire/ends.ts`, E4's.*
+
+- **Tools** (`src/ui/tools/state.ts`): `rotate` in `TOOLS`, its key `Q` in `TOOL_KEYS`, "Rotate"
+  in `TOOL_NAMES`, its prompt; the icon `rotate` (`src/ui/icons/Icons.tsx`). `Gesture.kind` adds
+  `duplicate` (Duplicate and Paste), `rotate`, `mirror` and `align`; the command bar's gesture row
+  reads its icon and its field's placeholder by kind (`data-tool` is the kind, `drag-end` for an
+  end), and Mirror's box (`data-testid="mirror-remove"`). `mirrorOptions` (`{ remove }`).
+- **Gestures** (`src/ui/tools/drag.ts`): `GestureSpec.press?(e)`, asked before a press commits:
+  `"drag"` (a new start, a base point), `"taken"`, or undefined to commit; `Gestures.refresh()`,
+  the gesture drawn again where the pointer was. While a gesture is on, its keys reach it in the
+  capture phase when the focus is on an element (not a text field, a dialog or a menu).
+- **Rotate** (`src/ui/tools/wire/rotate.ts`): `createRotateTool(viewer, gestures, { snap, pick })`
+  gives `{ handler, grab, enter, dispose }`; the router hands the viewer its grab while Rotate is
+  the tool, and Enter to `enter`. It shows the gizmo's rings (`ring-x`, `ring-y`, `ring-z`) and
+  hears `onGizmoDrag`.
+- **The Move tool** (`wire/move.ts`): `MoveTool.startCopy(ids, { title, base?, based }, e?)`, a
+  session on a copy (Duplicate, Paste); `CopyHow`. In Select, a part alone (or parts on one bar
+  along a world axis) shows the gizmo's `move-x`, `move-y` or `move-z` arrow at it, and a drag on
+  it slides them.
+- **Duplicate, Copy, Paste** (`wire/duplicate.ts`): `copyActions(mover, pointer)` registers
+  `duplicate` (`mod+d`, group transform), `copy` (`mod+c`) and `paste` (`mod+v`, in a menu once
+  something is copied), both group edit; `clipboard`, the tab's copied ids.
+- **Mirror** (`wire/mirror.ts`): `createMirror(viewer, gestures, { snap })` registers `mirror`
+  ("Mirror…", group transform); `mirrorWords(dryRun)`; `membersCount(ctx)`.
+- **Align** (`wire/align.ts`): `createAlign(viewer, gestures)` registers `align` ("Align to a
+  face…", group transform).
+- **Batches** (`src/ui/edit/batches.ts`): `duplicateBatch`, `mirrorBatch`, `arrayBatch` and
+  `alignBatch` built; `duplicateBatch` gains `opts.prefer`, `alignBatch` a target face `a` or `b`
+  (an end) and an optional `prefer`; new `rotateBatch(set, { axis, deg, about }, detach, prefer)`.
+- **Geometry** (`src/ui/edit/geometry.ts`, new, pure): `membersOf`, `centreOf`, `minCorner`,
+  `WorldMap` with `translation`, `turn` and `reflection`, `ghostsOf` (bars drawn where a map puts
+  them), `barCorners`, `extentAlong`, `facePlane`, `BarFace`, `sideWords`, `rounded`, `splitCopies`
+  (`4x`, `/4`), `MAX_COPIES`, `typedAngle`, `snapAngle`, `Axis`, `AXIS_INDEX`, `UNIT`.
+- **Rules** (`src/ui/tools/moves.ts`): `copyWords(dryRun)`, a copy's preview in words.
+- **The end handles** (`wire/ends.ts`, E4's): they take the gizmo away only when the view still
+  shows the one they set (it was a flag), so another user's gizmo shown since stays.
+- **The tools' router** (`wiring.ts`): Select's grab remembers the pointer (where a paste starts).
+
 ## Editing round: E0
 
 *Stream E0 of the [editing audit](editing-audit.md) (§7.2) built the shared interfaces the editing
@@ -501,6 +543,25 @@ registers its own actions and keys from its own files.*
 
 A stream that breaks another's spec makes the smallest selector fix in that spec, in the same
 merge, and names it. A semantic assertion is never weakened.
+
+## Gap X11 changes
+
+*Context ([`../notes/x11.md`](../notes/x11.md)): a bar or a placed part marked `context: true`,
+drawn and checked against but not built or bought. Each adds.*
+
+- **`ViewTheme`** (`src/viewer/theme.ts`) adds `body.context`, context's one tone whatever its
+  item; **`tokens.ts`** holds its dark and light values (S4 may retune them).
+- **The export's palette** (`src/mesh/style.ts`, frozen by D-UX-24): `COLOURS.context`, the GLB's
+  `context, translucent` material; `partTone` answers `"context"` first and `barColour` reads a
+  bar's `context`. No byte of a GLB without context moved (x11, what moved).
+- **The view model** (`src/mesh/model.ts`): `BarJson.context`, `PartJson.context`,
+  `ViewPart.context`, `ViewFastener.context`; `PartShape.context` (`src/mesh/place.ts`).
+- **`ViewerStats`** (`src/viewer/scene.ts`) adds `context`, the bars, parts and fasteners drawn as
+  context. The scene keeps a translucent pair of materials for context, made once, beside the
+  opaque pair.
+- **The inspector** (`src/ui/inspector/context.ts`): `contextOf(model, id)` (whether the entity can
+  be marked, whether it is, and the command) and `contextBatch(model, id, on)`; the Context row
+  (`ContextRow`, in `BarFields.tsx`) on a bar's and a placed part's fields, one step.
 
 ## Editing round: E5 changes
 

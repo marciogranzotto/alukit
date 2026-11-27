@@ -28,6 +28,9 @@ import type { GltfMaterial, GltfMesh, GltfNode, GltfScene } from "./glb.ts";
  * - Each node's `extras`: what it is, its id, item, SKU (what to order: the cut list's offer
  *   for a bar or a piece cut from stock, the order's lines for an item), options and cut length;
  *   a project shape's kind, or that a part is a placeholder; a hole's part, id, type and rod.
+ * - Context (X11), a bar, a part or a context connection's fastener, is exported where it stands
+ *   so the frame shows in its room: `extras.context`, one translucent material of its own, and no
+ *   SKU or cut length, since it is not bought or cut.
  */
 
 export interface ExportInput {
@@ -150,17 +153,30 @@ export function glbScene(input: ExportInput): GltfScene {
   const nodes: GltfNode[] = [];
   const top: number[] = [];
 
+  // Context (X11), bar or part: one translucent material of its own, and no SKU or cut length,
+  // since it is not bought or cut; `extras.context` lets a reader leave it out.
+  const contextMaterial = () =>
+    material("context, translucent", () => ({
+      color: linear(COLOURS.context, TRANSLUCENT_OPACITY),
+      metallic: 0.1,
+      roughness: 0.8,
+      translucent: true,
+    }));
+
   for (const [id, bar] of Object.entries(json.bars ?? {})) {
     const view = display.bars[id];
     const section = view ? display.sections[view.section] : undefined;
     if (!view || !section) continue;
+    const context = bar.context === true;
     const colour = barColour(bar);
-    const matName = COLOUR_NAMES.get(colour) ?? "bar";
-    const mat = material(matName, () => ({
-      color: linear(colour),
-      metallic: matName === "steel" ? 0.6 : 0.3,
-      roughness: 0.5,
-    }));
+    const matName = context ? "context, translucent" : (COLOUR_NAMES.get(colour) ?? "bar");
+    const mat = context
+      ? contextMaterial()
+      : material(matName, () => ({
+          color: linear(colour),
+          metallic: matName === "steel" ? 0.6 : 0.3,
+          roughness: 0.5,
+        }));
     const square = squareEnds(bar);
     const m = square
       ? mesh(`section ${view.section} ${matName}`, `${view.section} (${matName})`, mat, () =>
@@ -169,7 +185,7 @@ export function glbScene(input: ExportInput): GltfScene {
       : mesh(`bar ${id}`, `${id} (angled ends)`, mat, () =>
           meshData(angledGeometry(unit(view.section, section), bar, view)),
         );
-    const code = sku.bySource.get(id);
+    const code = context ? undefined : sku.bySource.get(id);
     top.push(nodes.length);
     nodes.push({
       name: `${id} ${label(id, derived.doc.bars) ?? bar.item}`,
@@ -181,7 +197,7 @@ export function glbScene(input: ExportInput): GltfScene {
         item: bar.item,
         ...(code !== undefined ? { sku: code } : {}),
         opt: bar.opt,
-        cut_mm: bar.cut_mm,
+        ...(context ? { context: true } : { cut_mm: bar.cut_mm }),
       },
     });
   }
@@ -189,23 +205,30 @@ export function glbScene(input: ExportInput): GltfScene {
   for (const [id, p] of Object.entries(json.parts ?? {})) {
     const placed = partShape(p, display.parts[id]);
     if (!placed) continue;
-    const { shape, translucent } = placed;
+    const { shape, translucent, context } = placed;
     const colour = partColour(placed);
     const base = COLOUR_NAMES.get(colour) ?? "part";
     const matName = translucent ? `${base}, translucent` : base;
-    const mat = material(matName, () => ({
-      color: linear(colour, translucent ? TRANSLUCENT_OPACITY : 1),
-      metallic: shape ? 0.4 : 0.1,
-      roughness: 0.6,
-      ...(translucent ? { translucent: true } : {}),
-    }));
+    const mat = context
+      ? contextMaterial()
+      : material(matName, () => ({
+          color: linear(colour, translucent ? TRANSLUCENT_OPACITY : 1),
+          metallic: shape ? 0.4 : 0.1,
+          roughness: 0.6,
+          ...(translucent ? { translucent: true } : {}),
+        }));
     // One item gives one shape, so parts of the same project item share its mesh.
     const m = shape
-      ? mesh(`shape ${p.item}`, `${p.item} (${shape.kind})`, mat, () => partMesh(placed))
+      ? mesh(
+          `shape ${p.item}${context ? " context" : ""}`,
+          `${p.item} (${shape.kind}${context ? ", context" : ""})`,
+          mat,
+          () => partMesh(placed),
+        )
       : mesh(`box ${JSON.stringify(placed.box)} ${matName}`, `box (${matName})`, mat, () =>
           partMesh(placed),
         );
-    const code = sku.ofItem(p.item, p.opt);
+    const code = context ? undefined : sku.ofItem(p.item, p.opt);
     const at = nodes.length;
     const holes: GltfNode[] = [];
     if (shape) {
@@ -248,6 +271,7 @@ export function glbScene(input: ExportInput): GltfScene {
           opt: p.opt,
           ...(shape ? { shape: shape.kind } : {}),
           ...(placed.placeholder ? { placeholder: true } : {}),
+          ...(context ? { context: true } : {}),
         },
       },
       ...holes,
@@ -256,14 +280,19 @@ export function glbScene(input: ExportInput): GltfScene {
 
   for (const f of display.fasteners) {
     const id = fastenerId(f);
-    const mat = material("fastener", () => ({
-      color: linear(COLOURS.fastener),
-      metallic: 0.8,
-      roughness: 0.4,
-    }));
-    const m = mesh("rod", "rod", mat, () => rodMesh());
-    const code = sku.bySource.get(id) ?? sku.ofItem(f.item, {});
-    const cut = pieceLen.get(id);
+    const context = f.context === true;
+    const mat = context
+      ? contextMaterial()
+      : material("fastener", () => ({
+          color: linear(COLOURS.fastener),
+          metallic: 0.8,
+          roughness: 0.4,
+        }));
+    const m = context
+      ? mesh("rod context", "rod (context)", mat, () => rodMesh())
+      : mesh("rod", "rod", mat, () => rodMesh());
+    const code = context ? undefined : (sku.bySource.get(id) ?? sku.ofItem(f.item, {}));
+    const cut = context ? undefined : pieceLen.get(id);
     top.push(nodes.length);
     nodes.push({
       name: `${id} ${f.item}`,
@@ -276,6 +305,7 @@ export function glbScene(input: ExportInput): GltfScene {
         item: f.item,
         ...(code !== undefined ? { sku: code } : {}),
         ...(cut !== undefined ? { cut_mm: cut } : {}),
+        ...(context ? { context: true } : {}),
       },
     });
   }

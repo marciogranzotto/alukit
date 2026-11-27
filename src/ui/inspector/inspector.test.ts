@@ -17,6 +17,7 @@ import {
   RULES,
   takeOut,
 } from "./arrangements.ts";
+import { contextBatch, contextOf } from "./context.ts";
 import { lengthMode, lengthPatch } from "./length.ts";
 import {
   copyMembers,
@@ -403,5 +404,27 @@ describe("a corner's arrangements (S5.5)", () => {
     expect(joinOpenBatch(cornersOf(open))).toEqual(
       CORNERS.map((p) => ({ cmd: "autoConnect", args: { at: p, optional: true } })),
     );
+  });
+});
+
+describe("the Context field (X11)", () => {
+  it("reads and sets context on a bar and a placed part, never on a copy or an unplaced line", async () => {
+    const bench = await viewOf(join(root, "golden-gen", "G51"));
+    expect(contextOf(bench, "b3")).toEqual({ can: true, on: true, cmd: "setBar" });
+    expect(contextOf(bench, "b1")).toEqual({ can: true, on: false, cmd: "setBar" });
+    expect(contextOf(bench, "p2")).toEqual({ can: true, on: true, cmd: "setPart" });
+    expect(contextBatch(bench, "b1", true)).toEqual([
+      { cmd: "setBar", args: { id: "b1", set: { context: true } } },
+    ]);
+    expect(contextBatch(bench, "p2", false)).toEqual([
+      { cmd: "setPart", args: { id: "p2", set: { context: null } } },
+    ]);
+    // A copy follows its template; a line counted and never drawn has no body to be context.
+    expect(contextOf(cart, "b26@1").can).toBe(false);
+    expect(contextOf(cart, "c1").can).toBe(false);
+    const parts = cart.doc.parts as Record<string, { unplaced?: boolean }>;
+    const unplaced = Object.keys(parts).find((id) => parts[id]?.unplaced) as string;
+    expect(unplaced).toBeDefined();
+    expect(contextOf(cart, unplaced).can).toBe(false);
   });
 });

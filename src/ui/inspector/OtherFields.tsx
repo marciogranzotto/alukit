@@ -4,7 +4,7 @@ import { EntityChips } from "../common/EntityChip.tsx";
 import { cornersOf } from "../corners.ts";
 import type { Model } from "../model.ts";
 import { typedValue } from "../tools/typed.ts";
-import { LabelRows } from "./BarFields.tsx";
+import { ContextRow, LabelRows } from "./BarFields.tsx";
 import {
   connectionSet,
   holeFaceCode,
@@ -227,7 +227,7 @@ function RollRow({ m, id, cmd }: { m: Model; id: string; cmd: string }) {
   );
 }
 
-const PART_SHOWN = new Set(["item", "opt", "on", "roll_deg", "label", "tags"]);
+const PART_SHOWN = new Set(["item", "opt", "on", "roll_deg", "label", "tags", "context"]);
 
 /** A part's item, with Replace (E5.4): the form opens from the row or the Replace part action. */
 function ItemRow({ m, id, item }: { m: Model; id: string; item: string }) {
@@ -289,6 +289,7 @@ export function PartFields({ m, id }: { m: Model; id: string }) {
             </Row>
           )}
           <LabelRows m={m} id={id} />
+          <ContextRow m={m} id={id} />
           {Object.entries(w)
             .filter(([k]) => !PART_SHOWN.has(k) && k !== "at")
             .map(([k, v]) => (

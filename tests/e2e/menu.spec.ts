@@ -73,6 +73,10 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
   const items = menu.getByRole("menuitem");
   await expect(items).toHaveText([
     /^Delete\s*Delete/,
+    /^Copy\s*Ctrl\+C/,
+    /^Duplicate\s*Ctrl\+D/,
+    /^Mirror…/,
+    /^Align to a face…/,
     /^Join b1\.a/,
     /^Replace profile…/,
     /^Fit to the selection\s*F/,
@@ -82,6 +86,10 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
   expect(hook?.title).toBe("b1");
   expect(hook?.entries.map((e) => [e.id, e.enabled])).toEqual([
     ["delete", true],
+    ["copy", true],
+    ["duplicate", true],
+    ["mirror", true],
+    ["align", true],
     ["join-end", true],
     ["replace", true],
     ["fit", true],
@@ -92,7 +100,7 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
   await page.keyboard.press("ArrowDown");
   await expect(items.nth(1)).toBeFocused();
   await page.keyboard.press("s");
-  await expect(items.nth(4)).toBeFocused();
+  await expect(items.nth(8)).toBeFocused();
 
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);

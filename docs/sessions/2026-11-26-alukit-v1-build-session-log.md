@@ -932,3 +932,10 @@ anything, and each has a default in place.
   - With the room's walls and floor as covers, 29 of 36 cross holes take the record's face. The other 7 are ties between equally good faces, broken in a different order. Named on the connections (F12), all 36 are accepted.
   - The new traced PF40-02 outline moves the bearing under its lips from 41.69 % to 40.79 / 42.26 % by side.
   - **New gap X11:** a modelling aid (the room's walls and floor) entered the BOM, the order and the bounding box. An agent is closing it, with G51.
+- **15:47**: E0 merged (gate PASS, 1,301 tests).
+  - The viewer precompiles every lasting material at startup: the gizmo, and also the selection's x-ray, which had linked on the first selection. A selection now links nothing, and the test asserts it.
+  - A second race was found: "two frames drawn" does not mean the model has drawn. `RenderStats.modelFrame` replaces that wait in both shader tests. Under load they passed 32/32 and 48/48.
+  - **Visible changes:** right-click opens the menu in Select, and keys match their modifiers exactly (calls 78–79).
+- **15:48**: The editing streams E2 (selection, visibility, menus), E3 (rotate, mirror, duplicate, arrays, copy and paste, align), E4 (editable ends, offsets, split, holes, several bars at once, nodes) and E5 (joints, patterns, parts) started in parallel.
+  - Each has its own block of §14 call numbers, so merges don't renumber.
+  - Gap X11 runs alongside them in the core.

@@ -659,3 +659,64 @@ test("selecting a bar shows its gizmo without linking a shader program, nor does
   });
   expect(await links()).toBe(before);
 });
+
+test("context draws translucent, apart from the build; marking it or not links no shader program (X11)", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __links: number };
+    w.__links = 0;
+    const link = WebGL2RenderingContext.prototype.linkProgram;
+    WebGL2RenderingContext.prototype.linkProgram = function (p) {
+      w.__links++;
+      link.call(this, p);
+    };
+  });
+  served = await serve("golden-gen/G51");
+  const step = async (batch: unknown[]) => {
+    const r = await cli(["do", served.dir, JSON.stringify(batch)]);
+    expect(r.code, r.err).toBe(0);
+  };
+  // The wall unmarked before the tab opens: a placeholder to buy, so the tab draws a problem
+  // badge from the start, as on any project with a problem. (Badges follow the model by their own
+  // request, and the first one a tab draws links the markers' programs once, whatever the model.)
+  await step([{ cmd: "setPart", args: { id: "p3", set: { context: null } } }]);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await openTab(page, served, 1);
+  const links = () => page.evaluate(() => (window as unknown as { __links: number }).__links);
+  const frames = () => page.evaluate(() => window.__alukit?.frames()?.frames ?? 0);
+  const stats = () => page.evaluate(() => window.__alukit?.stats());
+  const badges = async () => (await stats())?.badges;
+  await expect.poll(badges).toBe(1);
+  await expect.poll(frames).toBeGreaterThan(1);
+  // Five bars and three parts drawn; the bench's three bars and the floor as context.
+  expect(await stats()).toMatchObject({ bars: 5, parts: 3, context: 4 });
+  const before = await links();
+
+  // The bench's post and the floor unmarked, one step: they draw with the programs the opaque
+  // bars and the translucent parts already have, and the problems they bring are badged: the two
+  // placeholders, and the post's hole, now a machining service with no price, on the three
+  // built posts (the item's bars the order buys).
+  let drawn = await frames();
+  await step([
+    { cmd: "setBar", args: { id: "b3", set: { context: null } } },
+    { cmd: "setPart", args: { id: "p2", set: { context: null } } },
+  ]);
+  await waitDrawn(page, 2);
+  await expect.poll(frames).toBeGreaterThan(drawn);
+  await expect.poll(badges).toBe(5);
+  expect(await stats()).toMatchObject({ bars: 5, parts: 3, context: 2 });
+  expect(await links()).toBe(before);
+
+  // And back: the post marked context again joins the translucent bars' pair, and its hole, made
+  // in place, asks for no price.
+  drawn = await frames();
+  await step([{ cmd: "setBar", args: { id: "b3", set: { context: true } } }]);
+  await waitDrawn(page, 3);
+  await expect.poll(frames).toBeGreaterThan(drawn);
+  await expect.poll(badges).toBe(2);
+  expect(await stats()).toMatchObject({ bars: 5, parts: 3, context: 3 });
+  expect(await links()).toBe(before);
+  expect(errors).toEqual([]);
+});

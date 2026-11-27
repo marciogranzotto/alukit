@@ -283,6 +283,8 @@ export interface PlacedPart {
   origin: V3;
   /** A copy's pattern. */
   pattern?: string;
+  /** Context, not part of the build (gap X11): drawn and checked against, not counted. */
+  context?: true;
 }
 
 /** A part entry that is counted, not drawn (§4.7). */
@@ -305,6 +307,8 @@ export interface StockPiece {
   item: string;
   opt: Readonly<Record<string, string>>;
   len: number;
+  /** Cut for a connection whose every member is context (gap X11): the context's own, not cut. */
+  context?: true;
 }
 
 /** A count of an item the BOM lists, and the entity it came from (§5.4). */
@@ -313,6 +317,13 @@ export interface HardwareUse {
   opt: Readonly<Record<string, string>>;
   qty: number;
   source: string;
+  /**
+   * Not counted (gap X11): brought by a connection whose every member is context (the context's
+   * own), or a butt's through body marked context.
+   */
+  context?: true;
+  /** A butt's through body (§4.5), counted with its connection, not a connector it brings. */
+  body?: true;
 }
 
 /** Where a fastener passes one layer: the body and its interval along the axis from the head. */
@@ -392,4 +403,6 @@ export interface FaceResult {
   fastener?: { item: string; len?: number };
   /** The loose hardware from head to nut at each station; sleeves are in `stations`. */
   stack: { item: string; qty: number }[];
+  /** Every layer is context (gap X11): the context's own joint, its fasteners not counted. */
+  context?: true;
 }
