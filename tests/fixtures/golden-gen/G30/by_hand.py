@@ -12,7 +12,9 @@ The rule (design §3.4, fit by role; docs/notes/acceptance-gaps.md, A1):
   system of a joined bar the connector fits, puts a sleeve `inside: "through"` in it, and the
   through bar is hollow (an RHS or a tube);
 - a bar that is held neither way is a fit error naming it. The through bar is judged only when
-  some fastener set applies; with none, the butting bar's error is the one to fix.
+  some joined bar has a system the connector fits; with none, the butting bar's error is the one
+  to fix. A connector with no mounts at all puts no sleeve anywhere, so it holds a through bar of
+  no system in no way.
 
 The geometry: b1 runs along +X with its centre line on the X axis. A horizontal bar's section
 has local y up (+Z) and local x = y × t = +Y. The RHS 100x50x4 is 100 tall (local y) and 50 wide
@@ -34,6 +36,8 @@ CONNECTORS = {
     "test-joint:BUSH-END": {"fits": ["test:s40-c8"], "sets": {"test:s40-c8": (["test-joint:BUSH-M8"], "bore")}},
     "test-joint:BUSH-END-L": {"fits": ["test:s40-c8"], "sets": {"test:s40-c8": (["test-joint:BUSH-M8"], 40.0)}},
     "test-joint:BRK-T": {"fits": ["test:s40-c8"], "sets": {"test:s40-c8": (["test:SCR-M8x16", "test:TNUT-M8"], None)}},
+    # No mounts: it only requires a hole in the through bar.
+    "test-joint:END-AX": {"fits": ["test:s40-c8"], "sets": {}},
     # A joint recipe (acceptance gap A2): the same bush and sleeve, and no body of its own.
     "test-joint:BUSH-JOINT": {
         "fits": ["test:s40-c8"],
@@ -57,10 +61,11 @@ def case(through_item, butting_items, connector):
         if BARS[item]["system"] not in c["fits"]:
             errors.append(("fit", "c1", [bar]))
     sleeve = None
+    sleeved = chosen is not None and chosen[1] is not None
     if t["system"] not in c["fits"]:
-        if chosen is None:
-            pass  # no set applies: the butting bar's error stands alone
-        elif chosen[1] is None:
+        if not systems:
+            pass  # no joined bar has a fitted system: the butting bar's error stands alone
+        elif not sleeved:
             errors.insert(0, ("fit", "c1", ["b1"]))
     if chosen is not None and chosen[1] is not None:
         if not t["hollow"]:
@@ -110,6 +115,9 @@ results["through a T-slot bar"] = (r, {TS: lines([1000.0, r["cut"]])})
 
 r = case(RHS, [("b2", TS)], "test-joint:BRK-T")
 results["a T-slot bracket with no sleeve on the RHS"] = (r, {TS: lines([r["cut"]])})
+
+r = case(RHS, [("b2", TS)], "test-joint:END-AX")
+results["an end connector with no mounts on the RHS"] = (r, {TS: lines([r["cut"]])})
 
 r = case(RHS, [("b2", FB)], "test-joint:BUSH-END")
 results["the bush end on a flat bar of no system"] = (r, {FB: lines([r["cut"]])})

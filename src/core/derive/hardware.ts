@@ -245,19 +245,24 @@ class ConnectorGen {
    * Fit by role (§3.4; acceptance gap A1). A butting bar is held at its end by its system, which
    * the connector must fit. The through bar is held by its system, or by its bore: a chosen
    * fastener set puts a sleeve in it (`inside: "through"`), and the sleeve then needs it hollow.
-   * A bar held neither way is a `fit` error naming it. The through bar is judged only when a
-   * fastener set was chosen: with none, a butting bar has already failed, and that is the error
-   * to fix.
+   * A bar held neither way is a `fit` error naming it. The through bar is judged only when some
+   * joined bar has a system the connector fits: with none, no fastener set can apply, every
+   * butting bar has failed, and that is the error to fix.
    */
   private fit(itemId: string, fits: readonly string[], sets: readonly ChosenSet[]): void {
     const through = this.roles.through?.bar;
     const sleeved = sets.some((s) => s.entries.some((e) => "inside" in e));
-    for (const b of this.joined()) {
+    const fitted = (b: DerivedBar) => {
       const sys = b.placed.item.system;
-      if (sys !== undefined && fits.includes(sys)) continue;
+      return sys !== undefined && fits.includes(sys);
+    };
+    const anyFitted = this.joined().some(fitted);
+    for (const b of this.joined()) {
+      if (fitted(b)) continue;
+      const sys = b.placed.item.system;
       const isThrough = b === through;
       if (isThrough && sleeved) continue; // held by its bore; the sleeve checks it is hollow
-      if (isThrough && sets.length === 0 && this.roles.butting.length > 0) continue;
+      if (isThrough && !anyFitted) continue;
       const what = sys ? `a ${sys}` : `${b.placed.item.id}, of no system`;
       const how = isThrough ? ", and no fastener set of the connector sets a sleeve in it" : "";
       this.error("fit", `${itemId} fits ${fits.join(", ")}; ${b.placed.id} is ${what}${how}`, {

@@ -1,7 +1,7 @@
 {
   "case": "G30",
   "rule": "a connector fits each joined bar by its role: a butting bar by its system, the through bar by its system or, when a mount's fastener set puts a sleeve in it, by its bore (§3.4)",
-  "design": "a bush end on a T-slot bar butting into an RHS of no system: no error; the T-slot bar 575.00; one sleeve 42.00 (the bore across the RHS's 50, less two 4 mm walls); one bush and one connector. Two butting ends: two of each. Through a T-slot bar: a fit error on the through bar (a sleeve needs a hollow bar), the butting bar 580.00. A T-slot bracket with no sleeve on the RHS: a fit error on the RHS. The bush end on a flat bar of no system: a fit error on the flat bar only, and no fastener set applies, so no bush and no sleeve. A sleeve of a fixed length: cut as given, and refused in a T-slot through bar too. A joint recipe with the same mount: the same bush and sleeve, and no connector counted; the recipe is listed once",
+  "design": "a bush end on a T-slot bar butting into an RHS of no system: no error; the T-slot bar 575.00; one sleeve 42.00 (the bore across the RHS's 50, less two 4 mm walls); one bush and one connector. Two butting ends: two of each. Through a T-slot bar: a fit error on the through bar (a sleeve needs a hollow bar), the butting bar 580.00. A T-slot bracket with no sleeve on the RHS, or an end connector with no mounts at all: a fit error on the RHS. The bush end on a flat bar of no system: a fit error on the flat bar only, and no fastener set applies, so no bush and no sleeve. A sleeve of a fixed length: cut as given, and refused in a T-slot through bar too. A joint recipe with the same mount: the same bush and sleeve, and no connector counted; the recipe is listed once",
   "expect": {
     "lines": {
       "test:TS40": [{ "count": 1, "cut_mm": 575 }],
@@ -42,6 +42,15 @@
       "patch": { "connections": { "c1": { "connector": "test-joint:BRK-T" } } },
       "expect": {
         "lines": { "test:TS40": [{ "count": 1, "cut_mm": 575 }] },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "an end connector with no mounts on the RHS",
+      "patch": { "connections": { "c1": { "connector": "test-joint:END-AX" } } },
+      "expect": {
+        "lines": { "test:TS40": [{ "count": 1, "cut_mm": 575 }] },
+        "hardware": { "test-joint:END-AX": 1 },
         "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
       }
     },

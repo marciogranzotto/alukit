@@ -32,8 +32,10 @@ gave the fit error before and derives clean now, its sleeve 90.50.)
    a splice) cut a sleeve for nothing.
 4. A bar held neither way is a `fit` error naming it; for the through bar the message adds that no
    fastener set sets a sleeve in it.
-5. The through bar is judged only once a set is chosen. With none (the butting bar has no system
-   the connector fits), the butting bar's error is the one to fix, and it stands alone.
+5. The through bar is judged only when some joined bar has a system the connector fits. With none,
+   no fastener set can apply and every butting bar has failed: those errors stand alone. A
+   connector with no mounts at all sets no sleeve, so it holds a through bar of no system in no
+   way (a fit error, as before).
 
 | # | Decision | Why |
 |---|---|---|
@@ -43,7 +45,7 @@ gave the fit error before and derives clean now, its sleeve 90.50.)
 
 Golden case **G30** (`tests/fixtures/golden-gen/G30`): the bush end through an RHS (575.00, sleeve
 42.00, one bush); two butting ends; through a T-slot bar (fit error on the through bar); a T-slot
-bracket on the RHS (fit error on the RHS); the bush end on a flat bar of no system (one error, on
+bracket, or an end connector with no mounts, on the RHS (fit error on the RHS); the bush end on a flat bar of no system (one error, on
 the flat bar, no set applies); a sleeve of a fixed length, cut as given and refused in a T-slot
 bar; and A2's recipe.
 
