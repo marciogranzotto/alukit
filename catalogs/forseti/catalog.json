@@ -8302,7 +8302,7 @@
       "area_mm2": 299,
       "Ix_mm4": 47600,
       "Iy_mm4": 12000,
-      "core": { "bore_mm": 4.6, "tap": "M5" },
+      "core": { "bore_mm": 5, "tap": "M5" },
       "options": { "finish": ["anodised", "black"] },
       "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p11", "read": "2026-11-26" }
     },
@@ -8754,6 +8754,7 @@
         "read": "2026-11-26",
         "note": "the shop's description; the catalogue has no table for this profile"
       },
+      "core": { "bore_mm": 13.7 },
       "options": { "finish": ["anodised"] },
       "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p20", "read": "2026-11-26" }
     },

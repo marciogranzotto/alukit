@@ -59,7 +59,11 @@ its SHA-256 against `forseti_importer/tables.py`: page numbers in the tables hol
 only. From it come the profiles' printed area, IX, IY and mass (pp. 11–21), the alloy (p. 6), and,
 where a page draws the section as vector paths, the exact outline: line segments chained into
 rings, scaled by the printed width, centred, and turned into the section frame. Groove types are
-measured on those outlines and checked against the printed opening.
+measured on those outlines and checked against the printed opening. A section's cores, where an
+end tap is cut, are the bores its page prints: on an exact outline, the holes whose inscribed
+circle is a printed diameter, each count checked; on a parametric envelope, `bores` at the printed
+positions, with the base-40 corner holes measured on the exact outlines that have them
+([`docs/notes/section-cores.md`](../../docs/notes/section-cores.md)).
 
 ## Where the judgement lives
 

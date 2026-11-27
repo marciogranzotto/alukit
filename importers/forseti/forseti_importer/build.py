@@ -12,7 +12,7 @@ import re
 from collections import defaultdict
 from decimal import Decimal
 
-from . import emit, pdfcat, rest, store, tables
+from . import emit, geometry, pdfcat, rest, store, tables
 
 API = "https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products"
 WALK = ("-y", "+x", "+y", "-x")
@@ -147,6 +147,20 @@ class Build:
             }
             self.grooves[gid] = gt
 
+    def corner_holes(self) -> None:
+        """Checks CORNER_HOLES against the exact outlines it names, as groove types are checked:
+        each must have a core of that diameter at each corner, `inset` in from both faces. The
+        parametric sections marked `corners` take the table's values."""
+        c = tables.CORNER_HOLES
+        for stem in c["measured_on"]:
+            spec = tables.PROFILES[stem]
+            x, y = spec["w"] / 2 - c["inset"], spec["h"] / 2 - c["inset"]
+            want = sorted((sx * x, sy * y) for sx in (-1, 1) for sy in (-1, 1))
+            have = sorted(tuple(k["at_mm"]) for k in self.sections[stem]["cores"] if k["d_mm"] == c["d"])
+            if len(have) != 4 or any(abs(a - b) > 1e-9 for p, q in zip(have, want) for a, b in zip(p, q)):
+                raise ValueError(f"corner holes: {stem}'s outline has Ø{c['d']} cores at {have}, "
+                                 f"not {c['inset']} mm in from both faces at {want}")
+
     # --- profiles ---------------------------------------------------------------------------------
 
     def profiles(self) -> None:
@@ -280,6 +294,11 @@ class Build:
             + "Centred on its box, coordinates rounded to 0.0001 mm."
         )
         w2, h2 = spec["w"] / 2, spec["h"] / 2
+        cores = self.drawn_cores(stem, spec, o)
+        printed = ", ".join(f"Ø{num(Decimal(str(d)))} ×{n}" for d, n in spec["cores"].items())
+        note += (f" Cores: the holes whose inscribed circle is a bore the page prints ({printed}, "
+                 f"each within {tables.CORE_MATCH_MM} mm), centred on the hole to "
+                 f"{tables.CORE_GRID_MM} mm.")
         self.sections[stem] = {
             "schema": "alukit.section/1",
             "id": stem,
@@ -290,9 +309,35 @@ class Build:
             "bbox_mm": [[num(Decimal(str(-w2))), num(Decimal(str(-h2)))],
                         [num(Decimal(str(w2))), num(Decimal(str(h2)))]],
             "grooves": [{**gr, "type": gid} for gr in grooves],
+            "cores": cores,
             "outline": [list(pt) for pt in o.outline],
             "holes": [[list(pt) for pt in hole] for hole in o.holes],
         }
+
+    @staticmethod
+    def drawn_cores(stem: str, spec: dict, o: pdfcat.Outline) -> list[dict]:
+        """The cores of an exact outline: each hole whose inscribed circle about its centroid is a
+        bore the page prints (within CORE_MATCH_MM), at its centroid on the drawings' 0.1 mm grid,
+        with the printed diameter. Fails unless the count of each printed diameter is met, or when
+        a centre is off the grid by more than CORE_GRID_SLACK_MM."""
+        grid = Decimal(str(tables.CORE_GRID_MM))
+        found: list[tuple[float, Decimal, Decimal]] = []
+        for hole in o.holes:
+            cx, cy, d_in = geometry.inscribed(hole)
+            match = [d for d in spec["cores"] if abs(d_in - d) <= tables.CORE_MATCH_MM]
+            if not match:
+                continue
+            at = [(Decimal(repr(v)) / grid).quantize(Decimal(1)) * grid for v in (cx, cy)]
+            off = max(abs(float(a) - v) for a, v in zip(at, (cx, cy)))
+            if off > tables.CORE_GRID_SLACK_MM:
+                raise ValueError(f"{stem}: a Ø{match[0]} core at ({cx:.4f}, {cy:.4f}) is {off:.3f} mm off "
+                                 f"the {tables.CORE_GRID_MM} mm grid")
+            found.append((match[0], at[0], at[1]))
+        counts = {d: sum(1 for f in found if f[0] == d) for d in spec["cores"]}
+        if counts != spec["cores"]:
+            raise ValueError(f"{stem}: the outline's holes give cores {counts}; the page prints {spec['cores']}")
+        found.sort(key=lambda f: (-f[0], f[2], f[1]))
+        return [{"at_mm": [num(x) + 0, num(y) + 0], "d_mm": num(Decimal(str(d)))} for d, x, y in found]
 
     def parametric_section(self, stem: str, spec: dict, grooves: list[dict], gid: str, url: str) -> None:
         w, h = spec["w"], spec["h"]
@@ -307,6 +352,15 @@ class Build:
                 "measured on the series' vector outline")
         note += ("; the page draws this profile as a raster image" if spec["page"]
                  else "; the catalogue does not draw this profile")
+        if spec.get("corners"):
+            c = tables.CORNER_HOLES
+            d, inset = num(Decimal(str(c["d"]))), Decimal(str(c["inset"]))
+            x, y = Decimal(str(w)) / 2 - inset, Decimal(str(h)) / 2 - inset
+            params.setdefault("bores", []).extend(
+                {"at_mm": [num(sx * x), num(sy * y)], "d_mm": d} for sy in (-1, 1) for sx in (-1, 1))
+            note += (f". The Ø{d} corner holes the page draws are {num(inset)} mm in from both faces, "
+                     f"as printed and as the vector outlines of {' and '.join(c['measured_on'])} "
+                     f"measure them")
         if spec.get("approx"):
             note += ". " + spec["approx"][0].upper() + spec["approx"][1:]
         self.sections[stem] = {
@@ -520,6 +574,7 @@ def build(raw: str, pdf: str, out: str) -> int:
     b.material()
     b.profiles()
     b.groove_types()
+    b.corner_holes()
     b.hardware()
     b.kits()
     rest.run(b)

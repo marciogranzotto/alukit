@@ -110,6 +110,30 @@ def props(outline: Ring, holes: list[Ring]) -> dict[str, float]:
     return {"A": a, "cx": gx, "cy": gy, "Ix": syy - a * gy * gy, "Iy": sxx - a * gx * gx}
 
 
+def inscribed(r: Ring) -> tuple[float, float, float]:
+    """A hole's centre (its centroid) and the diameter of the largest circle about that centre
+    inside it: twice the least distance from the centre to an edge. For a core with keyways cut
+    into it, the circle is the bore the tap cuts its thread in; the keyways reach past it."""
+    n = len(r)
+    a = cx = cy = 0.0
+    for i in range(n):
+        x0, y0 = r[i]
+        x1, y1 = r[(i + 1) % n]
+        c = x0 * y1 - x1 * y0
+        a += c
+        cx += (x0 + x1) * c
+        cy += (y0 + y1) * c
+    gx, gy = cx / (3 * a), cy / (3 * a)
+
+    def dist(p: Pt, q: Pt) -> float:
+        dx, dy = q[0] - p[0], q[1] - p[1]
+        len2 = dx * dx + dy * dy
+        t = 0.0 if len2 == 0 else max(0.0, min(1.0, ((gx - p[0]) * dx + (gy - p[1]) * dy) / len2))
+        return ((p[0] + t * dx - gx) ** 2 + (p[1] + t * dy - gy) ** 2) ** 0.5
+
+    return gx, gy, 2 * min(dist(r[i], r[(i + 1) % n]) for i in range(n))
+
+
 def crossings(rings: list[Ring], v: float) -> list[float]:
     """Where the line y = v crosses the rings' edges, sorted (half-open rule at vertices)."""
     xs: list[float] = []

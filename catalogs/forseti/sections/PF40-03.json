@@ -8,7 +8,7 @@
     "method": "vector",
     "scale": "width 80 mm",
     "read": "2026-11-26",
-    "note": "vector path of 1877 segments; the outline is the stroke centreline. Centred on its box, coordinates rounded to 0.0001 mm."
+    "note": "vector path of 1877 segments; the outline is the stroke centreline. Centred on its box, coordinates rounded to 0.0001 mm. Cores: the holes whose inscribed circle is a bore the page prints (Ø13.7 ×4, Ø5 ×4, each within 0.15 mm), centred on the hole to 0.1 mm."
   },
   "bbox_mm": [[-40, -40], [40, 40]],
   "grooves": [
@@ -20,6 +20,16 @@
     { "face": "+y", "at_mm": 20, "type": "c8-40" },
     { "face": "-x", "at_mm": -20, "type": "c8-40" },
     { "face": "-x", "at_mm": 20, "type": "c8-40" }
+  ],
+  "cores": [
+    { "at_mm": [-20, -20], "d_mm": 13.7 },
+    { "at_mm": [20, -20], "d_mm": 13.7 },
+    { "at_mm": [-20, 20], "d_mm": 13.7 },
+    { "at_mm": [20, 20], "d_mm": 13.7 },
+    { "at_mm": [-35.5, -35.5], "d_mm": 5 },
+    { "at_mm": [35.5, -35.5], "d_mm": 5 },
+    { "at_mm": [-35.5, 35.5], "d_mm": 5 },
+    { "at_mm": [35.5, 35.5], "d_mm": 5 }
   ],
   "outline": [
     [-30.9699, -39.7531],

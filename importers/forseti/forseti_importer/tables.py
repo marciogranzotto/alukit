@@ -147,6 +147,12 @@ GROOVE_SOURCE = {
 #:   (survey §4); otherwise `bores` makes a parametric T-slot envelope.
 #: - `bore`: the core bore's diameter as printed on the drawing; `bores`: their centres in the
 #:   section frame, for the parametric envelope.
+#: - `cores` (exact outlines): every bore diameter the drawing prints, with how many holes have it.
+#:   The build finds them among the outline's holes by their inscribed circle (CORE_MATCH_MM) and
+#:   fails unless each count is met: geometry alone cannot tell a core from a pocket, so the
+#:   printed diameter says which holes are cores (docs/notes/section-cores.md).
+#: - `corners` (parametric): the profile has the base-40 corner holes (CORNER_HOLES), as its page
+#:   draws them.
 #:
 #: The printed IX and IY do not follow the drawing: for every rectangular profile the catalogue
 #: gives IX about the axis along the long side (the weak axis) and IY about the other. Checked
@@ -154,23 +160,55 @@ GROOVE_SOURCE = {
 #: and 45x90 econômico lying, and in each IX is the weak axis (p. 11, 15, 18, 19). Sections here
 #: stand tall, so IX goes to Iy_mm4 and IY to Ix_mm4. Square profiles print one value for both.
 PROFILES: dict[str, dict] = {
-    "PF20-14": {"page": 11, "w": 20, "h": 60, "drawn": (20, 60), "outline": "bottom", "bore": 4.6},
-    "PF30-02": {"page": 15, "w": 30, "h": 60, "drawn": (60, 30), "outline": "bottom", "bore": 12.1},
-    "PF30-04": {"page": 14, "w": 30, "h": 30, "drawn": (30, 30), "outline": "bottom", "bore": 12.1},
-    "PF40-00": {"page": 16, "w": 40, "h": 40, "drawn": (40, 40), "outline": "top", "bore": 13.7},
-    "PF40-01": {"page": 16, "w": 40, "h": 40, "drawn": (40, 40), "outline": "bottom", "bore": 13.7},
+    # Each `cores` is what the page prints: "Ø4,6 (M5)" on p. 11, "Ø12,1 (M14)" on p. 15,
+    # "Ø12,10" on p. 14 (its four 3.5 mm corner cells are square, with no diameter), "Ø13,70" on
+    # p. 16 (the 40x40 leve's four corner cells are square too), "Ø13,70" and "Ø5" on p. 16,
+    # "Ø13,7" and "Ø5" on p. 21, "Ø13,7 (M16)" on p. 18. The 45x90 econômico's drawing prints no
+    # diameter: Ø6,50 is the 45x45 econômico's above it on p. 19, the same series' core.
+    "PF20-14": {
+        "page": 11, "w": 20, "h": 60, "drawn": (20, 60), "outline": "bottom", "bore": 4.6,
+        "cores": {4.6: 3},
+    },
+    "PF30-02": {
+        "page": 15, "w": 30, "h": 60, "drawn": (60, 30), "outline": "bottom", "bore": 12.1,
+        "cores": {12.1: 2},
+    },
+    "PF30-04": {
+        "page": 14, "w": 30, "h": 30, "drawn": (30, 30), "outline": "bottom", "bore": 12.1,
+        "cores": {12.1: 1},
+    },
+    "PF40-00": {
+        "page": 16, "w": 40, "h": 40, "drawn": (40, 40), "outline": "top", "bore": 13.7,
+        "cores": {13.7: 1},
+    },
+    "PF40-01": {
+        "page": 16, "w": 40, "h": 40, "drawn": (40, 40), "outline": "bottom", "bore": 13.7,
+        "cores": {13.7: 1, 5: 4},
+    },
     "PF40-02": {
         "page": 17, "w": 40, "h": 80, "drawn": (80, 40), "bore": 13.7,
-        "bores": [(0, -20), (0, 20)],
+        "bores": [(0, -20), (0, 20)], "corners": True,
     },
-    "PF40-03": {"page": 21, "w": 80, "h": 80, "drawn": (80, 80), "outline": "top", "bore": 13.7},
+    "PF40-03": {
+        "page": 21, "w": 80, "h": 80, "drawn": (80, 80), "outline": "top", "bore": 13.7,
+        "cores": {13.7: 4, 5: 4},
+    },
     "PF40-03B": {
         "page": 20, "w": 80, "h": 80, "drawn": (80, 80), "bore": 13.7,
-        "bores": [(-20, -20), (20, -20), (-20, 20), (20, 20)],
+        "bores": [(-20, -20), (20, -20), (-20, 20), (20, 20)], "corners": True,
     },
-    "PF40-04": {"page": 17, "w": 40, "h": 40, "drawn": (40, 40), "bore": 13.7, "bores": [(0, 0)]},
-    "PF45-02": {"page": 18, "w": 45, "h": 90, "drawn": (90, 45), "outline": "bottom", "bore": 13.7},
-    "PF45-12": {"page": 19, "w": 45, "h": 90, "drawn": (90, 45), "outline": "bottom", "bore": 6.5},
+    "PF40-04": {
+        "page": 17, "w": 40, "h": 40, "drawn": (40, 40), "bore": 13.7, "bores": [(0, 0)],
+        "corners": True,
+    },
+    "PF45-02": {
+        "page": 18, "w": 45, "h": 90, "drawn": (90, 45), "outline": "bottom", "bore": 13.7,
+        "cores": {13.7: 2},
+    },
+    "PF45-12": {
+        "page": 19, "w": 45, "h": 90, "drawn": (90, 45), "outline": "bottom", "bore": 6.5,
+        "cores": {6.5: 2},
+    },
     # M2b: the other stems. Their pages draw raster images (or none), so the sections are T-slot
     # envelopes from the printed size and core bore. Extra keys:
     # - `printed`: the catalogue code whose table gives A, IX, IY and mass (default the stem);
@@ -187,7 +225,10 @@ PROFILES: dict[str, dict] = {
         "page": None, "w": 20, "h": 20, "bore": 4.6, "printed": None,
         "approx": "the catalogue has no drawing or table of the face (de face) variant; modelled as the plain 20x20 V-slot",
     },
-    "PF20-12": {"page": 11, "w": 20, "h": 40, "bore": 4.6, "bores": [(0, -10), (0, 10)]},
+    "PF20-12": {
+        "page": 11, "w": 20, "h": 40, "bore": 5, "bores": [(0, -10), (0, 10)],
+        "approx": "p. 11 prints the cores Ø5 (M6), as p. 10 does the 20x20 V-slot's; the shop's description says M5",
+    },
     "PF20-13": {
         "page": 12, "w": 40, "h": 80, "bore": 4.6,
         # Drawn lying 80 x 40, with four bores along the bottom and one in each ear; turned 90°
@@ -221,10 +262,28 @@ PROFILES: dict[str, dict] = {
     "PF45-01": {"page": 18, "w": 45, "h": 45, "bore": 13.7},
     "PF45-11": {"page": 19, "w": 45, "h": 45, "bore": 6.5},
     "PF50-01": {
-        "page": 20, "w": 50, "h": 50, "bore": None, "printed": None,
-        "approx": "p. 20 prints this profile's table with the 45x90 economy's values, so none is taken; the core is not drawn, so no bore is modelled",
+        "page": 20, "w": 50, "h": 50, "bore": 13.7, "printed": None,
+        "approx": "p. 20 prints this profile's table with the 45x90 economy's values, so none is taken; it draws the centre core Ø13,70 (M16)",
     },
 }
+
+#: The base-40 corner holes: a Ø5 (M6) bore near each outer corner, centred `inset` mm in from
+#: both faces. Printed: "Ø5" on pp. 16, 17, 20 and 21, "(M6)" on p. 20, the 4,5 inset on pp. 17
+#: and 20, and 31 between the 40x40 básico's on p. 16 (40 − 2 × 4.5). The build measures them on
+#: the exact outlines `measured_on` and fails unless they are there; the profiles marked `corners`
+#: take them.
+CORNER_HOLES = {"d": 5, "inset": 4.5, "measured_on": ["PF40-01", "PF40-03"]}
+
+#: A hole of an exact outline is a printed core when its inscribed circle (about its centroid) is
+#: within this of the printed diameter, in mm. The outlines are their strokes' centre lines and
+#: draw round bores as polygons: PF45-12's 19-sided Ø6.5 cores measure 6.378, the farthest.
+CORE_MATCH_MM = 0.15
+
+#: A core's centre is written to this grid (mm), the drawings' own: they dimension positions to
+#: 0.1 mm at best (4,5; 22,10). The build fails if a measured centre is farther than
+#: CORE_GRID_SLACK_MM from it; the farthest is 0.015 (PF40-03's corner holes).
+CORE_GRID_MM = 0.1
+CORE_GRID_SLACK_MM = 0.03
 
 #: Grooves: one centred on each series cell along each face (a 40x80 has two on each long face
 #: and one on each short face), as every profile drawn on pp. 11–21 shows.
