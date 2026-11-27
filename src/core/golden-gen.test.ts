@@ -457,6 +457,7 @@ describe("golden generation cases (design §4.6)", () => {
       "G47",
       "G48",
       "G49",
+      "G50",
     ]);
   });
 

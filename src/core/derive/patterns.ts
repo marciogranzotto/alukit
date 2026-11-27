@@ -3,6 +3,7 @@ import {
   type Connection,
   type EndSpec,
   type FreeEnd,
+  type HoleFaces,
   isPose,
   type Node,
   type Part,
@@ -317,13 +318,23 @@ class Remap {
           ends: c.ends.map((e) => this.end(e)),
           ...(c.held_by !== undefined ? { held_by: this.id(c.held_by) } : {}),
           ...(c.stack !== undefined ? { stack: c.stack.map((b) => this.id(b)) } : {}),
+          ...this.holeFaces(c.hole_faces),
         };
       }
       case "miter":
       case "splice":
-        return { ...c, ends: [this.end(c.ends[0]), this.end(c.ends[1])] };
+        return {
+          ...c,
+          ends: [this.end(c.ends[0]), this.end(c.ends[1])],
+          ...this.holeFaces(c.hole_faces),
+        };
       case "pivot":
-        return { ...c, base: this.station(c.base), ends: c.ends.map((e) => this.end(e)) };
+        return {
+          ...c,
+          base: this.station(c.base),
+          ends: c.ends.map((e) => this.end(e)),
+          ...this.holeFaces(c.hole_faces),
+        };
       case "face":
         return {
           ...c,
@@ -337,6 +348,12 @@ class Remap {
             : {}),
         };
     }
+  }
+
+  /** A connection's faces for its side holes, keyed by its ends (F12): the keys follow the ends. */
+  private holeFaces(h: HoleFaces | undefined): { hole_faces?: HoleFaces } {
+    if (h === undefined) return {};
+    return { hole_faces: Object.fromEntries(Object.entries(h).map(([e, v]) => [this.end(e), v])) };
   }
 
   part(p: Part): Part {

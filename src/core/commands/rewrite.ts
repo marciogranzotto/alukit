@@ -114,6 +114,20 @@ function ends(list: unknown, rw: Rewriter): unknown {
     : list;
 }
 
+/**
+ * A connection's faces for its side holes, keyed by its ends (F12): the keys follow the ends, and
+ * the faces and positions stay as written. They are read in the butting bar's section, as the
+ * connector's own positions are (§3.4), which no edit turns with the bar, so a face kept with its
+ * position still names the connector's hole, and derive judges it again.
+ */
+function holeFaces(c: O, rw: Rewriter): O {
+  if (!isObject(c.hole_faces) || !rw.end) return {};
+  const end = rw.end;
+  return {
+    hole_faces: Object.fromEntries(Object.entries(c.hole_faces).map(([e, v]) => [end(e), v])),
+  };
+}
+
 function bar(id: string, b: O, rw: Rewriter): O {
   const out: O = { ...b, a: point(b.a, rw, `${id}/a`) };
   if (isObject(b.b) && "len_mm" in b.b) {
@@ -160,16 +174,17 @@ function connection(id: string, c: O, rw: Rewriter): O {
       }
       const held = typeof c.held_by === "string" && rw.id ? { held_by: rw.id(c.held_by) } : {};
       const stack = Array.isArray(c.stack) ? { stack: ids(c.stack, rw) } : {};
-      return { ...c, through, ends: ends(c.ends, rw), ...held, ...stack };
+      return { ...c, through, ends: ends(c.ends, rw), ...held, ...stack, ...holeFaces(c, rw) };
     }
     case "miter":
     case "splice":
-      return { ...c, ends: ends(c.ends, rw) };
+      return { ...c, ends: ends(c.ends, rw), ...holeFaces(c, rw) };
     case "pivot":
       return {
         ...c,
         base: isObject(c.base) && rw.station ? rw.station(c.base, `${id}/base`) : c.base,
         ends: ends(c.ends, rw),
+        ...holeFaces(c, rw),
       };
     case "face": {
       const out: O = { ...c, bars: ids(c.bars, rw) };

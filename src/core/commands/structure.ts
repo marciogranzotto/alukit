@@ -4,7 +4,7 @@ import { Bar, BarId, ConnId, NodeId, Station, Vec3Expr } from "../project/schema
 import { getEntity, isObject, kindOf, mergePatch, withEntity, withoutEntity } from "./doc.ts";
 import { create, failed, patch, replace, requireEntity, SetArgs, withDoc } from "./helpers.ts";
 import { plus } from "./numbers.ts";
-import { type Ref, references, referrers } from "./refs.ts";
+import { type Ref, references, referrers, withoutEntry } from "./refs.ts";
 import { type CommandDef, done, type RawDoc, refuse } from "./types.ts";
 import { checkEntity } from "./validate.ts";
 import { changed, idList, over } from "./words.ts";
@@ -241,6 +241,12 @@ export const removeEntity: CommandDef<z.infer<typeof RemoveEntity>> = {
             `${r.from} refers to ${x} (${r.field}); cascade removes entities and drops list members, it does not rewrite ${r.from}: change it first`,
             { entity: a.id, refs: [r.from] },
           );
+        }
+        if (r.how === "member" && r.entry) {
+          // An entry keyed by the bar's end (a face named for its side holes, F12) goes with it.
+          doc = withEntity(doc, r.from, withoutEntry(getEntity(doc, r.from), r.entry));
+          changed.add(r.from);
+          continue;
         }
         if (r.how === "member" && r.list) {
           const v = getEntity(doc, r.from);

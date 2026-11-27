@@ -118,6 +118,15 @@ sleeve one of its mounts sets in the through bar's bore (an RHS or a tube). A ho
 requires in the through bar of a butt through that bar's end goes into the end face, along its
 axis.
 
+A hole in the butting bar's side (a quick connector's cross hole) goes in from a face no other
+member stands in front of, within its tool's room (30 mm). A connection may name that face per
+butting end, `"hole_faces": { "b2.a": "+x" }`, or per hole by the position its connector gives,
+`{ "b2.a": [{ "at_mm": [20, 20], "face": "+x" }] }`, over the catalog's choice; a covered named
+face is a `connection` error. A bar or part put in place after the frame's joints are made (a
+wall the frame is set against, a panel fitted last) takes `"after_assembly": true`: it does not
+block the tool when the joints are made, and a hole only it covers is a warning (the joint cannot
+be re-tightened once it is there).
+
 **Parts** sit on a station (`"on"`, with `roll_deg`), at a world pose
 (`"at": { "pos", "rot_deg" }`), or are unplaced lines (`"qty", "unplaced": true, "why"`), counted
 and priced but not drawn. **Patterns** repeat a `template` along a bar, a run or a `dir`, by
@@ -386,6 +395,7 @@ string; `<…>` is a string of that form; `?` marks an optional field.
   - `ends` (optional): `{ a?: { plane?: {point, normal} | {face} | {of}, cut?: "angle" | "square", extend_mm?: expr }, b?: { plane?: {point, normal} | {face} | {of}, cut?: "angle" | "square", extend_mm?: expr } }`
   - `ops` (optional): `[{ op: "hole", face: "+x" | "-x" | "+y" | "-y", at_mm: expr, from?: "a" | "b", d_mm?: expr, thread?: string, depth_mm?: expr, csk?: {d_mm, angle_deg}, cbore?: {d_mm, depth_mm} }, …]`
   - `holes` (optional): `{ factory: "a" | "b", stock_mm?: number } | { drilled: true } | { E_a_mm: expr } | { E_b_mm: expr }` — rails: the hole layout
+  - `after_assembly` (optional): `true` — placed after the frame's joints are made (a wall it is set against, a panel fitted last): it does not cover a cross hole while a joint made before it is tightened, only afterwards (a warning)
   - `label` (optional): `string`
   - `tags` (optional): `[string, …]`
   - `only_in` (optional): `[string, …]` — variants that include it (§4.10)
@@ -424,10 +434,10 @@ string; `<…>` is a string of that form; `?` marks an optional field.
   - `id`: `string` — any entity: n1, b7, r1, c3, p4, pt1, K1, C1, O1, D1, or project:<item>
   - `cascade` (optional): `boolean` — also remove what refers to it, and drop it from lists that can lose it
 - **`addConnection`** (connections): add a butt, miter, splice, pivot or face connection (§4.5)
-  - `{ type: "butt", through: <a bar: b<number>> | <a bar end: "b7.a" or "b7.b"> | { body: <a catalog item: "<catalog>:<code>">, at: <a node: n<number>> | [expr, expr, expr] | {on} | {pivot} | {pos, rot_deg?} }, ends: [<a bar end: "b7.a" or "b7.b">, …], spacer_mm?: expr, stack?: [<a bar: b<number>>, …], through_end?: "cover" | "node" | "none" | { end: "a" | "b", mode: "cover" | "node" }, held_by?: <a butt through the same bar whose through-fastener holds these ends too: c<number>>, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
-  - `{ type: "miter", ends: [<a bar end: "b7.a" or "b7.b">, <a bar end: "b7.a" or "b7.b">], connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
-  - `{ type: "splice", ends: [<a bar end: "b7.a" or "b7.b">, <a bar end: "b7.a" or "b7.b">], gap_mm?: expr, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
-  - `{ type: "pivot", base: { bar: <a bar: b<number>> | <a run: r<number>>, at_mm: expr, from?: "a" | "b" | "a.cut" | "b.cut", face?: "+x" | "-x" | "+y" | "-y", groove?: <a groove: "+y.1", numbered by increasing section coordinate>, off_mm?: [expr, expr] }, axis: "along" | "across", ends: [<a bar end: "b7.a" or "b7.b">, …], connector: <a connector with pivot geometry>, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
+  - `{ type: "butt", through: <a bar: b<number>> | <a bar end: "b7.a" or "b7.b"> | { body: <a catalog item: "<catalog>:<code>">, at: <a node: n<number>> | [expr, expr, expr] | {on} | {pivot} | {pos, rot_deg?} }, ends: [<a bar end: "b7.a" or "b7.b">, …], spacer_mm?: expr, stack?: [<a bar: b<number>>, …], through_end?: "cover" | "node" | "none" | { end: "a" | "b", mode: "cover" | "node" }, held_by?: <a butt through the same bar whose through-fastener holds these ends too: c<number>>, hole_faces?: { <key>: "+x" | "-x" | "+y" | "-y" | [{at_mm, face}, …] }, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
+  - `{ type: "miter", ends: [<a bar end: "b7.a" or "b7.b">, <a bar end: "b7.a" or "b7.b">], hole_faces?: { <key>: "+x" | "-x" | "+y" | "-y" | [{at_mm, face}, …] }, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
+  - `{ type: "splice", ends: [<a bar end: "b7.a" or "b7.b">, <a bar end: "b7.a" or "b7.b">], gap_mm?: expr, hole_faces?: { <key>: "+x" | "-x" | "+y" | "-y" | [{at_mm, face}, …] }, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
+  - `{ type: "pivot", base: { bar: <a bar: b<number>> | <a run: r<number>>, at_mm: expr, from?: "a" | "b" | "a.cut" | "b.cut", face?: "+x" | "-x" | "+y" | "-y", groove?: <a groove: "+y.1", numbered by increasing section coordinate>, off_mm?: [expr, expr] }, axis: "along" | "across", ends: [<a bar end: "b7.a" or "b7.b">, …], hole_faces?: { <key>: "+x" | "-x" | "+y" | "-y" | [{at_mm, face}, …] }, connector: <a connector with pivot geometry>, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
   - `{ type: "face", bars: [<a bar: b<number>> | <a run: r<number>> | <a part: p<number>>, …], gaps_mm?: [expr, …], faces?: [["+x" | "-x" | "+y" | "-y", "+x" | "-x" | "+y" | "-y"], …], fastening: "none" | "bolt" | "tnut" | "screw" | "blind", fastener?: <a catalog item: "<catalog>:<code>"> | { bar: <a catalog item: "<catalog>:<code>">, len_mm: expr }, stack?: [<a catalog item: "<catalog>:<code>"> | {item, qty?} | {item, inside, walls?, len_mm, clearance_mm?}, …], stations?: { at_mm?: [expr, …], across_mm?: [expr, …], rail_holes?: true | {along, every?, plus?}, pattern?: <a pattern: pt<number>> }, tap_depth_mm?: expr, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
 - **`setConnection`** (connections): change a connection's fields; its type may change when the result is valid
   - `id`: `string` — the entity to change
@@ -440,8 +450,8 @@ string; `<…>` is a string of that form; `?` marks an optional field.
   - `prefer` (optional): `"vertical" | "x" | "y" | "first"` — which bar runs through, when none passes the point: vertical, x, y or first; defaults.corner when absent, else vertical
   - `optional` (optional): `boolean` — do nothing, rather than refuse, when nothing butts at the point (the draw tool sends one for each end of a bar it adds)
 - **`addPart`** (parts and patterns): place a part on a station or at a world pose, or add an unplaced line (§4.7)
-  - `{ item: <a catalog item: "<catalog>:<code>">, opt?: { <key>: string }, on: { bar: <a bar: b<number>> | <a run: r<number>>, at_mm: expr, from?: "a" | "b" | "a.cut" | "b.cut", face?: "+x" | "-x" | "+y" | "-y", groove?: <a groove: "+y.1", numbered by increasing section coordinate>, off_mm?: [expr, expr] }, roll_deg?: expr, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
-  - `{ item: <a catalog item: "<catalog>:<code>">, opt?: { <key>: string }, at: { pos: [expr, expr, expr], rot_deg?: [expr, expr, expr] }, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
+  - `{ item: <a catalog item: "<catalog>:<code>">, opt?: { <key>: string }, on: { bar: <a bar: b<number>> | <a run: r<number>>, at_mm: expr, from?: "a" | "b" | "a.cut" | "b.cut", face?: "+x" | "-x" | "+y" | "-y", groove?: <a groove: "+y.1", numbered by increasing section coordinate>, off_mm?: [expr, expr] }, roll_deg?: expr, after_assembly?: true, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
+  - `{ item: <a catalog item: "<catalog>:<code>">, opt?: { <key>: string }, at: { pos: [expr, expr, expr], rot_deg?: [expr, expr, expr] }, after_assembly?: true, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
   - `{ item: <a catalog item: "<catalog>:<code>">, opt?: { <key>: string }, qty: expr, unplaced: true, why: string, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
 - **`setPart`** (parts and patterns): change a part's fields
   - `id`: `string` — the entity to change

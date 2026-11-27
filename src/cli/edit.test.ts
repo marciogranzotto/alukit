@@ -262,6 +262,51 @@ describe("alukit do", () => {
     expect((await capture(["do", dir, '{"x":1}'])).code).toBe(2);
     expect((await capture(["do", dir, "[]", "-f", "x.json"])).code).toBe(2);
   });
+
+  it("names a cross hole's face on a connection, and a member placed after assembly (F11, F12)", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "golden-gen", "G50");
+    const step = async (cmd: object) => {
+      const r = await capture(["do", dir, JSON.stringify(cmd), "--json"]);
+      expect(r.code, r.err).toBe(0);
+      const d = JSON.parse(r.out).diagnostics;
+      const brief = (xs: { severity: string; code: string; refs?: string[] }[]) =>
+        xs.filter((x) => x.code === "connection").map((x) => [x.severity, x.refs]);
+      return { new: brief(d.new), resolved: brief(d.resolved) };
+    };
+    // The wall placed with the frame: the hole at (20, 20) has no clear face.
+    const frame = { cmd: "setPart", args: { id: "p1", set: { after_assembly: null } } };
+    expect(await step(frame)).toEqual({
+      new: [["error", ["b2", "b3", "p1"]]],
+      resolved: [["warn", ["b2", "p1"]]],
+    });
+    // Its face named on the connection, +x, under the wall.
+    const named = { "b2.a": [{ at_mm: [20, 20], face: "+x" }] };
+    expect(
+      await step({ cmd: "setConnection", args: { id: "c1", set: { hole_faces: named } } }),
+    ).toEqual({ new: [["error", ["b2", "p1"]]], resolved: [["error", ["b2", "b3", "p1"]]] });
+    // The wall set against the frame after assembly: reached when the joint is made.
+    const late = { cmd: "setPart", args: { id: "p1", set: { after_assembly: true } } };
+    expect(await step(late)).toEqual({
+      new: [["warn", ["b2", "p1"]]],
+      resolved: [["error", ["b2", "p1"]]],
+    });
+    expect((await capture(["fmt", "--check", dir])).code).toBe(0);
+    const doc = JSON.parse(read(join(dir, "alukit.json")));
+    expect(doc.connections.c1.hole_faces).toEqual(named);
+    expect(doc.parts.p1.after_assembly).toBe(true);
+    // A face that is not a face of a section is refused, and nothing is written.
+    const bad = await capture([
+      "do",
+      dir,
+      JSON.stringify({
+        cmd: "setConnection",
+        args: { id: "c1", set: { hole_faces: { "b2.a": "+z" } } },
+      }),
+    ]);
+    expect(bad.code).toBe(1);
+    expect(JSON.parse(read(join(dir, "alukit.json")))).toEqual(doc);
+  });
 });
 
 describe("alukit add", () => {

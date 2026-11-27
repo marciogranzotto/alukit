@@ -1,0 +1,22 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G50",
+  "catalogs": ["../../catalogs/test-cover"],
+  "defaults": {
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "item": "test-cover:H80", "a": [0, 0, 0], "b": [340, 0, 0], "label": "an 80x80 sill, its end flush with the post's +x face" },
+    "b2": { "item": "test-cover:H80", "a": [300, 0, 40], "b": [300, 0, 640], "label": "an 80x80 post on it, a quick connector in each of two diagonal cores" },
+    "b3": { "item": "test-cover:H40-B", "a": [320, 62, 40], "b": [320, 62, 300], "label": "a 40x40 frame member standing 2 off the post's +y face, over the (20, 20) core" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"], "connector": "test-cover:HR-2" }
+  },
+  "parts": {
+    "p1": { "item": "project:WALL", "at": { "pos": [364.5, 0, 0] }, "after_assembly": true, "label": "a wall 24.5 off the post's +x face, set against the frame once it is assembled" }
+  },
+  "items": {
+    "WALL": { "kind": "placeholder", "name": "A wall the frame is set against", "bbox_mm": [[0, -500, 0], [30, 500, 1000]] }
+  }
+}

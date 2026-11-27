@@ -185,6 +185,18 @@ export const RailHoles = z.union([
   z.strictObject({ E_b_mm: Expr }),
 ]);
 
+/**
+ * A member that arrives after the frame's joints are made (a wall the frame is set against, a
+ * panel or a guard fitted last; after the decided frame's ninth run, F11). Its body does not stand
+ * in front of a side hole's mouth while a joint made before it is tightened, only afterwards.
+ */
+const AfterAssembly = z
+  .literal(true)
+  .optional()
+  .describe(
+    "placed after the frame's joints are made (a wall it is set against, a panel fitted last): it does not cover a cross hole while a joint made before it is tightened, only afterwards (a warning)",
+  );
+
 export const Bar = z.strictObject({
   item: ItemRef.optional().describe("a bar item; defaults.bar.item when absent"),
   opt: z.record(z.string(), z.string()).optional().describe("option values: { finish: black }"),
@@ -197,6 +209,7 @@ export const Bar = z.strictObject({
   ends: z.strictObject({ a: EndSpec.optional(), b: EndSpec.optional() }).optional(),
   ops: z.array(Op).optional(),
   holes: RailHoles.optional().describe("rails: the hole layout"),
+  after_assembly: AfterAssembly,
   ...Common,
 });
 export type Bar = z.infer<typeof Bar>;
@@ -226,6 +239,34 @@ export const ThroughEnd = z.union([
   z.strictObject({ end: z.enum(["a", "b"]), mode: z.enum(["cover", "node"]) }),
 ]);
 
+/**
+ * The face each hole in a butting bar's side goes in from, per butting end, over the connector's
+ * own choice (after the decided frame's ninth run, F12): one face for every such hole at that
+ * end, or a list naming the hole at each position (in the butting bar's section from its box
+ * centre, where the connector's positions are read; a hole with no position stands at [0, 0]).
+ */
+export const HoleFaces = z
+  .record(
+    EndRef,
+    z.union([
+      Face,
+      z
+        .array(
+          z.strictObject({
+            at_mm: z
+              .tuple([z.number(), z.number()])
+              .describe("the hole's position, as the connector places it"),
+            face: Face,
+          }),
+        )
+        .min(1),
+    ]),
+  )
+  .describe(
+    "per butting end, the face its side holes (a quick connector's cross hole) go in from: one face for all of them, or [{ at_mm: [x, y], face }] per hole",
+  );
+export type HoleFaces = z.infer<typeof HoleFaces>;
+
 export const Butt = z.strictObject({
   type: z.literal("butt"),
   through: z
@@ -244,12 +285,14 @@ export const Butt = z.strictObject({
   held_by: ConnId.optional().describe(
     "a butt through the same bar whose through-fastener holds these ends too: c<number>",
   ),
+  hole_faces: HoleFaces.optional(),
   ...ConnCommon,
 });
 
 export const Miter = z.strictObject({
   type: z.literal("miter"),
   ends: z.tuple([EndRef, EndRef]),
+  hole_faces: HoleFaces.optional(),
   ...ConnCommon,
 });
 
@@ -257,6 +300,7 @@ export const Splice = z.strictObject({
   type: z.literal("splice"),
   ends: z.tuple([EndRef, EndRef]),
   gap_mm: Expr.optional(),
+  hole_faces: HoleFaces.optional(),
   ...ConnCommon,
 });
 
@@ -265,6 +309,7 @@ export const Pivot = z.strictObject({
   base: Station,
   axis: z.enum(["along", "across"]).describe("the hinge axis, along or across the base bar"),
   ends: z.array(EndRef).min(1),
+  hole_faces: HoleFaces.optional(),
   connector: ItemRef.describe("a connector with pivot geometry"),
   qty: z.int().min(1).optional(),
   ...Common,
@@ -347,12 +392,14 @@ export const Part = z.union([
     opt: z.record(z.string(), z.string()).optional(),
     on: Station,
     roll_deg: Expr.optional(),
+    after_assembly: AfterAssembly,
     ...Common,
   }),
   z.strictObject({
     item: ItemRef,
     opt: z.record(z.string(), z.string()).optional(),
     at: Pose,
+    after_assembly: AfterAssembly,
     ...Common,
   }),
   z.strictObject({
