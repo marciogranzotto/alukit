@@ -18,7 +18,7 @@ type EndTap = EndTapOp | (EndHoleOp & { thread: string });
  * or a splice's) or a tapped end hole (§4.5, G31), must stand on one of its section's cores, its
  * centre within `TOL.len` of the core's; else it is a `machining` error on the bar naming the
  * end, the place and the nearest cores (each of those at the least distance), one for each place,
- * with the connections that made the taps there. On a core, the tap must fit it (`fit`, below):
+ * with the connections that made the taps there. On a core, the tap must fit it (`tapFits`, below):
  * an M16 on an 80x80's Ø5 corner hole is on a core and still an error. A drilled end hole is not a
  * tap and is not checked.
  *
@@ -65,7 +65,7 @@ export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void 
       const by = [...new Set(group.map((o) => o.by))].sort(compareIds);
       if (least <= TOL.len) {
         const core = section.cores[far.indexOf(least)] as SectionCore;
-        fit(ctx, id, sectionId, opText(b, t), by, t.thread, core.d_mm);
+        tapFits(ctx, id, sectionId, opText(b, t), by, t.thread, core.d_mm);
         continue;
       }
       const nearest = cores
@@ -92,7 +92,7 @@ export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void 
  * the section does not state. Either is a `machining` error; a thread with no tap drill or 6H
  * tolerance here is an info, its place checked and its fit not.
  */
-function fit(
+function tapFits(
   ctx: Ctx,
   bar: string,
   sectionId: string,
@@ -117,9 +117,14 @@ function fit(
     f.why === "core-wide"
       ? `the core is wider than ${thread}'s largest minor diameter, ${f.limit_mm.toFixed(3)} (6H), so the thread would be shallow`
       : `${thread}'s tap drill, ${mm(tapDrill(thread) as number)}, would drill it up ${mm((tapDrill(thread) as number) - d)}, more than one pitch (${mm(threadPitch(thread) as number)})`;
-  ctx.d.error("machining", bar, `${what} (${by.join(", ")}) does not fit ${core} it is on: ${why}`, {
-    refs: by,
-  });
+  ctx.d.error(
+    "machining",
+    bar,
+    `${what} (${by.join(", ")}) does not fit ${core} it is on: ${why}`,
+    {
+      refs: by,
+    },
+  );
 }
 
 const q = (x: number) => quantize(x, QUANTUM.len_mm);
