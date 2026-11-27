@@ -42,7 +42,7 @@ import { palette } from "../palette.ts";
 import { type CommandOutcome, model, sendCommands, summary } from "../store.ts";
 import { viewer } from "../viewport/viewer.ts";
 import { frameCommand, pickRefusal, placeCommand, placeFrom, runOf } from "./commands.ts";
-import { jointWords } from "./joint.ts";
+import { jointWords, touchesBars } from "./joint.ts";
 import {
   activeTool,
   CORNER_RULES,
@@ -254,7 +254,13 @@ export function createTools(viewer: Viewer): Tools {
   }
   function scheduleJoint(end: DrawEnd | undefined): void {
     const cmds = end && drawOptions.peek().autoConnect ? gestureCommands(end) : undefined;
-    if (!end || !cmds) {
+    const start = drawState.peek().start;
+    const m = model.peek();
+    // Open space: neither point of the stroke is where autoConnect could join, so its dry run
+    // would say nothing (joint.ts, touchesBars). Judged by where the points are, not how the end
+    // was found: a typed or grid end can land on a bar's end without snapping to it.
+    const open = !m || !start || !end || !(touchesBars(m, start.p) || touchesBars(m, end.p));
+    if (!end || !cmds || open) {
       clearJoint();
       return;
     }
