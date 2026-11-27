@@ -441,6 +441,24 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   let camera: PerspectiveCamera | OrthographicCamera = persp;
   const controls = new CameraControls(camera, renderer.domElement);
   controls.setTarget(0, 0, 0, false);
+  /**
+   * Whether the camera has stopped changing. camera-controls' `active` turns false only when an
+   * eased move comes to rest: after a move made at once (a fit when the first model comes, a
+   * change of projection) it stays true, though nothing moves (**read**: its `update` checks for
+   * rest only between two frames that both changed). Its `sleep` event, the first frame that
+   * changes nothing, says so; `transitionstart`, sent when an eased move is asked for, and
+   * `wake`, the first frame that changes, end it.
+   */
+  let asleep = true;
+  controls.addEventListener("transitionstart", () => {
+    asleep = false;
+  });
+  controls.addEventListener("wake", () => {
+    asleep = false;
+  });
+  controls.addEventListener("sleep", () => {
+    asleep = true;
+  });
 
   let dirty = true;
   const invalidate = () => {
@@ -1886,8 +1904,9 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         right,
         up,
         // camera-controls marks a transition active when it is asked for, and rested when the
-        // camera's change per frame falls below its rest threshold (0.01 mm here).
-        moving: controls.active,
+        // camera's change per frame falls below its rest threshold (0.01 mm here); a move made
+        // at once is over at the first frame that changes nothing (`asleep`).
+        moving: controls.active && !asleep,
       };
     },
     renderStats: () => ({ ...stats }),
