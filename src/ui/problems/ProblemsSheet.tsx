@@ -4,11 +4,11 @@ import { Num } from "../common/Num.tsx";
 import { StatusGlyph, StatusMark } from "../common/StatusGlyph.tsx";
 import type { Model } from "../model.ts";
 import { OpenItemsSection } from "../records/OpenItems.tsx";
-import { registerSheet, selectionOnly } from "../sheets/registry.ts";
+import { selectionOnly } from "../sheets/registry.ts";
 import { anySelected, type Col, Row, Sheet, SheetBar, SheetTable } from "../tables/common.tsx";
 import { resolveTargets } from "../targets.ts";
 import { GROUP_LOOK, ProblemList, ProblemRow } from "./ProblemRow.tsx";
-import { problemCounts, problemList } from "./source.ts";
+import { problemList } from "./source.ts";
 
 /**
  * The Problems sheet (docs/ux/plan.md D-UX-12, S4.8; docs/ux/heuristics-and-first-run.md §5.4):
@@ -143,41 +143,3 @@ export function ProblemsSheet({ m }: { m: Model }) {
     </Sheet>
   );
 }
-
-/** The rail's badge: what blocks the order, then the warnings, each as a glyph and a number. */
-function ProblemsBadge() {
-  const { blocks, warnings } = problemCounts.value;
-  if (blocks === 0 && warnings === 0) {
-    return (
-      <span class="badge ok" title="Every check passes">
-        <StatusGlyph status="ready" size={12} /> <span class="sr-only">Every check passes</span>
-      </span>
-    );
-  }
-  return (
-    <span class="badge" title={`${blocks} block the order, ${warnings} warnings`}>
-      {blocks > 0 && (
-        <span class="badge-n blocked">
-          <StatusGlyph status="blocked" size={12} />
-          {blocks}
-          <span class="sr-only"> block the order</span>
-        </span>
-      )}
-      {warnings > 0 && (
-        <span class="badge-n warn">
-          <StatusGlyph status="warn" size={12} />
-          {warnings}
-          <span class="sr-only"> warnings</span>
-        </span>
-      )}
-    </span>
-  );
-}
-
-registerSheet({
-  id: "problems",
-  title: "Problems",
-  order: 50,
-  badge: () => <ProblemsBadge />,
-  Body: ProblemsSheet,
-});

@@ -24,6 +24,24 @@ export interface Example {
 const isCommand = (x: unknown): x is Command =>
   typeof x === "object" && x !== null && typeof (x as Command).cmd === "string";
 
+let loaded: Promise<Example> | undefined;
+
+/**
+ * The skill's example, read and parsed the first time it is asked for. The skill's text (44 kB)
+ * is a chunk of its own, which only loading the example needs, so the page does not parse it on
+ * every start (docs/ux/integration-decisions.md).
+ */
+export function loadExample(): Promise<Example> {
+  loaded ??= import("../../../skills/alukit/SKILL.md?raw").then(
+    (m) => exampleOf(m.default),
+    (e: unknown) => {
+      loaded = undefined;
+      throw e;
+    },
+  );
+  return loaded;
+}
+
 /** The example's catalogs, currency and commands. */
 export function exampleOf(skill: string): Example {
   const out: Example = { catalogs: [], commands: [] };

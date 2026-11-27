@@ -3,10 +3,9 @@ import { endText } from "#core/cutlist/format.ts";
 import { DrawABar, EmptyState, OpenCatalog } from "../common/EmptyState.tsx";
 import { EntityChips } from "../common/EntityChip.tsx";
 import { Num } from "../common/Num.tsx";
-import { date, mm, plural, qty, withUnit } from "../format.ts";
+import { date, mm, qty, withUnit } from "../format.ts";
 import type { Model } from "../model.ts";
-import { registerSheet, selectionOnly } from "../sheets/registry.ts";
-import { model } from "../store.ts";
+import { selectionOnly } from "../sheets/registry.ts";
 import { anySelected, type Col, optText, Row, Sheet, SheetBar, SheetTable } from "./common.tsx";
 import { EndsPictogram, GroupTitle, MachiningCell, StockDiagram } from "./pictograms.tsx";
 
@@ -153,18 +152,3 @@ export function CutListSheet({ m }: { m: Model }) {
     </Sheet>
   );
 }
-
-/** The tab's badge: how many pieces there are to cut. */
-function PiecesBadge() {
-  const groups = model.value?.cutlist.groups ?? [];
-  const n = groups.reduce((sum, g) => sum + g.pieces, 0);
-  return n > 0 ? <span class="badge plain">{plural(n, "piece")}</span> : null;
-}
-
-registerSheet({
-  id: "cutlist",
-  title: "Cut list",
-  order: 10,
-  badge: () => <PiecesBadge />,
-  Body: CutListSheet,
-});

@@ -1,5 +1,4 @@
 import type { Model } from "../model.ts";
-import { registerSheet } from "../sheets/registry.ts";
 import { Sheet } from "../tables/common.tsx";
 import { DecisionsSection } from "./Decisions.tsx";
 import { HistorySection } from "./History.tsx";
@@ -17,5 +16,3 @@ export function RecordsSheet({ m }: { m: Model }) {
     </Sheet>
   );
 }
-
-registerSheet({ id: "records", title: "Records", order: 60, Body: RecordsSheet });

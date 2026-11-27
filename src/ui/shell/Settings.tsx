@@ -1,4 +1,3 @@
-import { signal } from "@preact/signals";
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { Order } from "#core/order/types.ts";
@@ -10,6 +9,7 @@ import type { Model } from "../model.ts";
 import { optionFields } from "../options.ts";
 import { busy, type CommandOutcome, model, sendCommands, summary } from "../store.ts";
 import { Dialog } from "./Dialog.tsx";
+import { settingsOpen } from "./open.ts";
 
 /**
  * Project settings (S2.11, BE-1): the name, the catalogs, the currency, the price basis and the
@@ -17,9 +17,9 @@ import { Dialog } from "./Dialog.tsx";
  * the order rules. Saving sends what changed as one `setProject` step, a merge patch over the
  * document (RFC 7396: a field set to null is removed), which the top bar's undo takes back; a
  * refusal shows under the form. Owner: S2.
+ *
+ * The app loads this module the first time the dialog opens (`settingsOpen`, in open.ts).
  */
-
-export const settingsOpen = signal(false);
 
 const isObject = (x: unknown): x is Record<string, unknown> =>
   typeof x === "object" && x !== null && !Array.isArray(x);

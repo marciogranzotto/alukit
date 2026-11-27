@@ -6,8 +6,8 @@ import { ParamsTable } from "../records/Params.tsx";
 import { openSheet } from "../sheets/registry.ts";
 import { model } from "../store.ts";
 import { useOutput, withAsOf } from "../tables/common.tsx";
+import { settingsOpen } from "./open.ts";
 import { readiness } from "./readiness.ts";
-import { settingsOpen } from "./Settings.tsx";
 import { firstStepsHidden, hideFirstSteps, orderSeen, startedEmpty } from "./start.ts";
 
 /**

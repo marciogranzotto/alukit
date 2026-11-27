@@ -2,10 +2,9 @@ import { EntityChips } from "../common/EntityChip.tsx";
 import { ItemSwatch } from "../common/ItemSwatch.tsx";
 import { Num } from "../common/Num.tsx";
 import { StatusGlyph } from "../common/StatusGlyph.tsx";
-import { kg, mm, plural, qty, withUnit } from "../format.ts";
+import { kg, mm, qty, withUnit } from "../format.ts";
 import type { Model } from "../model.ts";
-import { registerSheet, selectionOnly } from "../sheets/registry.ts";
-import { model } from "../store.ts";
+import { selectionOnly } from "../sheets/registry.ts";
 import { anySelected, type Col, optText, Row, Sheet, SheetBar, SheetTable } from "./common.tsx";
 
 /**
@@ -92,11 +91,3 @@ export function BomSheet({ m }: { m: Model }) {
     </Sheet>
   );
 }
-
-/** The tab's badge: how many lines the bill has. */
-function LinesBadge() {
-  const n = model.value?.bom.groups.reduce((sum, g) => sum + g.lines.length, 0) ?? 0;
-  return n > 0 ? <span class="badge plain">{plural(n, "line")}</span> : null;
-}
-
-registerSheet({ id: "bom", title: "BOM", order: 20, badge: () => <LinesBadge />, Body: BomSheet });

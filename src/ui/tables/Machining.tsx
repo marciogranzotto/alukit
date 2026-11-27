@@ -138,5 +138,3 @@ export function MachiningSheet({ m }: { m: Model }) {
     </Sheet>
   );
 }
-
-registerSheet({ id: "machining", title: "Machining", order: 30, Body: MachiningSheet });

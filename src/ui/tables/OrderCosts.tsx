@@ -18,8 +18,8 @@ import type { Model } from "../model.ts";
 import { ProblemList, ProblemRow } from "../problems/ProblemRow.tsx";
 import { problemList } from "../problems/source.ts";
 import { openItems } from "../records/OpenItems.tsx";
-import { registerSheet, selectionOnly } from "../sheets/registry.ts";
-import { model } from "../store.ts";
+import { selectionOnly } from "../sheets/registry.ts";
+import { blocks, thingsToResolve } from "./badges.tsx";
 import {
   AsOfInput,
   anySelected,
@@ -102,13 +102,6 @@ function reasonProblem(
     fixes: fixesFor(m, r),
     from: ["order"],
   };
-}
-
-const blocks = (s: SupplierOrder) => s.reasons.filter((r) => r.action === "block");
-
-/** The distinct things that block the order: one open item holding three suppliers is one. */
-function thingsToResolve(o: Order): number {
-  return new Set(o.suppliers.flatMap((s) => blocks(s).map((r) => `${r.rule}|${r.message}`))).size;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -592,42 +585,3 @@ export function OrderCostsSheet({ m }: { m: Model }) {
     </div>
   );
 }
-
-/**
- * The tab's badge: how many things hold the order, read closed. It asks for the order itself, as
- * the sheet does (the server prices a revision once), so it does not wait for the problems answer.
- */
-function OrderBadge() {
-  const m = model.value;
-  const got = useOutput<Order>(withAsOf("/api/order"), m?.rev ?? 0);
-  if (!m || got === undefined || "error" in got) return null;
-  const things = thingsToResolve(got.value);
-  if (things === 0) {
-    return got.value.suppliers.length === 0 ? null : (
-      <span class="badge ok" title="Every supplier can be ordered from">
-        <StatusGlyph status="ready" size={12} />
-        <span class="sr-only">Ready to order</span>
-      </span>
-    );
-  }
-  return (
-    <span
-      class="badge"
-      title={`${plural(things, "thing")} to resolve before the order can be sent`}
-    >
-      <span class="badge-n blocked">
-        <StatusGlyph status="blocked" size={12} />
-        {things}
-        <span class="sr-only"> to resolve</span>
-      </span>
-    </span>
-  );
-}
-
-registerSheet({
-  id: "order",
-  title: "Order & costs",
-  order: 40,
-  badge: () => <OrderBadge />,
-  Body: OrderCostsSheet,
-});
