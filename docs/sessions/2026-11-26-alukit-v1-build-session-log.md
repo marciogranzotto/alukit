@@ -875,3 +875,7 @@ anything, and each has a default in place.
   - AluKit judges exactly the project's five wall-side faces covered, and finds no clear face for them either.
   - Two gaps: a cover that arrives after assembly (a wall the frame is later set against) can't be said (**F11**), and a face can be named only in the catalog, not on a project connection (**F12**). A gap batch was launched.
   - A stale figure fixed in `docs/notes/x9-f8-f9.md`: X9 moves ten holes in the decided frame, not six.
+- **12:15–12:27**: Marcio is back and using the app.
+  - Two agents he stopped by accident were relaunched.
+  - **Traced sections:** at his request, Forseti's 19 generated profiles get traced cross-sections, from the catalogue's vector drawings where they exist and its raster drawings otherwise, each validated against the published kg/m and inertia before it is marked real.
+  - **Ends and lengths:** he asked to drag a bar's end to extend it, auto-attaching to the bars it meets, and to click a bar's length label to type a new length. This lifts the v1 limit on dragging ends. An agent is building it on the draw tool's joint preview.
