@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AluKit flows and IA: wireframes</title>
+<!--
+  Static wireframes for docs/ux/flows-and-ia.md. Each <section class="frame"> is one 1440 x 900
+  mockup; the PNGs beside this file are screenshots of them. Greyscale on purpose: these show
+  structure and flow, not the visual design. Numbers in the frames are illustrative.
+-->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9d9d4; font: 13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; color: #222; }
+  .frame { width: 1440px; height: 900px; background: #f6f6f3; position: relative; overflow: hidden; margin: 0 0 40px; display: flex; flex-direction: column; }
+  .caption { position: absolute; left: 12px; bottom: 8px; font-size: 11px; color: #777; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .top { height: 44px; border-bottom: 1px solid #999; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: #ecece8; flex: none; }
+  .btn { border: 1px solid #888; border-radius: 4px; padding: 3px 8px; background: #fff; white-space: nowrap; }
+  .btn.primary { background: #333; color: #fff; border-color: #333; }
+  .btn.ghost { background: transparent; }
+  .btn.small { padding: 1px 6px; font-size: 12px; }
+  .pill { border-radius: 12px; padding: 3px 10px; font-weight: 600; border: 2px solid #222; }
+  .pill.blocked { background: #fff; border-color: #b00; color: #b00; }
+  .pill.ready { border-color: #070; color: #070; }
+  .spacer { flex: 1; }
+  .sel { border: 1px solid #888; border-radius: 4px; padding: 2px 6px; background: #fff; }
+  .row { display: flex; flex: 1; min-height: 0; }
+  .col { display: flex; flex-direction: column; min-height: 0; }
+  .left { width: 250px; border-right: 1px solid #999; background: #efefeb; flex: none; }
+  .right { width: 310px; border-left: 1px solid #999; background: #efefeb; flex: none; overflow: hidden; }
+  .canvas { flex: 1; position: relative; background: #fbfbf9; overflow: hidden; }
+  .grid { position: absolute; inset: 0; background-image: linear-gradient(#e7e7e2 1px, transparent 1px), linear-gradient(90deg, #e7e7e2 1px, transparent 1px); background-size: 28px 28px; }
+  h4 { margin: 0; padding: 8px 10px 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #555; display: flex; align-items: center; gap: 6px; }
+  .list { padding: 0 6px; }
+  .li { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 4px; }
+  .li.on { background: #fff; outline: 2px solid #333; }
+  .li .k { margin-left: auto; font-family: ui-monospace, monospace; font-size: 11px; border: 1px solid #999; border-radius: 3px; padding: 0 4px; background: #fff; }
+  .sw { width: 22px; height: 22px; border: 1px solid #666; background: repeating-linear-gradient(45deg, #ccc 0 3px, #eee 3px 6px); flex: none; }
+  .sw.part { border-radius: 50%; background: #ddd; }
+  .dim { color: #777; }
+  .warn { color: #a60; font-weight: 600; }
+  .err { color: #b00; font-weight: 600; }
+  .ok { color: #070; font-weight: 600; }
+  .rail { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .rail .t { width: 112px; border: 1px solid #888; border-radius: 4px; background: #fff; padding: 3px 6px; display: flex; justify-content: space-between; }
+  .rail .t.on { background: #333; color: #fff; }
+  .rail .t kbd { font-family: ui-monospace, monospace; font-size: 11px; opacity: .8; }
+  .views { position: absolute; right: 10px; top: 10px; display: flex; gap: 4px; align-items: center; }
+  .cube { width: 54px; height: 54px; border: 1px solid #888; background: #fff; display: grid; place-items: center; font-size: 10px; color: #555; }
+  .cmdbar { position: absolute; left: 10px; right: 10px; bottom: 10px; border: 2px solid #333; border-radius: 6px; background: #fff; display: flex; align-items: center; gap: 8px; padding: 6px 10px; white-space: nowrap; font-size: 12px; overflow: hidden; }
+  .cmdbar .field { border: 1px solid #333; border-radius: 3px; padding: 1px 8px; min-width: 70px; font-family: ui-monospace, monospace; background: #ffffe6; }
+  .cmdbar .sep { width: 1px; height: 18px; background: #bbb; }
+  .sheets { height: 250px; border-top: 1px solid #999; background: #efefeb; display: flex; flex-direction: column; flex: none; }
+  .tabs { display: flex; gap: 2px; padding: 0 8px; border-bottom: 1px solid #aaa; align-items: flex-end; height: 32px; flex: none; }
+  .tab { padding: 6px 10px; border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; }
+  .tab.on { background: #f6f6f3; border-color: #aaa; font-weight: 600; margin-bottom: -1px; }
+  .tab .b { display: inline-block; min-width: 16px; padding: 0 4px; border-radius: 8px; background: #b00; color: #fff; font-size: 11px; text-align: center; }
+  .tab .b.w { background: #a60; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 3px 8px; border-bottom: 1px solid #ddd; white-space: nowrap; }
+  th { font-weight: 600; color: #555; font-size: 12px; }
+  td.n, th.n { text-align: right; font-family: ui-monospace, monospace; }
+  tr.hl td { background: #fff; font-weight: 600; border-top: 2px solid #333; border-bottom: 2px solid #333; }
+  tr.hl td:first-child { border-left: 2px solid #333; }
+  tr.hl td:last-child { border-right: 2px solid #333; }
+  .inp { border: 1px solid #888; border-radius: 3px; background: #fff; padding: 1px 6px; font-family: ui-monospace, monospace; }
+  h4 .btn, h4 .inp { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12px; }
+  .kv { padding: 0 10px; }
+  .kv .r { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid #ddd; }
+  .kv .r > span:first-child { width: 86px; color: #555; flex: none; }
+  .note { position: absolute; background: #222; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: grid; place-items: center; font-weight: 700; font-size: 13px; z-index: 5; box-shadow: 0 0 0 3px #f6f6f3; }
+  .legend { position: absolute; right: 12px; bottom: 8px; background: #fff; border: 1px solid #999; border-radius: 6px; padding: 8px 10px; width: 420px; font-size: 12px; z-index: 6; }
+  .legend ol { margin: 0; padding-left: 18px; }
+  .legend li { margin: 2px 0; }
+  .legend b { font-weight: 600; }
+  .card { background: #fff; border: 1px solid #888; border-radius: 6px; }
+  .overlay { position: absolute; background: rgba(40,40,40,.25); inset: 44px 0 0 0; }
+  svg text { font: 11px ui-monospace, monospace; fill: #333; }
+  .chip { display: inline-block; border: 1px solid #999; border-radius: 10px; padding: 0 8px; background: #fff; font-size: 12px; }
+  .chip.on { background: #333; color: #fff; border-color: #333; }
+  .toast { position: absolute; right: 14px; top: 12px; background: #fff; border: 2px solid #333; border-radius: 6px; padding: 6px 10px; display: flex; gap: 10px; align-items: center; z-index: 4; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================= 08: layout -->
+<section class="frame" id="m-layout">
+  <div class="top">
+    <b>AluKit</b>
+    <span class="sel">Lab rack ▾</span>
+    <span class="dim">variant</span><span class="sel">standard ▾</span><span class="btn small ghost">Compare…</span>
+    <span class="btn">⟲ Undo <span class="dim">· you: draw bar b12</span></span><span class="btn">⟳</span>
+    <span class="spacer"></span>
+    <span class="pill blocked">● BLOCKED · 3 to fix</span>
+    <span class="btn">Revision: changed since “Quote 1” ▾</span>
+    <span class="btn">Export GLB</span>
+    <span class="chip">◉ claude · active</span>
+  </div>
+  <div class="row">
+    <div class="left col">
+      <h4>Parts bin <span class="spacer"></span><span class="btn small">Browse catalog… <span class="mono">/</span></span></h4>
+      <div class="list">
+        <div class="li on"><span class="sw"></span><span><b>PF40-01</b> 40×40 Básico<br><span class="dim">anodised · 12 in use</span></span><span class="k">B</span></div>
+        <div class="li"><span class="sw"></span><span><b>PF40-80</b> 40×80<br><span class="dim">anodised · 2 in use</span></span></div>
+        <div class="li"><span class="sw part"></span><span><b>BRK-40</b> angle bracket<br><span class="dim">16 in use</span></span><span class="k">P</span></div>
+        <div class="li"><span class="sw part"></span><span><b>TNUT-M8</b> T-nut<br><span class="dim">pinned</span></span></div>
+      </div>
+      <h4 style="margin-top:8px">Model <span class="spacer"></span><span class="inp" style="width:110px;color:#999">filter</span></h4>
+      <div class="list">
+        <div class="li">▾ <b>by tag</b> <span class="dim">· by kind</span></div>
+        <div class="li">&nbsp;&nbsp;▸ base ring <span class="dim">4</span></div>
+        <div class="li">&nbsp;&nbsp;▸ posts <span class="dim">4</span></div>
+        <div class="li">&nbsp;&nbsp;▸ top ring <span class="dim">4</span></div>
+        <div class="li">▸ Joints <span class="dim">9</span> <span class="warn">· 8 open</span></div>
+        <div class="li">▸ Parts <span class="dim">3</span></div>
+        <div class="li">▸ Patterns <span class="dim">1</span></div>
+        <div class="li">▸ Params <span class="dim">W D H</span></div>
+      </div>
+    </div>
+    <div class="canvas">
+      <div class="grid"></div>
+      <div class="rail">
+        <div class="t"><span>Select</span><kbd>V</kbd></div>
+        <div class="t on"><span>Bar</span><kbd>B</kbd></div>
+        <div class="t"><span>Box frame</span><kbd>G</kbd></div>
+        <div class="t"><span>Connect</span><kbd>C</kbd></div>
+        <div class="t"><span>Part</span><kbd>P</kbd></div>
+        <div class="t"><span>Pattern</span><kbd>X</kbd></div>
+        <div class="t"><span>Measure</span><kbd>M</kbd></div>
+      </div>
+      <div class="views">
+        <span class="btn small">Fit F</span><span class="btn small">Persp O</span><span class="btn small">Section</span>
+        <div class="cube">ISO<br>views ▾</div>
+      </div>
+      <svg role="img" aria-label="a box frame being drawn, with joint markers" width="830" height="440" style="position:absolute;left:150px;top:60px" viewBox="0 0 830 440">
+        <!-- a box frame, isometric-ish -->
+        <g stroke="#555" stroke-width="9" stroke-linecap="square" fill="none">
+          <line x1="150" y1="330" x2="520" y2="400"/>
+          <line x1="520" y1="400" x2="700" y2="300"/>
+          <line x1="150" y1="330" x2="330" y2="230"/>
+          <line x1="330" y1="230" x2="700" y2="300"/>
+          <line x1="150" y1="330" x2="150" y2="110"/>
+          <line x1="520" y1="400" x2="520" y2="180"/>
+          <line x1="700" y1="300" x2="700" y2="80"/>
+          <line x1="330" y1="230" x2="330" y2="10"/>
+          <line x1="150" y1="110" x2="520" y2="180"/>
+          <line x1="520" y1="180" x2="700" y2="80"/>
+        </g>
+        <line x1="150" y1="110" x2="330" y2="10" stroke="#333" stroke-width="9" stroke-dasharray="10 6"/>
+        <text x="200" y="45">preview: b12, 600 along +Y</text>
+        <!-- joint markers -->
+        <g>
+          <circle cx="150" cy="330" r="9" fill="#333"/><circle cx="520" cy="400" r="9" fill="#333"/>
+          <circle cx="700" cy="300" r="9" fill="#333"/><circle cx="330" cy="230" r="9" fill="#333"/>
+          <circle cx="520" cy="180" r="10" fill="#fff" stroke="#a60" stroke-width="4"/>
+          <circle cx="700" cy="80" r="10" fill="#fff" stroke="#a60" stroke-width="4"/>
+          <circle cx="150" cy="110" r="10" fill="#fff" stroke="#a60" stroke-width="4"/>
+          <circle cx="330" cy="10" r="0"/>
+        </g>
+        <text x="535" y="176">open end</text>
+        <text x="40" y="350">joined (butt)</text>
+      </svg>
+      <div class="cmdbar">
+        <b>Bar</b><span class="sep"></span>
+        <span>from <code>b9.a</code></span><span>along <b>+Y</b></span>
+        <span class="field">600▌</span><span class="dim">⏎</span><span class="sep"></span>
+        <span>anchor <code>-x-y</code> <span class="dim">A</span></span><span>roll 0° <span class="dim">R</span></span>
+        <span>plane ground <span class="dim">W</span></span><span class="sep"></span>
+        <span>corners <span class="sel">posts run through ▾</span></span><span>☑ join ends</span>
+      </div>
+    </div>
+    <div class="right col">
+      <h4>Inspector · b2 <span class="dim" style="text-transform:none;letter-spacing:0">bar, base ring</span></h4>
+      <div class="kv">
+        <div class="r"><span>Profile</span><span class="sel">PF40-01 40×40 Básico ▾</span><span class="btn small">Replace…</span></div>
+        <div class="r"><span>Finish</span><span class="sel">anodised ▾</span></div>
+        <div class="r"><span>Length</span><span class="inp">520</span><span class="dim">design → cut <b>520.00</b></span></div>
+        <div class="r"><span>End a</span><span>butt into <code>b5</code> (c3)</span><span class="btn small">Flip</span></div>
+        <div class="r"><span>End b</span><span class="warn">open</span><span class="btn small">Join…</span></div>
+        <div class="r"><span>Anchor</span><span class="sel">-x-y ▾</span><span>Roll</span><span class="sel">0° ▾</span></div>
+        <div class="r"><span>Label</span><span class="inp" style="flex:1">base rail, left</span></div>
+        <div class="r"><span>Tags</span><span class="chip">base ring</span><span class="chip">+</span></div>
+      </div>
+      <h4 style="margin-top:6px">Derived <span class="dim" style="text-transform:none;letter-spacing:0">read only</span></h4>
+      <div class="kv">
+        <div class="r"><span>Mass</span><span class="mono">0.776 kg</span><span class="dim">ⓘ src</span></div>
+        <div class="r"><span>Price</span><span class="mono">65.78 BRL</span><span class="dim">ⓘ offer, read 2026-11-26</span></div>
+        <div class="r"><span>Machining</span><span class="dim">none</span></div>
+        <div class="r"><span>In outputs</span><span class="btn small">Cut list row</span><span class="btn small">Order line</span></div>
+      </div>
+      <div style="padding:10px"><span class="btn">Delete ⌫</span></div>
+    </div>
+  </div>
+  <div class="sheets">
+    <div class="tabs">
+      <span class="tab on">Cut list</span><span class="tab">BOM</span><span class="tab">Machining</span><span class="tab">Order &amp; costs <span class="b">3</span></span><span class="tab">Problems <span class="b w">9</span></span><span class="tab">Records</span>
+      <span class="spacer"></span>
+      <span class="chip on" style="margin-bottom:5px">◎ selection only</span>&nbsp;<span class="btn small" style="margin-bottom:5px">⇕ resize</span>&nbsp;<span class="btn small" style="margin-bottom:5px">⤢ maximize T</span>
+    </div>
+    <div style="padding:6px 10px; overflow:hidden">
+      <div class="dim" style="margin-bottom:4px">PF40-01 40×40 Básico · anodised · showing the row that holds the selection (b2) · <u>show all 6 rows</u></div>
+      <table>
+        <tr><th class="n">count</th><th class="n">cut mm</th><th>ends a / b</th><th>machining</th><th>pieces</th><th class="n">price</th></tr>
+        <tr class="hl"><td class="n">2</td><td class="n">520.00</td><td>square / square</td><td class="dim">none</td><td><code>b2</code> <code>b4</code></td><td class="n">131.56</td></tr>
+      </table>
+    </div>
+  </div>
+  <span class="note" style="left:784px;top:10px">1</span>
+  <span class="note" style="left:228px;top:52px">2</span>
+  <span class="note" style="left:770px;top:270px">3</span>
+  <span class="note" style="left:262px;top:600px">4</span>
+  <span class="note" style="left:1404px;top:54px">5</span>
+  <span class="note" style="left:1082px;top:652px">6</span>
+  <span class="note" style="left:1291px;top:10px">7</span>
+  <div class="legend" style="bottom:26px; left:12px; right:auto; width:760px">
+    <ol>
+      <li><b>Readiness pill</b>: the order's state on every screen; click for what blocks it.</li>
+      <li><b>Parts bin</b> above the model outline: both visible; the catalog opens wide.</li>
+      <li><b>Joint markers</b>: joined, open and failed ends, clickable.</li>
+      <li><b>Command bar</b>: the typed value and the tool's options, by the canvas.</li>
+      <li><b>Inspector edits</b> the selection through <code>setBar</code>, <code>removeEntity</code>….</li>
+      <li><b>Sheets</b>: resizable, follow the selection both ways.</li>
+      <li><b>Presence</b>: who else is editing (agents through the CLI).</li>
+    </ol>
+  </div>
+  <div class="caption">08 · Proposed layout (wireframe). One canvas, a bin and outline on the left, an editable inspector on the right, sheets below.</div>
+</section>
+
+<!-- ============================================================= 09: first run -->
+<section class="frame" id="m-first-run">
+  <div class="top">
+    <b>AluKit</b><span class="sel">Lab rack ▾</span>
+    <span class="btn" style="opacity:.5">⟲ Undo</span><span class="btn" style="opacity:.5">⟳</span>
+    <span class="spacer"></span>
+    <span class="pill" style="border-color:#999;color:#777">○ nothing to order yet</span>
+    <span class="btn">Revision: none ▾</span><span class="btn">Export GLB</span>
+  </div>
+  <div class="row">
+    <div class="left col">
+      <h4>Parts bin</h4>
+      <div class="dim" style="padding:4px 12px">Empty. Choose a profile to start: it appears here, armed for the Bar tool.</div>
+      <h4 style="margin-top:8px">Model</h4>
+      <div class="dim" style="padding:4px 12px">Nothing drawn yet.</div>
+    </div>
+    <div class="canvas">
+      <div class="grid"></div>
+      <div class="card" style="position:absolute;left:40px;top:40px;width:380px;padding:14px 16px">
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px">Start “Lab rack”</div>
+        <div style="margin:8px 0"><b>1 · Catalogs and money</b><br>
+          <span class="chip on">forseti ✓</span> <span class="chip">std</span> <span class="chip">ref-hiwin</span> <span class="chip">+ a folder…</span><br>
+          <span class="dim">currency</span> <span class="sel">BRL ▾</span> <span class="dim">· price basis</span> <span class="sel">regular ▾</span></div>
+        <div style="margin:12px 0"><b>2 · Your main profile</b><br>
+          <span class="btn primary">Choose a profile…</span> <span class="dim">becomes the default bar and its finish</span></div>
+        <div style="margin:12px 0"><b>3 · Draw</b><br>
+          <span class="btn">▭ Box frame <span class="mono">G</span></span> <span class="btn">／ Bar <span class="mono">B</span></span>
+          <div class="dim" style="margin-top:6px">or let an agent start it: <code>alukit do &lt;dir&gt; -f batch.json</code></div></div>
+      </div>
+    </div>
+    <div class="right col">
+      <h4>Inspector</h4>
+      <div class="kv">
+        <div class="dim" style="padding:6px 0">Nothing selected. Project params:</div>
+        <div class="r"><span>W</span><span class="inp">1000</span><span class="dim">mm</span></div>
+        <div class="r"><span>D</span><span class="inp">600</span><span class="dim">mm</span></div>
+        <div class="r"><span>H</span><span class="inp">800</span><span class="dim">mm</span></div>
+        <div class="r"><span class="dim">+ param</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="position:absolute;left:440px;top:90px;width:985px;height:640px;display:flex;flex-direction:column;z-index:3;box-shadow:0 8px 30px rgba(0,0,0,.35)">
+    <div style="display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #bbb">
+      <b>Catalog</b><span class="inp" style="flex:1;font-size:14px;padding:4px 8px">40x40▌</span><span class="dim">forseti · 1034 items</span><span class="btn small">✕ Esc</span>
+    </div>
+    <div style="display:flex;flex:1;min-height:0">
+      <div style="width:170px;border-right:1px solid #ccc;padding:8px">
+        <div class="dim" style="font-size:11px;text-transform:uppercase">Kind</div>
+        <div><b>● bar</b> <span class="dim">(Bar tool)</span></div><div>○ connector</div><div>○ fastener</div><div>○ accessory</div><div>○ any</div>
+        <div class="dim" style="font-size:11px;text-transform:uppercase;margin-top:10px">System</div>
+        <div>☑ s40-c8 <span class="dim">4</span></div><div>☐ s20-c6 <span class="dim">1</span></div>
+        <div class="dim" style="font-size:11px;text-transform:uppercase;margin-top:10px">Size</div>
+        <div>☑ 40 × 40</div><div>☐ 40 × 80</div>
+        <div class="dim" style="font-size:11px;text-transform:uppercase;margin-top:10px">Fidelity</div>
+        <div>☐ exact only</div>
+      </div>
+      <div style="flex:1;overflow:hidden">
+        <table>
+          <tr><th></th><th>code · name</th><th class="n">kg/m</th><th class="n">BRL/m</th><th></th></tr>
+          <tr><td><span class="sw" style="width:40px;height:40px"></span></td><td><b>PF40-00</b><br>Perfil Estrutural em Alumínio 40×40 <b>Leve</b> – Canal 8</td><td class="n">1.116</td><td class="n">…</td><td class="dim">exact</td></tr>
+          <tr class="hl"><td><span class="sw" style="width:40px;height:40px"></span></td><td><b>PF40-01</b><br>Perfil Estrutural em Alumínio 40×40 <b>Básico</b> – Canal 8</td><td class="n">1.493</td><td class="n">126.50</td><td class="dim">exact</td></tr>
+          <tr><td><span class="sw" style="width:40px;height:40px"></span></td><td><b>PF40-11</b><br>Perfil Estrutural em Alumínio 40×40 <b>T-Slot Centro M8</b> – Canal 8</td><td class="n">1.379</td><td class="n">…</td><td class="dim">parametric</td></tr>
+          <tr><td><span class="sw" style="width:40px;height:40px"></span></td><td><b>PF20-15</b><br>Perfil Estrutural em Alumínio 40×40 <b>V-Slot</b> – Canal 6</td><td class="n">1.144</td><td class="n">…</td><td class="dim">parametric</td></tr>
+        </table>
+        <div class="dim" style="padding:8px">Accessories, kits and plates that mention 40×40 are under other kinds (21).</div>
+      </div>
+      <div style="width:270px;border-left:1px solid #ccc;padding:10px">
+        <div style="display:flex;gap:10px"><span class="sw" style="width:96px;height:96px"></span><div><b>PF40-01</b><br>40×40 Básico, canal 8<br><span class="dim">forseti › bar › s40-c8</span></div></div>
+        <div style="margin-top:10px"><b>Finish</b> <span class="err">required</span></div>
+        <div>● anodised <span class="dim">· 126.50 BRL/m</span></div>
+        <div>○ black <span class="dim">· 145.50 BRL/m</span></div>
+        <div class="dim" style="margin-top:6px">sold cut 40–3000 mm · read 2026-11-26</div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+          <span class="btn primary">Use for drawing (B) and make default</span>
+          <span class="btn">Add to bin</span>
+          <span class="btn" style="opacity:.5">Replace selected bars (none selected)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="note" style="left:274px;top:72px">1</span>
+  <span class="note" style="left:428px;top:150px">2</span>
+  <span class="note" style="left:1410px;top:280px">3</span>
+  <span class="legend" style="bottom:40px;left:12px;right:auto;width:410px;z-index:6">
+    <ol>
+      <li><b>Start card</b> replaces the blank grid: catalogs, currency, a default profile, a first tool.</li>
+      <li><b>Wide catalog</b>: kind follows the tool; names wrap; price per metre in the list.</li>
+      <li><b>A required option must be chosen</b> when the project has no default for it.</li>
+    </ol>
+  </span>
+  <div class="caption">09 · First run (wireframe). The start card and the catalog opened from it.</div>
+</section>
+
+<!-- ============================================================= 10: corners -->
+<section class="frame" id="m-corners">
+  <div class="top">
+    <b>AluKit</b><span class="sel">Lab rack ▾</span>
+    <span class="btn">⟲ Undo <span class="dim">· you: box frame (12 bars, 8 joints)</span></span><span class="btn">⟳</span>
+    <span class="spacer"></span>
+    <span class="pill blocked">● BLOCKED · 1 to fix</span><span class="btn">Revision: unsaved ▾</span><span class="btn">Export GLB</span>
+  </div>
+  <div class="row">
+    <div class="left col">
+      <h4>Model</h4>
+      <div class="list">
+        <div class="li">▾ Joints <span class="dim">8</span></div>
+        <div class="li on">&nbsp;&nbsp;● corner (0, 0, 0) <span class="dim">3 ends</span></div>
+        <div class="li">&nbsp;&nbsp;● corner (1000, 0, 0)</div>
+        <div class="li">&nbsp;&nbsp;● corner (1000, 600, 0)</div>
+        <div class="li">&nbsp;&nbsp;● corner (0, 600, 0)</div>
+        <div class="li">&nbsp;&nbsp;● 4 top corners</div>
+        <div class="li">▸ Bars <span class="dim">12</span></div>
+      </div>
+    </div>
+    <div class="canvas">
+      <div class="grid"></div>
+      <svg role="img" aria-label="one corner close up: a post and two rails meeting" width="760" height="620" style="position:absolute;left:60px;top:40px" viewBox="0 0 760 620">
+        <!-- a corner, close up: post up, rail along X to the right, rail along Y to the back-left -->
+        <g fill="#ddd" stroke="#444" stroke-width="2">
+          <polygon points="300,120 360,90 360,450 300,480"/>
+          <polygon points="240,90 300,120 300,480 240,450"/>
+          <polygon points="240,90 300,60 360,90 300,120"/>
+          <polygon points="360,450 720,560 720,620 360,510"/>
+          <polygon points="300,480 360,450 360,510 300,540" fill="#ccc"/>
+          <polygon points="240,450 40,360 40,420 240,510"/>
+        </g>
+        <circle cx="300" cy="500" r="14" fill="#333"/>
+        <text x="320" y="590">b1 rail X</text><text x="40" y="450">b4 rail Y</text><text x="370" y="200">b5 post</text>
+        <rect x="430" y="40" width="300" height="110" fill="#fff" stroke="#333" stroke-width="2" rx="6"/>
+        <text x="445" y="65">hover on a marker:</text>
+        <text x="445" y="88">corner (0,0,0): b5 runs through</text>
+        <text x="445" y="108">b1.a, b4.b butt into it (c1, c2)</text>
+        <text x="445" y="128">click to change</text>
+      </svg>
+      <div class="cmdbar"><b>Select</b><span class="dim">click a joint marker to edit the corner · Shift-click several markers · Esc clears</span></div>
+    </div>
+    <div class="right col" style="width:430px">
+      <h4>Inspector · corner (0, 0, 0)</h4>
+      <div class="kv">
+        <div class="r"><span>Ends</span><span><code>b1.a</code> <code>b4.b</code> <code>b5.a</code></span></div>
+        <div class="r"><span>Connector</span><span class="sel">BRK-40 angle bracket ▾</span><span class="dim">× 2</span></div>
+      </div>
+      <div style="padding:8px 10px 0"><b>Arrangement</b> <span class="dim">· the cut lengths each one gives</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:8px 10px">
+        <div class="card" style="padding:8px;outline:3px solid #333">
+          <b>Post runs through</b> <span class="dim">(current)</span><br>
+          <span class="mono">b5 800.00 · b1 920.00 · b4 520.00</span><br><span class="dim">rails butt into the post</span>
+        </div>
+        <div class="card" style="padding:8px">
+          <b>Rail X runs through</b><br>
+          <span class="mono">b1 1000.00 · b4 520.00 · b5 760.00</span><br><span class="dim">post stands on b1; b4 butts into b1</span>
+        </div>
+        <div class="card" style="padding:8px">
+          <b>Rail Y runs through</b><br>
+          <span class="mono">b4 600.00 · b1 920.00 · b5 760.00</span><br><span class="dim">post stands on b4; b1 butts into b4</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;padding:6px 10px"><span class="btn primary">Apply to this corner</span><span class="btn">Apply to all 4 base corners</span></div>
+      <div class="dim" style="padding:6px 10px">Applies as one step: <code>setConnection</code> or <code>addConnection</code> per joint. Undo takes it back whole.</div>
+      <h4 style="margin-top:6px">Draw default</h4>
+      <div class="kv"><div class="r"><span>New corners</span><span class="sel">posts run through ▾</span><span class="dim">also in the command bar</span></div></div>
+    </div>
+  </div>
+  <span class="note" style="left:628px;top:592px">1</span>
+  <span class="note" style="left:1000px;top:140px">2</span>
+  <span class="note" style="left:1000px;top:520px">3</span>
+  <span class="legend" style="bottom:70px;left:270px;width:520px">
+    <ol>
+      <li><b>Joint markers</b> sit on every node where ends meet; open ends are hollow, failed ones red.</li>
+      <li><b>Arrangements</b> are compared by the cut lengths they give, before anything is applied.</li>
+      <li><b>Apply to many</b>: the same corner rule for every matching corner, as one step.</li>
+    </ol>
+  </span>
+  <div class="caption">10 · Corners as objects (wireframe). Cut lengths are illustrative: a 1000 × 600 × 800 box of 40 × 40, outside faces flush.</div>
+</section>
+
+<!-- ============================================================= 11: order readiness -->
+<section class="frame" id="m-order">
+  <div class="top">
+    <b>AluKit</b><span class="sel">Cart ▾</span><span class="dim">variant</span><span class="sel">standard ▾</span>
+    <span class="btn">⟲ Undo <span class="dim">· you: resolve O2</span></span><span class="btn">⟳</span>
+    <span class="spacer"></span>
+    <span class="pill blocked">● BLOCKED · 3 to fix</span><span class="btn">Revision: unsaved ▾</span><span class="btn">Export GLB</span>
+  </div>
+  <div class="row">
+    <div class="col" style="flex:1;min-width:0">
+      <div class="tabs" style="background:#efefeb">
+        <span class="tab">Cut list</span><span class="tab">BOM</span><span class="tab">Machining</span><span class="tab on">Order &amp; costs <span class="b">3</span></span><span class="tab">Problems <span class="b w">1</span></span><span class="tab">Records</span>
+        <span class="spacer"></span><span class="btn small" style="margin-bottom:5px">⤡ restore split</span>
+      </div>
+      <div style="padding:10px 14px;overflow:hidden">
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <span style="font-size:18px;font-weight:700" class="err">Not ready to order</span>
+          <span>3 blockers · 1 warning · as of <span class="inp">2026-11-27</span></span>
+          <span class="spacer"></span>
+          <span class="btn" style="opacity:.5" title="blocked">Copy order list</span><span class="btn" style="opacity:.5">CSV per supplier</span>
+        </div>
+        <div class="card" style="margin-top:10px;font-size:12px">
+          <table>
+            <tr><th></th><th>rule</th><th>what</th><th>supplier</th><th>fix</th></tr>
+            <tr class="hl"><td class="err">✕</td><td>missing-price</td><td><b>Sensor bracket</b> <code>project:angle-a</code> has no price</td><td>local</td><td><span class="btn small primary">Set price…</span></td></tr>
+            <tr><td colspan="5" style="background:#fff;padding:8px 30px">
+              low <span class="inp">35.00</span> likely <span class="inp">40.00</span> high <span class="inp">50.00</span> BRL ·
+              how known <span class="sel">quote ▾</span> ref <span class="inp" style="width:170px">local shop, by phone</span> read <span class="inp">2026-11-27</span>
+              <span class="btn small primary">Save</span> <span class="dim">sends <code>setItem</code>; an estimate still blocks (est-price)</span></td></tr>
+            <tr><td class="err">✕</td><td>open-item</td><td><b>O1</b> confirm the rail screws' length against the rail's counterbore <span class="dim">· scope</span> <code>c35</code></td><td>test-gen-vendor</td><td><span class="btn small">Show c35</span> <span class="btn small">Resolve…</span></td></tr>
+            <tr><td class="err">✕</td><td>option-not-sold</td><td><b>PF40-01</b> × 12 pieces have no finish, and it is sold only anodised or black</td><td>forseti</td><td><span class="sel">anodised ▾</span> <span class="btn small">For all 12</span> <span class="btn small">As project default</span></td></tr>
+            <tr><td class="warn">!</td><td>stale-price</td><td><b>NUT-M10-100</b> price read 57 days ago</td><td>test-geo-vendor</td><td><span class="btn small">Refresh lock…</span></td></tr>
+          </table>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <div class="card" style="padding:8px 10px;width:230px"><b>local</b> <span class="err">BLOCKED</span><br><span class="mono">0.00 BRL</span> <span class="dim">· 1 line</span></div>
+          <div class="card" style="padding:8px 10px;width:230px"><b>test-fab</b> <span class="ok">READY</span><br><span class="mono">235.00 BRL</span> <span class="dim">· 2 lines</span></div>
+          <div class="card" style="padding:8px 10px;width:230px"><b>test-gen-vendor</b> <span class="err">BLOCKED</span><br><span class="mono">40.00 BRL</span> <span class="dim">· 2 lines</span></div>
+          <div class="card" style="padding:8px 10px;width:230px"><b>test-geo-vendor</b> <span class="ok">READY</span> <span class="warn">!</span><br><span class="mono">325.00 BRL</span> <span class="dim">· 4 lines</span></div>
+        </div>
+        <div class="card" style="margin-top:12px;padding:8px 10px;display:flex;gap:30px">
+          <span><b>Total</b> <span class="mono">6155.35 BRL</span> <span class="dim">likely · 5441.59 to 7512.91</span></span>
+          <span class="dim">sourced 68 % · estimated 32 %</span>
+          <span class="dim">2 lines unpriced, left out</span>
+          <span class="spacer"></span><u>cost lines ▸</u>
+        </div>
+        <div class="dim" style="margin-top:10px">Supplier detail tables (the lines <code>alukit order</code> prints) follow below, collapsed per supplier.</div>
+      </div>
+    </div>
+    <div class="col" style="width:360px;border-left:1px solid #999">
+      <div class="canvas" style="flex:1">
+        <div class="grid"></div>
+        <div style="position:absolute;left:12px;top:10px" class="dim">3D · the blocked entities lit</div>
+        <svg role="img" aria-label="the cart frame with the blocked entities lit" width="340" height="330" style="position:absolute;left:10px;top:60px" viewBox="0 0 440 420">
+          <g stroke="#aaa" stroke-width="7" fill="none">
+            <line x1="60" y1="300" x2="280" y2="350"/><line x1="280" y1="350" x2="400" y2="280"/><line x1="60" y1="300" x2="180" y2="230"/><line x1="180" y1="230" x2="400" y2="280"/>
+            <line x1="60" y1="300" x2="60" y2="90"/><line x1="280" y1="350" x2="280" y2="140"/><line x1="400" y1="280" x2="400" y2="70"/><line x1="180" y1="230" x2="180" y2="20"/>
+            <line x1="60" y1="90" x2="280" y2="140"/><line x1="280" y1="140" x2="400" y2="70"/><line x1="60" y1="90" x2="180" y2="20"/><line x1="180" y1="20" x2="400" y2="70"/>
+          </g>
+          <rect x="70" y="100" width="34" height="20" fill="#333"/><text x="110" y="115">angle-a</text>
+          <line x1="180" y1="20" x2="400" y2="70" stroke="#333" stroke-width="9"/><text x="250" y="30">c35</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <span class="note" style="left:1006px;top:10px">1</span>
+  <span class="note" style="left:1040px;top:122px">2</span>
+  <span class="note" style="left:2px;top:300px">3</span>
+  <span class="legend" style="bottom:30px;left:14px;right:auto;width:520px">
+    <ol>
+      <li>The <b>pill</b> opens this sheet, maximized, on the blockers.</li>
+      <li>Every blocker carries <b>its own fix</b>, sent as the command the CLI would send.</li>
+      <li>Suppliers as <b>summary cards</b>; the line tables stay as the CLI prints them.</li>
+    </ol>
+  </span>
+  <div class="caption">11 · Order readiness (wireframe). The cart's blockers, plus the first-run finish problem, each with its fix.</div>
+</section>
+
+<!-- ============================================================= 12: review and edit -->
+<section class="frame" id="m-review">
+  <div class="top">
+    <b>AluKit</b><span class="sel">Lab rack ▾</span><span class="dim">variant</span><span class="sel">standard ▾</span><span class="btn small">Compare with tall</span>
+    <span class="btn">⟲ Undo <span class="dim">· claude: add bar b13</span></span><span class="btn">⟳</span>
+    <span class="spacer"></span>
+    <span class="pill ready">● READY · 1 warning</span><span class="btn">Revision: unsaved ▾</span><span class="btn">Export GLB</span>
+  </div>
+  <div class="toast" style="top:54px"><span class="chip">◉ claude</span> added <code>b13</code> (shelf rail) · <u>Show</u> · <u>Undo it</u></div>
+  <div class="row">
+    <div class="col" style="flex:1;min-width:0">
+      <div class="tabs" style="background:#efefeb">
+        <span class="tab on">Cut list</span><span class="tab">BOM</span><span class="tab">Machining</span><span class="tab">Order &amp; costs</span><span class="tab">Problems</span><span class="tab">Records</span>
+        <span class="spacer"></span><span class="chip" style="margin-bottom:5px">◎ selection only</span>&nbsp;<span class="btn small" style="margin-bottom:5px">⤡ restore split</span>
+      </div>
+      <div style="padding:10px 14px">
+        <div style="margin-bottom:6px"><b>PF40-01</b> 40×40 Básico · anodised · 13 pieces · 9880.00 mm · sold cut to length</div>
+        <table>
+          <tr><th class="n">count</th><th class="n">cut mm</th><th class="n">design</th><th>ends a / b</th><th>machining</th><th>pieces</th></tr>
+          <tr><td class="n">4</td><td class="n">800.00</td><td class="n">H</td><td>square / square</td><td class="dim">—</td><td><code>b5</code> <code>b6</code> <code>b7</code> <code>b8</code></td></tr>
+          <tr class="hl"><td class="n">4</td><td class="n">920.00</td><td class="n">W</td><td>square / square</td><td class="dim">—</td><td><b><code>b1</code></b> <code>b3</code> <code>b9</code> <code>b11</code></td></tr>
+          <tr><td class="n">4</td><td class="n">520.00</td><td class="n">D</td><td>square / square</td><td class="dim">—</td><td><code>b2</code> <code>b4</code> <code>b10</code> <code>b12</code></td></tr>
+          <tr style="background:#fffbe0"><td class="n">1</td><td class="n">920.00</td><td class="n">W</td><td>square / square</td><td>Ø6.8 tap M8, end a</td><td><code>b13</code> <span class="chip">new · claude</span></td></tr>
+        </table>
+        <div class="dim" style="margin-top:6px">The selected row stays lit while the 3D view orbits; Esc clears both.</div>
+        <div class="card" style="margin-top:14px;padding:10px;width:520px">
+          <b>b1</b> <span class="dim">· base rail, front · from the row's menu, or the inspector</span>
+          <div class="kv" style="padding:0;margin-top:6px">
+            <div class="r"><span>Length</span><span class="inp">W</span><span class="dim">= 1000 design → cut 920.00 (two posts through, −40 each end)</span></div>
+            <div class="r"><span>Profile</span><span class="sel">PF40-01 ▾</span><span class="btn small">Replace…</span><span class="dim">this bar · all 4 in “base ring” · all 13</span></div>
+            <div class="r"><span>Driven by</span><span><code>W</code> <span class="dim">— editing W moves b1, b3, b9, b11 and the top ring</span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col" style="width:470px;border-left:1px solid #999">
+      <div class="canvas" style="flex:1">
+        <div class="grid"></div>
+        <svg role="img" aria-label="the frame with b1 selected and the agent's new bar b13 dashed" width="450" height="440" style="position:absolute;left:10px;top:110px" viewBox="0 0 450 440">
+          <g stroke="#aaa" stroke-width="7" fill="none">
+            <line x1="60" y1="300" x2="280" y2="350"/><line x1="280" y1="350" x2="400" y2="280"/><line x1="60" y1="300" x2="180" y2="230"/><line x1="180" y1="230" x2="400" y2="280"/>
+            <line x1="60" y1="300" x2="60" y2="90"/><line x1="280" y1="350" x2="280" y2="140"/><line x1="400" y1="280" x2="400" y2="70"/><line x1="180" y1="230" x2="180" y2="20"/>
+            <line x1="60" y1="90" x2="280" y2="140"/><line x1="280" y1="140" x2="400" y2="70"/><line x1="60" y1="90" x2="180" y2="20"/><line x1="180" y1="20" x2="400" y2="70"/>
+          </g>
+          <line x1="60" y1="300" x2="280" y2="350" stroke="#333" stroke-width="10"/><text x="120" y="350">b1</text>
+                    <line x1="60" y1="170" x2="280" y2="220" stroke="#d9b600" stroke-width="7" stroke-dasharray="8 5"/><text x="110" y="160">b13 (new)</text>
+        </svg>
+        <div style="position:absolute;left:12px;bottom:10px" class="dim">row ↔ 3D: picking either selects both; F frames it</div>
+      </div>
+    </div>
+  </div>
+  <span class="note" style="left:1000px;top:58px">1</span>
+  <span class="note" style="left:16px;top:160px">2</span>
+  <span class="note" style="left:16px;top:430px">3</span>
+  <span class="legend" style="bottom:20px;left:560px;width:400px">
+    <ol>
+      <li><b>Agent steps announce themselves</b>, with Show and Undo it, and stay marked in the tables.</li>
+      <li><b>Rows and bodies are one selection</b>; the design column shows what drives a length.</li>
+      <li><b>Edit from the table</b>: length (or its param), profile with Replace this, these or all.</li>
+    </ol>
+  </span>
+  <div class="caption">12 · Review with the sheets maximized (wireframe). Cut lengths are illustrative.</div>
+</section>
+
+</body>
+</html>
