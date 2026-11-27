@@ -3,6 +3,7 @@ import type { ItemCard, ListedEntry } from "../../server/catalog.ts";
 import { OptionSelects, useOptions } from "../catalog/Card.tsx";
 import { cardOf } from "../catalog/state.ts";
 import { fetchCatalogItems } from "../client/catalog.ts";
+import { AnchorDots } from "../common/AnchorDots.tsx";
 import { EntityChips } from "../common/EntityChip.tsx";
 import { splitBatch } from "../edit/batches.ts";
 import { Errors } from "../Feedback.tsx";
@@ -30,7 +31,18 @@ import { isObject, written } from "./words.ts";
 type O = Record<string, unknown>;
 
 /** The fields a bar's rows show, so the rest are listed as words below them. */
-const SHOWN = new Set(["item", "opt", "a", "b", "anchor", "roll_deg", "ends", "label", "tags"]);
+const SHOWN = new Set([
+  "item",
+  "opt",
+  "a",
+  "b",
+  "anchor",
+  "off_mm",
+  "roll_deg",
+  "ends",
+  "label",
+  "tags",
+]);
 
 /** An item's card, fetched once per item; undefined while it loads or when it cannot be had. */
 export function useCard(id: string | undefined): ItemCard | undefined {
@@ -409,6 +421,68 @@ export function anchorWords(a: string): string {
   return a;
 }
 
+/** A world direction in words: the axis it runs along (`+Y`), else none. */
+function worldAxis(v: readonly number[] | undefined): string | undefined {
+  if (!v) return undefined;
+  const i = [0, 1, 2].find((k) => Math.abs(Math.abs(v[k] as number) - 1) < 1e-6);
+  return i === undefined ? undefined : `${(v[i] as number) > 0 ? "+" : "-"}${"XYZ"[i]}`;
+}
+
+/**
+ * The offset (`off_mm`, §4.4): the section moved from its anchor along its own x and y, each
+ * named by the world direction it runs in when it runs along one. A param is written as typed
+ * (D-UX-17); both zero removes it. One step (E4.2).
+ */
+function OffsetRow({ m, id }: { m: Model; id: string }) {
+  const w = written(m, id) as O;
+  const { outcome, send } = useSend();
+  const [bad, setBad] = useState<string>();
+  const off = Array.isArray(w.off_mm) ? (w.off_mm as (number | string)[]) : [0, 0];
+  const frame = m.derived.bars[id]?.frame;
+  const commit = (i: 0 | 1, text: string) => {
+    const t = typedNumber(text.trim().replace(/^=\s*/, "") || "0", m.derived.params);
+    if ("why" in t) {
+      setBad(t.why);
+      return;
+    }
+    setBad(undefined);
+    const next = [...off];
+    next[i] = t.written;
+    const none = next.every((x) => x === 0);
+    void send(
+      [{ cmd: "setBar", args: { id, set: { off_mm: none ? null : next } } }],
+      `offset ${id}`,
+    );
+  };
+  return (
+    <>
+      <Row label="Offset" fields={["off_mm"]} testid="row-offset">
+        <span class="end-edit">
+          {([0, 1] as const).map((i) => {
+            const axis = i === 0 ? "x" : "y";
+            const world = worldAxis(i === 0 ? frame?.x : frame?.y);
+            return (
+              <span key={axis}>
+                {axis}
+                {world ? ` (world ${world})` : ""}{" "}
+                <CommitInput
+                  label={`Offset along the section's ${axis}${world ? `, world ${world}` : ""}, mm`}
+                  testid={`field-off-${axis}`}
+                  size={6}
+                  value={String(off[i] ?? 0)}
+                  onCommit={(text) => commit(i, text)}
+                />{" "}
+                mm
+              </span>
+            );
+          })}
+        </span>
+      </Row>
+      <RowErrors outcome={bad !== undefined ? { ok: false, why: bad, errors: [] } : outcome} />
+    </>
+  );
+}
+
 function AnchorRow({ m, id }: { m: Model; id: string }) {
   const w = written(m, id) as O;
   const card = useCard(m.derived.bars[id]?.item);
@@ -416,22 +490,35 @@ function AnchorRow({ m, id }: { m: Model; id: string }) {
   const now = typeof w.anchor === "string" ? w.anchor : "c";
   const anchors = card?.anchors ?? ["c", "-x-y", "+x-y", "+x+y", "-x+y", "-x", "+x", "-y", "+y"];
   const list = anchors.includes(now) ? anchors : [now, ...anchors];
+  const view = m.display.bars[id];
+  const section = view ? m.display.sections[view.section] : undefined;
+  const anchor = (v: string) =>
+    void send(
+      [{ cmd: "setBar", args: { id, set: { anchor: v === "c" ? null : v } } }],
+      `anchor ${id}`,
+    );
   return (
     <>
-      <Row label="Anchor" fields={["anchor", "off_mm"]} testid="row-anchor">
+      <Row label="Anchor" fields={["anchor"]} testid="row-anchor">
+        {section && (
+          <>
+            <AnchorDots
+              bbox={section.bbox}
+              datums={section.datums}
+              anchors={list}
+              value={now}
+              disabled={readOnly() || busy.value}
+              onPick={(a) => a !== now && anchor(a)}
+            />{" "}
+          </>
+        )}
         <select
           class="insp-select"
           data-testid="field-anchor"
           aria-label="Anchor: where the section sits on the bar's line"
           value={now}
           disabled={readOnly() || busy.value}
-          onChange={(e) => {
-            const v = (e.currentTarget as HTMLSelectElement).value;
-            void send(
-              [{ cmd: "setBar", args: { id, set: { anchor: v === "c" ? null : v } } }],
-              `anchor ${id}`,
-            );
-          }}
+          onChange={(e) => anchor((e.currentTarget as HTMLSelectElement).value)}
         >
           {list.map((a) => (
             <option key={a} value={a}>
@@ -624,6 +711,7 @@ export function BarFields({ m, id }: { m: Model; id: string }) {
           <ProfileRow m={m} id={id} />
           <OptionRows m={m} id={id} />
           <AnchorRow m={m} id={id} />
+          <OffsetRow m={m} id={id} />
           <RollRow m={m} id={id} />
           <EndRows m={m} id={id} />
           <LabelRows m={m} id={id} />

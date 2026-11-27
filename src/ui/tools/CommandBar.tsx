@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
-import { anchorPoint } from "#core/derive/frame.ts";
 import type { CornerRule } from "#core/project/schema.ts";
 import { GROUND } from "../../viewer/workplane.ts";
+import { AnchorDots } from "../common/AnchorDots.tsx";
 import { Icon } from "../icons/Icons.tsx";
 import { anchorWords } from "../inspector/BarFields.tsx";
 import { optionsText } from "../options.ts";
@@ -89,47 +89,22 @@ function Armed({ which }: { which: "bar" | "part" }) {
  */
 function AnchorPicker({ bar }: { bar: PaletteItem }) {
   const o = drawOptions.value;
-  const anchors = bar.anchors ?? ["c"];
   const s = bar.section;
   if (!s) return null;
-  const [[x0, y0], [x1, y1]] = s.bbox;
-  const w = x1 - x0;
-  const h = y1 - y0;
-  const size = 34;
-  const k = (size - 8) / Math.max(w, h, 1);
-  const at = (a: string) => {
-    const p = anchorPoint(a, s.bbox, s.datums ?? {});
-    return p ? [4 + (p[0] - x0) * k, size - 4 - (p[1] - y0) * k] : undefined;
-  };
   return (
     <fieldset class="cb-opt cb-anchor" data-testid="draw-anchor" data-anchor={o.anchor}>
       <legend title="Where the bar's line runs through its section (A cycles)">
         Anchor: {anchorWords(o.anchor)}
       </legend>
-      <span class="cb-anchor-pad" style={{ width: `${size}px`, height: `${size}px` }}>
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-          <rect class="cb-anchor-box" x={4} y={size - 4 - h * k} width={w * k} height={h * k} />
-        </svg>
-        {anchors.map((a) => {
-          const p = at(a);
-          if (!p) return null;
-          return (
-            <button
-              type="button"
-              key={a}
-              class={a === o.anchor ? "cb-dot on" : "cb-dot"}
-              style={{ left: `${p[0]}px`, top: `${p[1]}px` }}
-              aria-pressed={a === o.anchor}
-              aria-label={`anchor ${a}`}
-              title={`anchor ${a}`}
-              data-anchor={a}
-              onClick={() => {
-                drawOptions.value = { ...drawOptions.value, anchor: a };
-              }}
-            />
-          );
-        })}
-      </span>
+      <AnchorDots
+        bbox={s.bbox}
+        datums={s.datums}
+        anchors={bar.anchors ?? ["c"]}
+        value={o.anchor}
+        onPick={(a) => {
+          drawOptions.value = { ...drawOptions.value, anchor: a };
+        }}
+      />
     </fieldset>
   );
 }

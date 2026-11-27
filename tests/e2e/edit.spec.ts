@@ -8,6 +8,7 @@ import {
   numberText,
   openTab,
   type Served,
+  scratchProject,
   serve,
   waitDrawn,
 } from "./helpers.ts";
@@ -307,4 +308,59 @@ test("split and reverse from the menu (E-UX-21): one step each, as the CLI cuts 
   });
   expect(cutOf(await cutList(served.dir), "b9")).toBe("1120.00");
   expect(errors).toEqual([]);
+});
+
+/** A bar as `alukit derive --json` gives it, errors or not (it exits 1 on an error). */
+async function derivedBar(dir: string, id: string): Promise<unknown> {
+  const r = await cli(["derive", dir, "--json"]);
+  return (JSON.parse(r.out) as { bars: Record<string, unknown> }).bars[id];
+}
+
+/** `alukit check --json`'s errors, as `code entity`. */
+async function errorsOf(dir: string): Promise<string[]> {
+  const r = await cli(["check", dir, "--json"]);
+  const out = JSON.parse(r.out) as {
+    diagnostics: { severity: string; code: string; entity?: string }[];
+  };
+  return out.diagnostics.filter((d) => d.severity === "error").map((d) => `${d.code} ${d.entity}`);
+}
+
+test("an offset in the bar's plane, and the anchor on the section's dots (E4.2), as setBar gives them", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  // The audit's brace on the default centre anchor: half outside the frame's back plane, so its
+  // butts miss the posts' edges.
+  const brace = [
+    { cmd: "addBar", args: { a: [0, 600, 0], b: [1000, 600, 750] } },
+    { cmd: "autoConnect", args: { at: [0, 600, 0], optional: true } },
+    { cmd: "autoConnect", args: { at: [1000, 600, 750], optional: true } },
+  ];
+  served = await serve("brace");
+  await cliDo(served.dir, brace);
+  expect(await errorsOf(served.dir)).toEqual(["butt-miss c9", "butt-miss c10"]);
+  // The same edit on the CLI, on a scratch copy: the oracle.
+  const oracle = await scratchProject("brace");
+  await cliDo(oracle.dir, brace);
+  await cliDo(oracle.dir, { cmd: "setBar", args: { id: "b13", set: { off_mm: [-20, 0] } } });
+  await openTab(page, served, 1);
+  await pick(page, "b13");
+  // The brace's section x is world +Y (it runs in the XZ plane): −20 along it, into the frame.
+  await expect(page.getByTestId("row-offset")).toContainText("x (world +Y)");
+  await page.getByTestId("field-off-x").fill("-20");
+  await page.getByTestId("field-off-x").press("Enter");
+  await waitDrawn(page, 2);
+  expect((await written(served.dir)).bars?.b13).toMatchObject({ off_mm: [-20, 0] });
+  // The butts now meet the posts' faces; what remains is the angled cuts to declare (E4.1).
+  expect(await errorsOf(served.dir)).toEqual(await errorsOf(oracle.dir));
+  expect(await errorsOf(served.dir)).toEqual(["angled-end b13.a", "angled-end b13.b"]);
+  // The brace derives where the CLI's does (its errors make `cutlist` refuse, not `derive`).
+  expect(await derivedBar(served.dir, "b13")).toEqual(await derivedBar(oracle.dir, "b13"));
+  await oracle.remove();
+
+  // The anchor, picked on the section's dots: the middle of face +x.
+  await page.getByTestId("row-anchor").locator('[data-anchor="+x"]').click();
+  await waitDrawn(page, 3);
+  expect((await written(served.dir)).bars?.b13).toMatchObject({ anchor: "+x", off_mm: [-20, 0] });
+  await expect(page.getByTestId("field-anchor")).toHaveValue("+x");
 });
