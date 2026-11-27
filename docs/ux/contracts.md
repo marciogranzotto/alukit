@@ -209,3 +209,21 @@ S3 ([s3-decisions.md](s3-decisions.md)) changed these contracts. Each adds, exce
 - **Tests**: `tests/e2e/png.ts`'s `coverage` counts the pixels off their row's commonest colour,
   since the background is a gradient; snapshot.spec is otherwise unchanged. view.spec checks the
   projection by `aria-pressed` (§5.10).
+
+## What S1 added
+
+S1 changed the contracts above only by adding, and built the clients. Its decisions are in
+[`s1-decisions.md`](s1-decisions.md). Outside its files it changed two assertions of S2's
+`live.spec.ts`, which read `alukit log`'s output before BE-4 put it in words (s1-decisions, "Outside S1's files").
+
+| Interface | File | What S1 added |
+|---|---|---|
+| Clients | `src/ui/client/{problems,dryrun,catalog}.ts` | `fetchProblems(q)` calls `GET /api/problems`; `dryRun(commands)` posts `dryRun: true`; `catalog.ts` (new) is `fetchCatalogItems(q)` with `prefer`. `problemsParams`, `dryRunOf` and `catalogParams` are exported for tests. `notYet` is gone, its stubs with it; `ClientAnswer` keeps `unavailable` |
+| A dry run's effects | `src/core/commands/dry.ts` | `DryRunEffects` is `DryEffects`: S0's `cuts`, `removed` and `claimed`, and `added`, each bar the step would create with its cut length (s1-decisions 14) |
+| Problem model | `src/core/problems/` | `problemsOf`, `problemsAt` and `problemsText` beside `types.ts`, whose types did not change |
+| The catalog list | `src/catalog/search.ts` | `CatalogEntry.size_mm` for bars, `SearchQuery.prefer` |
+| Steps in words | `src/core/commands/types.ts`, `history.ts`; `src/server/host.ts` | `CommandDef.describe`; `LogEntry.text`, `StepInfo.text` and the `rev` event's `text`. `what` is unchanged |
+| The corner rule | `src/core/project/schema.ts` | `CornerRule`; `Defaults.corner`; `autoConnect`'s `prefer` (drop 2) |
+| The box frame | `src/core/commands/frame.ts` | `addFrame`, whose answer's `info` is `{ posts, rings: { base?, shelf?, top? }, connections, params? }`: what S5.7's tool and S2's start card read (drop 2) |
+| Restore | `POST /api/restore` | `kept`, the paths of the files kept in `.alukit/rejected/` (drop 2) |
+| The catalog list | `src/catalog/search.ts` | `CatalogEntry.from`, `{ minor, currency?, per }` (`FromPrice`, `src/core/order/price.ts`; drop 2) |

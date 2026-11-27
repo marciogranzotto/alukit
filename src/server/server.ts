@@ -17,6 +17,7 @@ import { compareIds } from "#core/ids.ts";
 import type { Lock } from "#core/lock/schema.ts";
 import { machiningJson } from "#core/machining/format.ts";
 import { costsJson, costsOf, orderJson } from "#core/order/format.ts";
+import { problemsAt, problemsText } from "#core/problems/problems.ts";
 import { gitStamp } from "#core/project/git.ts";
 import { DOCUMENT } from "#core/project/open.ts";
 import type { Doc } from "#core/project/parse.ts";
@@ -62,6 +63,7 @@ import {
   newToken,
   type Refusal,
 } from "./security.ts";
+import { SOURCE, SOURCE_RULE } from "./source.ts";
 import { SSE_PING, sseEvent } from "./sse.ts";
 import { viewModel } from "./view.ts";
 
@@ -80,18 +82,19 @@ import { viewModel } from "./view.ts";
  * | `GET /api/derived`, `/api/cutlist`, `/api/bom`, `/api/check` | as the CLI's `--json` outputs |
  * | `GET /api/order`, `/api/costs` `[?as_of=YYYY-MM-DD]` | as `alukit order` and `costs --format json`, from the lock; today by default |
  * | `GET /api/machining` | as `alukit machining --format json`: the custom parts' holes, the machined bars |
+ * | `GET /api/problems` `[?as_of=YYYY-MM-DD]` | as `alukit problems --json` (`alukit.problems/1`): the check and the order's reasons, grouped by consequence |
  * | `GET /api/export/glb` | as `alukit export glb`, byte for byte: the model as binary glTF, to download |
  * | `GET /api/revisions` | the saved revisions (§4.13) and the current state's content hash |
  * | `POST /api/revisions` | `{ name, as_of? }`: saves a revision of what the server holds |
  * | `GET /api/revisions/verify?name=` | as `alukit revision verify --json`, byte for byte |
  * | `GET /api/catalog` | the catalogs the document names, as vendor › kind › family with counts (§8) |
- * | `GET /api/catalog/items` `[?q=&vendor=&kind=&family=&limit=&offset=]` | items matching a search |
+ * | `GET /api/catalog/items` `[?q=&vendor=&kind=&family=&prefer=&limit=&offset=]` | items matching a search; `prefer` ranks a kind first |
  * | `GET /api/catalog/item?id=<catalog>:<code>` | one item's card: key data, section, options, offers |
  * | `GET /api/log` | the log of steps, undos and redos |
  * | `GET /api/events` | the event stream: SSE wire format, read with `fetch` |
- * | `POST /api/commands` | `{ commands, source, id?, baseRev?, strict? }`: one step |
+ * | `POST /api/commands` | `{ commands, source, id?, baseRev?, strict?, dryRun? }`: one step; with `dryRun`, what the step would do, writing nothing |
  * | `POST /api/undo`, `/api/redo` | `{ source }` |
- * | `POST /api/restore` | "restore last good": the last good state over invalid files |
+ * | `POST /api/restore` | "restore last good": the last good state over invalid files, which it keeps in `.alukit/rejected/` and names (`kept`) |
  *
  * Every request that derives (the model, the outputs, the GLB) takes `?variant=<name>`, as the
  * CLI takes `--variant`: that variant, else the document's default (§4.10). A name the document
@@ -129,11 +132,7 @@ const COMMON: Record<string, string> = {
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
 };
 
-const SOURCE = /^(ui|cli|cli:[A-Za-z0-9._-]{1,64}|agent:[A-Za-z0-9._-]{1,64})$/;
-
-const Source = z
-  .string()
-  .regex(SOURCE, "ui, cli, cli:<name> or agent:<name> (file is the watcher's)");
+const Source = z.string().regex(SOURCE, SOURCE_RULE);
 
 const CommandsBody = z.strictObject({
   commands: z.array(z.unknown()).min(1).max(10_000),
@@ -141,6 +140,8 @@ const CommandsBody = z.strictObject({
   id: z.string().min(1).max(200).optional(),
   baseRev: z.number().int().nonnegative().optional(),
   strict: z.boolean().optional(),
+  /** Apply and derive, write nothing (BE-2): the answer says what the step would do. */
+  dryRun: z.boolean().optional(),
 });
 
 const HistoryBody = z.strictObject({ source: Source });
@@ -269,6 +270,8 @@ interface Ctx {
   project: ProjectHost;
   /** The model answers of the current revision, serialised once per variant asked for. */
   model: { rev: number; text: Map<string, string> } | undefined;
+  /** The problems of the current revision, once per variant and order date asked for. */
+  problems: { rev: number; text: Map<string, string> } | undefined;
   /** The catalog browser's index, built once per opening of the catalogs and lock. */
   catalog: CatalogIndex | undefined;
   /** The saved revisions, each file read once while it stays the same. */
@@ -506,6 +509,26 @@ async function api(
         sendJson(res, 200, path === "/api/order" ? orderJson(o) : costsJson(costsOf(o)), snap.rev);
         return;
       }
+      case "/api/problems": {
+        // As `alukit problems --json` prints it (BE-3): the check's list and the order's
+        // reasons as one list, grouped by consequence, at the order's date, today by default.
+        const asOf = query.get("as_of") ?? p.today();
+        if (!isDate(asOf)) {
+          sendJson(res, 400, { ok: false, message: "as_of takes a date, YYYY-MM-DD" });
+          return;
+        }
+        const snap = snapshotFor(p, query, res);
+        if (!snap) return;
+        const key = `${snap.derived.variant ?? ""}\u0000${asOf}`;
+        if (ctx.problems?.rev !== snap.rev) ctx.problems = { rev: snap.rev, text: new Map() };
+        let text = ctx.problems.text.get(key);
+        if (text === undefined) {
+          text = problemsText(problemsAt({ ...snap, lock: snap.stamp.lock }, asOf));
+          ctx.problems.text.set(key, text);
+        }
+        sendJson(res, 200, text, snap.rev);
+        return;
+      }
       case "/api/export/glb": {
         // As `alukit export glb` writes it (§9), through the same function: the same bytes.
         const snap = snapshotFor(p, query, res);
@@ -583,6 +606,7 @@ async function api(
           ...(opt("vendor") !== undefined ? { vendor: opt("vendor") } : {}),
           ...(opt("kind") !== undefined ? { kind: opt("kind") } : {}),
           ...(opt("family") !== undefined ? { family: opt("family") } : {}),
+          ...(opt("prefer") !== undefined ? { prefer: opt("prefer") } : {}),
           ...(limit !== undefined ? { limit } : {}),
           ...(offset !== undefined ? { offset } : {}),
         });
@@ -634,6 +658,12 @@ async function api(
     case "/api/commands": {
       const b = parse(CommandsBody);
       if (!b) return;
+      if (b.dryRun) {
+        const d = await p.dryRun({ commands: b.commands, source: b.source });
+        const status = d.ok ? 200 : d.kind === "refused" ? 422 : 409;
+        sendJson(res, status, { schema: "alukit.do/1", dry: true, ...d }, p.rev);
+        return;
+      }
       const a = await p.commands({
         commands: b.commands,
         source: b.source,
@@ -797,6 +827,7 @@ export async function openSession(options: SessionOptions): Promise<Session> {
     token,
     project,
     model: undefined,
+    problems: undefined,
     catalog: undefined,
     revisions: new RevisionIndex(dir),
     stamp: undefined,

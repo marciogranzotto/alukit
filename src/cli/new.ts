@@ -1,5 +1,8 @@
 import { access, mkdir, readFile } from "node:fs/promises";
 import { basename, join, relative, resolve, sep } from "node:path";
+import { builtinIds } from "#catalog/open.ts";
+import { sellsTslot } from "#catalog/search.ts";
+import { idList } from "#core/commands/words.ts";
 import { pinLock } from "#core/lock/pin.ts";
 import { documentRefs } from "#core/lock/refs.ts";
 import { LOCK_FILE } from "#core/lock/schema.ts";
@@ -16,7 +19,9 @@ import { usageOf } from "./project-usage.ts";
  * `alukit new <dir> [--name] [--catalog <id|path>]... [--currency <code>]` (design §7.3):
  * creates a project folder: `alukit.json`, its lock pinning the catalogs it names (§4.13), and a
  * `.gitignore` line for `.alukit/`, the edit lock's folder (§7.1). Without `--catalog` it names
- * the built-in `std` catalog. It refuses a folder that already holds a project.
+ * the built-in `std` catalog. It refuses a folder that already holds a project. When none of the
+ * catalogs it names sells T-slot profile, a notice says which built-in ones do (D-UX-7): naming
+ * one by default would make one vendor the tool's default, which is a call beyond the command.
  */
 
 const NEW_USAGE = usageOf("new");
@@ -102,5 +107,18 @@ export async function newCommand(argv: readonly string[], io: Io): Promise<numbe
     `created ${join(dir, DOCUMENT)} and ${join(dir, LOCK_FILE)} (catalogs: ${catalogs.join(", ")})` +
       (ignored ? `; ${STATE_DIR}/ added to .gitignore` : ""),
   );
+  if (!sellsTslot(live.set, live.named)) {
+    const others: string[] = [];
+    for (const id of await builtinIds()) {
+      if (catalogs.includes(id)) continue;
+      const one = await openLiveCatalogs(root, { catalogs: [id] });
+      if (sellsTslot(one.set, [id])) others.push(id);
+    }
+    if (others.length > 0) {
+      io.err(
+        `notice: no catalog here sells T-slot profile; ${idList(others, others.length)} ${others.length === 1 ? "does" : "do"}: name it with --catalog ${others[0]}, or add it later with setProject`,
+      );
+    }
+  }
   return 0;
 }

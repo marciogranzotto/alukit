@@ -4,10 +4,11 @@ import { resolve } from "node:path";
 import { parseJson } from "#catalog/json.ts";
 import { checkModel } from "#core/check/check.ts";
 import { modelOutputs, outputAccessors } from "#core/check/outputs.ts";
-import { applyBatch, batchOf, type CommandResult } from "#core/commands/apply.ts";
+import { applyBatchLive, batchOf, type CommandResult } from "#core/commands/apply.ts";
+import { type DryEffects, effectsOf } from "#core/commands/dry.ts";
 import type { CommandError, State } from "#core/commands/types.ts";
 import { localDate } from "#core/dates.ts";
-import { derive } from "#core/derive/derive.ts";
+import { type Derived, derive } from "#core/derive/derive.ts";
 import { jsonText } from "#core/derive/output.ts";
 import type { Diagnostic } from "#core/diagnostics.ts";
 import { contentHash, pinLock } from "#core/lock/pin.ts";
@@ -15,7 +16,7 @@ import { documentRefs, lockCovers } from "#core/lock/refs.ts";
 import { LOCK_FILE, lockText } from "#core/lock/schema.ts";
 import { lockItems } from "#core/lock/source.ts";
 import { projectText } from "#core/project/canonical.ts";
-import { openLiveCatalogs } from "#core/project/open.ts";
+import { catalogPlaces, openLiveCatalogs } from "#core/project/open.ts";
 import {
   EditLockHeld,
   readDocument,
@@ -24,6 +25,7 @@ import {
   writeProject,
 } from "#core/project/store.ts";
 import { call, findServer, type ServerLink } from "../server/client.ts";
+import { cliSource } from "../server/source.ts";
 import { parseOptions, usageError } from "./args.ts";
 import type { Io } from "./cli.ts";
 import { diagnosticLine } from "./project.ts";
@@ -44,18 +46,26 @@ const DO_USAGE = usageOf("do");
 
 export interface EditOptions {
   json: boolean;
-  /** Tags the source (§7.1): `cli:<name>`. */
-  as?: string;
+  /** A dry run (BE-2): apply and derive, write nothing, and say what the step would do. */
+  dry?: boolean;
+  /** The step's source in the log (§7.1), from `--as` through `cliSource`. */
+  source: string;
   /** The command named in error messages: `do`, or `add` when it applies its own command. */
   cmd: string;
 }
 
-/** What `alukit check` reports on the model of a state (§5.5), without the file-level checks. */
-function modelDiagnostics(s: State): Diagnostic[] {
+/**
+ * A state derived, with what `alukit check` reports on its model (§5.5), without the file-level
+ * checks.
+ */
+function modelOf(s: State): { derived: Derived; diagnostics: Diagnostic[] } {
   const items = lockItems(s.lock);
   const derived = derive(s.doc, items);
   const accessors = outputAccessors(modelOutputs(derived, items));
-  return checkModel({ raw: s.doc, derived, items, accessors }).diagnostics;
+  return {
+    derived,
+    diagnostics: checkModel({ raw: s.doc, derived, items, accessors }).diagnostics,
+  };
 }
 
 function key(d: Diagnostic): string {
@@ -70,13 +80,23 @@ function counts(ds: readonly Diagnostic[]) {
   };
 }
 
-function resultLine(r: CommandResult): string {
+function resultLine(r: CommandResult, dry: boolean): string {
+  const verb = (done: string, would: string) => (dry ? `would ${would}` : done);
   const parts = [
-    r.created.length > 0 ? `created ${r.created.join(", ")}` : "",
-    r.removed.length > 0 ? `removed ${r.removed.join(", ")}` : "",
-    r.changed.length > 0 ? `changed ${r.changed.join(", ")}` : "",
+    r.created.length > 0 ? `${verb("created", "create")} ${r.created.join(", ")}` : "",
+    r.removed.length > 0 ? `${verb("removed", "remove")} ${r.removed.join(", ")}` : "",
+    r.changed.length > 0 ? `${verb("changed", "change")} ${r.changed.join(", ")}` : "",
   ].filter((s) => s !== "");
   return `${r.cmd}: ${parts.length > 0 ? parts.join("; ") : "no change"}`;
+}
+
+/** What a dry run says the step would do to what is derived, a line each. */
+function effectLines(e: DryEffects): string[] {
+  return [
+    ...Object.entries(e.cuts).map(([id, [a, b]]) => `cut ${id}: ${a} → ${b}`),
+    ...Object.entries(e.added).map(([id, cut]) => `new ${id}: cut ${cut}`),
+    ...(e.claimed.length > 0 ? [`claims ${e.claimed.join(", ")}`] : []),
+  ];
 }
 
 /** An answer to a batch, from the server or in-process: what `do` prints. */
@@ -88,12 +108,16 @@ type DoAnswer =
       diagnostics: { new: Diagnostic[]; resolved: Diagnostic[]; counts: ReturnType<typeof counts> };
       /** From a server: the steps others made since the batch's base revision. */
       between?: unknown[];
+      /** A dry run's: every id the step would create, and what it would do to what is derived. */
+      created?: string[];
+      effects?: DryEffects;
     }
   | { ok: false; failed: { index: number; cmd?: string; errors: CommandError[] } };
 
 function report(answer: DoAnswer, source: string, io: Io, opts: EditOptions): number {
+  const dry = opts.dry === true;
   if (opts.json) {
-    io.out(jsonText({ schema: DO_SCHEMA, ...answer, source }).trimEnd());
+    io.out(jsonText({ schema: DO_SCHEMA, ...(dry ? { dry } : {}), ...answer, source }).trimEnd());
     return answer.ok ? 0 : 1;
   }
   if (!answer.ok) {
@@ -107,11 +131,15 @@ function report(answer: DoAnswer, source: string, io: Io, opts: EditOptions): nu
     return 1;
   }
   const { new: added, resolved, counts: total } = answer.diagnostics;
-  for (const res of answer.results) io.out(resultLine(res));
-  for (const d of added) io.out(`new ${diagnosticLine(d)}`);
-  for (const d of resolved) io.out(`resolved ${diagnosticLine(d)}`);
+  for (const res of answer.results) io.out(resultLine(res, dry));
+  for (const d of added) io.out(`${dry ? "would add" : "new"} ${diagnosticLine(d)}`);
+  for (const d of resolved) io.out(`${dry ? "would resolve" : "resolved"} ${diagnosticLine(d)}`);
+  if (answer.effects) for (const line of effectLines(answer.effects)) io.out(line);
+  const tally = `${total.error} error${total.error === 1 ? "" : "s"}, ${total.warn} warning${total.warn === 1 ? "" : "s"} (${added.length} new, ${resolved.length} resolved)`;
   io.out(
-    `rev ${answer.rev}: ${total.error} error${total.error === 1 ? "" : "s"}, ${total.warn} warning${total.warn === 1 ? "" : "s"} (${added.length} new, ${resolved.length} resolved)`,
+    dry
+      ? `dry run on rev ${answer.rev}: ${tally} after it; nothing was written`
+      : `rev ${answer.rev}: ${tally}`,
   );
   return 0;
 }
@@ -126,8 +154,14 @@ async function applyThroughServer(
 ): Promise<number> {
   let r: Awaited<ReturnType<typeof call>>;
   try {
-    // The id makes a retry harmless (§7.1); this process sends once.
-    r = await call(link, "POST", "/api/commands", { commands, source, id: randomUUID() });
+    // The id makes a retry harmless (§7.1); this process sends once. A dry run has none: it
+    // changes nothing, and the server remembers no answer of one.
+    r = await call(
+      link,
+      "POST",
+      "/api/commands",
+      opts.dry ? { commands, source, dryRun: true } : { commands, source, id: randomUUID() },
+    );
   } catch (e) {
     io.err(
       `alukit ${opts.cmd}: the server at ${link.url} did not answer (${e instanceof Error ? e.message : String(e)}); nothing is known to have changed`,
@@ -159,7 +193,7 @@ export async function applyToProject(
   opts: EditOptions,
 ): Promise<number> {
   const root = resolve(dir);
-  const source = opts.as ? `cli:${opts.as}` : "cli";
+  const source = opts.source;
   const link = await findServer(root);
   if (link) return applyThroughServer(link, commands, source, io, opts);
   try {
@@ -188,36 +222,50 @@ export async function applyToProject(
         lock = pinned.lock;
       }
       const state: State = { doc: raw, lock };
-      const before = modelDiagnostics(state);
+      const before = modelOf(state);
 
-      const r = applyBatch(state, commands, { today: localDate(), live: live.set });
+      const env = { today: localDate(), live: live.set, catalogs: await catalogPlaces(root) };
+      const r = await applyBatchLive(state, commands, env, async (catalogs) => {
+        return (await openLiveCatalogs(root, { catalogs })).set;
+      });
       if (!r.ok) return report({ ok: false, failed: r.failed }, source, io, opts);
 
-      const docText = projectText(r.state.doc);
-      const newLockText = lockText(r.state.lock);
-      await writeProject(
-        root,
-        docText !== doc.text ? docText : undefined,
-        newLockText !== lockRead.text ? r.state.lock : undefined,
-      );
+      // The revision: the content hash of the files as written, or, for a dry run, of the
+      // state it ran against.
+      const shown = opts.dry ? state : r.state;
+      const docText = projectText(shown.doc);
+      const newLockText = lockText(shown.lock);
+      if (!opts.dry) {
+        await writeProject(
+          root,
+          docText !== doc.text ? docText : undefined,
+          newLockText !== lockRead.text ? r.state.lock : undefined,
+        );
+      }
       const rev = contentHash([docText, newLockText]).slice(
         "sha256:".length,
         "sha256:".length + 12,
       );
 
-      const after = modelDiagnostics(r.state);
-      const was = new Set(before.map(key));
-      const now = new Set(after.map(key));
+      const after = modelOf(r.state);
+      const was = new Set(before.diagnostics.map(key));
+      const now = new Set(after.diagnostics.map(key));
       return report(
         {
           ok: true,
           rev,
           results: r.results,
           diagnostics: {
-            new: after.filter((d) => !was.has(key(d))),
-            resolved: before.filter((d) => !now.has(key(d))),
-            counts: counts(after),
+            new: after.diagnostics.filter((d) => !was.has(key(d))),
+            resolved: before.diagnostics.filter((d) => !now.has(key(d))),
+            counts: counts(after.diagnostics),
           },
+          ...(opts.dry
+            ? {
+                created: r.results.flatMap((x) => x.created),
+                effects: effectsOf(before.derived, after.derived, r.results),
+              }
+            : {}),
         },
         source,
         io,
@@ -265,6 +313,7 @@ export async function doCommand(argv: readonly string[], io: Io): Promise<number
       file: { type: "string", short: "f" },
       json: { type: "boolean" },
       as: { type: "string" },
+      "dry-run": { type: "boolean" },
     },
     DO_USAGE,
     io,
@@ -291,9 +340,12 @@ export async function doCommand(argv: readonly string[], io: Io): Promise<number
       io,
     );
   }
+  const who = cliSource(args.values.as);
+  if ("error" in who) return usageError("do", who.error, DO_USAGE, io);
   return applyToProject(dir, commands, io, {
     json: args.values.json === true,
-    ...(args.values.as ? { as: args.values.as } : {}),
+    dry: args.values["dry-run"] === true,
+    source: who.source,
     cmd: "do",
   });
 }

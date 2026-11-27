@@ -1,5 +1,7 @@
 import { applyBatch, type BatchResult, type CommandResult } from "./apply.ts";
+import { COMMANDS } from "./registry.ts";
 import type { CommandEnv, State } from "./types.ts";
+import { joinPhrases } from "./words.ts";
 
 /**
  * Undo and redo by snapshots (design §6, review m1): each step keeps the state before it, so undo
@@ -23,7 +25,10 @@ export interface LogEntry {
   rev: number;
   /** Who made the step; for an undo or redo, who asked for it. */
   source: string;
+  /** The step's commands by name, as scripts read them (`addBar, autoConnect`). */
   what: string;
+  /** The step in words, as a person reads it (`add bar b12, joined at 1 end`, BE-4). */
+  text: string;
   /** For undo and redo entries: the revision of the step undone or redone. */
   of?: number;
 }
@@ -113,6 +118,7 @@ export class History {
       rev: this.revision,
       source: source ?? step.source,
       what: `undo ${stepText(step)}`,
+      text: `undo ${stepWords(step)}`,
       of: step.rev,
     });
     return { ok: true, step, rev: this.revision };
@@ -128,6 +134,7 @@ export class History {
       rev: this.revision,
       source: source ?? step.source,
       what: `redo ${stepText(step)}`,
+      text: `redo ${stepWords(step)}`,
       of: step.rev,
     });
     return { ok: true, step, rev: this.revision };
@@ -144,7 +151,12 @@ export class History {
     this.past.push(s);
     this.future = [];
     this.state = step.after;
-    this.entries.push({ rev: this.revision, source: s.source, what: stepText(s) });
+    this.entries.push({
+      rev: this.revision,
+      source: s.source,
+      what: stepText(s),
+      text: stepWords(s),
+    });
   }
 }
 
@@ -157,4 +169,24 @@ export function stepText(step: Step): string {
       : "?",
   );
   return names.join(", ");
+}
+
+/**
+ * A step in words (BE-4): each command's own phrase (`CommandDef.describe`) from its arguments
+ * and what it did, put together by `joinPhrases`; "edit the files by hand" for a direct edit.
+ */
+export function stepWords(step: Pick<Step, "commands" | "results">): string {
+  if (!step.commands) return "edit the files by hand";
+  return joinPhrases(
+    step.commands.map((c, i) => {
+      const { cmd, args } = c as { cmd: string; args?: unknown };
+      const def = COMMANDS.get(cmd);
+      const did = step.results?.[i];
+      const parsed = def?.args.safeParse(args ?? {});
+      return {
+        cmd,
+        phrase: def && did && parsed?.success ? def.describe(parsed.data, did) : cmd,
+      };
+    }),
+  );
 }

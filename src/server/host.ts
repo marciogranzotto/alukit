@@ -1,12 +1,14 @@
 import { createHash } from "node:crypto";
 import { type FSWatcher, unwatchFile, watch, watchFile } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CatalogSet } from "#catalog/link.ts";
 import { type CheckOutput, checkModel } from "#core/check/check.ts";
 import { type ModelOutputs, modelOutputs, outputAccessors } from "#core/check/outputs.ts";
-import { applyBatch, type CommandResult } from "#core/commands/apply.ts";
-import { History, type LogEntry, type Step, stepText } from "#core/commands/history.ts";
-import type { CommandEnv, State } from "#core/commands/types.ts";
+import { applyBatchLive, type CommandResult } from "#core/commands/apply.ts";
+import { type DryEffects, effectsOf } from "#core/commands/dry.ts";
+import { History, type LogEntry, type Step, stepText, stepWords } from "#core/commands/history.ts";
+import type { CatalogPlaces, CommandEnv, State } from "#core/commands/types.ts";
 import { localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
@@ -17,9 +19,9 @@ import { LOCK_FILE, type Lock, lockText } from "#core/lock/schema.ts";
 import { lockItems } from "#core/lock/source.ts";
 import { projectText } from "#core/project/canonical.ts";
 import { gitStamp } from "#core/project/git.ts";
-import { DOCUMENT, openLiveCatalogs } from "#core/project/open.ts";
+import { catalogPlaces, DOCUMENT, openLiveCatalogs } from "#core/project/open.ts";
 import { parseProject } from "#core/project/parse.ts";
-import { readDocument, readLock, writeAtomic } from "#core/project/store.ts";
+import { keepRejected, readDocument, readLock, writeAtomic } from "#core/project/store.ts";
 import { type SaveResult, saveRevision } from "#core/revision/files.ts";
 
 /**
@@ -54,7 +56,10 @@ export type Status =
 export interface StepInfo {
   rev: number;
   source: string;
+  /** Its commands by name. */
   what: string;
+  /** In words, as a person reads it (BE-4). */
+  text: string;
 }
 
 export interface DiagnosticsDelta {
@@ -70,6 +75,8 @@ export type HostEvent =
       rev: number;
       source: string;
       what: string;
+      /** The step in words (BE-4); for an undo or redo, "undo …" or "redo …". */
+      text: string;
       /** For an undo or redo: the revision of the step taken back or applied again. */
       of?: number;
       changes?: { created: string[]; removed: string[]; changed: string[] };
@@ -128,6 +135,21 @@ export type CommandsAnswer =
   | { ok: false; kind: "stale"; rev: number; between: LogEntry[] }
   | { ok: false; kind: "write"; message: string; rev: number };
 
+/** A dry run's answer (BE-2): what the step would do; `rev` is the revision it ran against. */
+export type DryRunAnswer =
+  | {
+      ok: true;
+      rev: number;
+      source: string;
+      results: CommandResult[];
+      /** Every id the step would create, in order. */
+      created: string[];
+      diagnostics: DiagnosticsDelta;
+      effects: DryEffects;
+    }
+  | { ok: false; kind: "refused"; failed: unknown; rev: number }
+  | { ok: false; kind: "read-only"; status: Status; rev: number };
+
 export type HistoryAnswer =
   | { ok: true; rev: number; step: StepInfo; undo: StepInfo | null; redo: StepInfo | null }
   | { ok: false; kind: "nothing" | "read-only" | "write"; message: string; rev: number };
@@ -144,6 +166,8 @@ export interface HostOptions {
   settleMs?: number;
   /** The interval of the polling safety net beside `fs.watch`, in ms (default 1000; 0: none). */
   pollMs?: number;
+  /** The clock that names a file restore keeps (`.alukit/rejected/<UTC time>.json`). */
+  now?: () => Date;
 }
 
 /** The project could not be opened: its files are not valid (§7.4). */
@@ -175,7 +199,9 @@ function key(d: Diagnostic): string {
 }
 
 function info(step: Step | undefined): StepInfo | null {
-  return step ? { rev: step.rev, source: step.source, what: stepText(step) } : null;
+  return step
+    ? { rev: step.rev, source: step.source, what: stepText(step), text: stepWords(step) }
+    : null;
 }
 
 /** What the files on disk hold, read and validated. */
@@ -227,15 +253,19 @@ export class ProjectHost {
   private poll: (() => void) | undefined;
   private settleTimer: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
+  /** Where a command may take a catalog from: the built-in ids, folders inside the project. */
+  private readonly places: CatalogPlaces;
 
   private constructor(
     opts: HostOptions,
     state: State,
     disk: { doc?: string; lock?: string },
     live: { set: CatalogSet; diagnostics: Diagnostic[]; named: string[] },
+    places: CatalogPlaces,
   ) {
     this.dir = opts.dir;
     this.opts = opts;
+    this.places = places;
     this.history = new History(state);
     this.disk = disk;
     this.catalogDiagnostics = live.diagnostics;
@@ -265,7 +295,8 @@ export class ProjectHost {
       await writeAtomic(join(opts.dir, LOCK_FILE), text);
       disk.lock = sha(text);
     }
-    const host = new ProjectHost(opts, { doc: raw, lock }, disk, live);
+    const places = await catalogPlaces(opts.dir, opts.builtinDir);
+    const host = new ProjectHost(opts, { doc: raw, lock }, disk, live, places);
     if (opts.watch !== false) {
       host.startWatching();
       // An edit between the read above and the watchers starting would be reported by neither:
@@ -361,6 +392,36 @@ export class ProjectHost {
     return answer;
   }
 
+  /**
+   * A dry run (BE-2, D-UX-11): the batch applied and derived in the command queue, against the
+   * revision after every step queued before it, the files read first as for a step. It writes,
+   * logs and broadcasts nothing, and answers what the step would add: the diagnostics, the ids
+   * it would create, and the effects on what is derived. Not remembered by id: a dry run and a
+   * real step never share an answer.
+   */
+  dryRun(req: Pick<CommandsRequest, "commands" | "source">): Promise<DryRunAnswer> {
+    return this.run(async () => {
+      await this.takeInFiles();
+      const rev = this.rev;
+      if (this.statusValue.readOnly) {
+        return { ok: false, kind: "read-only", status: this.statusValue, rev };
+      }
+      const { r, now } = await this.tryBatch(req.commands);
+      this.adoptCatalogs(now);
+      if (!r.ok) return { ok: false, kind: "refused", failed: r.failed, rev };
+      const after = this.compute(undefined, r.state);
+      return {
+        ok: true,
+        rev,
+        source: req.source,
+        results: r.results,
+        created: r.results.flatMap((x) => x.created),
+        diagnostics: deltaOf(this.snap, after),
+        effects: effectsOf(this.snap.derived, after.derived, r.results),
+      };
+    });
+  }
+
   /** Takes back the latest step, whoever made it (§7.1). */
   undo(source: string): Promise<HistoryAnswer> {
     return this.run(() => this.move("undo", source));
@@ -370,15 +431,34 @@ export class ProjectHost {
     return this.run(() => this.move("redo", source));
   }
 
-  /** "Restore last good" (§7.1): writes the last good state over files that are not valid. */
-  restore(): Promise<{ ok: boolean; rev: number; message?: string }> {
+  /**
+   * "Restore last good" (§7.1): writes the last good state over files that are not valid. What
+   * it writes over is kept first in `.alukit/rejected/` (BE-9), and the answer names it: the one
+   * action that could lose a person's typing loses nothing.
+   */
+  restore(): Promise<{ ok: boolean; rev: number; message?: string; kept?: string[] }> {
     return this.run(async () => {
       // A fix saved a moment ago, before the watcher saw it, is not to be overwritten.
       await this.takeInFiles();
       if (!this.statusValue.readOnly) {
         return { ok: true, rev: this.rev, message: "the files already hold the current state" };
       }
+      let kept: string[];
       try {
+        // Each file as it stands, when it differs from what is written over it.
+        const [doc, lock] = await Promise.all(
+          [DOCUMENT, LOCK_FILE].map((f) =>
+            readFile(join(this.dir, f), "utf8").catch(() => undefined),
+          ),
+        );
+        kept = await keepRejected(
+          this.dir,
+          {
+            ...(doc !== undefined && doc !== projectText(this.state.doc) ? { doc } : {}),
+            ...(lock !== undefined && lock !== lockText(this.state.lock) ? { lock } : {}),
+          },
+          (this.opts.now ?? (() => new Date()))(),
+        );
         await this.write(this.state, true);
       } catch (e) {
         this.setStatus(writeFailure(e));
@@ -389,7 +469,7 @@ export class ProjectHost {
         };
       }
       this.setStatus({ readOnly: false });
-      return { ok: true, rev: this.rev };
+      return { ok: true, rev: this.rev, ...(kept.length > 0 ? { kept } : {}) };
     });
   }
 
@@ -457,7 +537,28 @@ export class ProjectHost {
   }
 
   private env(live: CatalogSet): CommandEnv {
-    return { today: this.today(), live };
+    return { today: this.today(), live, catalogs: this.places };
+  }
+
+  /**
+   * Applies a batch to the current state with the catalogs at hand, opened afresh (M4a decision
+   * 13); a command that changes the catalogs the document names has them opened before it runs.
+   * `now` is the current document's catalogs, `after` those the batch ends with: the host takes
+   * the second only once the step is written.
+   */
+  private async tryBatch(commands: readonly unknown[]) {
+    const now = await openLiveCatalogs(this.dir, this.state.doc, this.opts.builtinDir);
+    let after = now;
+    const r = await applyBatchLive(this.state, commands, this.env(now.set), async (catalogs) => {
+      after = await openLiveCatalogs(this.dir, { catalogs }, this.opts.builtinDir);
+      return after.set;
+    });
+    return { r, now, after };
+  }
+
+  private adoptCatalogs(live: { set: CatalogSet; diagnostics: Diagnostic[]; named: string[] }) {
+    this.catalogDiagnostics = live.diagnostics;
+    this.live = { set: live.set, named: live.named, at: Date.now() };
   }
 
   private async applyNow(req: CommandsRequest): Promise<CommandsAnswer> {
@@ -474,10 +575,8 @@ export class ProjectHost {
     if (req.strict && req.baseRev !== undefined && req.baseRev !== rev0) {
       return { ok: false, kind: "stale", rev: rev0, between };
     }
-    const live = await openLiveCatalogs(this.dir, this.state.doc, this.opts.builtinDir);
-    this.catalogDiagnostics = live.diagnostics;
-    this.live = { set: live.set, named: live.named, at: Date.now() };
-    const r = applyBatch(this.state, req.commands, this.env(live.set));
+    const { r, now, after } = await this.tryBatch(req.commands);
+    this.adoptCatalogs(now);
     if (!r.ok) return { ok: false, kind: "refused", failed: r.failed, rev: rev0 };
     try {
       await this.write(r.state);
@@ -485,6 +584,7 @@ export class ProjectHost {
       this.setStatus(writeFailure(e));
       return { ok: false, kind: "write", message: (e as Error).message, rev: rev0 };
     }
+    this.adoptCatalogs(after);
     const before = this.snap;
     const rev = this.history.commit(req.commands, r.results, r.state, req.source);
     const changes = {
@@ -498,6 +598,7 @@ export class ProjectHost {
       rev,
       source: req.source,
       what: stepText(this.history.undoStep as Step),
+      text: stepWords(this.history.undoStep as Step),
       changes,
       diagnostics: delta,
       undo: info(this.history.undoStep),
@@ -530,6 +631,7 @@ export class ProjectHost {
       rev: this.rev,
       source,
       what: entry.what,
+      text: entry.text,
       of: step.rev,
       diagnostics: delta,
       undo: info(this.history.undoStep),
@@ -607,6 +709,7 @@ export class ProjectHost {
         rev,
         source: "file",
         what: "file edit",
+        text: stepWords({}),
         diagnostics: delta,
         undo: info(this.history.undoStep),
         redo: info(this.history.redoStep),
@@ -634,8 +737,7 @@ export class ProjectHost {
     }
   }
 
-  private compute(variant?: string): Snapshot {
-    const state = this.state;
+  private compute(variant?: string, state: State = this.state): Snapshot {
     const items = lockItems(state.lock);
     const derived = derive(state.doc, items, { variant });
     const stamp = { lock: lockHash(state.lock) };
@@ -663,13 +765,7 @@ export class ProjectHost {
   private advance(before: Snapshot): DiagnosticsDelta {
     this.snap = this.compute();
     this.variantSnaps.clear();
-    const was = new Set(before.check.diagnostics.map(key));
-    const now = new Set(this.snap.check.diagnostics.map(key));
-    return {
-      new: this.snap.check.diagnostics.filter((d) => !was.has(key(d))),
-      resolved: before.check.diagnostics.filter((d) => !now.has(key(d))),
-      counts: counts(this.snap.check.diagnostics),
-    };
+    return deltaOf(before, this.snap);
   }
 
   private setStatus(s: Status): void {
@@ -718,6 +814,17 @@ export class ProjectHost {
       }
     }
   }
+}
+
+/** The diagnostics a step added and resolved, going from one snapshot to the next. */
+function deltaOf(before: Snapshot, after: Snapshot): DiagnosticsDelta {
+  const was = new Set(before.check.diagnostics.map(key));
+  const now = new Set(after.check.diagnostics.map(key));
+  return {
+    new: after.check.diagnostics.filter((d) => !was.has(key(d))),
+    resolved: before.check.diagnostics.filter((d) => !now.has(key(d))),
+    counts: counts(after.check.diagnostics),
+  };
 }
 
 function writeFailure(e: unknown): Status {

@@ -27,6 +27,10 @@ function typeText(s: JsonSchema, depth = 0): string {
   if (alts.length > 1) return [...new Set(alts.map((b) => typeText(b, depth)))].join(" | ");
   if ("const" in s) return JSON.stringify(s.const);
   if (Array.isArray(s.enum)) return s.enum.map((v) => JSON.stringify(v)).join(" | ");
+  // Zod writes a nullable primitive as a list of types: `{ "type": ["string", "null"] }`.
+  if (Array.isArray(s.type)) {
+    return (s.type as string[]).map((t) => typeText({ ...s, type: t }, depth)).join(" | ");
+  }
   switch (s.type) {
     case "string":
       return typeof s.description === "string" && typeof s.pattern === "string"
