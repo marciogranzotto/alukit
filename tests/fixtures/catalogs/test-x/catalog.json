@@ -8,7 +8,50 @@
     "src": "est",
     "note": "synthetic test data for blind fasteners, a butt's stack, a plain bar held by a screw and head seats, not a vendor's"
   },
+  "standards": {
+    "SHCS": {
+      "name": "SHCS (synthetic)",
+      "title": "A socket head cap screw table for tests",
+      "sizes": {
+        "M4": { "dk_mm": 7, "k_mm": 4, "s_mm": 3 },
+        "M8": { "dk_mm": 13, "k_mm": 8, "s_mm": 6 }
+      },
+      "prov": { "src": "src", "ref": "a synthetic table, ISO 4762's values at M4 and M8" }
+    }
+  },
   "items": {
+    "SCR-M8x50-STD": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M8x50 whose maker names its standard (synthetic)",
+      "thread": "M8",
+      "length_mm": 50,
+      "standard": { "id": "SHCS", "src": "src", "ref": "the maker's data sheet (synthetic)" }
+    },
+    "SCR-M8x50-EST": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M8x50, its standard read from its type (synthetic)",
+      "thread": "M8",
+      "length_mm": 50,
+      "standard": { "id": "SHCS", "src": "est", "note": "a socket head cap screw by its type" }
+    },
+    "SCR-M8x50-OWN": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M8x50 with a reduced head its maker states (synthetic)",
+      "thread": "M8",
+      "length_mm": 50,
+      "standard": { "id": "SHCS", "src": "src" },
+      "dims": { "dk_mm": 10 }
+    },
+    "SCR-M8x50-BARE": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M8x50, no standard and no dimensions (synthetic)",
+      "thread": "M8",
+      "length_mm": 50
+    },
     "FB-120x12": {
       "kind": "bar",
       "name": "Flat bar 120x12",

@@ -61,6 +61,7 @@ export function catalogHash(cat: LoadedCatalog): string {
     materials: map(cat.materials),
     grooves: map(cat.grooves),
     systems: map(cat.systems),
+    ...(cat.standards.size > 0 ? { standards: map(cat.standards) } : {}),
     items: map(cat.items, (li) => li.item),
     offers: map(cat.offers),
     sections: map(cat.sections, (ls) => ls.section),
@@ -124,6 +125,9 @@ class Collector {
       }
       case "offer":
         return true;
+      case "standard":
+        // Read when catalogs are linked: the item holds the dimensions it filled (F2a).
+        return this.set.get("standard", ref, from) !== undefined;
     }
   }
 

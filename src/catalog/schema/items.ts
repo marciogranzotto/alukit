@@ -347,6 +347,13 @@ export const FastenerItem = z
     dims: Quantities.optional().describe(
       "published dimensions under the standard's letters: d1_mm, d2_mm, h_mm, s_mm, m_mm …",
     ),
+    standard: Prov.extend({
+      id: Ref.describe("a `standards` entry, e.g. std:ISO4762"),
+    })
+      .optional()
+      .describe(
+        "the standard it is made to, and how that is known (src: its maker names it; est: inferred, e.g. from its type): linking fills each dimension it does not state from that standard's row for its thread (after the alternative frame's acceptance)",
+      ),
     hole_mm: Valued.optional().describe(
       "a blind fastener's hole, as its maker states it: a blind fastening drills it in every layer it passes (after the alternative frame's acceptance)",
     ),

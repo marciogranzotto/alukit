@@ -224,6 +224,9 @@ def one(b, p: dict, x: dict, kind: str, subtype: str | None, a: dict[str, str], 
         ln = mm_value(a.get("Comprimento do Parafuso", ""))
         if ln is not None:
             it["length_mm"] = ln
+        standard = store.standard_of(p) if subtype in ("screw", "bolt") else None
+        if standard:
+            it["standard"] = standard
         if subtype in ("t-nut", "hammer-screw"):
             if len(fits) == 1:
                 it["groove"] = GROOVE_OF[fits[0]]

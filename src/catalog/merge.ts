@@ -15,10 +15,10 @@ export type Tree = Record<string, unknown>;
 /** Who set a field: the file, its layer, and the default provenance of what it wrote. */
 export interface Source {
   file: string;
-  layer: 1 | 2 | 3 | "clone";
+  layer: 1 | 2 | 3 | "clone" | "standard";
   /** The default provenance of a bare number set here, when it is not the item's own `prov`. */
   prov?: Prov;
-  /** For a field filled from a clone's original: that item's full id. */
+  /** For a field filled from a clone's original: that item's full id; from a standard: its full id. */
   from?: string;
 }
 

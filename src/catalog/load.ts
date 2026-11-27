@@ -23,6 +23,8 @@ import {
   OffersEnvelope,
   Override,
   OverridesEnvelope,
+  Standard,
+  type Standard as StandardT,
   System,
   type System as SystemT,
 } from "./schema/files.ts";
@@ -93,6 +95,8 @@ export interface LoadedCatalog {
   materials: Map<string, MaterialT>;
   grooves: Map<string, GrooveTypeT>;
   systems: Map<string, SystemT>;
+  /** Standards fasteners are made to (F2a): read at link time, never locked. */
+  standards: Map<string, StandardT>;
   items: Map<string, LoadedItem>;
   /** Keyed by SKU. */
   offers: Map<string, Offer>;
@@ -106,9 +110,14 @@ export interface LoadResult {
   diagnostics: Diagnostic[];
 }
 
-const DEFINITIONS = ["materials", "grooves", "systems"] as const;
+const DEFINITIONS = ["materials", "grooves", "systems", "standards"] as const;
 type DefinitionMap = (typeof DEFINITIONS)[number];
-const DEFINITION_SCHEMA = { materials: Material, grooves: GrooveType, systems: System } as const;
+const DEFINITION_SCHEMA = {
+  materials: Material,
+  grooves: GrooveType,
+  systems: System,
+  standards: Standard,
+} as const;
 
 function cmp(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
@@ -381,7 +390,8 @@ export function loadCatalog(source: CatalogSource): LoadResult {
   const materials = new Map<string, MaterialT>();
   const grooves = new Map<string, GrooveTypeT>();
   const systems = new Map<string, SystemT>();
-  const targets = { materials, grooves, systems } as const;
+  const standards = new Map<string, StandardT>();
+  const targets = { materials, grooves, systems, standards } as const;
   for (const key of DEFINITIONS) {
     const map = (defs.tree[key] ?? {}) as Tree;
     for (const [local, raw] of Object.entries(map)) {
@@ -501,6 +511,7 @@ export function loadCatalog(source: CatalogSource): LoadResult {
       materials,
       grooves,
       systems,
+      standards,
       items: loadedItems,
       offers,
       sections,

@@ -4,8 +4,8 @@ import { type LoadedCatalog, type LoadedItem, type LoadedSection, splitRef } fro
 import type { Source } from "./merge.ts";
 import { factoryE } from "./rails.ts";
 import { type Face, isValuedObject, num } from "./schema/common.ts";
-import type { GrooveType, Material, System } from "./schema/files.ts";
-import type { Item } from "./schema/items.ts";
+import type { GrooveType, Material, Standard, System } from "./schema/files.ts";
+import type { FastenerItem, Item } from "./schema/items.ts";
 import type { Offer } from "./schema/offers.ts";
 import {
   GENERATORS,
@@ -21,7 +21,14 @@ import { coreProblems } from "./sections/geometry.ts";
  * original (§3.4).
  */
 
-export type EntityKind = "item" | "section" | "material" | "groove" | "system" | "offer";
+export type EntityKind =
+  | "item"
+  | "section"
+  | "material"
+  | "groove"
+  | "system"
+  | "standard"
+  | "offer";
 
 export interface Resolved<T> {
   /** Full id: `<catalog>:<local>`. */
@@ -37,6 +44,7 @@ interface EntityTypes {
   material: Material;
   groove: GrooveType;
   system: System;
+  standard: Standard;
   offer: Offer;
 }
 
@@ -58,6 +66,7 @@ export class CatalogSet {
       material: cat.materials,
       groove: cat.grooves,
       system: cat.systems,
+      standard: cat.standards,
       offer: cat.offers,
     }[kind] as Map<string, EntityTypes[K]>;
     const value = map.get(local);
@@ -120,6 +129,7 @@ export function itemRefs(item: Item): RefSite[] {
     case "fastener":
       add("groove", item.groove, "groove");
       for (const [i, sys] of (item.fits ?? []).entries()) add(`fits[${i}]`, sys, "system");
+      add("standard/id", item.standard?.id, "standard");
       break;
     case "carriage":
       add("rail_system", item.rail_system, "system");
@@ -266,6 +276,31 @@ export function linkCatalogs(loaded: readonly LoadedCatalog[]): LinkResult {
     }
   }
 
+  // Fasteners made to a standard: the dimensions they do not state come from its row for their
+  // thread (after the alternative frame's acceptance, F2a).
+  for (const cat of set.catalogs.values()) {
+    for (const [local, li] of cat.items) {
+      if (li.item.kind !== "fastener" || !li.item.standard) continue;
+      const std = set.get("standard", li.item.standard.id, cat.id);
+      if (!std) continue; // reported above
+      const size = li.item.thread;
+      const row = size === undefined ? undefined : std.value.sizes[size];
+      if (!row) {
+        error(
+          "standard-size",
+          size === undefined
+            ? `standard ${std.id} is read at the fastener's thread, and it gives none`
+            : `standard ${std.id} (${std.value.name}) has no row for ${size}`,
+          li.files,
+          li.id,
+          size === undefined ? "thread" : "standard/id",
+        );
+        continue;
+      }
+      cat.items.set(local, withStandardDims(li, li.item, std, size as string, row));
+    }
+  }
+
   // Rails' stock offers that do not state factory_E_mm take the centred layout's, as an estimate.
   for (const cat of set.catalogs.values()) {
     for (const [sku, offer] of cat.offers) {
@@ -310,6 +345,46 @@ function withCloneRatings(clone: LoadedItem, orig: LoadedItem): LoadedItem {
     });
   }
   return { ...clone, item: { ...clone.item, ratings } as Item, sources };
+}
+
+/**
+ * A fastener with the dimensions it does not state filled from its standard's row for its thread
+ * (after the alternative frame's acceptance, F2a). What the item states wins. Each filled value
+ * keeps the table's own provenance, an estimate when the item is only taken to be made to the
+ * standard (its `standard.src` is `est`), and says where it came from.
+ */
+function withStandardDims(
+  li: LoadedItem,
+  item: FastenerItem,
+  std: Resolved<Standard>,
+  size: string,
+  row: Readonly<Record<string, unknown>>,
+): LoadedItem {
+  const own = (item.dims ?? {}) as Record<string, unknown>;
+  const cited = item.standard as NonNullable<FastenerItem["standard"]>;
+  const dims: Record<string, unknown> = { ...own };
+  const sources = new Map<string, Source>(li.sources);
+  const how =
+    cited.src === "est" ? "the standard it is taken to be made to" : "the standard it cites";
+  for (const [key, value] of Object.entries(row)) {
+    if (Object.hasOwn(own, key)) continue;
+    const obj = isValuedObject(value) ? value : undefined;
+    const ref = obj?.ref ?? std.value.prov?.ref;
+    const read = obj?.read ?? std.value.prov?.read;
+    dims[key] = {
+      v: num(value as number),
+      src: cited.src === "est" ? "est" : (obj?.src ?? std.value.prov?.src ?? "src"),
+      ...(ref ? { ref } : {}),
+      ...(read ? { read } : {}),
+      note: `from ${std.id}'s row for ${size}, ${how}`,
+    };
+    sources.set(`dims/${key}`, {
+      file: `${std.catalog.dir}/catalog.json`,
+      layer: "standard",
+      from: std.id,
+    });
+  }
+  return { ...li, item: { ...item, dims } as Item, sources };
 }
 
 /** A section's geometry, built: drawn for every fidelity, with properties where they mean something. */

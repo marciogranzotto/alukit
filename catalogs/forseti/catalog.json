@@ -128,6 +128,11 @@
       "code": "228579-2-115",
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-cab-cilindrica-allen-m24x40mm/",
       "thread": "M24",
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-cab-cilindrica-allen-m24x40mm/",
@@ -6235,6 +6240,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
       "thread": "M5",
       "length_mm": 8,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
@@ -6250,6 +6260,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
       "thread": "M5",
       "length_mm": 10,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
@@ -6265,6 +6280,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
       "thread": "M5",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
@@ -6280,6 +6300,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
       "thread": "M5",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
@@ -6295,6 +6320,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
       "thread": "M5",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
@@ -6310,6 +6340,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
       "thread": "M5",
       "length_mm": 25,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
@@ -6325,6 +6360,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
       "thread": "M5",
       "length_mm": 30,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m5/",
@@ -6340,6 +6380,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
       "thread": "M6",
       "length_mm": 8,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
@@ -6355,6 +6400,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
       "thread": "M6",
       "length_mm": 10,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
@@ -6370,6 +6420,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
       "thread": "M6",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
@@ -6385,6 +6440,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
       "thread": "M6",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
@@ -6400,6 +6460,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
       "thread": "M6",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
@@ -6415,6 +6480,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
       "thread": "M6",
       "length_mm": 25,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
@@ -6430,6 +6500,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
       "thread": "M6",
       "length_mm": 30,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
@@ -6445,6 +6520,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
       "thread": "M6",
       "length_mm": 35,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
@@ -6460,6 +6540,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
       "thread": "M6",
       "length_mm": 40,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m6/",
@@ -6475,6 +6560,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
       "thread": "M8",
       "length_mm": 10,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
@@ -6490,6 +6580,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
       "thread": "M8",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
@@ -6505,6 +6600,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
       "thread": "M8",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
@@ -6520,6 +6620,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
       "thread": "M8",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
@@ -6535,6 +6640,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
       "thread": "M8",
       "length_mm": 25,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
@@ -6550,6 +6660,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
       "thread": "M8",
       "length_mm": 30,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
@@ -6565,6 +6680,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
       "thread": "M8",
       "length_mm": 35,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
@@ -6580,6 +6700,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
       "thread": "M8",
       "length_mm": 40,
+      "standard": {
+        "id": "std:ISO7380-1",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-abaulada-m8/",
@@ -6595,6 +6720,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m5/",
       "thread": "M5",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m5/",
@@ -6610,6 +6740,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m5/",
       "thread": "M5",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m5/",
@@ -6625,6 +6760,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m5/",
       "thread": "M5",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m5/",
@@ -6640,6 +6780,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m6/",
       "thread": "M6",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m6/",
@@ -6655,6 +6800,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m6/",
       "thread": "M6",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m6/",
@@ -6670,6 +6820,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m6/",
       "thread": "M6",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m6/",
@@ -6685,6 +6840,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m8/",
       "thread": "M8",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m8/",
@@ -6700,6 +6860,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m8/",
       "thread": "M8",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m8/",
@@ -6715,6 +6880,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m8/",
       "thread": "M8",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m8/",
@@ -6730,6 +6900,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m8/",
       "thread": "M8",
       "length_mm": 25,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-inox-cabeca-cilindrica-m8/",
@@ -7198,6 +7373,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M3",
       "length_mm": 6,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/",
@@ -7214,6 +7394,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M3",
       "length_mm": 8,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/",
@@ -7230,6 +7415,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M3",
       "length_mm": 10,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m3/",
@@ -7246,6 +7436,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M4",
       "length_mm": 6,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
@@ -7262,6 +7457,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M4",
       "length_mm": 8,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
@@ -7278,6 +7478,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M4",
       "length_mm": 10,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
@@ -7294,6 +7499,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M4",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
@@ -7310,6 +7520,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M4",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m4/",
@@ -7326,6 +7541,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M5",
       "length_mm": 8,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
@@ -7342,6 +7562,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M5",
       "length_mm": 10,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
@@ -7358,6 +7583,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M5",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
@@ -7374,6 +7604,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M5",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
@@ -7390,6 +7625,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M5",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
@@ -7406,6 +7646,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M5",
       "length_mm": 25,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m5/",
@@ -7422,6 +7667,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M6",
       "length_mm": 8,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
@@ -7438,6 +7688,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M6",
       "length_mm": 10,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
@@ -7454,6 +7709,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M6",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
@@ -7470,6 +7730,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M6",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
@@ -7486,6 +7751,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M6",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-zincado-preto/",
@@ -7502,6 +7772,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M6",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
@@ -7518,6 +7793,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M6",
       "length_mm": 25,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
@@ -7534,6 +7814,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M6",
       "length_mm": 30,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
@@ -7550,6 +7835,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M6",
       "length_mm": 35,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
@@ -7566,6 +7856,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M6",
       "length_mm": 40,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m6-galvanizado-branco/",
@@ -7582,6 +7877,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M8",
       "length_mm": 10,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
@@ -7598,6 +7898,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M8",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
@@ -7614,6 +7919,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M8",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
@@ -7630,6 +7940,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M8",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
@@ -7646,6 +7961,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M8",
       "length_mm": 25,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
@@ -7662,6 +7982,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M8",
       "length_mm": 30,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
@@ -7678,6 +8003,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M8",
       "length_mm": 35,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
@@ -7694,6 +8024,11 @@
       "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p62" }],
       "thread": "M8",
       "length_mm": 40,
+      "standard": {
+        "id": "std:ISO4762",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-cabeca-cilindrica-m8-galvanizado-branco/",
@@ -8052,6 +8387,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-cabeca-sextavada-m8/",
       "thread": "M8",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO4017",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon head (\"cabeça sextavada\"), ISO 4017's (DIN 933's is as wide across flats at M8)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-cabeca-sextavada-m8/",
@@ -8067,6 +8407,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-cabeca-sextavada-m8/",
       "thread": "M8",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO4017",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon head (\"cabeça sextavada\"), ISO 4017's (DIN 933's is as wide across flats at M8)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-cabeca-sextavada-m8/",
@@ -8082,6 +8427,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-cabeca-sextavada-m8/",
       "thread": "M8",
       "length_mm": 25,
+      "standard": {
+        "id": "std:ISO4017",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon head (\"cabeça sextavada\"), ISO 4017's (DIN 933's is as wide across flats at M8)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-cabeca-sextavada-m8/",
@@ -8097,6 +8447,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-cabeca-sextavada-m8/",
       "thread": "M8",
       "length_mm": 30,
+      "standard": {
+        "id": "std:ISO4017",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon head (\"cabeça sextavada\"), ISO 4017's (DIN 933's is as wide across flats at M8)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-cabeca-sextavada-m8/",
@@ -8112,6 +8467,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-cabeca-sextavada-m8/",
       "thread": "M8",
       "length_mm": 35,
+      "standard": {
+        "id": "std:ISO4017",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon head (\"cabeça sextavada\"), ISO 4017's (DIN 933's is as wide across flats at M8)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-cabeca-sextavada-m8/",
@@ -10125,6 +10485,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 6,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10140,6 +10505,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 8,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10155,6 +10525,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 10,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10170,6 +10545,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 12,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10185,6 +10565,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 15,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10200,6 +10585,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 20,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10215,6 +10605,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 25,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10230,6 +10625,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 30,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10245,6 +10645,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 35,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10260,6 +10665,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 40,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10275,6 +10685,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 45,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10290,6 +10705,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 55,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10305,6 +10725,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
       "thread": "M5",
       "length_mm": 65,
+      "standard": {
+        "id": "std:DIN7984",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-allen-de-perfil-baixo-m5/",
@@ -10844,6 +11269,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-em-inox-cabeca-sextavada-m8/",
       "thread": "M8",
       "length_mm": 12,
+      "standard": {
+        "id": "std:ISO4017",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon head (\"cabeça sextavada\"), ISO 4017's (DIN 933's is as wide across flats at M8)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-em-inox-cabeca-sextavada-m8/",
@@ -10859,6 +11289,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-em-inox-cabeca-sextavada-m8/",
       "thread": "M8",
       "length_mm": 16,
+      "standard": {
+        "id": "std:ISO4017",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon head (\"cabeça sextavada\"), ISO 4017's (DIN 933's is as wide across flats at M8)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-em-inox-cabeca-sextavada-m8/",
@@ -10874,6 +11309,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-em-inox-cabeca-sextavada-m8/",
       "thread": "M8",
       "length_mm": 20,
+      "standard": {
+        "id": "std:ISO4017",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon head (\"cabeça sextavada\"), ISO 4017's (DIN 933's is as wide across flats at M8)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-em-inox-cabeca-sextavada-m8/",
@@ -10889,6 +11329,11 @@
       "url": "https://loja.forsetisolucoes.com.br/produto/parafuso-em-inox-cabeca-sextavada-m8/",
       "thread": "M8",
       "length_mm": 25,
+      "standard": {
+        "id": "std:ISO4017",
+        "src": "est",
+        "note": "the shop names no standard; its type is a hexagon head (\"cabeça sextavada\"), ISO 4017's (DIN 933's is as wide across flats at M8)"
+      },
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/parafuso-em-inox-cabeca-sextavada-m8/",

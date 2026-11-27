@@ -2,8 +2,9 @@ import { copyFile, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { sectionProperties } from "#core/section-properties.ts";
-import { buildSection } from "./link.ts";
-import { BUILTIN_DIR } from "./open.ts";
+import { checkCatalog } from "./check.ts";
+import { buildSection, type CatalogSet } from "./link.ts";
+import { BUILTIN_DIR, openCatalog } from "./open.ts";
 import { reportJson } from "./report.ts";
 import { at, checkTest, fixtureCopy, patchJson } from "./testing.ts";
 
@@ -15,8 +16,15 @@ describe("the test catalog", () => {
     const { report, set } = await checkTest(await fixtureCopy());
     expect(report.diagnostics).toEqual([]);
     expect(report.counts).toEqual({ items: 18, offers: 22, sections: 6, errors: 0, warnings: 0 });
-    // TS40E's section is the built-in Forseti outline; Forseti's rails reference ref-hiwin.
-    expect([...set.catalogs.keys()].sort()).toEqual(["forseti", "ref-hiwin", "ref-test", "test"]);
+    // TS40E's section is the built-in Forseti outline; Forseti's rails reference ref-hiwin, its
+    // screws the standards in std (F2a).
+    expect([...set.catalogs.keys()].sort()).toEqual([
+      "forseti",
+      "ref-hiwin",
+      "ref-test",
+      "std",
+      "test",
+    ]);
     expect(report.uncomputed).toEqual(["test:RAIL20", "test:TS40", "test:TS4080"]);
   });
 
@@ -306,6 +314,97 @@ describe("ids across catalogs (design §3.1)", () => {
     const { report } = await checkTest(root);
     expect(codes({ report })).toContain("catalog-id-mismatch");
     expect(codes({ report })).toContain("ref-unknown-catalog");
+  });
+});
+
+describe("a fastener made to a standard (F2a)", () => {
+  const open = async (root: string) => {
+    const opened = await openCatalog(join(root, "test-x"), { cwd: root });
+    return { ...opened, report: checkCatalog(opened.set, "test-x", opened.diagnostics) };
+  };
+  const dims = (set: CatalogSet, id: string) => {
+    const it = set.get("item", id, "test-x")?.value.item;
+    return it?.kind === "fastener" ? it.dims : undefined;
+  };
+
+  it("fills the dimensions it does not state from its standard's row, with where they came from", async () => {
+    const { set, report } = await open(await fixtureCopy());
+    expect(report.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    expect(dims(set, "SCR-M8x50-STD")).toEqual({
+      dk_mm: {
+        v: 13,
+        src: "src",
+        ref: "a synthetic table, ISO 4762's values at M4 and M8",
+        note: "from test-x:SHCS's row for M8, the standard it cites",
+      },
+      k_mm: expect.objectContaining({ v: 8, src: "src" }),
+      s_mm: expect.objectContaining({ v: 6, src: "src" }),
+    });
+    expect(set.get("item", "SCR-M8x50-STD", "test-x")?.value.sources.get("dims/dk_mm")).toEqual({
+      file: expect.stringMatching(/test-x\/catalog\.json$/),
+      layer: "standard",
+      from: "test-x:SHCS",
+    });
+    // Taken to be made to it: the values are the standard's, their claim an estimate.
+    expect(dims(set, "SCR-M8x50-EST")?.dk_mm).toMatchObject({
+      v: 13,
+      src: "est",
+      note: "from test-x:SHCS's row for M8, the standard it is taken to be made to",
+    });
+    // What the item states wins.
+    expect(dims(set, "SCR-M8x50-OWN")).toMatchObject({ dk_mm: 10, k_mm: { v: 8 }, s_mm: { v: 6 } });
+    expect(dims(set, "SCR-M8x50-BARE")).toBeUndefined();
+  });
+
+  it("refuses a standard with no row for the thread, a fastener with no thread, and an unknown one", async () => {
+    const root = await fixtureCopy();
+    await patchJson(join(root, "test-x/catalog.json"), (d) => {
+      at(d, "items", "SCR-M8x50-STD").thread = "M6";
+      delete at(d, "items", "SCR-M8x50-EST").thread;
+      at(d, "items", "SCR-M8x50-OWN").standard.id = "NOPE";
+    });
+    const { report } = await open(root);
+    expect(
+      report.diagnostics
+        .filter((d) => d.severity === "error")
+        .map((d) => [d.code, d.entity, d.field, d.message]),
+    ).toEqual([
+      [
+        "ref-unknown",
+        "test-x:SCR-M8x50-OWN",
+        "standard/id",
+        '"NOPE" is not a standard in catalog "test-x"',
+      ],
+      [
+        "standard-size",
+        "test-x:SCR-M8x50-EST",
+        "thread",
+        "standard test-x:SHCS is read at the fastener's thread, and it gives none",
+      ],
+      [
+        "standard-size",
+        "test-x:SCR-M8x50-STD",
+        "standard/id",
+        "standard test-x:SHCS (SHCS (synthetic)) has no row for M6",
+      ],
+    ]);
+  });
+
+  it("fills the vendor's screws from the std catalog's tables", async () => {
+    const opened = await openCatalog(join(BUILTIN_DIR, "forseti"));
+    const it = (id: string) => opened.set.get("item", id, "forseti")?.value.item;
+    const socket = it("PCI8-10");
+    expect(socket?.kind === "fastener" && socket.standard).toMatchObject({
+      id: "std:ISO4762",
+      src: "est",
+    });
+    expect(socket?.kind === "fastener" && socket.dims).toMatchObject({
+      dk_mm: { v: 13, src: "est", ref: "ISO 4762:2004, Table 1" },
+      k_mm: { v: 8 },
+      s_mm: { v: 6 },
+    });
+    const button = it("PAB5-8");
+    expect(button?.kind === "fastener" && button.dims?.dk_mm).toMatchObject({ v: 9.5 });
   });
 });
 

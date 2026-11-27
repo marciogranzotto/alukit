@@ -3,7 +3,7 @@
   "catalogs": {
     "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
     "test-stud": { "hash": "sha256:37e5b1a53f0c4b3a6b03d02f45b3be497dbf929fabf23d852339df53ad10f7f0", "name": "Stud joint test catalog (synthetic)", "vendor": "test-stud-vendor", "currency": "BRL" },
-    "test-x": { "hash": "sha256:720b2b08b3f55cf4ce77265da1dc03e511604ca6911a5bce30f6f2c3cc70758a", "name": "Joint gaps test catalog (synthetic)", "vendor": "test-x-vendor", "currency": "BRL" }
+    "test-x": { "hash": "sha256:2e1018355b3ee095c26e45fb9ef7ebf1f66bdf22dc91d418bf0a352e459acc2f", "name": "Joint gaps test catalog (synthetic)", "vendor": "test-x-vendor", "currency": "BRL" }
   },
   "items": {
     "test-stud:TS40C": { "hash": "sha256:1f38e08fae257fca973a45f6a6a834f8bde9124e45b0be96cba2d1250b2ba4f2", "item": { "kind": "bar", "name": "Profile 40x40, one core tapped M16 (synthetic)", "material": "test:al-6063-t5", "prov": { "src": "est", "note": "synthetic test data for through studs and joints in several cores, not a vendor's" }, "shape": "tslot", "section": "TS40C", "system": "test:s40-c8", "mass_kg_per_m": 1.5, "core": { "bore_mm": 13.7, "tap": "M16" } } },

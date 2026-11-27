@@ -31,6 +31,8 @@ export function lockCatalogSet(lock: Lock): CatalogSet {
         materials: new Map(),
         grooves: new Map(),
         systems: new Map(),
+        // A fastener's standard is read when catalogs are linked; the lock holds what it filled.
+        standards: new Map(),
         items: new Map(),
         offers: new Map(),
         sections: new Map(),

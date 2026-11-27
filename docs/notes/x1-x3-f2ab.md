@@ -144,3 +144,43 @@ On the reproductions (**verified**: derived with this code): X2a with `stack` in
 the through bar) now passes `fit` by X3, but the rail under the plate is still not drilled, and the
 screw's head would sit between the plate and the rail: the head's seat on the plate's far face is
 F2b's to check (below). The right model of X2b is X2a's, with the plate in the stack.
+
+## F2a: head diameters from the cited standard
+
+**The case.** A vendor's socket screws give no head dimensions, so F2's seat check left every
+seat of theirs unchecked, an info each. **The cause** (**read**, `fastenings.ts` `bearers` and
+F2's call 44): the bearing diameter is read from the item's `dims` only, and derive reads only the
+lock, so no ISO table could be consulted at derive time.
+
+20. **A shared definition, `standards`** (§3.3), not items. `std`'s items are single products
+    (one length, one class); a standard is a table by size. It loads, merges and blames like the
+    other definitions; its own `prov` carries the citation.
+21. **Filled at link time**, as a clone's ratings are (`withStandardDims` in `link.ts`), so the
+    lock holds the filled item and derive is unchanged: the lock does not hold the standard
+    (`pin.ts` resolves the reference and does not follow it), and a catalog's hash includes its
+    standards when it has any. What the item states wins, key by key.
+22. **The citation is an object**, `standard: { id, src, ref?, note? }`: a reference plus how it
+    is known. A maker that names the standard is `src`; one inferred from the product's type is
+    `est`, and then every value it fills is `est` too, keeping the table's `ref` and `read`. A row
+    is keyed by the thread (`M8`), the size a fastener already states; a fastener with no thread,
+    or a standard with no row for it, is a `standard-size` error, never a guess.
+23. **Four tables** in `std` (ISO 4762, ISO 7380-1, DIN 7984, ISO 4017), each value read from
+    two distributors' reproductions (**verified**, [`std-hiwin-verification.md`](std-hiwin-verification.md)).
+    Round heads give `dk`, not `dw`, as `std`'s own ISO 4762 item does, so a seat is read to the
+    head's outside diameter (call 48); `dw` is in one source only.
+24. **The importer cites, Forseti names nothing** (`tables.STANDARDS`, the reviewed table, with the
+    reason for each and for each left out). 89 screws: 43 socket cylindrical heads (ISO 4762), 24
+    button heads (ISO 7380-1), 13 low heads (DIN 7984), 9 hex heads (ISO 4017), all `est`. Left out:
+    countersunk heads, the Phillips pan head, nuts, washers. The same snapshot and PDF give the
+    committed files plus the 89 citations (**verified**: the build run twice, before and after).
+25. **DIN 912** has ISO 4762's head: a vendor naming it is cited as `std:ISO4762` with a note, and
+    no alias machinery exists until a vendor needs one.
+
+**G42** (**verified**: `by_hand.py`): G37's M8 socket head over a c8 groove, its screw giving no
+dimensions, citing a synthetic standard with dk 13 at M8: 45.87 %, a `fit` warning, as G37's own
+dk 13 gives; the same read from its type; its own dk 10: 33.54 %; no standard: no seat, an info.
+`catalog.test.ts` adds the provenance, what wins, the three refusals, and Forseti's screws filled
+from `std`.
+
+**Diagnostics on earlier fixtures**: none moved (**verified**: every golden and cart case's
+diagnostics compared before and after). No earlier fixture seats a Forseti screw.

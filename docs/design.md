@@ -279,6 +279,12 @@ golden case worked by an independent hand script
   lifts the end plane by their depth; the end's seat is on the last. Stage 4 drills each where the
   through bar's holes' axes cross it, and fit holds each by the screw that clamps it (x1 13–19).
   Draft 2.3 could say an end plate only as `spacer_mm`, which drilled it nowhere. Call 47.
+- §3.3, §3.4: **a fastener made to a standard** (F2a; G42). Catalogs define `standards`, tables of
+  dimensions by thread; a fastener's `standard` cites one, and linking fills the dimensions it
+  does not state from its row, so the head-seat check reads them. `std` holds four such tables,
+  and the Forseti importer cites them for its socket, button, low-head and hex-head screws as
+  estimates (89 items), so their seats are checked where they were infos (x1 20–25). Call 44
+  revised; call 48.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -454,7 +460,7 @@ closed here; §16 maps each one to its section or to a v1 exclusion.
 ### 3.1 Layout, merge order and ids
 
 ```
-catalogs/<id>/catalog.json      id, vendor, currency, materials, groove types, systems, items (importer output)
+catalogs/<id>/catalog.json      id, vendor, currency, materials, groove types, systems, standards, items (importer output)
 catalogs/<id>/offers.json       offers: SKU, packs, kits, options, prices with read dates (importer output)
 catalogs/<id>/sections/*.json   section definitions, one file per section (3.5)
 catalogs/<id>/families/*.json   per-family modelling written by agents (mounting, fastener sets, ratings)
@@ -574,6 +580,16 @@ The `-c7` tail of a Forseti SKU is not a finish; `-pp` is (*read: survey §1*).
   square to its full depth would cross its neighbours' at a 40x40's corners).
 - **System**: an interface family that decides what fits. A T-slot system is a series plus a
   groove type (`forseti:s40-c8`); a rail system is a rail size family (`forseti:rail-hg20`).
+- **Standard** (*2.3*, after the alternative frame's acceptance; gap F2a): a table of the
+  dimensions a fastener standard gives by size, `sizes` keyed by thread (`"M8": { "dk_mm": 13,
+  "k_mm": 8, "s_mm": 6 }`), under the standard's letters, with `name`, `title` and `prov`. `std`
+  holds ISO 4762, ISO 7380-1, DIN 7984 and ISO 4017, each checked against two tables that reproduce
+  it. A fastener that cites one (§3.4) takes, when catalogs are linked, each dimension it does not
+  state from the row of its thread, as a clone takes its ratings: what the item states wins; a
+  filled value keeps the table's `ref` and `read`, is an estimate when the item is only taken to
+  be made to the standard, and names the standard in its note and its source. A cited standard
+  with no row for the thread, or a fastener with no thread, is a `standard-size` error. The lock
+  holds the filled item, not the table, so derive still reads only the lock.
 
 ### 3.4 Kinds
 
@@ -583,7 +599,7 @@ Fields marked † are needed only by later phases (D5), but the schema has them 
 |---|---|
 | **bar** | `shape`: `tslot`, `tube`, `rhs`, `rod`, `threaded-rod`, `flat`, `angle`, `channel`, `beam` or `rail`. `section` (a section id, §3.5); `system` (T-slot and rail bars); published `area_mm2`, `Ix_mm4`, `Iy_mm4`, `J_mm4`†, `Wx_mm3`†, `Wy_mm3`†; `core` (bore, tap size); tolerances† (straightness, twist; DIN EN 12020-2 / ABNT NBR 8116); `thread` (threaded rod); `rail` { `pitch_mm`, `E_min_mm`, `E_max_mm`, hole spec } (rails) |
 | **connector** | `subtype` (bracket, plate, end-connector, cube, gusset, hinge, splice); `fits` [systems]; `frame` (the connector's own axes, which give the rating directions their meaning; review m7); `mounts` [{ plane, holes, `fasteners` keyed by system: `{ "forseti:s40-c8": [{ item, qty }], "forseti:s45-c10": [ … ] }` }] (review B3); a fastener set may list a sleeve cut from bar stock, `{ "item", "inside": "through", "len_mm": "bore" \| <number> }`, set in the through bar's bore on the mount hole's axis (*2.1*, §4.5); a fastener set is used once per hole of its mount, so its `qty` counts per hole (*2.3*); `requires` [machining on the joined bars, e.g. an end tap M8 plus an access hole: `{ op, on, thread?, d_mm?, depth_mm?, from_end_mm?, at_mm?, at_holes? }`, `on` naming the butting bar, the through bar or each; `at_mm` or `at_holes` its positions (*2.3*, below)]; `spacer_mm`; `overhang_mm`, how far a butting end face may reach past the face it bears on before a warning (*2.3*, §4.5); `body` (a cube's box); `pivot` { `height_mm`, `end_mm`, `range_deg` } (hinges); `splice` { the stud or plates, the tap it needs, `at_mm`: each stud's core (*2.3*) }; `recipe: true` for a joint recipe (*2.3*, below) |
-| **fastener** | `subtype` (screw, bolt, nut, washer, t-nut, hammer-screw, insert, stud, …; *2.3*), `thread`, `length_mm`, `head` (DIN/ISO), `class`, `material`, `torque_Nm`, `dims` (published dimensions under the standard's letters; *2.3*); T-nuts and hammer screws add `fits` (the systems whose grooves they fit; *2.3*), `groove` and `insertion` (`drop-in` or `slide-in`); a blind fastener adds `hole_mm`, the hole its maker states, and `grip_min_mm` and `grip_max_mm`, the thickness it grips (*2.3*, §4.5) |
+| **fastener** | `subtype` (screw, bolt, nut, washer, t-nut, hammer-screw, insert, stud, …; *2.3*), `thread`, `length_mm`, `head` (DIN/ISO), `class`, `material`, `torque_Nm`, `dims` (published dimensions under the standard's letters; *2.3*); T-nuts and hammer screws add `fits` (the systems whose grooves they fit; *2.3*), `groove` and `insertion` (`drop-in` or `slide-in`); `standard` `{ id, src, ref, note }`, the standard it is made to and how that is known (`src`: its maker names it; `est`: read from its type), whose row fills the dimensions it does not state (*2.3*, §3.3, F2a); a blind fastener adds `hole_mm`, the hole its maker states, and `grip_min_mm` and `grip_max_mm`, the thickness it grips (*2.3*, §4.5) |
 | **carriage** | `rail_system`; `dims`; the datum `run` (*2.1*): the point that sits on the rail's running-face centre line (§4.7); usually `clone_of` an item in a reference catalog (§3.2) |
 | **accessory** | feet, casters, handles: a free-text `subtype`, `thread`, `fits`, `dims` |
 | **panel** | sheet stock: `thickness_mm`, `material`; sheet sizes are offers. No mass field: its mass follows from its thickness and its material (*2.3*) |
@@ -1174,8 +1190,9 @@ face's **material** is a bar's side less every opening in it: where the section'
 opening from its groove type; an inner face or a part's face is whole, and a face ends at the
 bar's end faces. The fraction of the annulus on material is reported per station; below half,
 a `fit` warning with the fraction; on none, a `fit` error (a head wholly over an opening or off the
-face). The threshold is geometric (loads are v2). A part that gives no bearing diameter is not
-checked: one info per item, naming its connections. **v1 limit**: a butt connector's screws are
+face). The threshold is geometric (loads are v2). A part that gives no bearing diameter, of its
+own or from the standard it cites (§3.3, *2.3*, F2a), is not checked: one info per item, naming its
+connections. **v1 limit**: a butt connector's screws are
 not checked, since its fastener sets do not say which part bears on which face.
 
 **Reported per bar:** `cut_mm` (the long-point length: the longest of the box's four edges between
@@ -1272,6 +1289,7 @@ length at R$ 126.50/m in 10 mm steps, 40–3000 mm, and in stock bars of 3000 an
 | G39 | RHS 200x100x4.75 b1 (0,0,0)→(1000,0,0); flat 120x12 b2 (100,0,106)→(350,0,106) on its top wall; `face` [b2, b1], `blind`, a blind M8 (`hole_mm` 14, grip 3 to 22), `at_mm: [50, 200]` | a blind fastener (*2.3*, gap X1) | Ø14 through b2 at 50 and 200; Ø14 4.75 deep in b1's top wall at 150 and 300, none in its bottom wall; grip 16.75; the head (Ø20) 100 % on b2. A 25 mm plate: grip 29.75, a `fit` error. On a solid 8 mm flat: Ø14 through it, grip 20.00. A fastener with no `hole_mm`: a `face` error, no hole |
 | G40 | plain 80 x 80 block b1 (0,0,0)→(200,0,0), no system; 40x40 post b2 (100,0,40)→(100,0,540), its core for M16; `butt` through b1 with J1: an M16 `end-tap` in the post, a Ø9 `through-hole` in b1, a bush and an M8 screw | a plain bar held by a screw in a drilled hole (*2.3*, gap X3) | no error: Ø9 through b1 at 100, M16 in b2's end. Through b1's end b: an end hole along its axis, no error. A 20 deep hole, a hole with no tap at its place, a Ø6 hole, a stud for the screw, or an RHS for the block: a `fit` error on c1 naming b1 |
 | G41 | 40x40 rail b1 (0,0,0)→(600,0,0); plate 80 x 8 b3 (260,0,24)→(340,0,24) on its top face; 40x40 post b2 (300,0,28)→(300,0,600), its core for M16; `butt` through b1 with J1, `stack: ["b3"]` | a butt's stack (*2.3*, gap X2) | b2's end at the plate's top, cut 572, seated on b3 +y (1600 mm², no overhang); Ø9 through b1 at 300 and through b3 at 40. Two plates (b4 on b3): cut 564, Ø9 in b4 at 30, seated on b4. Through b1's end b with the plate standing on it: the end hole along the axis, b3's at 40, cut 592. A spacer as well, a plate 2 mm off, a plate the post misses: a `connection` error. A tube for the plate, a hole at no tap: a `fit` error naming b3 |
+| G42 | G37's 40x40 b1 (0,0,0)→(400,0,0) on a 50 x 10 flat b2; `face` [b1, b2], `screw`, an M8x50 socket screw giving no dimensions, citing a standard whose M8 row has dk 13, `at_mm: [200]` | a fastener made to a standard (*2.3*, gap F2a) | the head (Ø13 from the table) over the c8 groove bears 45.87 %, a `fit` warning; the same with the standard read from its type. Its own dk 10: 33.54 %. No standard: no seat, an info. Its own dk 10 on a flat face: 100 % |
 
 ### 4.7 Parts, rails and patterns (D14)
 
@@ -2418,8 +2436,10 @@ compared number moves: the check is right, and the question is the record's.
 43. *New in 2.3, after acceptance run 4, open.* A seat on less than half its annulus warns; the
     half is fixed, not set by the project (§4.5, §5.5).
 44. *New in 2.3, after acceptance run 4, open.* The stack's first washer is under the head and the
-    next under the nut; a part with no bearing diameter in its item is not checked (an info), with
-    no fallback to the ISO tables, since derive reads only the lock (§4.5).
+    next under the nut; a part with no bearing diameter in its item is not checked (an info).
+    *Revised after the alternative frame's acceptance (F2a):* an item that cites a standard takes
+    the diameter from that standard's table when catalogs are linked, so the lock holds it and
+    derive still reads only the lock; an item that cites none is not guessed at (§3.3, §4.5).
 45. *New in 2.3, after the alternative frame's acceptance, open.* A blind fastener's hole is its
     maker's `hole_mm`, never a clearance table's: with none, a `face` error. It grips the near wall
     of a hollow last layer and the whole of a solid one, and its grip range is checked when the
@@ -2434,6 +2454,13 @@ compared number moves: the check is right, and the question is the record's.
     from the through bar's far side, so a screw from the butting side into a tap in the through bar
     leaves it a `fit` error, and an access hole or a counterbore under a stack is a `connection`
     error (§4.5).
+48. *New in 2.3, after the alternative frame's acceptance, open.* The Forseti importer cites a
+    standard for a screw family only where its type fixes the head (socket cylindrical, button,
+    low and hex heads), as an estimate, since the shop names none. It cites none for countersunk
+    heads (their seat is a cone), the Phillips pan head (ISO 7045's and DIN 7985's differ), nuts
+    (the shop's own tables are DIN 934's, not ISO 4032's) or washers (its plain washers are not all
+    ISO 7089's). A table gives `dk` for a round head, not `dw`, so the seat is read to the head's
+    outside diameter, as F2's items give it (§3.3).
 
 ## 15. Review 1 resolution
 
