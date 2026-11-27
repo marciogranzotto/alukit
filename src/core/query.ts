@@ -21,7 +21,8 @@ import { stringsWithPattern } from "./schema-walk.ts";
  * Selecting entities (design §7.3 `alukit query`): an id (`b7`, `K1`, `project:plate`), a kind
  * (`bars`, `bar`), `tag:<t>`, `item:<ref>`, `<kind> of <id>`: the entities of that kind the
  * entity refers to or that refer to it (`connections of b2`, `bars of c3`), `like:<id>` (what is
- * like it, `similarTo`), and `connected:<ids>` and `connected*:<ids>` (the bars joined to them,
+ * like it, `similarTo`, by item; `like:<id> by tag`, by its tags; the app's select similar and
+ * same tags), and `connected:<ids>` and `connected*:<ids>` (the bars joined to them,
  * `connectedTo`). Over the document as written: pattern copies are derive's, not entities of
  * their own.
  */
@@ -193,11 +194,17 @@ export function select(doc: RawDoc, selector: string, derived?: () => Derived): 
   const s = selector.trim();
   const like = /^like:(.*)$/.exec(s);
   if (like) {
-    const id = (like[1] as string).trim();
+    // `like:b1` by item and options; `like:b1 by tag` by every tag it carries (E2.2).
+    const by = /^(\S*)\s+by\s+(\S+)$/.exec((like[1] as string).trim());
+    const id = (by ? (by[1] as string) : (like[1] as string)).trim();
+    const likeness = by ? by[2] : "item";
     if (id === "") return { ok: false, message: "like: needs an id, e.g. like:b1" };
+    if (likeness !== "item" && likeness !== "tag") {
+      return { ok: false, message: "like: compares by item or by tag, e.g. like:b1 by tag" };
+    }
     if (!hasEntity(doc, id)) return { ok: false, message: `there is no entity ${id}` };
     if (!derived) return { ok: false, message: "like: reads the derived model" };
-    return { ok: true, ids: similarTo(doc, derived(), id, "item") };
+    return { ok: true, ids: similarTo(doc, derived(), id, likeness) };
   }
   const connected = /^connected(\*?):(.*)$/.exec(s);
   if (connected) {

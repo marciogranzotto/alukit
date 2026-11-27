@@ -19,6 +19,7 @@ import type { Lock } from "#core/lock/schema.ts";
 import { machiningJson } from "#core/machining/format.ts";
 import { costsJson, costsOf, orderJson } from "#core/order/format.ts";
 import { problemsAt, problemsText } from "#core/problems/problems.ts";
+import { select } from "#core/query.ts";
 import { gitStamp } from "#core/project/git.ts";
 import { DOCUMENT } from "#core/project/open.ts";
 import type { Doc } from "#core/project/parse.ts";
@@ -558,6 +559,26 @@ async function api(
           arrangementsText(a.rev, { corners: a.corners, rules: a.rules, joints: a.joints }),
           a.rev,
         );
+        return;
+      }
+      case "/api/query": {
+        // The entities a selector names, as `alukit query` selects them (§7.3), in id order and
+        // unbounded: the app's selection verbs (select similar, the same tags, connected) ask
+        // here, so they read `similarTo` and `connectedTo` over the document and the derived
+        // model the server holds (the editing audit's E2.2).
+        const selector = query.get("select");
+        if (selector === null || selector.trim() === "") {
+          sendJson(res, 400, { ok: false, message: "select takes a selector, e.g. like:b1" });
+          return;
+        }
+        const snap = snapshotFor(p, query, res);
+        if (!snap) return;
+        const sel = select(snap.state.doc, selector, () => snap.derived);
+        if (!sel.ok) {
+          sendJson(res, 400, { ok: false, message: sel.message });
+          return;
+        }
+        sendJson(res, 200, { ok: true, rev: snap.rev, selector, ids: sel.ids }, snap.rev);
         return;
       }
       case "/api/export/glb": {

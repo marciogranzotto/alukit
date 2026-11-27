@@ -93,6 +93,26 @@ describe("select's like: and connected:", () => {
     expect(select(doc, "like:", () => derived).ok).toBe(false);
   });
 
+  it("selects by item or by tag with `by` (E2.2: the app's select similar and same tags)", () => {
+    expect(select(doc, "like:b5 by item", () => derived)).toEqual(
+      select(doc, "like:b5", () => derived),
+    );
+    // Every tag b2 carries, within its kind: the four posts.
+    expect(select(doc, "like:b2 by tag", () => derived)).toEqual({
+      ok: true,
+      ids: range("b", 1, 4),
+    });
+    expect(select(doc, "like:b5  by  tag", () => derived)).toEqual({ ok: true, ids: ["b5"] });
+    expect(select(doc, "like:b99 by tag", () => derived)).toEqual({
+      ok: false,
+      message: "there is no entity b99",
+    });
+    expect(select(doc, "like:b2 by colour", () => derived)).toEqual({
+      ok: false,
+      message: "like: compares by item or by tag, e.g. like:b1 by tag",
+    });
+  });
+
   it("selects the bars joined to a list of ids, or the whole assembly with connected*", () => {
     expect(select(doc, "connected:c13,r1")).toEqual({
       ok: true,

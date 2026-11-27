@@ -318,8 +318,8 @@ alukit rotate <dir> --ids <id,id,...> --axis x|y|z --deg <deg> --about <x,y,z> [
     turn them about a world axis through a point (`transform`); exact at multiples of 90°
 alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]
     entities by id, kind, tag:<t>, item:<ref>, `<kind> of <id>`, like:<id> (its kind, item and
-    options), or connected:<ids> (the bars joined to them; connected*: the whole assembly);
-    bounded output
+    options; `like:<id> by tag`: its kind and every tag it carries), or connected:<ids> (the
+    bars joined to them; connected*: the whole assembly); bounded output
 alukit fmt <dir>... [--check]
     rewrite alukit.json and alukit.lock.json into canonical form; --check: exit 1 if one would change
 alukit lock update <dir> [--item <id>]... [--dry-run] [--json]

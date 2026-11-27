@@ -75,8 +75,8 @@ export const USAGE = {
   query: [
     "alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]",
     "    entities by id, kind, tag:<t>, item:<ref>, `<kind> of <id>`, like:<id> (its kind, item and",
-    "    options), or connected:<ids> (the bars joined to them; connected*: the whole assembly);",
-    "    bounded output",
+    "    options; `like:<id> by tag`: its kind and every tag it carries), or connected:<ids> (the",
+    "    bars joined to them; connected*: the whole assembly); bounded output",
   ],
   fmt: [
     "alukit fmt <dir>... [--check]",
