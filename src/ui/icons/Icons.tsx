@@ -49,6 +49,13 @@ const DRAW = {
       <path d="M4 8.2L2 10l2 1.8M12 8.2l2 1.8-2 1.8" />
     </>
   ),
+  // The Move tool: four arrows out from a centre
+  move: (
+    <>
+      <path d="M8 1.5v13M1.5 8h13" />
+      <path d="M6 3.5l2-2 2 2M6 12.5l2 2 2-2M3.5 6l-2 2 2 2M12.5 6l2 2-2 2" />
+    </>
+  ),
   // The box frame tool (S5.7): a frame's rings and posts, seen from a corner
   frame: (
     <>

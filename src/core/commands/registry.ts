@@ -32,6 +32,7 @@ import {
   tag,
 } from "./records.ts";
 import { addBar, addNode, addRun, moveNode, removeEntity, setBar, setRun } from "./structure.ts";
+import { transform } from "./transform.ts";
 import type { CommandDef } from "./types.ts";
 
 /** Every command (design §6), in the order of §6's table. */
@@ -42,6 +43,7 @@ export const COMMAND_LIST: readonly CommandDef<never>[] = [
   addBar,
   setBar,
   moveEnd,
+  transform,
   reverseBar,
   splitBar,
   addFrame,

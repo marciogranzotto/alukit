@@ -81,6 +81,11 @@ export interface OverlayState {
   /** The axis the line follows: drawn long, in the axis colour. */
   guide?: { through: V3; axis: "x" | "y" | "z" } | undefined;
   ghost?: GhostBar | undefined;
+  /**
+   * Several bars as they would be (the Move tool's selection, moved): drawn as the ghost is, with
+   * its one material, from a pool of meshes that only grows, so a drag makes no material.
+   */
+  ghosts?: readonly GhostBar[] | undefined;
   /** Picked points (a connection's ends, a station). */
   pins?: readonly V3[] | undefined;
   /** The work plane, drawn when it is not the ground. */
@@ -123,6 +128,9 @@ export class Overlay {
   private handleState: HandlesState | undefined;
   private ghost: { mesh: Mesh; key: string } | undefined;
   private readonly ghostMaterial: MeshBasicMaterial;
+  /** The ghosts' meshes, reused; and each section's geometry, made once. */
+  private readonly ghostPool: Mesh[] = [];
+  private readonly ghostGeometry = new Map<string, BufferGeometry>();
   private colours: ViewTheme["overlay"];
   private kind: MarkerKind | undefined;
   private last: OverlayState = {};
@@ -275,6 +283,35 @@ export class Overlay {
     setPositions(this.pins, s.pins ?? []);
     setPositions(this.plane, s.plane ? planeGrid(s.plane) : []);
     this.setGhost(s.ghost);
+    this.setGhosts(s.ghosts ?? []);
+  }
+
+  private setGhosts(gs: readonly GhostBar[]): void {
+    gs.forEach((g, i) => {
+      const key = JSON.stringify(g.section);
+      let geometry = this.ghostGeometry.get(key);
+      if (!geometry) {
+        geometry = sectionGeometry(g.section);
+        this.ghostGeometry.set(key, geometry);
+      }
+      let mesh = this.ghostPool[i];
+      if (!mesh) {
+        mesh = new Mesh(geometry, this.ghostMaterial);
+        mesh.name = "preview";
+        mesh.matrixAutoUpdate = false;
+        mesh.raycast = () => {};
+        mesh.renderOrder = 999;
+        this.group.add(mesh);
+        this.ghostPool.push(mesh);
+      }
+      mesh.geometry = geometry;
+      mesh.matrix.copy(ghostMatrix(g));
+      mesh.matrixWorldNeedsUpdate = true;
+      mesh.visible = g.len > 0;
+    });
+    for (let i = gs.length; i < this.ghostPool.length; i++) {
+      (this.ghostPool[i] as Mesh).visible = false;
+    }
   }
 
   private setGhost(g: GhostBar | undefined): void {
@@ -296,20 +333,7 @@ export class Overlay {
       this.group.add(mesh);
       this.ghost = { mesh, key };
     }
-    const { x, y, t, a, len, shift } = g;
-    const o: V3 = [
-      a[0] + x[0] * shift[0] + y[0] * shift[1],
-      a[1] + x[1] * shift[0] + y[1] * shift[1],
-      a[2] + x[2] * shift[0] + y[2] * shift[1],
-    ];
-    // biome-ignore format: a matrix reads best by rows
-    const m = new Matrix4().set(
-      x[0], y[0], t[0] * len, o[0],
-      x[1], y[1], t[1] * len, o[1],
-      x[2], y[2], t[2] * len, o[2],
-      0, 0, 0, 1,
-    );
-    this.ghost.mesh.matrix.copy(m);
+    this.ghost.mesh.matrix.copy(ghostMatrix(g));
     this.ghost.mesh.matrixWorldNeedsUpdate = true;
     this.ghost.mesh.visible = true;
   }
@@ -329,8 +353,26 @@ export class Overlay {
       (o.material as { dispose(): void }).dispose();
     }
     this.ghost?.mesh.geometry.dispose();
+    for (const g of this.ghostGeometry.values()) g.dispose();
     this.ghostMaterial.dispose();
   }
+}
+
+/** A ghost bar's placement: the section's x and y, the axis scaled to its length, at a + shift. */
+function ghostMatrix(g: GhostBar): Matrix4 {
+  const { x, y, t, a, len, shift } = g;
+  const o: V3 = [
+    a[0] + x[0] * shift[0] + y[0] * shift[1],
+    a[1] + x[1] * shift[0] + y[1] * shift[1],
+    a[2] + x[2] * shift[0] + y[2] * shift[1],
+  ];
+  // biome-ignore format: a matrix reads best by rows
+  return new Matrix4().set(
+    x[0], y[0], t[0] * len, o[0],
+    x[1], y[1], t[1] * len, o[1],
+    x[2], y[2], t[2] * len, o[2],
+    0, 0, 0, 1,
+  );
 }
 
 function setPositions(o: Points | Line | LineSegments, pts: readonly V3[]): void {

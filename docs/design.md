@@ -458,6 +458,22 @@ output moved.
   the joint preview before the release and one step after it (ends 1–8). **The length label**
   says "cut" and takes a typed cut length, moving the end the inspector's rule picks (ends 12–14).
 
+### The Move tool and `transform` (after the UX redesign)
+
+The owner asked how to move an item; the app had no way. The [editing
+audit](ux/editing-audit.md) specified one core command for it (E-UX-3 to E-UX-5, task E1.1). The
+note is the same [`ux/drag-ends-decisions.md`](ux/drag-ends-decisions.md), "The Move tool"
+(cited "move"). No golden value or derived output moved.
+
+- §6: **`transform`** moves or turns nodes, bars, runs, parts and pattern templates as one step,
+  keeping what is written in its form (`W` moved by 100 is `W + 100`); what joins the moved set to
+  the rest follows (joined ends slide along their own bars to stay on it) or, with `joined:
+  "detach"`, is freed (move 1–9; calls 65, 66).
+- §7.3: **`alukit move`** and **`alukit rotate`**, sugar over `do` for one `transform` (move 10).
+- §8 Tools: **Move, `D`**: drag the selection or what is pressed, or click a base point and then
+  where it goes; snaps, `→ ← ↑` locks, typed offsets, the moved bars drawn where they would be,
+  the dry run's words before the release, Alt to detach; one step (move 11–18).
+
 ## Draft 2.2 — what changed (2026-11-26)
 
 - **A shoe mitred square to a strut (gap G-A; §4.5, §16).** A plane's `normal` may name a bar:
@@ -2129,7 +2145,7 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
 
 | Group | Commands |
 |---|---|
-| Structure | `addNode` `moveNode` `addBar` `setBar` `moveEnd` (*2.3*) `reverseBar` `splitBar` (optionally adding a `splice`, and the run) `addFrame` (*2.3*) `addRun` `setRun` `removeEntity` |
+| Structure | `addNode` `moveNode` `addBar` `setBar` `moveEnd` (*2.3*) `transform` (*2.3*) `reverseBar` `splitBar` (optionally adding a `splice`, and the run) `addFrame` (*2.3*) `addRun` `setRun` `removeEntity` |
 | Connections | `addConnection` `setConnection` `autoConnect` |
 | Parts and patterns | `addPart` `setPart` `addPattern` `setPattern` `explodePattern` `mirror` `array` |
 | Items | `addItem` `setItem` (project items) |
@@ -2185,6 +2201,23 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   or write a length over params where no coordinate can hold it.
   The app's end handles and length label send it followed by an `autoConnect` with `end`, so an
   end that lands on a bar joins it by the corner rule ([ends](ux/drag-ends-decisions.md) 9, 15).
+- **`transform`** (*2.3*, after the UX redesign; the editing audit's E-UX-3 to E-UX-5) moves
+  (`by: [dx, dy, dz]`) or turns (`rotate: { axis, deg, about }`, about a world axis through a
+  point) nodes, bars, runs, parts and patterns' templates as one step, keeping each in the form it
+  is written: an inline point moves, an expression keeping its params (`W` moved by 100 is
+  `W + 100`, and the step's words say so); a node moves as `moveNode` moves it; a part on a
+  station rides its bar, or, moved alone along it, changes `at_mm` (off it, it is refused); a part
+  at a world pose moves its pose; a template moves and its copies follow. A quarter turn is exact
+  and keeps expressions; another angle refuses a coordinate a param drives rather than write a
+  number. What joins the moved set to the rest is `joined`'s: `follow` (the default) keeps every
+  joint, a joined end of the rest sliding along its own bar to stay on a moved bar it bears on and
+  a node shared with the rest moving with its users, and refuses a move that would still break a
+  joint, naming it; `detach` takes the moved ends out of the connections that join them to the
+  rest (a connection goes with its last end or layer) and writes the rest's ends that were written
+  on the moved set as coordinates where they are. Its answer lists what moved, what followed (the
+  rest's ends, and the parts on moved bars), what was freed and what was kept as an expression;
+  a dry run adds the cut lengths that move and what is removed ([move](ux/drag-ends-decisions.md)
+  1–9).
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
   moves (`cuts`, before and after), the bars it adds with their cuts, what it removes, and the ends
@@ -2310,6 +2343,7 @@ source in the log.
 | `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context |
 | `alukit do <dir> -f batch.json` (or `-f -` for stdin) | edits from a file or stdin, one process per batch; inline JSON also works. `--dry-run` (*2.3*) says what the batch would do and writes nothing (§6) |
 | `alukit add bar --item … --a n1 --b 0,0,900`, … | sugar over `do`; `alukit add frame <dir> --size W,D,H` (*2.3*) is `addFrame` (§6) |
+| `alukit move <dir> --ids b3,b4 --by dx,dy,dz [--detach]` / `alukit rotate <dir> --ids … --axis z --deg 90 --about x,y,z [--detach]` (*2.3*) | sugar over `do` for one `transform` (§6); `--by` takes expressions; `--dry-run` writes nothing |
 | `alukit log` / `alukit undo` / `alukit redo` | the server's log; undo the latest step; redo the last one undone (*2.3*: all three need a running server) |
 | `alukit lock update <dir> [--item id] [--dry-run]` | §4.13 |
 | `alukit fmt <dir> [--check]` | canonical form |
@@ -2496,6 +2530,18 @@ locked, and pressing it says why ("driven by L: edit L").
 Enter commits, `Esc` leaves it. End b moves when it is free, else end a, the end drawn large while
 the field is open; a driven length says "driven by L: edit L"; with both ends held it says why.
 It joins and previews as a drag does.
+
+**Move, `D`** (*2.3*, after the UX redesign; [move](ux/drag-ends-decisions.md) 11–18; SketchUp's
+Move). The selection, or what is pressed when it is not selected, moves by a drag (press, drag,
+release) or by two clicks (a base point, then where it goes), on the end handles' drag machinery.
+The base point and where it goes snap to ends, faces, grooves and parts' points, not the moved
+set's own; Shift moves freely in a plane parallel to the work plane; `→ ← ↑` lock X, Y or Z, and
+parts alone on one bar slide along it. A value typed meanwhile is the distance along the lock or
+the way the pointer went (`200`, `=D`), the offset (`0, 200, 0`) or where the base point goes
+(`[0, 0, H]`); a param is kept. The moved bars are drawn where they would be, with the overlay's
+one ghost material; after a snap or a pause, the dry run says what follows, frees, joins or is
+cut ("b2.a, p1 follow · cut b2 580 → 680"), or why the move is refused. The release is one step:
+`transform`, then an `autoConnect` at each moved bar's end. Joined ends follow; Alt frees them.
 
 **The inspector** (*2.3*; s5 25–28) edits in place. A bar's new length moves end b along the bar,
 written as numbers; a coordinate a param drives says "driven by H: edit H" and is never
@@ -3074,6 +3120,16 @@ new head warnings each a bearing below half. Both frames now pass acceptance.
     design length, "· cut" beside it. A typed cut that reads a param keeps it: the design length is
     written as the cut plus what the ends add or take (`L - 40 + 20`), so the param keeps driving
     the cut (D-UX-17); where no coordinate can hold it, the step is refused (ends 7, 8, 12).
+65. *New in 2.3, after the UX redesign, open.* `transform` follows by default: a joined end of the
+    rest slides along its own bar to stay on a moved bar it bears on (a post under a rail that
+    rises grows with it), and a move that would still break a joint is refused, naming it, with
+    `detach` to free it; in the app, Alt. The other default, detaching, would leave a moved
+    sub-assembly's neighbours open at every joint without a word ([move](ux/drag-ends-decisions.md)
+    3–5, 16).
+66. *New in 2.3, after the UX redesign, open.* The Move tool's key is `D` (D-UX-18 has `M` for
+    Measure and `G` for the box frame; the editing audit's Duplicate, Ctrl/Cmd+D, starts a Move on
+    a copy, so the two share a letter). A part on a station moves only along its bar; off it,
+    `transform` refuses it, saying so, rather than turn it into a part at a world pose (move 6, 11).
 
 ## 15. Review 1 resolution
 

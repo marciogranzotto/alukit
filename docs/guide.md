@@ -240,12 +240,25 @@ be used now is disabled and says why.
 | Tool | Key | How |
 |---|---|---|
 | Select | `V` | click to pick, Ctrl or Cmd-click to toggle, Shift-drag a box; `Delete` or `Backspace` deletes the selection, listing first what else goes |
+| Move | `D` | drag the selection (or a bar or part you press), or click a base point and then where it goes; type `200`, `0, 200, 0` or `[x, y, z]` and `Enter`. `→ ← ↑` lock an axis; joined ends follow, and holding **Alt** frees them instead |
 | Draw bar | `B` | click a start, then click an end, or type a length and press `Enter` |
 | Box frame | `G` | click the corner, type `1000, 600` and `Enter` (or click the far corner), then the height and `Enter` |
 | Connect | `C` | pick a through bar and the ends that butt, two ends for a miter or splice, or two or more bars for a face joint, then apply. A face joint takes a fastening (none, bolt, T-nut, screw) with its fastener, stack and stations; a pivot takes a station on a face as its base, then the ends it carries, and a hinge. A pick the type cannot take is left out, and the tip says why |
 | Place part | `P` | click a face or groove: the part goes there, one step. Type a distance first to place it that far from the nearer end |
 | Pattern | `X` | take the selection as the template, click the bar to repeat along, give pitch and count |
 | Measure | `M` | two snapped points: the distance and its components |
+
+**Changing a bar's length.** Select a bar: a handle shows at each end. Drag one to lengthen or
+shorten the bar along its axis; it falls onto the bars it meets and joins them on release, as the
+preview by the end says first ("will butt on b1 · cut 580"). Type a number while dragging to set
+the cut. Or click the cut length on the bar's label and type it, then `Enter`. An end that is
+joined is freed by the drag, and the preview says so; one a pivot, mitre or a param sets is
+locked, and says why ("driven by L: edit L").
+
+**Moving.** With Move (`D`), the moved bars are drawn where they would go, and the preview says
+what comes along, what is freed and which cuts change ("b2.a, p1 follow · cut b2 580 → 680"), or
+why the move cannot keep a joint ("Alt: detach"). A part on a bar slides along it. `alukit move`
+and `alukit rotate` do the same from the command line.
 
 `Esc` steps back one level at a time: what is typed, the last pick, the gesture, the tool, then
 the selection. `Ctrl/Cmd+Z` undoes the last step, and `Shift` with it redoes.

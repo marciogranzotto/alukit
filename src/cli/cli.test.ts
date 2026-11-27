@@ -60,6 +60,8 @@ describe("cli", () => {
       "check",
       "do",
       "add",
+      "move",
+      "rotate",
       "query",
       "lock update",
       "fmt",

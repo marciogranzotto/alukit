@@ -436,6 +436,16 @@ describe("connections", () => {
     expect(geometry(derived(r.state))).toEqual(geometry(derived(g("G01"))));
   });
 
+  it("transform moves G01 and back as one step each, keeping c1 (transform.test.ts)", () => {
+    const there = ok(g("G01"), { cmd: "transform", args: { ids: ["b1", "b2"], by: [0, 0, 250] } });
+    expect(there.state.doc.connections).toEqual(g("G01").doc.connections);
+    const back = ok(there.state, {
+      cmd: "transform",
+      args: { ids: ["b1", "b2"], by: [0, 0, -250] },
+    });
+    expect(back.state.doc).toEqual(g("G01").doc);
+  });
+
   it("autoConnect with optional does nothing where nothing butts, and connects where something does", () => {
     // The draw tool sends one for each end of the bar it adds, in the same batch (§7.1).
     const s = g("G01");

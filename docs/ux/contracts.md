@@ -406,3 +406,23 @@ adds, except the move marked **moved**.*
 - **Core**: `src/core/commands/hold.ts` (`endHold`, `drivenEnd`, `drivers`, `movingAxes`), free of
   the schemas, which the app reads; `src/core/commands/move.ts` (`moveEnd`); `numbers.ts` adds
   `offsetBy`.
+
+## Move tool changes
+
+*The Move tool and `transform` ([drag-ends-decisions.md](drag-ends-decisions.md), "The Move
+tool"). Each adds.*
+
+- **Tools** (`src/ui/tools/state.ts`): `move` in `TOOLS`, its key `D` in `TOOL_KEYS`, "Move" in
+  `TOOL_NAMES`, and its prompt; the icon `move` (`src/ui/icons/Icons.tsx`).
+- **The Move tool** (`src/ui/tools/mover.ts`): `createMoveTool(viewer, gestures, { snap })` gives
+  `{ handler, grab, startFromKeyboard, dispose }`; the tools' wiring makes it once, hands the
+  viewer its `grab` while Move is the tool, and routes a value key to `startFromKeyboard` when a
+  selection waits and no drag is on. Its gesture is a `GestureSpec` of kind `"move"` on
+  `drag.ts`, the end handles' machinery; the gesture bar shows it (`data-tool="move"`).
+- **Its rules** (`src/ui/tools/moves.ts`, pure): `moveSet`, `slideAxis`, `typedOffset`,
+  `offsetOf`, `moveCommands`, `moveWords`, `MOVE_LOCKS`, `UNIT`.
+- **The overlay** (`src/viewer/overlay.ts`, S3's): `OverlayState.ghosts`, several bars drawn as the
+  ghost is, on its one material, from a pool of meshes and a geometry per section, both kept.
+- **Core**: `src/core/commands/transform.ts` (`transform`, `TransformInfo`); `move.ts` exports
+  `axisMeetsLine`, which `moveEnd` and `transform` share. **CLI**: `src/cli/move.ts` (`alukit
+  move`, `alukit rotate`); `add.ts` exports `vec3` and `numbers3` for it.

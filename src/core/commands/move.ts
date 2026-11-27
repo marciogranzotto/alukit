@@ -113,33 +113,36 @@ function meeting(ctx: CommandContext, Q: V3, u: V3, to: string): number {
     }
     return s;
   }
+  const m = axisMeetsLine(Q, u, A, B);
+  if ("why" in m) throw refusal("geometry", m.why.replaceAll("{bar}", id), { field: "to" });
+  return m.s;
+}
+
+/**
+ * Where the axis `Q + u·s` (u a unit vector) meets the segment A–B's line within its ends: the
+ * parameter s, or why not, with `{bar}` standing for the segment's name. Shared by `moveEnd` and
+ * by `transform`'s joined ends, which slide along their own bars to stay on what moved.
+ */
+export function axisMeetsLine(Q: V3, u: V3, A: V3, B: V3): { s: number } | { why: string } {
   const t = sub(B, A);
   const L = norm(t);
   const n = cross(u, t);
-  const nn = norm(n);
-  if (nn / L < 1e-9) {
-    throw refusal("geometry", `the axis runs along ${id}, so it meets its line nowhere`, {
-      field: "to",
-    });
-  }
+  if (norm(n) / L < 1e-9) return { why: "the axis runs along {bar}, so it meets its line nowhere" };
   // The closest points of the two lines: Q + u·s and A + t·r.
   const w = sub(Q, A);
-  const uu = 1;
   const ut = dot(u, t);
   const tt = dot(t, t);
   const uw = dot(u, w);
   const tw = dot(t, w);
-  const den = uu * tt - ut * ut;
+  const den = tt - ut * ut;
   const s = (ut * tw - tt * uw) / den;
-  const r = (uu * tw - ut * uw) / den;
+  const r = (tw - ut * uw) / den;
   const gap = dist(addScaled(Q, u, s), addScaled(A, t, r));
-  if (gap > TOL.len) {
-    throw refusal("geometry", `the axis misses ${id}'s line by ${len(gap)} mm`, { field: "to" });
-  }
+  if (gap > TOL.len) return { why: `the axis misses {bar}'s line by ${len(gap)} mm` };
   if (r * L < -TOL.len || r * L > L + TOL.len) {
-    throw refusal("geometry", `the axis meets ${id}'s line past its ends`, { field: "to" });
+    return { why: "the axis meets {bar}'s line past its ends" };
   }
-  return s;
+  return { s };
 }
 
 /** A written coordinate as a number, or the refusal for one a param drives. */

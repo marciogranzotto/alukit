@@ -62,6 +62,15 @@ export const USAGE = {
     "    add one entity, or a box frame in one step, as sugar over `do`; `alukit add <what> --help`",
     "    lists the options",
   ],
+  move: [
+    "alukit move <dir> --ids <id,id,...> --by <dx,dy,dz> [--detach] [--dry-run] [--json] [--as <name>]",
+    "    move nodes, bars, runs, parts or a pattern's template by an offset, as sugar over `do`",
+    "    (`transform`); joined ends follow, or --detach frees them; expressions keep their params",
+  ],
+  rotate: [
+    "alukit rotate <dir> --ids <id,id,...> --axis x|y|z --deg <deg> --about <x,y,z> [--detach] [--dry-run] [--json] [--as <name>]",
+    "    turn them about a world axis through a point (`transform`); exact at multiples of 90°",
+  ],
   query: [
     "alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]",
     "    entities by id, kind, tag:<t>, item:<ref>, or `<kind> of <id>`; bounded output",

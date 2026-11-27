@@ -45,6 +45,7 @@ import { frameBatch, pickRefusal, placeCommand, placeFrom, runOf } from "./comma
 import { createGestures } from "./drag.ts";
 import { createEndHandles } from "./handles.ts";
 import { type JointWords, jointWords, touchesBars } from "./joint.ts";
+import { createMoveTool } from "./mover.ts";
 import { type Cmd, createPreviewer } from "./preview.ts";
 import {
   activeTool,
@@ -161,6 +162,8 @@ export function createTools(viewer: Viewer): Tools {
       // The section plane's far side is not drawn, so nothing there snaps.
       hidden: viewer.clipped,
     });
+  /** The Move tool (mover.ts), on the same drag machinery as the end handles. */
+  const mover = createMoveTool(viewer, gestures, { snap: snapAt });
   /** The text by the pointer, and the machine label of what it is on (see `hint`). */
   const show = (e: ToolPointer | undefined, text: string | undefined, snap?: string) => {
     hint.value =
@@ -1001,6 +1004,7 @@ export function createTools(viewer: Viewer): Tools {
 
   const handlers: Readonly<Record<ToolName, ToolHandler | undefined>> = {
     select: undefined,
+    move: mover.handler,
     draw,
     frame,
     connect,
@@ -1031,7 +1035,7 @@ export function createTools(viewer: Viewer): Tools {
   const offTool = activeTool.subscribe((t) => {
     gestures.cancel();
     // A press is a drag's before the camera's: the end handles' in Select.
-    viewer.setGrab(t === "select" ? ends.grab : undefined);
+    viewer.setGrab(t === "select" ? ends.grab : t === "move" ? mover.grab : undefined);
     drawState.value = {};
     typed.value = "";
     current = undefined;
@@ -1165,6 +1169,19 @@ export function createTools(viewer: Viewer): Tools {
 
   const offKeys = [
     // A drag on (an end handle, Move) takes its keys first: Esc, Enter, Tab, a typed value.
+    // Move with a selection and no drag on: a value typed moves it from the keyboard (D-UX-17).
+    onKey(
+      "tool",
+      (e) =>
+        !chord(e) &&
+        activeTool.peek() === "move" &&
+        !gestures.live() &&
+        e.key.length === 1 &&
+        /^[0-9.\-+([=]$/.test(e.key) &&
+        mover.startFromKeyboard() &&
+        gestures.key(e),
+      51,
+    ),
     onKey("tool", (e) => !chord(e) && gestures.key(e), 50),
     onKey("tool", (e) => !chord(e) && gestureKey(e)),
     onKey("app", (e) => !chord(e) && shortcutKey(e)),
@@ -1181,6 +1198,28 @@ export function createTools(viewer: Viewer): Tools {
           keys: ["Esc"],
           does: "Step back one level: what is typed, the last pick, the gesture, the tool, then the selection",
         },
+      ],
+    }),
+    describeKeys({
+      id: "moving",
+      title: "While moving (D)",
+      order: 15,
+      rows: [
+        {
+          keys: ["D"],
+          does: "Move: drag the selection or a bar, or click a base point, then where it goes",
+        },
+        {
+          keys: ["0–9", "Enter"],
+          does: "Type the distance (along the lock or the way you dragged), x, y, z, or [x, y, z]",
+        },
+        { keys: ["→", "←", "↑"], does: "Lock the move to X, Y or Z (again, or ↓, to free it)" },
+        { keys: ["Shift"], does: "Hold to move freely, snapping to nothing" },
+        {
+          keys: ["Alt"],
+          does: "Hold to free what joins the selection to the rest, instead of it following",
+        },
+        { keys: ["Tab"], does: "Flip the previewed joint where a moved end lands on a bar" },
       ],
     }),
     describeKeys({
@@ -1216,6 +1255,7 @@ export function createTools(viewer: Viewer): Tools {
       offFrame();
       joint.reset();
       ends.dispose();
+      mover.dispose();
       gestures.dispose();
       viewer.setGrab(undefined);
       viewer.setLabel("frame", undefined);

@@ -118,5 +118,88 @@ label would leave uncovered. Where this batch stands on each:
 | (b) binding to a param with `=W` | Done for the cut: `=L - 40` keeps `L` driving it (decision 7) |
 | (b) which end moves | End b, else end a when b is held (decision 13); the menu for end a or both ends from the middle is E4.6 |
 | (b) a param-driven length opens the param | Done: "driven by L: edit L" opens it (decision 10) |
+| (c) CLI parity: a core command, not `setBar` patches composed in the browser | Done: `transform` and `alukit move` / `rotate` (move 1, 10) |
+| (c) nodes and param-driven coordinates | Done: a node moves as `moveNode` does; expressions are kept (move 2) |
+| (c) a part dragged alone slides along its bar | Done, as a `transform` that changes `at_mm` (move 6, 14); E3.7 names `setPart`, which gives the same document |
+| (c) point to point | The base point and the destination both snap (move 13), so a drag from an end to another end lands on it; E3.5's spec can hold it |
+| (c) rotate | In the core and the CLI (move 7); its tool is E3.1 |
+| (c) copy while moving, a crossing selection | Not here: E3.3 and E2's selection work |
 
 `tests/e2e/ends.spec.ts` is the spec the audit assigns to E4; its cases extend this file.
+
+## The Move tool
+
+The owner then asked "how do I move an item?", and the app had no way to. The [editing
+audit](editing-audit.md) had already specified the core of it: one command, `transform`
+(E-UX-3 to E-UX-5, task E1.1), which this batch builds, rotation included, with the Move tool on
+the end handles' drag machinery (`drag.ts`), so the drag code exists once. Decisions are cited as
+"move n".
+
+### Research
+
+| Source | What it does | What AluKit takes |
+|---|---|---|
+| SketchUp's Move ([Moving entities around](https://help.sketchup.com/en/sketchup/moving-entities-around)) | Click a base point and a destination, or drag; inference snaps both; the arrow keys lock an axis; a typed distance, `[x, y, z]` (absolute) or `<dx, dy, dz>` (relative) sets it; moving what is not selected takes what is under the pointer | Both ways of moving, the snaps, the arrow locks (as the draw tool has them), typed distance and coordinates, and taking what is pressed (**read**) |
+| Fusion's Move/Copy (the editing audit's §4.2) | Free move, translate, rotate, point to point; free move is not parametric | A move is a command whose arguments say what it did, never a free drag left unrecorded (**read**, via the audit) |
+| Revit's beam ends and Tekla's handles (the audit's §4.2) | A joined member's end stretches with what it is joined to | Joined ends follow by default, along their own bars (**read**, via the audit) |
+| three.js [`TransformControls`](https://threejs.org/docs/pages/TransformControls.html) | An axis-constrained drag from the pointer's ray | The same ray-onto-axis projection as the end handles; no `TransformControls` (decision 4 of the research table above) |
+
+### Decisions
+
+| # | Decision | Why |
+|---|---|---|
+| 1 | **One core command, `transform`** (§6), to the audit's E1.1: `ids`, `by` or `rotate { axis, deg, about }`, `joined: follow \| detach`. Rotation is in the core and the CLI now; its tool is the audit's E3.1 | E-UX-3: one edit path, CLI parity, agents never compute geometry by hand. Nothing else moved things, so nothing was reshaped |
+| 2 | **What is written keeps its form** (E-UX-4): an inline point moves, `W` by 100 becoming `W + 100` and a typed `D` staying `D`; the words name the first expression kept ("keeping b3.a y: 600 + D"). A node moves itself (`moveNode`'s rule: its users follow). A pattern's template moves and its copies follow; a pattern id stands for its template | Never silently turns a param-driven point into a number (D-UX-17) |
+| 3 | **Follow** (the default): a joined end of the rest that bears on a moved bar (a butt's end on a moved through bar) slides along its own bar to where its axis meets the moved bar's line, so a post under a rising rail grows with it and nothing tilts; an end written on a moved bar (its end, a station on it, a pivot whose base is on it) or at a moved node follows by itself | Revit and Tekla stretch joined members; sliding along the member's own axis keeps every end square, as the end handles do |
+| 4 | **Follow refuses what it cannot keep**: an end whose axis cannot meet the moved bar, or anything else that would break a joint (an end leaving the bar it butts on, a mitre pulled apart), found as an error the move would add, is refused, naming it, and saying `detach` frees it | A move that quietly breaks a frame is the worst surprise; the refusal is the preview's text before the release |
+| 5 | **Detach** frees the joints: the moved ends leave the butts, mitres, splices, pivots and face connections that join them to the rest (a connection goes with its last end, or its second-last layer, unless something refers to it); the rest's ends written on the moved set are written as coordinates where they are; a node shared with the rest stays, the moved ends written where they go | "Detach removes the joint" (E1.1); what stays, stays |
+| 6 | **A part on a station** rides its bar when the bar moves; moved alone, it changes `at_mm` along its bar (a typed `D` kept); off its bar it is refused ("p7 is on b7: it moves along b7 only"). A part at a world pose moves its pose; under a turn its `rot_deg` is the old rotation turned, read back about X, then Y, then Z | E-UX-4; turning a station part into a world pose would lose what it is fixed to |
+| 7 | **A turn** is about a world axis through a point. A quarter turn maps each coordinate to ± another plus a constant, so it is exact and keeps expressions; another angle writes numbers, and refuses a coordinate a param drives. A turned bar's `up` turns with it; without one, its roll becomes what puts the turned section where the default frame of the turned axis would not, added to the roll as written | E-UX-5 and §4.4's exact table; the body is the old one turned (a test compares frames exactly) |
+| 8 | **Its answer** lists what moved, what followed (the rest's ends, and the parts on moved bars), what was freed and the expressions kept; a dry run adds the generic effects, the cut lengths that move and what is removed. `DryEffects` is unchanged | The Move tool's preview reads it; E1.6's effects stay one shape for every command |
+| 9 | **The guard costs one derive**: on the 84-frame lattice (1,008 bars, 672 butts), a frame of 12 bars moved with follow took a median 45 ms, detached 24 ms (**measured**, below) | The audit's risk note asked for this number |
+| 10 | **`alukit move <dir> --ids … --by dx,dy,dz [--detach]`** and **`alukit rotate <dir> --ids … --axis z --deg 90 --about x,y,z [--detach]`**, sugar over `do` (`--dry-run`, `--json`, `--as`) | E-UX-3's CLI forms |
+| 11 | **Move is `D`**, on the rail after Select. D-UX-18 has `M` for Measure and `G` for the box frame; the audit's Duplicate is Ctrl/Cmd+D and starts a Move session on a copy, so the two share a letter. `Q` stays the audit's Rotate (E-UX-24) | The letters free after D-UX-18 and E-UX-24; a pair that reads as one family |
+| 12 | **What moves**: the selection; a press on something not selected selects it and moves that (SketchUp). A pattern copy is refused, naming its template. A press on empty space with a selection is a base point there; with no selection it orbits as usual | SketchUp's pre-pick; no new selection mode |
+| 13 | **Base point and destination snap** to ends, faces, grooves and parts' points, never the moved set's own (it would follow the pointer). Shift moves freely in a plane parallel to the work plane, through the base point, in whole millimetres. `→ ← ↑` lock X, Y or Z (again, or `↓`, to free); the pointer's ray is read on the axis, or a snap projected onto it | The draw tool's snaps and locks, as a person already knows them |
+| 14 | **Parts alone on one bar slide along it**: the lock is that bar's axis, said in the prompt ("along b1") | `transform` refuses them off it (decision 6), so the drag never offers what it cannot do |
+| 15 | **Typed values** (D-UX-17): one value is the distance along the lock, or the way the pointer went (`200`, `=D`); three are the offset (`0, 200, 0`); `[x, y, z]` is where the base point goes. A param is written as typed. With a selection and no drag, typing starts a move from the selection's centre, and Enter commits it | SketchUp's Measurements box; keyboard-only parity |
+| 16 | **Alt detaches** while held, said in the reading ("detached (Alt)"); a refused follow says "Alt: detach" | The least surprising default (follow) with one modifier for the other, as the coordinator asked |
+| 17 | **The preview** is local first: the moved bars as ghosts (a pool of meshes on the overlay's one ghost material, at most 48), the line from the base point, the marker, the axis guide. After a snap, a typed value or a 250 ms rest, the shared previewer dry-runs the step and says what follows, frees, joins or is cut, or why not; Tab flips a joint a moved end makes | E-UX-19 and E-UX-20; one previewer for every gesture |
+| 18 | **The release is one step**: `transform`, then an `autoConnect` at each end of the moved bars (at most 12 bars), so an end that lands on a bar joins it by the corner rule, as drawing one does | "The same auto-attach" as the end handles |
+
+### Measured
+
+The scratch script (not committed) built the 84-frame lattice with one `addFrame` batch (7.7 s)
+and timed `applyBatch` five times each, the load average at 18–20:
+
+| Step | Median | Range |
+|---|---|---|
+| `transform` of one frame (12 bars) by [0, 0, 50], follow | 45 ms | 43–53 ms |
+| The same, detach | 24 ms | 24–25 ms |
+| `transform` of one post by 0.5 mm, refused (a rail's end would leave it) | 21 ms | 21–24 ms |
+
+### Screenshots
+
+| | |
+|---|---|
+| ![b1 moved by a typed 0, -150, 0: its ghost where it would go, and "b2.a, p1 follow · cut b2 580 → 730" by the destination and in the command bar](img/drag-ends/move-follow.png) | ![b2 dragged up along Z with Alt held: "frees c1 · cut b1 1020 → 1000, b2 580 → 600" before the release](img/drag-ends/move-detach.png) |
+| A joined bar moved: its joined end follows | With Alt: the joint is freed |
+
+### Tests
+
+- `src/core/commands/transform.test.ts` (E1.1's list): a free bar moved, in words; `W` becoming
+  `W + 100` and a typed `D` kept; a node moved with its users following, a bar at a shared node
+  following or detaching; a station part along its bar and refused off it; a world part moved and
+  turned; a pattern's template moved with its copies; follow sliding b2.a along b2 (cut 680);
+  follow on the cart (the base rails and what sits on them up 50: the braces' pivots and the slats
+  come along, no diagnostic added, no connection changed); follow refusing, detach removing c1;
+  refusals; a quarter turn exact (points, roll, frames compared exactly), an expression kept at
+  180° and refused at 30°.
+- `src/core/commands/commands.test.ts`: G01 moved and back, the document unchanged.
+  `src/cli/edit.test.ts`: `alukit move` (dry run, follow, detach), `alukit rotate`, usage errors.
+- `src/ui/tools/moves.test.ts` on `tests/fixtures/ux/move`: the set, the slide axis, typed
+  offsets, the batch, and the dry run's words for follow, a refused follow and detach.
+- `tests/e2e/move.spec.ts`: a free bar dragged along X (one step, one undo); a joined bar typed
+  `0, -100, 0`, its joined end following as the preview said; a joined bar dragged up with Alt,
+  the preview first refusing and then saying "frees c1"; a part slid 100 along its bar; `0, D, 0`
+  from the keyboard kept as `600 + D`, and Esc cancelling with nothing written.

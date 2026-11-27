@@ -301,6 +301,11 @@ alukit do <dir> '<json>' | -f <file> | -  [--json] [--as <name>|agent:<name>] [-
 alukit add bar|point|connection|part|frame <dir> [options] [--json]
     add one entity, or a box frame in one step, as sugar over `do`; `alukit add <what> --help`
     lists the options
+alukit move <dir> --ids <id,id,...> --by <dx,dy,dz> [--detach] [--dry-run] [--json] [--as <name>]
+    move nodes, bars, runs, parts or a pattern's template by an offset, as sugar over `do`
+    (`transform`); joined ends follow, or --detach frees them; expressions keep their params
+alukit rotate <dir> --ids <id,id,...> --axis x|y|z --deg <deg> --about <x,y,z> [--detach] [--dry-run] [--json] [--as <name>]
+    turn them about a world axis through a point (`transform`); exact at multiples of 90°
 alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]
     entities by id, kind, tag:<t>, item:<ref>, or `<kind> of <id>`; bounded output
 alukit fmt <dir>... [--check]
@@ -400,6 +405,11 @@ string; `<…>` is a string of that form; `?` marks an optional field.
   - `by_mm` (optional): `number` — move the end outward by this much; negative shortens
   - `to` (optional): `string` — a bar, or a bar's end: the end goes where its axis meets that bar's design line, or to that end's design point
   - `detach` (optional): `boolean` — free an end that a node, a station, another bar's end or a butt holds: write it as coordinates and drop it from its butt (the butt goes with its last end)
+- **`transform`** (structure): move or turn nodes, bars, runs, parts and pattern templates as one step, keeping or freeing what joins them to the rest
+  - `ids`: `[string, …]` — the nodes, bars, runs, parts, patterns (their templates) and connections to move
+  - `by` (optional): `[expr, expr, expr]` — [dx, dy, dz]: move by this; an expression over params is kept (W moved by D is W + D)
+  - `rotate` (optional): `{ axis: "x" | "y" | "z", deg: number, about: [number, number, number] }` — turn about a world axis through a point; exact at multiples of 90°
+  - `joined` (optional): `"follow" | "detach"` — what joins the moved set to the rest: follow (default) keeps each joint, the rest's joined ends sliding along their own bars to stay on what moved, or refuses naming the joint it would break; detach frees them
 - **`reverseBar`** (structure): swap a bar's ends and rewrite anchor, offset, roll and every reference, so the body stays
   - `id`: `<a bar: b<number>> | <a run: r<number>>` — a bar, or a run: every bar of it, and its order
 - **`splitBar`** (structure): split a bar in two at a distance from end a, optionally adding a splice and the run

@@ -467,7 +467,7 @@ function GestureBar({ g }: { g: Gesture }) {
       aria-label={`${g.title}: command bar`}
     >
       <span class="cb-tool">
-        <Icon name={g.kind === "end" ? "select" : "draw"} /> {g.title}
+        <Icon name={g.kind === "end" ? "select" : "move"} /> {g.title}
       </span>
       <span class="cb-prompt" data-testid="command-prompt" title={g.prompt} aria-live="polite">
         {g.prompt}
