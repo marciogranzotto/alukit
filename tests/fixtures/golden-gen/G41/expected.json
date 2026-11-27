@@ -57,6 +57,7 @@
     "recipes": {
       "test-x:J1": 1
     },
+    "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
     "errors": []
   },
   "cases": [

@@ -5,6 +5,7 @@ import { rewriteEntity } from "../commands/rewrite.ts";
 import { openProject } from "../project/open.ts";
 import { FIXTURES, mergePatch } from "../testing.ts";
 import { derive } from "./derive.ts";
+import { chamberWidth } from "./hardware.ts";
 
 /**
  * The joint gaps the alternative frame's acceptance found, part 2 (docs/notes/x1-x3-f2ab.md),
@@ -139,6 +140,73 @@ describe("a butt's stack (X2)", () => {
     const c1 = (doc.connections as Record<string, unknown>).c1;
     const moved = rewriteEntity("connections", "c1", c1, { id: (x) => (x === "b3" ? "b9" : x) });
     expect((moved as { stack: string[] }).stack).toEqual(["b9"]);
+  });
+});
+
+describe("a butt connector's screw heads (F2b)", () => {
+  const of = async (patch: unknown, code = "fit") => said((await project("G43", patch)).d, code);
+  const conn = (c: string) => ({ connections: { c1: { connector: `test-x:${c}` } } });
+
+  it("says where a head under the lips fails, with the numbers", async () => {
+    expect(await of({})).toEqual([
+      [
+        "warn",
+        "c1",
+        "the head of test-x:SCR-M8x20 into b2.a's tap, Ø13.00, bears on 45.9 % of its seat on the lips of b1's face +y, less than 50 %",
+      ],
+    ]);
+    expect(await of(conn("J1-SEAT"))).toEqual([
+      [
+        "error",
+        "c1",
+        "the head of test-x:SCR-M8x20 into b2.a's tap (k 8.00) on the T-nut seat test-x:TNUT-SEAT (k 5.50) under the lips of b1's face +y (2.20) reaches 15.70 into the groove, 3.45 past its depth (12.25)",
+      ],
+    ]);
+    expect(await of(conn("J1-SLOT-WIDE"))).toEqual([
+      [
+        "error",
+        "c1",
+        "the head of test-x:SCR-M8x20-WIDE into b2.a's tap, Ø16.00, is wider than the chamber under the lips of b1's face +y where it reaches, 10.20 deep (14.50)",
+      ],
+    ]);
+    const off = (y: number) => ({ bars: { b2: { a: [300, y, 20], b: [300, y, 520] } } });
+    expect(await of(off(3))).toEqual([
+      [
+        "error",
+        "c1",
+        "the screw test-x:SCR-M8x20 into b2.a's tap sits 3.00 off the centre of the groove of b1's face +y, so its M8 shank does not pass the 8.20 opening",
+      ],
+    ]);
+    expect(await of(off(10))).toEqual([
+      [
+        "error",
+        "c1",
+        "the screw test-x:SCR-M8x20 into b2.a's tap has no way through b1: the connector drills no hole in it there, and no groove of its face +y lies under the joint for the head",
+      ],
+    ]);
+  });
+
+  it("reads the chamber's taper where the head reaches", () => {
+    const g = { face: "+y" as const, at_mm: 0, depth_mm: 12.25, undercut_mm: 14.5 };
+    expect(chamberWidth(g, 10.2)).toBe(14.5);
+    // Narrowing from 14.5 at 6 deep to 10 at 12.25: at 10.20, 14.5 - 4.5 × 4.2 / 6.25.
+    const tapered = { ...g, taper_from_mm: 6, bottom_mm: 10 };
+    expect(chamberWidth(tapered, 10.2)).toBeCloseTo(11.476, 9);
+    expect(chamberWidth(tapered, 5)).toBe(14.5);
+    expect(chamberWidth(tapered, 20)).toBe(10);
+    expect(chamberWidth({ face: "+y", at_mm: 0 }, 5)).toBeUndefined();
+  });
+
+  it("names a screw whose head it cannot size, once, and checks nothing of it", async () => {
+    const { d } = await project("G43", conn("J1-BARE"));
+    expect(d.butts.get("c1")?.heads).toBeUndefined();
+    expect(said(d, "fit")).toEqual([
+      [
+        "info",
+        "c1",
+        "test-x:SCR-M8x50-BARE gives no bearing diameter (dw_mm, dk_mm or s_mm), so its head's seat in a butt is not checked: c1",
+      ],
+    ]);
   });
 });
 

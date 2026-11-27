@@ -365,6 +365,16 @@ export interface HeadSeat {
   bearing: number;
 }
 
+/**
+ * A butt connector's screw head, seated (after the alternative frame's acceptance, F2b): the
+ * butting end whose tap the screw goes into, the tap's position where the connector gives one,
+ * and its seat: on the through bar's far face, or under the lips of its near face's groove.
+ */
+export interface ButtHead extends HeadSeat {
+  end: string;
+  at?: readonly [number, number];
+}
+
 /** A face connection's contacts and fastenings (§4.5). */
 export interface FaceResult {
   fastening: "none" | "bolt" | "tnut" | "screw" | "blind";

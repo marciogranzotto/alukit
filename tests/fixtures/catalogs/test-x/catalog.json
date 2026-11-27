@@ -20,6 +20,323 @@
     }
   },
   "items": {
+    "SCR-M8x20": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M8x20 (synthetic)",
+      "thread": "M8",
+      "length_mm": 20,
+      "dims": {
+        "dk_mm": 13,
+        "k_mm": 8
+      }
+    },
+    "SCR-M8x20-WIDE": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Screw M8x20 with a Ø16 head (synthetic)",
+      "thread": "M8",
+      "length_mm": 20,
+      "dims": {
+        "dk_mm": 16,
+        "k_mm": 8
+      }
+    },
+    "W8": {
+      "kind": "fastener",
+      "subtype": "washer",
+      "name": "Plain washer 8 (synthetic, ISO 7089's size)",
+      "thread": "M8",
+      "dims": {
+        "d1_mm": 8.4,
+        "d2_mm": 16,
+        "h_mm": 1.6
+      }
+    },
+    "TNUT-SEAT": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "T-nut drilled out as a head's seat, body 5.5 high (synthetic)",
+      "thread": "M8",
+      "fits": ["test:s40-c8"],
+      "dims": {
+        "k_mm": 5.5
+      }
+    },
+    "TNUT-SEAT-THIN": {
+      "kind": "fastener",
+      "subtype": "t-nut",
+      "name": "Thin T-nut seat, body 2 high (synthetic)",
+      "thread": "M8",
+      "fits": ["test:s40-c8"],
+      "dims": {
+        "k_mm": 2
+      }
+    },
+    "J1-BARE": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J1 with a screw that gives no dimensions (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "test:s40-c8": [
+              { "item": "BUSH-16-8", "qty": 1 },
+              { "item": "SCR-M8x50-BARE", "qty": 1 }
+            ]
+          }
+        }
+      ],
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "through-hole", "on": "through", "d_mm": 9 }
+      ]
+    },
+    "J1-W": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J1 with a washer under the head (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": {
+            "point_mm": [0, 0, 0],
+            "normal": [0, 0, -1]
+          },
+          "holes": [
+            {
+              "at_mm": [0, 0, 0],
+              "d_mm": 9
+            }
+          ],
+          "fasteners": {
+            "test:s40-c8": [
+              {
+                "item": "BUSH-16-8",
+                "qty": 1
+              },
+              {
+                "item": "SCR-M8x100",
+                "qty": 1
+              },
+              {
+                "item": "W8",
+                "qty": 1
+              }
+            ]
+          }
+        }
+      ],
+      "requires": [
+        {
+          "op": "end-tap",
+          "on": "butting",
+          "thread": "M16"
+        },
+        {
+          "op": "through-hole",
+          "on": "through",
+          "d_mm": 9
+        }
+      ]
+    },
+    "J1-SLOT": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "A screw in the receiving bar's groove, its head under the lips, into a bush in the butting bar (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": {
+            "point_mm": [0, 0, 0],
+            "normal": [0, 0, -1]
+          },
+          "holes": [
+            {
+              "at_mm": [0, 0, 0],
+              "d_mm": 9
+            }
+          ],
+          "fasteners": {
+            "test:s40-c8": [
+              {
+                "item": "BUSH-16-8",
+                "qty": 1
+              },
+              {
+                "item": "SCR-M8x20",
+                "qty": 1
+              }
+            ]
+          }
+        }
+      ],
+      "requires": [
+        {
+          "op": "end-tap",
+          "on": "butting",
+          "thread": "M16"
+        },
+        {
+          "op": "access-hole",
+          "on": "through",
+          "d_mm": 7,
+          "note": "for the key, from the far face"
+        }
+      ]
+    },
+    "J1-SEAT": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J1-SLOT with its head on a T-nut seat (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": {
+            "point_mm": [0, 0, 0],
+            "normal": [0, 0, -1]
+          },
+          "holes": [
+            {
+              "at_mm": [0, 0, 0],
+              "d_mm": 9
+            }
+          ],
+          "fasteners": {
+            "test:s40-c8": [
+              {
+                "item": "BUSH-16-8",
+                "qty": 1
+              },
+              {
+                "item": "SCR-M8x20",
+                "qty": 1
+              },
+              {
+                "item": "TNUT-SEAT",
+                "qty": 1
+              }
+            ]
+          }
+        }
+      ],
+      "requires": [
+        {
+          "op": "end-tap",
+          "on": "butting",
+          "thread": "M16"
+        },
+        {
+          "op": "access-hole",
+          "on": "through",
+          "d_mm": 7,
+          "note": "for the key, from the far face"
+        }
+      ]
+    },
+    "J1-SEAT-THIN": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J1-SLOT with its head on a thin T-nut seat (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": {
+            "point_mm": [0, 0, 0],
+            "normal": [0, 0, -1]
+          },
+          "holes": [
+            {
+              "at_mm": [0, 0, 0],
+              "d_mm": 9
+            }
+          ],
+          "fasteners": {
+            "test:s40-c8": [
+              {
+                "item": "BUSH-16-8",
+                "qty": 1
+              },
+              {
+                "item": "SCR-M8x20",
+                "qty": 1
+              },
+              {
+                "item": "TNUT-SEAT-THIN",
+                "qty": 1
+              }
+            ]
+          }
+        }
+      ],
+      "requires": [
+        {
+          "op": "end-tap",
+          "on": "butting",
+          "thread": "M16"
+        },
+        {
+          "op": "access-hole",
+          "on": "through",
+          "d_mm": 7,
+          "note": "for the key, from the far face"
+        }
+      ]
+    },
+    "J1-SLOT-WIDE": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J1-SLOT with a Ø16 head (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": {
+            "point_mm": [0, 0, 0],
+            "normal": [0, 0, -1]
+          },
+          "holes": [
+            {
+              "at_mm": [0, 0, 0],
+              "d_mm": 9
+            }
+          ],
+          "fasteners": {
+            "test:s40-c8": [
+              {
+                "item": "BUSH-16-8",
+                "qty": 1
+              },
+              {
+                "item": "SCR-M8x20-WIDE",
+                "qty": 1
+              }
+            ]
+          }
+        }
+      ],
+      "requires": [
+        {
+          "op": "end-tap",
+          "on": "butting",
+          "thread": "M16"
+        },
+        {
+          "op": "access-hole",
+          "on": "through",
+          "d_mm": 7,
+          "note": "for the key, from the far face"
+        }
+      ]
+    },
     "SCR-M8x50-STD": {
       "kind": "fastener",
       "subtype": "screw",

@@ -3,7 +3,7 @@
   "catalogs": {
     "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
     "test-geo": { "hash": "sha256:5d41a6d7c43671052d74bf5387b76e9c3e428d09da74fbe3088f0ba9ae5f1718", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" },
-    "test-x": { "hash": "sha256:2e1018355b3ee095c26e45fb9ef7ebf1f66bdf22dc91d418bf0a352e459acc2f", "name": "Joint gaps test catalog (synthetic)", "vendor": "test-x-vendor", "currency": "BRL" }
+    "test-x": { "hash": "sha256:39afd5e9474b660b819f1222b382cbe3113342cba19ce23c65a88481bb343e3d", "name": "Joint gaps test catalog (synthetic)", "vendor": "test-x-vendor", "currency": "BRL" }
   },
   "items": {
     "test-geo:FB-50x10": { "hash": "sha256:940ba09dee00f3db3afa2356302471a9c006e588437214b4a945bd195aecdadc", "item": { "kind": "bar", "name": "Flat bar 50x10", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "shape": "flat", "section": "FB-50x10" } },

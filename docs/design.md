@@ -285,6 +285,13 @@ golden case worked by an independent hand script
   and the Forseti importer cites them for its socket, button, low-head and hex-head screws as
   estimates (89 items), so their seats are checked where they were infos (x1 20–25). Call 44
   revised; call 48.
+- §4.5: **a butt connector's screw heads** (F2b; G43). Its screw seats its head on the through
+  bar's far face where the connector drills a through-hole at the tap's place, checked as a face
+  fastener's; else under the near face's groove lips, on them or on a T-nut seat from its sets,
+  where the shank must pass the opening and the lip, seat and head the groove's depth and
+  chamber; with neither, it has no way through, a `fit` error. Draft 2.3 checked no butt
+  connector's screws (its v1 limit), so a head over a groove opening or past a groove's floor
+  went unsaid (x1 26–31). G41's far-face head now warns (45.87 %). Call 49.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1192,8 +1199,20 @@ bar's end faces. The fraction of the annulus on material is reported per station
 a `fit` warning with the fraction; on none, a `fit` error (a head wholly over an opening or off the
 face). The threshold is geometric (loads are v2). A part that gives no bearing diameter, of its
 own or from the standard it cites (§3.3, *2.3*, F2a), is not checked: one info per item, naming its
-connections. **v1 limit**: a butt connector's screws are
-not checked, since its fastener sets do not say which part bears on which face.
+connections. A **butt connector's screws** are seated too (*2.3*, after the alternative frame's
+acceptance; gap F2b, G43): the chosen sets' first screw or bolt, one into each tap the connector
+makes in a butting end. Where the connector drills a `through-hole` in the through bar at the tap's
+place (call 40's pairing), the screw comes through the bar and its head, or the sets' first washer
+under it, bears on the far face round that hole, checked as above. Where it drills none there,
+the head sits under the lips of the near face's groove that lies under the joint, on the lips or
+on a T-nut from the sets (drilled out, the head's seat): the shank must pass the opening, and the
+lip, the T-nut's body (`k_mm`) and the head (`k_mm`) the groove's depth, with the head no wider
+than the chamber where it reaches (its undercut, narrowed where it tapers), each else a `fit`
+error; with no T-nut, the head's seat on the lips is the face's material at the joint, as the
+opening leaves it. With neither a hole nor a groove, the screw has no way through the bar, a `fit`
+error. The seats are reported with the butt's (`heads`). **v1 limit**: a butt through a bar's end
+is not seat-checked, since an end face's material is its section, which no seat reads yet (call
+49).
 
 **Reported per bar:** `cut_mm` (the long-point length: the longest of the box's four edges between
 the end faces), `centre_mm` (along the bounding-box centre line), `short_mm` (the shortest edge),
@@ -1267,7 +1286,10 @@ centred layout); kerf 3, no end trim. G29–G34 (*2.3*) use their own synthetic 
 `test-joint`: bush ends, a joint recipe, end connectors; `test-stud`: an RHS 200x100x4.75, 40x40
 and 80x80 bars with M16 cores, a stud end, a bush end, four-core joints and splices), so they do
 not move with the built-in catalogs; so does G38 (*2.3*, `test-span`: a 40 x 40 square bar cut to
-length at R$ 126.50/m in 10 mm steps, 40–3000 mm, and in stock bars of 3000 and 6000).
+length at R$ 126.50/m in 10 mm steps, 40–3000 mm, and in stock bars of 3000 and 6000), and
+G39–G43 (*2.3*, after the alternative frame's acceptance: `test-x`: flat bars, a plain block, a
+thin tube, blind fasteners, J1's screw-and-bush butt connectors and their variants, screws and
+seats for a groove's lips, and two standards' rows).
 
 | # | Setup | Rule exercised | Expected |
 |---|---|---|---|
@@ -1290,6 +1312,7 @@ length at R$ 126.50/m in 10 mm steps, 40–3000 mm, and in stock bars of 3000 an
 | G40 | plain 80 x 80 block b1 (0,0,0)→(200,0,0), no system; 40x40 post b2 (100,0,40)→(100,0,540), its core for M16; `butt` through b1 with J1: an M16 `end-tap` in the post, a Ø9 `through-hole` in b1, a bush and an M8 screw | a plain bar held by a screw in a drilled hole (*2.3*, gap X3) | no error: Ø9 through b1 at 100, M16 in b2's end. Through b1's end b: an end hole along its axis, no error. A 20 deep hole, a hole with no tap at its place, a Ø6 hole, a stud for the screw, or an RHS for the block: a `fit` error on c1 naming b1 |
 | G41 | 40x40 rail b1 (0,0,0)→(600,0,0); plate 80 x 8 b3 (260,0,24)→(340,0,24) on its top face; 40x40 post b2 (300,0,28)→(300,0,600), its core for M16; `butt` through b1 with J1, `stack: ["b3"]` | a butt's stack (*2.3*, gap X2) | b2's end at the plate's top, cut 572, seated on b3 +y (1600 mm², no overhang); Ø9 through b1 at 300 and through b3 at 40. Two plates (b4 on b3): cut 564, Ø9 in b4 at 30, seated on b4. Through b1's end b with the plate standing on it: the end hole along the axis, b3's at 40, cut 592. A spacer as well, a plate 2 mm off, a plate the post misses: a `connection` error. A tube for the plate, a hole at no tap: a `fit` error naming b3 |
 | G42 | G37's 40x40 b1 (0,0,0)→(400,0,0) on a 50 x 10 flat b2; `face` [b1, b2], `screw`, an M8x50 socket screw giving no dimensions, citing a standard whose M8 row has dk 13, `at_mm: [200]` | a fastener made to a standard (*2.3*, gap F2a) | the head (Ø13 from the table) over the c8 groove bears 45.87 %, a `fit` warning; the same with the standard read from its type. Its own dk 10: 33.54 %. No standard: no seat, an info. Its own dk 10 on a flat face: 100 % |
+| G43 | 40x40 rail b1 (0,0,0)→(600,0,0); 40x40 post b2 (300,0,20)→(300,0,520), its core for M16; `butt` through b1 with J1-SLOT: an M16 `end-tap` in the post, no hole at the tap in b1, a bush and an M8x20 screw (dk 13, k 8) | a butt connector's screw heads (*2.3*, gap F2b) | the head under the lips of b1's top groove (c8: opening 8.2, lip 2.2, depth 12.25, chamber 14.5) bears 45.87 %, a `fit` warning, and reaches 10.20. On a T-nut seat 5.5 high: 15.70, 3.45 past the depth, a `fit` error; on one 2 high: 12.20, no error. A Ø16 head: wider than the chamber, a `fit` error. The post 3 off the groove's centre: the shank misses the opening; 10 off: no groove, no way through; each a `fit` error. J1 through b1: the head on its bottom face, 45.87 %, a warning; on a washer d2 16: 53.74 % |
 
 ### 4.7 Parts, rails and patterns (D14)
 
@@ -1743,6 +1766,8 @@ along the box's centre line from each end face (*2.3*).
 | Fit | a connector that holds a joined bar in no way it may (§3.4, by role; *2.3*); a T-nut that does not fit its groove; a carriage on another rail system; a `face` with no contact; a head, nut or washer that bears on none of its face's material (*2.3*); a blind fastener whose grip lies outside its maker's range (*2.3*, §4.5) | error |
 | Fit (*2.3*) | a head, nut or washer that bears on less than half of its annulus (§4.5, its seat) | warn |
 | Fit (*2.3*) | a head, nut or washer whose item gives no bearing diameter, so its seats are not checked | info |
+| Fit (*2.3*, F2b) | a butt connector's screw with no clearance hole and no groove to pass the through bar; under a groove's lips, a shank the opening does not pass, a head (and its T-nut seat) past the groove's depth, or a head wider than the chamber where it reaches (§4.5) | error |
+| Fit (*2.3*, F2b) | a butt connector's screw whose item gives no bearing diameter, or no head height where it sits under a groove's lips (nor its T-nut seat a body height), so it is not checked | info |
 | Machining (*2.3*) | two ops of one bar of the same kind and size at one place, one op made twice (§5.1): a requirement written once per screw, a splice whose studs have no positions, two ends that each pass a hole through one axis. Places compare as the cut list's identity does, a through hole by its axis. A tap into a bar's end on none of its section's cores (its centre more than `tol.len` from every core's): an end tap, a connector's in a butting or a through bar's end or a splice's, or a tapped end hole (a drilled one is not checked); the error names the bar, the end, the place and the nearest cores (*2.3*). A tap on a core its thread does not fit (the tap rule below): an M16 in an 80x80's Ø5 corner hole (*2.3*); a tapped end hole at an angle to the bar's axis, which runs across its cores (*2.3*) | error |
 | Machining (*2.3*) | a tap into the end of a bar whose section gives no core positions, so it is not checked: a `tslot`'s `bores` and a drawn section's `cores` give them (§3.5), a box section or one that lists none does not; a tap on a core whose thread is none of its labels and has no tap drill or 6H tolerance in AluKit (not metric, or a pitch over 2.5 mm), its place checked and its fit not | info |
 | Lengths | cut length ≤ 0, outside the offer's range, a cut angle outside the supplier's service range | error |
@@ -2249,7 +2274,7 @@ needs:
   `test-order/` and `test-order-eu/` (the order rules), `test-joint/` and `test-open/` (the
   acceptance gaps), `test-stud/` (the second run's), `test-span/` (gap X4).
 - `golden-ends/`: the end cases of §4.6 (G1–G21; G27 and G28 since 2.2 and 2.3).
-- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26; G29–G34 and G38 since 2.3).
+- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26; G29–G34, G38 and G39–G43 since 2.3).
 - `order/` (*2.3*): two suppliers, both READY as written, for the order rules: each test patches
   one condition in, so each rule has a case that blocks and one that does not.
 - `base-frame/` (*2.3*): the cart's base frame built by the CLI from an empty project, the oracle
@@ -2461,6 +2486,12 @@ compared number moves: the check is right, and the question is the record's.
     (the shop's own tables are DIN 934's, not ISO 4032's) or washers (its plain washers are not all
     ISO 7089's). A table gives `dk` for a round head, not `dw`, so the seat is read to the head's
     outside diameter, as F2's items give it (§3.3).
+49. *New in 2.3, after the alternative frame's acceptance, open.* Where a butt connector's screw
+    head sits is read from the connector's own `requires`, as call 40's pairing is: a
+    `through-hole` at the tap's place means through the bar from its far face; none means under the
+    near face's lips. A T-nut in the chosen sets of a screw under the lips is its head's seat, and
+    no seat of the head on it is reported (the T-nut's footprint is not an item field); a washer
+    goes under a head on the far face only. A butt through a bar's end is not seat-checked (§4.5).
 
 ## 15. Review 1 resolution
 

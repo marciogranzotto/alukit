@@ -33,6 +33,7 @@ import { boxCentre, faceLocal, facePlane, localOf, onBar } from "./place.ts";
 import { area2, ccw, clip, discArea, type P2 } from "./polygon.ts";
 import { holePoint, selectHoles } from "./rails.ts";
 import type {
+  ButtHead,
   DerivedPart,
   FaceResult,
   FaceStation,
@@ -98,6 +99,8 @@ export interface GenOut {
   hardware: HardwareUse[];
   /** Joint recipes the connections use (§3.4): not bought, so not hardware. */
   recipes: HardwareUse[];
+  /** Per butt, its connector's screw heads, seated (F2b). */
+  heads: Map<string, ButtHead[]>;
 }
 
 interface BodyFace {
@@ -453,6 +456,31 @@ function seatMaterial(body: Body, f: BodyFace): P2[][] {
       ]),
     )
     .filter((p) => p.length >= 3);
+}
+
+/**
+ * The fraction of an annulus about X (from radius r to R) on a face's material (`seatMaterial`):
+ * what a head, nut or washer bears on (after acceptance run 4). 0 for an empty annulus.
+ */
+function annulusBearing(body: Body, f: BodyFace, X: V3, R: number, r: number): number {
+  const ring = Math.PI * (R * R - r * r);
+  if (ring <= 0) return 0;
+  const c = to2(f, X);
+  let bears = 0;
+  for (const piece of seatMaterial(body, f)) {
+    bears += discArea(c, R, piece) - (r > 0 ? discArea(c, r, piece) : 0);
+  }
+  return Math.min(1, Math.max(0, bears / ring));
+}
+
+/**
+ * The fraction of the annulus from `dIn` to `dOut` about X that lies on the material of a bar's
+ * bounding face: a butt connector's screw head on it (F2b), a tap drill's disc (`dIn` 0; X5).
+ */
+export function barFaceBearing(bar: DerivedBar, face: Face, X: V3, dOut: number, dIn = 0): number {
+  const body = barBody(bar);
+  const f = body.faces.find((x) => x.name === face) as BodyFace;
+  return annulusBearing(body, f, X, dOut / 2, dIn / 2);
 }
 
 /** A point of the face's plane is on the face, within tol.len of its edges. */
@@ -1143,20 +1171,12 @@ class FaceGen {
   ): Omit<HeadSeat, "side"> {
     const R = (b.out as number) / 2;
     const r = Math.max((hole ?? 0) / 2, (b.in ?? 0) / 2);
-    const c = to2(f, X);
-    const ring = Math.PI * (R * R - r * r);
-    let bears = 0;
-    if (ring > 0) {
-      for (const piece of seatMaterial(body, f)) {
-        bears += discArea(c, R, piece) - (r > 0 ? discArea(c, r, piece) : 0);
-      }
-    }
     return {
       item: b.item,
       d_in: 2 * r,
       d_out: 2 * R,
       on: `${body.id} ${f.name}`,
-      bearing: ring > 0 ? Math.min(1, Math.max(0, bears / ring)) : 0,
+      bearing: annulusBearing(body, f, X, R, r),
     };
   }
 
@@ -1832,7 +1852,7 @@ function hollowOf(body: Body): Hollow | undefined {
 }
 
 /** A T-nut fits a bar when it names the bar's system, or the groove type it enters (§5.5). */
-function fitsGroove(
+export function fitsGroove(
   itemId: string,
   item: Item,
   bar: BarItemInfo,

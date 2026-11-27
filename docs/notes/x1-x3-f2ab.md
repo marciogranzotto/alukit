@@ -184,3 +184,50 @@ from `std`.
 
 **Diagnostics on earlier fixtures**: none moved (**verified**: every golden and cart case's
 diagnostics compared before and after). No earlier fixture seats a Forseti screw.
+
+## F2b: a butt connector's screw heads
+
+**The case.** A post butts a rail's top face; its connector's M8 screw goes into a bush in the
+post's core. The reference project now puts the head inside the rail's top groove, under its lips,
+on a T-nut drilled out to pass the screw; others bring the screw through the rail from its bottom
+face. Either way the head bears on something the design never checked: a groove opening under it,
+or a groove too shallow for head and seat. **The cause** (**read**, `hardware.ts` and F2's
+`fastenings.ts`): seats were checked for face fasteners only (§4.5's v1 limit), since a connector's
+sets do not say where each part goes.
+
+26. **Where the head goes is read from `requires`**, as F2's pairing (call 40) reads which tap a
+    through-hole serves: a `through-hole` in the through bar at a tap's place means the screw comes
+    through the bar and its head is on the far face; none means the head is in the near face's
+    groove, under its lips (call 49). The screw is the sets' first `screw` or `bolt`, one per tap
+    (`buttingTaps`), as X3's `screwThrough` takes it.
+27. **The far-face seat is F2's**: the annulus from the through-hole (or a washer's bore) to the
+    head's bearing diameter (or the washer's `d2_mm`), on the face's material less its openings
+    (`barFaceBearing`, which `FaceGen` now shares). Under half: a `fit` warning; on nothing, an
+    error.
+28. **Under the lips, four checks, each a `fit` error**: the shank passes the opening (its edge,
+    |offset| + d/2, within the opening's half-width); the lip, the T-nut seat's body (`k_mm`) and
+    the head's height (`k_mm`) fit the groove's depth; the head is no wider than the chamber where
+    it reaches (its undercut, narrowed straight from `taper_from_mm` to `bottom_mm` where the groove
+    gives a taper); and a groove lies under the joint at all, else the screw has no way through.
+    `BarGroove` now carries the groove type's depth, undercut and taper for this.
+29. **A T-nut in the sets is the head's seat** (the drilled-out T-nut), checked to fit the groove
+    as any T-nut is, and its body counts in the depth. Its footprint on the lips is no item field,
+    so no seat of the head on it is reported. With none, the head bears on the lips' underside,
+    which is the face's outer material at the joint, as the opening leaves it (**inferred**: the
+    lips' underside mirrors their outer face; a chamfer under them is not in a groove type).
+30. **Not checked**: a screw whose item gives no bearing diameter, or under the lips no head height
+    (nor its T-nut a body height), one `fit` info per item naming its connections; a butt through a
+    bar's end, since an end face's material is its section and no seat reads one yet (§4.5's
+    remaining v1 limit); a stud's nut (no catalog connector's sets give a stud a nut today,
+    **read**: test-stud's and test-x's).
+31. **Seats are output with the butt** (`butts.<id>.heads`: end, tap position, the bearing part, the
+    face, the annulus and its percentage), and the golden check compares them (`heads`).
+
+**Golden G43** (`by_hand.py`, band integrals of a disc across the opening): under the lips 45.87 %
+and 10.20 deep; on the 5.5 seat 15.70, 3.45 past 12.25; on the 2 seat 12.20; a Ø16 head in the 14.5
+chamber; 3 and 10 off the groove's centre; through the rail 45.87 %, on a washer 53.74 %.
+
+**Diagnostics on earlier fixtures** (**verified**, every golden and cart case's diagnostics compared
+before and after): G41's J1 head on the rail's bottom face, over its groove, warns at 45.87 % in its
+base and five of its cases; that is the seat this gap adds, and G41's base expectation now pins it.
+No other fixture moved: no earlier butt seats a screw on a grooved far face.

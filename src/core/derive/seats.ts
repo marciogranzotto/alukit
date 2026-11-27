@@ -16,7 +16,7 @@ import {
   sharedArea,
   triangulate,
 } from "./polygon.ts";
-import type { ButtFace, ButtSeat } from "./types.ts";
+import type { ButtFace, ButtHead, ButtSeat } from "./types.ts";
 
 /**
  * A butt's end faces on the faces they bear on (§4.5, after acceptance run 4). Stage 3 placed each
@@ -40,6 +40,8 @@ import type { ButtFace, ButtSeat } from "./types.ts";
 
 export interface ButtSeats {
   ends: ButtSeat[];
+  /** Its connector's screw heads, seated in stage 4 (after the alternative frame's acceptance, F2b). */
+  heads?: ButtHead[];
 }
 
 /** A half-space, n · X ≤ c. */

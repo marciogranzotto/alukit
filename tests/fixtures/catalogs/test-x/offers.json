@@ -1,6 +1,51 @@
 {
   "schema": "alukit.offers/1",
   "offers": {
+    "SCR-M8x20": {
+      "item": "SCR-M8x20",
+      "price": {
+        "regular_minor": 100,
+        "per": "unit",
+        "read": "2026-11-27",
+        "src": "src"
+      }
+    },
+    "SCR-M8x20-WIDE": {
+      "item": "SCR-M8x20-WIDE",
+      "price": {
+        "regular_minor": 100,
+        "per": "unit",
+        "read": "2026-11-27",
+        "src": "src"
+      }
+    },
+    "W8": {
+      "item": "W8",
+      "price": {
+        "regular_minor": 100,
+        "per": "unit",
+        "read": "2026-11-27",
+        "src": "src"
+      }
+    },
+    "TNUT-SEAT": {
+      "item": "TNUT-SEAT",
+      "price": {
+        "regular_minor": 100,
+        "per": "unit",
+        "read": "2026-11-27",
+        "src": "src"
+      }
+    },
+    "TNUT-SEAT-THIN": {
+      "item": "TNUT-SEAT-THIN",
+      "price": {
+        "regular_minor": 100,
+        "per": "unit",
+        "read": "2026-11-27",
+        "src": "src"
+      }
+    },
     "FB-120x12-6000": {
       "item": "FB-120x12",
       "supplier": "test-steel",

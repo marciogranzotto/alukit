@@ -8,6 +8,7 @@ import { connectorHardware } from "./hardware.ts";
 import { placeParts } from "./parts.ts";
 import { layoutRails } from "./rails.ts";
 import type {
+  ButtHead,
   DerivedPart,
   FaceResult,
   HardwareUse,
@@ -36,6 +37,8 @@ export interface Attached {
   pieces: StockPiece[];
   hardware: HardwareUse[];
   recipes: HardwareUse[];
+  /** Per butt, its connector's screw heads, seated (F2b). */
+  heads: ReadonlyMap<string, ButtHead[]>;
 }
 
 export function attach(
@@ -46,7 +49,13 @@ export function attach(
 ): Attached {
   layoutRails(ctx, bars);
   const parts = placeParts(ctx, bars, runs);
-  const out: GenOut = { fastenings: new Map(), pieces: [], hardware: [], recipes: [] };
+  const out: GenOut = {
+    fastenings: new Map(),
+    pieces: [],
+    hardware: [],
+    recipes: [],
+    heads: new Map(),
+  };
   generateFaces(ctx, bars, runs, parts, out);
   connectorHardware(ctx, bars, out, stacks);
   duplicateOps(ctx, bars);
@@ -57,5 +66,6 @@ export function attach(
     pieces: [...out.pieces].sort((a, b) => compareIds(a.source, b.source)),
     hardware: out.hardware,
     recipes: out.recipes,
+    heads: out.heads,
   };
 }
