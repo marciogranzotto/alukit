@@ -7,13 +7,19 @@ source states (mounting geometry, fits, clone references) is layer 2, in familie
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import statistics
 from collections import defaultdict
 from decimal import Decimal
 
-from . import emit, geometry, pdfcat, rest, store, tables
+from . import emit, geometry, pdfcat, rest, store, tables, trace
+
+#: The catalog's hand-written overrides (design §3.1), which correct printed values: a trace is
+#: checked against the published values after them (§3.5's authority rule).
+OVERRIDES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "catalogs",
+                         "forseti", "overrides.json")
 
 API = "https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products"
 WALK = ("-y", "+x", "+y", "-x")
@@ -42,6 +48,8 @@ class Build:
         self.materials: dict[str, dict] = {}
         self.notes: dict[str, list[str]] = defaultdict(list)
         self.outlines: dict[str, pdfcat.Outline] = {}
+        with open(OVERRIDES, encoding="utf-8") as f:
+            self.overrides: list[dict] = json.load(f)["overrides"]
 
     # --- provenance and common fields ----------------------------------------------------------
 
@@ -221,13 +229,14 @@ class Build:
         if pr is not None:
             if pr.A_cm2 is None or pr.IX_cm4 is None or pr.IY_cm4 is None or pr.kg_per_m is None:
                 raise ValueError(f"{stem}: incomplete table on p. {pr.page}")
-            ix, iy = (pr.IX_cm4, pr.IY_cm4) if w == h else (pr.IY_cm4, pr.IX_cm4)
             # Every other printed mass is its area times the alloy's density (survey §7): a table
             # that is not gets reported, and the printed values stay the authority.
             expect = float(pr.A_cm2) * 0.27
             if abs(float(pr.kg_per_m) - expect) > 0.015 * expect:
                 self.notes["printed mass differs from area x density by more than 1.5 %"].append(
                     f"{stem}: p. {pr.page} prints {pr.kg_per_m} kg/m for {pr.A_cm2} cm2 ({expect:.3f})")
+        # No usable table: the mass is the one the shop's description states, if it does.
+        shop_mass = re.search(r"Peso[^0-9]{0,25}(\d+,\d+)\s*kg\s*/\s*m", desc) if pr is None else None
         grooves = []
         for face in WALK:
             length = w if face in ("-y", "+y") else h
@@ -237,7 +246,14 @@ class Build:
         if "outline" in spec:
             self.exact_section(stem, spec, grooves, gid)
         else:
-            self.parametric_section(stem, spec, grooves, gid, main["permalink"])
+            refused = None
+            if stem in tables.TRACES:
+                mass = Decimal(shop_mass.group(1).replace(",", ".")) if shop_mass else None
+                refused = self.traced_section(stem, spec, grooves, gid, pr, mass)
+            if stem not in self.sections:
+                self.parametric_section(stem, spec, grooves, gid, main["permalink"], refused)
+        if pr is not None:
+            ix, iy = self.printed_axes(stem, w, h, pr)
         core: dict = {"bore_mm": spec["bore"]} if spec["bore"] is not None else {}
         if tap:
             core["tap"] = tap.group(1)
@@ -260,8 +276,7 @@ class Build:
                 "Iy_mm4": num(iy * 10000),
             }
         else:
-            # No usable table: the mass is the one the shop's description states, if it does.
-            m = re.search(r"Peso[^0-9]{0,25}(\d+,\d+)\s*kg\s*/\s*m", desc)
+            m = shop_mass
             if m:
                 it["mass_kg_per_m"] = {
                     "v": num(Decimal(m.group(1).replace(",", "."))), "src": "src",
@@ -315,7 +330,7 @@ class Build:
         note += (f" Cores: the holes whose inscribed circle is a bore the page prints ({printed}, "
                  f"each within {tables.CORE_MATCH_MM} mm), centred on the hole to "
                  f"{tables.CORE_GRID_MM} mm. "
-                 + self.labels_note(stem, tables.CORNER_HOLES["d"] in spec["cores"]) + ".")
+                 + self.labels_note(stem, stem in tables.CORNER_HOLES["measured_on"]) + ".")
         self.sections[stem] = {
             "schema": "alukit.section/1",
             "id": stem,
@@ -390,8 +405,14 @@ class Build:
         if counts != spec["cores"]:
             raise ValueError(f"{stem}: the outline's holes give cores {counts}; the page prints {spec['cores']}")
         found.sort(key=lambda f: (-f[0], f[2], f[1]))
-        # The module cores take the profile's labels, the base-40 corner holes the series'.
-        labels = {spec["bore"]: tables.CORE_THREADS[stem][0], tables.CORNER_HOLES["d"]: tables.CORNER_HOLES["threads"]}
+        # The module cores take the profile's labels, the base-40 corner holes (on the outlines
+        # CORNER_HOLES names) the series'. A bore of the corner holes' size is a module core
+        # elsewhere: the 20x20 V-slot's Ø5.
+        labels = {spec["bore"]: tables.CORE_THREADS[stem][0]}
+        if stem in tables.CORNER_HOLES["measured_on"]:
+            if spec["bore"] == tables.CORNER_HOLES["d"]:
+                raise ValueError(f"{stem}: its module bore is the corner holes' size; the cores need telling apart")
+            labels[tables.CORNER_HOLES["d"]] = tables.CORNER_HOLES["threads"]
         if set(spec["cores"]) - set(labels):
             raise ValueError(f"{stem}: no thread label for the cores {sorted(set(spec['cores']) - set(labels))}")
         return [{"at_mm": [num(x) + 0, num(y) + 0], "d_mm": num(Decimal(str(d))), "threads": labels[d]}
@@ -408,7 +429,189 @@ class Build:
                     f"drawing on p. 20")
         return out
 
-    def parametric_section(self, stem: str, spec: dict, grooves: list[dict], gid: str, url: str) -> None:
+    # --- traced sections (fidelity `traced`, design §3.5) ----------------------------------------
+
+    def printed_axes(self, stem: str, w: float, h: float, pr: pdfcat.Printed) -> tuple[Decimal, Decimal]:
+        """The printed IX and IY as the section's Ix and Iy (about its x and y axes). For every
+        rectangular profile the catalogue gives IX about the axis along the long side (sections
+        stand tall, so IX is Iy). A square profile prints one value, or two when a face differs
+        (the face-plate variants): the smaller then goes to the weaker axis of the section's
+        outline, and stays in the drawing's order when the section has none to tell."""
+        if w != h:
+            return pr.IY_cm4, pr.IX_cm4
+        if pr.IX_cm4 == pr.IY_cm4:
+            return pr.IX_cm4, pr.IY_cm4
+        s = self.sections[stem]
+        if "outline" not in s:
+            self.notes["square profiles printing two inertias, kept in the drawing's order (no outline "
+                       "tells their weak axis)"].append(stem)
+            return pr.IX_cm4, pr.IY_cm4
+        p = geometry.props(s["outline"], s["holes"])
+        lo, hi = sorted((pr.IX_cm4, pr.IY_cm4))
+        ix, iy = (lo, hi) if p["Ix"] < p["Iy"] else (hi, lo)
+        self.notes["square profiles printing two inertias, the smaller given to the outline's weaker "
+                   "axis"].append(f"{stem}: Ix {ix}, Iy {iy} cm4 (IX {pr.IX_cm4}, IY {pr.IY_cm4} printed)")
+        return ix, iy
+
+    def published(self, stem: str, w: float, h: float, pr: pdfcat.Printed | None,
+                  mass: Decimal | None, props: dict) -> dict[str, float]:
+        """The published area and inertias a trace is checked against (after the catalog's
+        overrides, which correct printed values): the printed table's, else the area of the shop's
+        mass at the alloy's density."""
+        out: dict[str, float] = {}
+        density = next(iter(self.materials.values()))["density_kg_per_m3"]
+        if pr is not None:
+            out["area"] = float(pr.A_cm2) * 100
+            if w != h:
+                ix, iy = pr.IY_cm4, pr.IX_cm4
+            else:
+                lo, hi = sorted((pr.IX_cm4, pr.IY_cm4))
+                ix, iy = (lo, hi) if props["Ix"] < props["Iy"] else (hi, lo)
+            out["Ix"], out["Iy"] = float(ix) * 1e4, float(iy) * 1e4
+        elif mass is not None:
+            out["area"] = float(mass) / density * 1e6
+        for o in self.overrides:
+            if o["item"] == stem and "value" in o and o["field"] in ("area_mm2", "Ix_mm4", "Iy_mm4"):
+                out[{"area_mm2": "area", "Ix_mm4": "Ix", "Iy_mm4": "Iy"}[o["field"]]] = float(o["value"])
+        return out
+
+    def traced_section(self, stem: str, spec: dict, grooves: list[dict], gid: str,
+                       pr: pdfcat.Printed | None, mass: Decimal | None) -> str | None:
+        """Traces the profile's raster image (`tables.TRACES`, forseti_importer/trace.py) and makes
+        it the section when it agrees with the published area and inertias within
+        TRACE_TOLERANCE; otherwise returns why it does not, for the parametric section's note."""
+        t = tables.TRACES[stem]
+        w, h = spec["w"], spec["h"]
+        faces = t.get("faces", WALK)
+        grooves = [gr for gr in grooves if gr["face"] in faces]
+        tr = trace.trace_profile(self.doc, t, (w, h), grooves)
+        cal = tr.cal
+        u_sys = (cal.se_delta_mm ** 2 + tables.TRACE_METHOD_MM ** 2) ** 0.5
+        u_px = 0.5 / cal.s
+        # Cores: each a traced hole at its printed centre, its bore snapped to the printed diameter.
+        holes = list(tr.holes)
+        cores, worst, problems = [], 0.0, []
+        for x, y, d, labels in self.printed_cores(stem, spec):
+            at = [i for i, hole in enumerate(holes) if geometry.inside((x, y), hole)]
+            if not at:
+                problems.append(f"it has no hole at the core ({x}, {y}) the page prints")
+                continue
+            hole = holes[at[0]]
+            d_tr = trace.bore(hole, (x, y))
+            if abs(d_tr - d) > tables.TRACE_CORE_MM:
+                problems.append(f"its bore about ({x}, {y}) is Ø{d_tr:.2f}, not the printed Ø{d} "
+                                f"(within {tables.TRACE_CORE_MM} mm)")
+                continue
+            worst = max(worst, abs(d_tr - d))
+            holes[at[0]] = trace.snap_bore(hole, (x, y), d)
+            cores.append({"at_mm": [num(Decimal(str(x))) + 0, num(Decimal(str(y))) + 0],
+                          "d_mm": num(Decimal(str(d))), "threads": labels})
+        rnd = lambda ring: [[pdfcat._r(px), pdfcat._r(py)] for px, py in ring]  # noqa: E731
+        outline, holes = rnd(tr.outline), [rnd(hole) for hole in holes]
+        props = geometry.props(outline, holes)
+        pub = self.published(stem, w, h, pr, mass, props)
+        if "area" not in pub:
+            return "no published area or mass to check its trace against"
+        err = {k: props["A" if k == "area" else k] / v - 1 for k, v in pub.items()}
+        tol = tables.TRACE_TOLERANCE
+        said = ", ".join(f"{'the area' if k == 'area' else k} {e * 100:+.2f} %" for k, e in err.items())
+        if not all(abs(e) <= tol["area" if k == "area" else "inertia"] for k, e in err.items()):
+            problems.append(f"against the published values {said}, beyond the {tol['area'] * 100:g} % "
+                            f"(area) and {tol['inertia'] * 100:g} % (inertia) a trace is held to")
+        self.notes["traces left out" if problems else
+                   "traced sections (area and inertias against the published)"].append(
+            f"{stem}: {'; '.join(problems) if problems else said}")
+        if problems:
+            return "a trace of the page's raster image was left out: " + "; ".join(problems)
+        res = max(abs(r) for _, r in cal.residuals_mm)
+        printed = t["printed"]
+        note = (
+            f"traced from the page's raster image ({tr.source}): its edge at 50 % coverage by marching "
+            f"squares, simplified by Douglas-Peucker at {trace.EPS_PX} px; the scale "
+            f"({cal.sx:.3f} x {cal.sy:.3f} px/mm) and the outline stroke's margin "
+            f"({cal.delta_mm:.3f} ± {cal.se_delta_mm:.3f} mm) fitted by least squares to the printed size"
+            + (f" and the printed groove dimensions ({', '.join(f'{k[:-3]} {num(Decimal(str(v)))}' for k, v in printed.items())})"
+               if printed else "")
+            + (f" and {len(t['scans'])} dimensions printed behind the covers" if t.get("scans") else "")
+            + f", residuals at most {res:.2f} mm; the margin taken off by an exact inner offset, the box "
+            f"snapped to {w} x {h} (it was {tr.snap_mm[0]:+.3f}, {tr.snap_mm[1]:+.3f} mm off)"
+            + (f", the cores' bores snapped to their printed diameters (at most {worst:.2f} mm off)"
+               if cores else "")
+            + f". Edges ±{u_sys:.3f} mm overall (the margin's standard error with "
+            f"{tables.TRACE_METHOD_MM} mm, the method's largest error on the rasters drawn under vector "
+            f"outlines) and ±{u_px:.2f} mm locally (half a pixel). Against the published values {said}"
+            + (". Grooves on " + ", ".join(faces) + " only: the other faces are closed" if len(faces) < 4 else "")
+            + ". " + self.labels_note(stem, bool(spec.get("corners"))) + "."
+        )
+        w2, h2 = w / 2, h / 2
+        self.sections[stem] = {
+            "schema": "alukit.section/1",
+            "id": stem,
+            "fidelity": "traced",
+            "props_ok": True,
+            "from": {"ref": pdf_ref(t["page"]), "method": "raster",
+                     "scale": f"the printed size, {w} x {h} mm, and the dimensions the page prints",
+                     "read": tables.PDF_READ, "note": note},
+            "bbox_mm": [[num(Decimal(str(-w2))), num(Decimal(str(-h2)))],
+                        [num(Decimal(str(w2))), num(Decimal(str(h2)))]],
+            "grooves": [{**gr, "type": gid} for gr in grooves],
+            "cores": sorted(cores, key=lambda c: (-c["d_mm"], c["at_mm"][1], c["at_mm"][0])),
+            "outline": outline,
+            "holes": holes,
+        }
+        own = self.traced_groove(stem, t, outline, holes, grooves, u_sys + u_px)
+        if own:
+            self.sections[stem]["groove_dims"] = own
+        return None
+
+    @staticmethod
+    def printed_cores(stem: str, spec: dict) -> list[tuple[float, float, float, list[str]]]:
+        """The cores a profile's page prints: its bores (`bores`, else one at the centre) and, on
+        the base-40 profiles marked `corners`, the corner holes."""
+        if spec["bore"] is None:
+            return []
+        labels = tables.CORE_THREADS[stem][0]
+        out = [(x, y, spec["bore"], labels) for x, y in (spec.get("bores") or [(0, 0)])]
+        if spec.get("corners"):
+            c = tables.CORNER_HOLES
+            x, y = spec["w"] / 2 - c["inset"], spec["h"] / 2 - c["inset"]
+            out += [(sx * x, sy * y, c["d"], c["threads"]) for sy in (-1, 1) for sx in (-1, 1)]
+        return out
+
+    def traced_groove(self, stem: str, t: dict, outline: list, holes: list, grooves: list[dict],
+                      u: float) -> dict | None:
+        """A traced section's own groove: the dimensions its page prints, and the rest measured on
+        the trace as on an exact outline (the median over its grooves), estimates within the
+        trace's uncertainty and the grooves' spread."""
+        w, h = tables.PROFILES[stem]["w"], tables.PROFILES[stem]["h"]
+        dims = [pdfcat.measure_groove(outline, holes, w, h, gr["face"], gr["at_mm"], trace.GROOVE_START_MM)
+                for gr in grooves]
+        ref = pdf_ref(t["page"])
+        apart = t.get("printed_only", {})
+        printed = {**t["printed"], **{k: v for k, (v, _) in apart.items()}}
+        out: dict = {}
+        said = []
+        for k in GROOVE_DIMS:
+            vs = [getattr(d, k) for d in dims if getattr(d, k) is not None]
+            if k in printed:
+                out[k] = {"v": num(Decimal(str(printed[k]))), "src": "src", "ref": ref}
+                if k in apart and vs:
+                    said.append(f"the {k[:-3]} as printed, {num(Decimal(str(printed[k])))}, which the trace "
+                                f"measures {statistics.median(vs):.2f}: {apart[k][1]}")
+                continue
+            if 2 * len(vs) <= len(dims):
+                continue
+            v = round(statistics.median(vs), 2)
+            half = round(u + (max(vs) - min(vs)) / 2, 2)
+            out[k] = {"v": v, "src": "est", "ref": ref, "low": round(v - half, 2), "high": round(v + half, 2)}
+        out["note"] = (f"{'the dimensions p. ' + str(t['page']) + ' prints; the rest' if printed else 'all'} "
+                       f"measured on the traced outline as on an exact one, the median over its "
+                       f"{len(dims)} grooves, each range the trace's uncertainty and the grooves' spread"
+                       + "".join(f"; {s}" for s in said))
+        return out
+
+    def parametric_section(self, stem: str, spec: dict, grooves: list[dict], gid: str, url: str,
+                           refused: str | None = None) -> None:
         w, h = spec["w"], spec["h"]
         default = [{"face": f, "at_mm": 0} for f in WALK]
         params: dict = {"w_mm": w, "h_mm": h, "groove": gid}
@@ -442,6 +645,8 @@ class Build:
             note += ". " + self.labels_note(stem, bool(spec.get("corners")))
         if spec.get("approx"):
             note += ". " + spec["approx"][0].upper() + spec["approx"][1:]
+        if refused:
+            note += ". " + refused[0].upper() + refused[1:]
         self.sections[stem] = {
             "schema": "alukit.section/1",
             "id": stem,

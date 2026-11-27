@@ -16,8 +16,24 @@ import type { BarItem, Item } from "./schema/items.ts";
 
 /** Beyond this relative difference a published value is a mismatch, unless accepted (§3.6). */
 export const MISMATCH = 0.01;
-/** A traced outline is accepted only within this of the published area (§3.5). */
+/** A traced outline is accepted only within this of the published area, and so of the mass (§3.5). */
 export const TRACED_AREA = 0.02;
+/**
+ * ... and within this of the published inertias and section moduli (§3.5, *2.3*): an edge's error
+ * weighs by its distance from the axis squared, up to 2.1 times the area's error on the traces
+ * checked against vector outlines.
+ */
+export const TRACED_INERTIA = 0.04;
+
+/**
+ * How far a computed value may differ from the published one before it is a mismatch (§3.6): 1 %,
+ * or for a traced outline the tolerance it was accepted within (§3.5), since its edges carry the
+ * trace's uncertainty.
+ */
+export function mismatchTolerance(fidelity: string, field: Compared): number {
+  if (fidelity !== "traced") return MISMATCH;
+  return field === "area_mm2" || field === "mass_kg_per_m" ? TRACED_AREA : TRACED_INERTIA;
+}
 /** A drawn outline's box may differ from the declared nominal box by this much (mm). */
 export const BBOX_SLACK_MM = 0.1;
 
@@ -369,8 +385,9 @@ function checkBar(
     const published = num(pub);
     const diff = c / published - 1;
     const why = accepted.get(field);
+    const tolerance = mismatchTolerance(s.fidelity, field);
     let status: RowStatus = "ok";
-    if (Math.abs(diff) > MISMATCH) status = why === undefined ? "mismatch" : "accepted";
+    if (Math.abs(diff) > tolerance) status = why === undefined ? "mismatch" : "accepted";
     rows.push({
       ...base,
       published,
@@ -382,7 +399,7 @@ function checkBar(
       add(
         "error",
         "mismatch",
-        `computed ${c.toPrecision(6)} against published ${published} (${(diff * 100).toFixed(2)} %, over ${MISMATCH * 100} %); fix the data or accept it in overrides.json`,
+        `computed ${c.toPrecision(6)} against published ${published} (${(diff * 100).toFixed(2)} %, over ${tolerance * 100} %); fix the data or accept it in overrides.json`,
         [ls.file, ...li.files],
         li.id,
         field,
@@ -392,17 +409,19 @@ function checkBar(
       add(
         "info",
         "accept-unneeded",
-        `the accepted mismatch is now within ${MISMATCH * 100} %`,
+        `the accepted mismatch is now within ${tolerance * 100} %`,
         li.files,
         li.id,
         field,
       );
     }
-    if (field === "area_mm2" && s.fidelity === "traced" && Math.abs(diff) > TRACED_AREA) {
+    // A trace beyond its tolerance is not accepted at all: an override cannot keep it (§3.5).
+    if (s.fidelity === "traced" && Math.abs(diff) > tolerance) {
+      const area = field === "area_mm2" || field === "mass_kg_per_m";
       add(
         "error",
-        "traced-area",
-        `a traced outline must be within ${TRACED_AREA * 100} % of the published area; it is ${(diff * 100).toFixed(2)} % off`,
+        area ? "traced-area" : "traced-inertia",
+        `a traced outline must be within ${tolerance * 100} % of the published ${area ? (field === "area_mm2" ? "area" : "mass") : field}; it is ${(diff * 100).toFixed(2)} % off`,
         [ls.file],
         li.id,
         field,

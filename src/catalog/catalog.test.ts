@@ -440,6 +440,48 @@ describe("computed against published (design §3.6)", () => {
     const { report } = await checkTest(root);
     expect(codes({ report })).toEqual(["mismatch", "traced-area"]);
   });
+
+  it("judges a traced outline by its own tolerance: 2 % of the area and mass, 4 % of the inertias (2.3)", async () => {
+    const root = await fixtureCopy();
+    const traced = join(root, "test/sections/PF40-T.json");
+    await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), traced);
+    await patchJson(traced, (d) => {
+      d.id = "PF40-T";
+      d.fidelity = "traced";
+      for (const g of d.grooves as { type: string }[]) g.type = "c8";
+    });
+    // The outline gives 553.5 mm², 1.4945 kg/m and Ix 91 300 mm⁴: 1.6 %, 1.7 % and 3.8 % over these.
+    await patchJson(join(root, "test/catalog.json"), (d) => {
+      Object.assign(at(d, "items", "TS40E"), {
+        section: "PF40-T",
+        area_mm2: 545,
+        mass_kg_per_m: 1.47,
+        Ix_mm4: 88000,
+      });
+    });
+    const within = await checkTest(root);
+    expect(codes(within)).toEqual([]);
+    const rows = within.report.rows.filter((r) => r.item === "test:TS40E");
+    for (const f of ["area_mm2", "mass_kg_per_m", "Ix_mm4"]) {
+      expect(rows.find((r) => r.field === f)?.status, f).toBe("ok");
+    }
+    // The same outline as an exact one is held to 1 %.
+    await patchJson(traced, (d) => {
+      d.fidelity = "exact";
+    });
+    const exact = await checkTest(root);
+    expect(
+      exact.report.diagnostics.filter((d) => d.code === "mismatch").map((d) => d.field),
+    ).toEqual(expect.arrayContaining(["area_mm2", "mass_kg_per_m", "Ix_mm4"]));
+    // Traced again, an inertia beyond 4 % is refused, whatever an override says.
+    await patchJson(traced, (d) => {
+      d.fidelity = "traced";
+    });
+    await patchJson(join(root, "test/catalog.json"), (d) => {
+      at(d, "items", "TS40E").Ix_mm4 = 86000;
+    });
+    expect(codes(await checkTest(root))).toEqual(["mismatch", "traced-inertia"]);
+  });
 });
 
 describe("a drawn section's cores (§3.5, §5.5)", () => {

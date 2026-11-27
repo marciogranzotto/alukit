@@ -36,25 +36,74 @@ describe("the built-in catalogs", () => {
 });
 
 describe("Forseti (design §12, M2a done-when)", () => {
-  it("passes the eight vector outlines within 1 %, or names the mismatch accepted", async () => {
+  it("passes the nine vector outlines within 1 %, or names the mismatch accepted", async () => {
     const { report, set } = await check("forseti");
     const exact = [...(set.catalogs.get("forseti")?.sections.values() ?? [])]
       .filter((s) => s.section.fidelity === "exact")
       .map((s) => `forseti:${s.id}`)
       .sort();
+    // PF20-11's page draws it as a vector path too (p. 10), where M2b read a raster image.
     expect(exact).toEqual(
-      ["PF20-14", "PF30-02", "PF30-04", "PF40-00", "PF40-01", "PF40-03", "PF45-02", "PF45-12"].map(
-        (s) => `forseti:${s}`,
-      ),
+      [
+        "PF20-11",
+        "PF20-14",
+        "PF30-02",
+        "PF30-04",
+        "PF40-00",
+        "PF40-01",
+        "PF40-03",
+        "PF45-02",
+        "PF45-12",
+      ].map((s) => `forseti:${s}`),
     );
     const rows = report.rows.filter((r) => exact.includes(r.section) && r.status !== "computed");
-    expect(rows.length).toBeGreaterThanOrEqual(8 * 4);
+    expect(rows.length).toBeGreaterThanOrEqual(9 * 4);
     for (const r of rows) expect(["ok", "accepted"], `${r.item} ${r.field}`).toContain(r.status);
-    // The accepted ones are the two the catalogue's drawings and tables disagree on.
+    // The accepted ones are those the catalogue's drawings and tables disagree on: PF20-11's
+    // printed mass is not its printed area's, and its inertias are 1.4 % over the printed.
     expect([...new Set(rows.filter((r) => r.status === "accepted").map((r) => r.item))]).toEqual([
+      "forseti:PF20-11",
       "forseti:PF20-14",
       "forseti:PF40-00",
     ]);
+  });
+
+  it("holds the eight traced outlines within 2 % of the published area and 4 % of the inertias (§3.5)", async () => {
+    const { report, set } = await check("forseti");
+    const traced = [...(set.catalogs.get("forseti")?.sections.values() ?? [])].filter(
+      (s) => s.section.fidelity === "traced",
+    );
+    expect(traced.map((s) => s.id).sort()).toEqual([
+      "PF20-21",
+      "PF30-01",
+      "PF30-01F",
+      "PF30-11",
+      "PF40-02",
+      "PF45-01",
+      "PF45-11",
+      "PF50-01",
+    ]);
+    for (const ls of traced) {
+      const s = ls.section;
+      if (s.fidelity !== "traced") continue;
+      expect(s.props_ok, ls.id).toBe(true);
+      expect(s.from?.method, ls.id).toBe("raster");
+      // Each states its uncertainty and its errors against the published values.
+      expect(s.from?.note, ls.id).toMatch(/Edges ±\d\.\d{3} mm overall .* ±\d\.\d{2} mm locally/);
+      // The cores its page prints, snapped to the printed bores, and its own groove.
+      expect(s.cores?.length, ls.id).toBeGreaterThan(0);
+      expect(s.groove_dims, ls.id).toBeDefined();
+    }
+    const rows = report.rows.filter(
+      (r) => r.fidelity === "traced" && r.status !== "computed" && !r.field.startsWith("W"),
+    );
+    // Seven have a printed table (area, Ix, Iy, mass); the 50x50 the shop's mass.
+    expect(rows).toHaveLength(7 * 4 + 1);
+    for (const r of rows) {
+      expect(r.status, `${r.item} ${r.field}`).toBe("ok");
+      const tol = r.field === "area_mm2" || r.field === "mass_kg_per_m" ? 0.02 : 0.04;
+      expect(Math.abs(r.diff ?? 1), `${r.item} ${r.field}`).toBeLessThanOrEqual(tol);
+    }
   });
 
   it("gives every item an offer with regular and sale prices and a read date, and every bar a section", async () => {
@@ -90,6 +139,11 @@ describe("Forseti (design §12, M2a done-when)", () => {
     // p. 17: IY 6,55 cm⁴ printed for the strong axis, read as 65,5; IX 17,76 about the weak one.
     expect(v(pf4080.Ix_mm4)).toBe(655000);
     expect(v(pf4080.Iy_mm4)).toBe(177600);
+    // p. 13 prints the face-plate 30x30's IX 2,58 and IY 2,82: the catalogue's IX is the weak
+    // axis, and its traced outline is weaker about y (the plate stiffens it about x).
+    const face = item("PF30-01F");
+    if (face?.kind !== "bar") throw new Error("PF30-01F is not a bar");
+    expect([v(face.Ix_mm4), v(face.Iy_mm4)]).toEqual([28200, 25800]);
   });
 });
 
@@ -161,7 +215,9 @@ describe("Forseti (design §12, M2b done-when)", () => {
       expect(f, stem).toMatch(/^(exact|traced|parametric|box)$/);
       fidelity[f ?? "none"] = (fidelity[f ?? "none"] ?? 0) + 1;
     }
-    expect(fidelity).toEqual({ exact: 8, parametric: 19 });
+    // 9 exact (vector), 8 traced (raster), 10 parametric: five traces outside their tolerance, the
+    // 40x80C drawn as an outline-only line drawing, four stems the catalogue does not draw.
+    expect(fidelity).toEqual({ exact: 9, traced: 8, parametric: 10 });
   });
 
   it("covers the shop's kinds: real kinds where the data supports them, generic for the rest", async () => {

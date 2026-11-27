@@ -87,7 +87,19 @@
       "item": "PF20-11",
       "field": "mass_kg_per_m",
       "accept": true,
-      "why": "p. 10 prints 0,425 kg/m for an area of 1,64 cm², which at 2700 kg/m³ is 0.443, and the shop's description says 0,409. The section is an envelope (no outline to settle the area), so none of the three can be preferred; the printed value stands as the authority"
+      "why": "p. 10 prints 0,425 kg/m for an area of 1,64 cm², which at 2700 kg/m³ is 0.443, and the shop's description says 0,409. The vector outline on p. 10 (165.0 mm²) agrees with the printed area within 0.6 %, so the printed mass is the odd one; it stands as the authority, as the profile's mass did before the outline was read"
+    },
+    {
+      "item": "PF20-11",
+      "field": "Ix_mm4",
+      "accept": true,
+      "why": "the vector outline on p. 10 gives 1.4 % more than the printed 0,67 cm⁴ about either axis, with its area 0.6 % over the printed 1,64 cm²; the page's drawing and its table disagree by that much, and the printed value stands as the authority"
+    },
+    {
+      "item": "PF20-11",
+      "field": "Iy_mm4",
+      "accept": true,
+      "why": "with Ix_mm4: the outline is symmetric"
     }
   ]
 }

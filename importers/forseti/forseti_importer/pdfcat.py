@@ -195,7 +195,7 @@ class GrooveDims:
 
 
 def measure_groove(outline: g.Ring, holes: list[g.Ring], w: float, h: float, face: str,
-                   at_mm: float) -> GrooveDims:
+                   at_mm: float, start_mm: float = STEP_MM) -> GrooveDims:
     """A T-slot groove's envelope, measured on an exact outline along the groove's centre line:
     the empty width at each depth from the face inward, sampled every STEP_MM until the centre
     line meets material (the depth). The chamber is the run of widths within CHAMBER_TOL_MM of the
@@ -205,11 +205,12 @@ def measure_groove(outline: g.Ring, holes: list[g.Ring], w: float, h: float, fac
     underside, the material beside the opening may end before the chamber's wall: the lip is a
     hook, and the chamber rises toward the face beyond it. The hook is the width over both hooks'
     ends and the wall the depth the rise ends at, down the middle of each rise (averaged over the
-    two sides)."""
+    two sides). A traced outline's face is only as straight as its image's pixels, so sampling may
+    start `start_mm` inside it; the opening is still the narrowest width above the lip."""
     f = _face_frame(face, w, h)
     rings = [[f(x, y) for x, y in r] for r in [outline, *holes]]
     widths: list[tuple[float, float]] = []
-    v = STEP_MM
+    v = start_mm
     while True:
         gap = g.gap_at(rings, v, at_mm)
         if gap is None or gap == float("inf"):

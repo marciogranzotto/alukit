@@ -8802,8 +8802,8 @@
       "system": "s30-c8",
       "mass_kg_per_m": 0.803,
       "area_mm2": 297,
-      "Ix_mm4": 25800,
-      "Iy_mm4": 28200,
+      "Ix_mm4": 28200,
+      "Iy_mm4": 25800,
       "core": { "bore_mm": 12.1, "tap": "M14" },
       "options": { "finish": ["anodised"] },
       "prov": { "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p13", "read": "2026-11-26" }

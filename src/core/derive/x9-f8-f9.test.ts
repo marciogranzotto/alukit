@@ -235,8 +235,9 @@ describe("a head on the lips' underside (F8) and a profile's own groove (F9)", (
     };
     // The 40x40 básico is the groove type's source: its own outline is the type.
     expect(pick("PF40-01")).toEqual([8.18, 3.79, 9.99, 22.01, 13.59, 1.8, undefined]);
-    // The 40x80: p. 17 prints 8,1, 4, 10 and 22; the hooks and the wall read off its image.
-    expect(pick("PF40-02")).toEqual([8.1, 4, 10, 22, 14.3, 1.9, undefined]);
+    // The 40x80: p. 17 prints 8,1, 4, 10 and 22; the hooks and the wall measured on its traced
+    // outline (F9 read 14.3 and 1.9 off the same image).
+    expect(pick("PF40-02")).toEqual([8.1, 4, 10, 22, 14.33, 1.85, undefined]);
     // The 80x80 básico: p. 20 prints 4, 10 and 22; the opening read.
     expect(pick("PF40-03B")).toEqual([8.2, 4, 10, 22, 13.9, 2.6, undefined]);
     // The 80x80 reforçado's vector outline: its own groove measured, its lips with no hook.
