@@ -66,8 +66,11 @@ describe("the skill's worked example, run as written", () => {
     ]);
   });
 
-  const pieces = (args: string[]) => {
-    const cl = JSON.parse(alukit(dir, ["cutlist", "table", "--format", "json", ...args]).out);
+  // The example's own commands run above as processes, as written. The probes below only read
+  // what they built, so they run the same CLI in-process: process start-up isn't what they test.
+  const pieces = async (args: string[]) => {
+    const r = await capture(["cutlist", join(dir, "table"), "--format", "json", ...args]);
+    const cl = JSON.parse(r.out);
     const out: Record<string, number> = {};
     for (const g of cl.groups) {
       expect(g.item).toBe("forseti:PF40-01");
@@ -76,10 +79,12 @@ describe("the skill's worked example, run as written", () => {
     return out;
   };
 
-  it("gives the cut lists, the check and the verification the skill states", () => {
-    expect(pieces([])).toEqual({ "750.00": 4, "920.00": 2, "520.00": 2 });
-    expect(pieces(["--variant", "tall"])).toEqual({ "900.00": 4, "920.00": 4, "520.00": 2 });
-    const check = JSON.parse(alukit(dir, ["check", "table", "--variant", "tall", "--json"]).out);
+  it("gives the cut lists, the check and the verification the skill states", async () => {
+    expect(await pieces([])).toEqual({ "750.00": 4, "920.00": 2, "520.00": 2 });
+    expect(await pieces(["--variant", "tall"])).toEqual({ "900.00": 4, "920.00": 4, "520.00": 2 });
+    const check = JSON.parse(
+      (await capture(["check", join(dir, "table"), "--variant", "tall", "--json"])).out,
+    );
     expect(check.ok).toBe(true);
     expect(check.checks).toEqual([expect.objectContaining({ id: "C1", pass: true, margin: 100 })]);
     const verify = runs.find((r) => r.args[0] === "revision" && r.args[1] === "verify");
