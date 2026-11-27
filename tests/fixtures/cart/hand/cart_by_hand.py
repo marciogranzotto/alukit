@@ -1201,7 +1201,52 @@ for e in order_lines:
     age = (datetime.date.fromisoformat(AS_OF) - datetime.date.fromisoformat(offer[6])).days
     if age > 30:
         reason(e["supplier"], "stale-price", "warn", f"{offer[0]}: price read {offer[6]}, {age} days before {AS_OF}", [line["item"]])
-RULES = ["check-error", "open-item", "placeholder", "missing-price", "est-price", "out-of-stock", "option-not-sold", "stale-price"]
+
+# Butts that name no connector (docs/ux/review-phase4.md B1): the cart names no default butt
+# connector, and every butt but the end plate's (c33, test-geo:PLT-8) names none of its own, so
+# nothing is bought to join their ends. The check notes it, and the order rule no-connector warns
+# in the same words, for the suppliers of the bars the butts join: each one's through bar and its
+# butting ends' bars.
+UNJOINED = {
+    "c1": ("b5", ["b1", "b2", "b7", "b8"]),
+    "c2": ("b6", ["b3", "b4", "b7", "b8"]),
+    "c5": ("b1", ["b9"]),
+    "c6": ("b2", ["b9"]),
+    "c7": ("b3", ["b10"]),
+    "c8": ("b4", ["b10"]),
+    "c10": ("b7", ["b11"]),
+    "c11": ("b8", ["b12"]),
+    "c12": ("b12", ["b13"]),
+    "c21": ("b9", ["b18"]),
+    "c22": ("b10", ["b18"]),
+    "c26": ("b9", ["b26"]),
+    "c27": ("b10", ["b26"]),
+    "c28": ("b5", ["b27", "b28"]),
+    "c29": ("b6", ["b29", "b30"]),
+    "c30": ("b7", ["b27", "b29"]),
+    "c31": ("b8", ["b28", "b30"]),
+    "c32": ("b2", ["b31"]),
+}
+unjoined = sorted(UNJOINED, key=id_key)
+UNJOINED_MESSAGE = (
+    f"{len(unjoined)} butts name no connector, and the project names no default butt connector: "
+    f"the order buys nothing to join them ({', '.join(unjoined[:3])} and {len(unjoined) - 3} more)"
+)
+joined_bars = {b for through, ends in UNJOINED.values() for b in [through, *ends]}
+for s in sorted({e["supplier"] for e in order_lines if e["sources"] & joined_bars}, key=lambda s: (s is None, s or "")):
+    reason(s, "no-connector", "warn", UNJOINED_MESSAGE, unjoined)
+# The check notes each butt on its own, in the same words.
+UNJOINED_NOTES = [
+    {
+        "severity": "info",
+        "code": "butt-no-connector",
+        "entity": c,
+        "message": f"{c} names no connector, and the project names no default butt connector: the order buys nothing to join its ends",
+    }
+    for c in unjoined
+]
+RULES = ["check-error", "open-item", "placeholder", "missing-price", "est-price", "out-of-stock", "option-not-sold", "stale-price", "no-connector"]
+WARN_RULES = {"stale-price", "no-connector"}
 
 # Lines in a group: bars, connectors, fasteners, carriages, …, generic, then the project's own
 # plates, bent angles and placeholders; by item, offer, longest.
@@ -1287,7 +1332,7 @@ order_out = {
     "as_of": AS_OF,
     "oldest_read": min(e["line"]["read"] for e in order_lines if "read" in e["line"]),
     "status": "BLOCKED" if any(s["status"] == "BLOCKED" for s in supplier_out) else "READY",
-    "rules": {r: ("warn" if r == "stale-price" else "block") for r in RULES},
+    "rules": {r: ("warn" if r in WARN_RULES else "block") for r in RULES},
     "suppliers": supplier_out,
     "costs": costs_out,
     "totals": {
@@ -1301,7 +1346,10 @@ order_out = {
         "share": share,
         "unpriced": sum(1 for e in order_lines if e.get("missing")),
     },
-    "diagnostics": SEATS,
+    # The order carries the check's notes too, by severity, then entity: the butts' notes come
+    # after the warnings, among the infos on c23 and c35.
+    "diagnostics": [d for d in SEATS if d["severity"] == "warn"]
+    + sorted([d for d in SEATS if d["severity"] == "info"] + UNJOINED_NOTES, key=lambda d: (id_key(d["entity"]), d["code"])),
 }
 
 

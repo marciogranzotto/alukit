@@ -81,6 +81,21 @@ export function Outline() {
   const problems = problemsByEntity(problemList.value?.answer.problems ?? []);
   const sel = selection.value;
   const newBy = marks.value;
+  // Several new rows in one group: one mark on its head (review p3), a quiet edge on each row.
+  const headMarks = new Map<string, string>();
+  const quiet = new Set<string>();
+  const markGroups = (gs: readonly Group[]) => {
+    for (const g of gs) {
+      const made = g.rows.filter((r) => newBy.has(r.id));
+      if (made.length > 1) {
+        const by = new Set(made.map((r) => newBy.get(r.id)));
+        headMarks.set(g.key, `${made.length} new · ${by.size === 1 ? [...by][0] : "others"}`);
+        for (const r of made) quiet.add(r.id);
+      }
+      if (g.groups) markGroups(g.groups);
+    }
+  };
+  markGroups(groups);
 
   const setOpen = (g: Group, open: boolean) => {
     if (isTop(g)) {
@@ -238,6 +253,11 @@ export function Outline() {
                     </span>
                   )}
                   <span class="title">{g.title}</span>
+                  {headMarks.has(g.key) && (
+                    <span class="new-mark" data-testid="new-mark">
+                      {headMarks.get(g.key)}
+                    </span>
+                  )}
                   {!g.ref && <span class="count">{count}</span>}
                 </div>
               );
@@ -256,7 +276,7 @@ export function Outline() {
                 onKeyDown={onKeyDown}
                 aria-level={it.level}
                 aria-selected={selected}
-                class={`row level-${it.level}${selected ? " selected" : ""}${r.copy ? " copy" : ""}${revealed === it.key ? " revealed" : ""}`}
+                class={`row level-${it.level}${selected ? " selected" : ""}${r.copy ? " copy" : ""}${by ? " new" : ""}${revealed === it.key ? " revealed" : ""}`}
                 onClick={(e) => {
                   setFocusKey(it.key);
                   select([r.id], e.ctrlKey || e.metaKey ? "toggle" : "replace");
@@ -269,8 +289,11 @@ export function Outline() {
                 }}
               >
                 <span class="id">{r.id}</span>
-                <span class="text">{r.text}</span>
-                {by && (
+                <span class="text" title={r.title}>
+                  {r.text}
+                </span>
+                {r.figure && <span class="figure">{r.figure}</span>}
+                {by && !quiet.has(r.id) && (
                   <span class="new-mark" data-testid="new-mark">
                     new · {by}
                   </span>

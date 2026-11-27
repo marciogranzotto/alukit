@@ -1,21 +1,41 @@
 import { useEffect, useState } from "preact/hooks";
 import type { CornerRule } from "#core/project/schema.ts";
 import type { V3 } from "../../../mesh/model.ts";
+import { cardOf, openCatalog } from "../../catalog/state.ts";
 import { dryRun } from "../../client/dryrun.ts";
+import { ConnectorSelect, connectorLabel, useConnectors } from "../../common/ConnectorSelect.tsx";
 import { Errors } from "../../Feedback.tsx";
 import { optionsText } from "../../options.ts";
 import { palette } from "../../palette.ts";
-import { frameWay } from "../../shell/start.ts";
+import { type FrameProfile, frameWay } from "../../shell/start.ts";
 import { busy, type CommandOutcome, model, sendCommands } from "../../store.ts";
-import { frameCommand } from "../commands.ts";
-import { CORNER_RULES, CORNER_WORDS, frameDraft, frameOptions, lastResult } from "../state.ts";
+import { frameBatch } from "../commands.ts";
+import {
+  activeTool,
+  CORNER_RULES,
+  CORNER_WORDS,
+  type FrameDraft,
+  frameDraft,
+  frameNumbers,
+  frameOptions,
+  frameStage,
+  JOIN_NONE,
+  lastResult,
+  typed,
+} from "../state.ts";
+import { parseTyped } from "../typed.ts";
 
 /**
- * The box frame's form (S5.7, D-UX-8): the corner, W, D and H (expressions with params), the
- * rings and a shelf, the corner rule, the connector and the params switch; the frame's numbers
- * from a dry run of the `addFrame` it would send; one step. The box frame tool shows it above the
- * inspector, sharing its draft with the gesture (a click or a typed value fills a field), and the
- * start card shows it as its first way in (`frameWay`). Owner: S5.
+ * The box frame's form (S5.7, D-UX-8): W, D and H (expressions with params), how the corners are
+ * joined, and under More options the corner, the rings, a shelf, the corner rule and the params
+ * switch; the frame's numbers from a dry run of the step it would send; one step. The box frame
+ * tool shows it above the inspector, sharing its draft with the gesture: a click fills a field,
+ * and what is typed in the command bar shows in the fields as it is typed (review M6). The start
+ * card shows it as its first way in (`frameWay`), with the profile its first step chose. Owner: S5.
+ *
+ * Joined with (docs/ux/review-phase4.md B1): the connectors that fit the frame's bar, or nothing,
+ * said so. With no project default yet it must be chosen, and the connector chosen becomes the
+ * project's default butt connector in the same step.
  */
 
 /** How long the form waits after a change before it asks for the numbers: a dry run. */
@@ -29,6 +49,8 @@ interface FrameInfo {
   rings?: Partial<Record<"base" | "shelf" | "top", string[]>>;
   connections?: string[];
 }
+
+type Batch = ReturnType<typeof frameBatch>;
 
 /** Cut lengths of a group of bars, as "4 × 800" or "2 × 1000, 2 × 520". */
 function cuts(ids: readonly string[], added: Readonly<Record<string, number>>): string {
@@ -45,23 +67,23 @@ function cuts(ids: readonly string[], added: Readonly<Record<string, number>>): 
 
 const RING_WORDS = { base: "base ring", shelf: "shelf ring", top: "top ring" } as const;
 
-/** The form's numbers: the dry run of the frame as it stands, asked after a pause. */
-function useNumbers(key: string, cmd: ReturnType<typeof frameCommand>): Numbers {
+/** The form's numbers: the dry run of the frame's step as it stands, asked after a pause. */
+function useNumbers(key: string, batch: Batch): Numbers {
   const [numbers, setNumbers] = useState<Numbers>(undefined);
   useEffect(() => {
-    if ("why" in cmd) {
+    if ("why" in batch) {
       setNumbers(undefined);
       return;
     }
     let live = true;
     const timer = setTimeout(async () => {
-      const r = await dryRun([cmd]);
+      const r = await dryRun(batch.commands);
       if (!live) return;
       if (!r.ok) setNumbers({ why: r.why });
       else if (!r.value.ok)
         setNumbers({ why: r.value.errors.map((e) => e.message).join("; ") || r.value.why });
       else {
-        const info = (r.value.results[0]?.info ?? {}) as FrameInfo;
+        const info = (r.value.results.at(-1)?.info ?? {}) as FrameInfo;
         const added = r.value.effects.added;
         const lines = [
           ...(info.posts ? [`posts ${cuts(info.posts, added)}`] : []),
@@ -87,19 +109,88 @@ function useNumbers(key: string, cmd: ReturnType<typeof frameCommand>): Numbers 
   return numbers;
 }
 
-export function FrameForm({ onDone }: { onDone?: () => void }) {
+/** A bar item's system, as its catalog card gives it: what the frame's connectors must fit. */
+function useSystem(item: string | undefined): string | undefined {
+  const [system, setSystem] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    setSystem(undefined);
+    if (!item) return;
+    let live = true;
+    cardOf(item).then(
+      (c) => live && setSystem(c.entry.system),
+      () => live && setSystem(undefined),
+    );
+    return () => {
+      live = false;
+    };
+  }, [item]);
+  return system;
+}
+
+/**
+ * The draft as the form shows it: while the box frame tool is on, what is typed in the command
+ * bar for the value it asks next, before Enter (review M6), so the fields and the numbers follow
+ * the typing. The draft itself changes on Enter or a click, as the gesture's stages need.
+ */
+export function liveDraft(d: FrameDraft, params: Readonly<Record<string, number>>): FrameDraft {
+  if (activeTool.value !== "frame") return d;
+  const t = parseTyped(typed.value, params);
+  const stage = frameStage(d);
+  if (stage === "size" && t.kind === "list" && t.items.length === 2) {
+    const [w, dd] = t.items;
+    return { ...d, w: w ? String(w.written) : d.w, d: dd ? String(dd.written) : d.d };
+  }
+  if (stage === "height" && t.kind === "value") return { ...d, h: String(t.written) };
+  return d;
+}
+
+export function FrameForm({
+  onDone,
+  profile,
+}: {
+  onDone?: () => void;
+  /**
+   * The start card's profile (review M1): the frame is made of it, and it becomes the project's
+   * default bar in the same step; `null` while the card's first step has none. Absent in the box
+   * frame tool, which draws with the palette's bar, else the project's default.
+   */
+  profile?: FrameProfile | null;
+}) {
   const m = model.value;
-  const d = frameDraft.value;
+  const params = m?.derived.params ?? {};
+  const d = liveDraft(frameDraft.value, params);
   const o = frameOptions.value;
-  const bar = palette.value.bar;
+  const inCard = profile !== undefined;
+  const bar = inCard ? undefined : palette.value.bar;
   const defaultBar =
     (m?.defaults.bar as { item?: unknown; opt?: Record<string, string> } | undefined) ?? undefined;
   const hasDefault = typeof defaultBar?.item === "string";
+  const butt = m?.defaults.butt as { connector?: unknown; qty?: unknown } | undefined;
+  const defaultButt = typeof butt?.connector === "string" ? butt.connector : undefined;
+  const item = inCard
+    ? profile?.item
+    : (bar?.id ?? (hasDefault ? String(defaultBar?.item) : undefined));
+  const system = useSystem(item);
+  const systems = system ? [system] : [];
+  const connectors = useConnectors(systems);
   const at: V3 = d.at ?? [0, 0, 0];
-  const cmd = frameCommand({ ...d, at }, o, bar, hasDefault, m?.derived.params ?? {});
-  const numbers = useNumbers(JSON.stringify(cmd), cmd);
+  const project = { hasDefaultBar: hasDefault, defaultButt };
+  const batch: Batch =
+    inCard && !profile
+      ? { why: "pick a profile above" }
+      : frameBatch({ ...d, at }, o, bar, project, params, profile?.patch);
+  const numbers = useNumbers(JSON.stringify(batch), batch);
+  // The panel's numbers are the command bar's too, while the frame tool draws (review m9).
+  useEffect(() => {
+    if (inCard) return;
+    frameNumbers.value =
+      numbers && "lines" in numbers ? numbers.lines.slice(0, -1).join(" · ") : undefined;
+    return () => {
+      frameNumbers.value = undefined;
+    };
+  }, [numbers, inCard]);
   const [outcome, setOutcome] = useState<CommandOutcome | undefined>(undefined);
-  const setDraft = (next: Partial<typeof d>) => {
+  const setDraft = (next: Partial<FrameDraft>) => {
     frameDraft.value = { ...frameDraft.value, ...next };
   };
   const setOptions = (next: Partial<typeof o>) => {
@@ -119,8 +210,8 @@ export function FrameForm({ onDone }: { onDone?: () => void }) {
     </label>
   );
   const create = async () => {
-    if ("why" in cmd) return;
-    const r = await sendCommands([cmd], "box frame", { inline: true });
+    if ("why" in batch) return;
+    const r = await sendCommands(batch.commands, "box frame", { inline: true });
     setOutcome(r);
     if (r.ok) {
       lastResult.value = { rev: r.rev, created: r.created };
@@ -128,7 +219,20 @@ export function FrameForm({ onDone }: { onDone?: () => void }) {
       onDone?.();
     }
   };
-  const profile = bar
+  const chosenName = (() => {
+    const e = [...connectors.fit, ...connectors.other].find((x) => x.id === defaultButt);
+    return e ? connectorLabel(e) : defaultButt;
+  })();
+  // "Nothing" only while the project names no default: a butt that names no connector takes the
+  // default (derive's `connector ?? defaults.butt.connector`), so with one it cannot be honoured.
+  const joint = defaultButt && o.joint === JOIN_NONE ? "" : o.joint;
+  const lead = defaultButt
+    ? [{ value: "", label: `the project's default: ${chosenName}` }]
+    : [
+        { value: "", label: "Choose how the corners are joined…" },
+        { value: JOIN_NONE, label: "Nothing: I will join them myself" },
+      ];
+  const profileText = bar
     ? `${bar.name}${bar.opt ? ` ${optionsText(bar.opt)}` : ""}`
     : hasDefault
       ? `${String(defaultBar?.item)}${defaultBar?.opt ? ` ${optionsText(defaultBar.opt)}` : ""}, the project's default`
@@ -142,103 +246,136 @@ export function FrameForm({ onDone }: { onDone?: () => void }) {
         void create();
       }}
     >
-      <p class={profile ? "frame-profile" : "frame-profile warn"} data-testid="frame-profile">
-        {profile
-          ? `In ${profile}`
-          : "Choose the frame's profile first: arm a bar in the parts bin."}
-      </p>
+      {!inCard && (
+        <p class="frame-profile" data-testid="frame-profile">
+          <span class="sub">Profile:</span> {profileText ?? "none yet"}{" "}
+          <button type="button" class="link" onClick={openCatalog}>
+            {profileText ? "Change" : "Choose one"}
+          </button>
+        </p>
+      )}
       <div class="tp-row">
         {text("w", "W", "The outside width, along X: an expression with params, 1.2m, …")}
         {text("d", "D", "The outside depth, along Y")}
         {text("h", "H", "The outside height, along Z")}
       </div>
-      <div class="tp-row">
-        <span>corner at</span>
-        {([0, 1, 2] as const).map((i) => (
-          <input
-            key={i}
-            class="frame-at"
-            data-testid={`frame-at-${"xyz"[i]}`}
-            aria-label={`corner ${"xyz"[i]}`}
-            inputMode="decimal"
-            value={at[i]}
-            onInput={(e) => {
-              const v = Number((e.currentTarget as HTMLInputElement).value);
-              if (!Number.isFinite(v)) return;
-              const next: [number, number, number] = [at[0], at[1], at[2]];
-              next[i] = v;
-              setDraft({ at: next });
-            }}
-          />
-        ))}
+      <div class="tp-row frame-joint">
+        <label for="frame-joint">Joined with</label>
+        <ConnectorSelect
+          id="frame-joint"
+          testid="frame-joint"
+          label="How the frame's corners are joined: a connector that fits the bar, or nothing"
+          value={joint}
+          systems={systems}
+          lead={lead}
+          disabled={busy.value}
+          onChange={(v) => setOptions({ joint: v })}
+        />
+        {joint !== JOIN_NONE && (joint !== "" || defaultButt) && (
+          <label title="Connectors at each butting end">
+            ×{" "}
+            <input
+              class="frame-qty"
+              data-testid="frame-qty"
+              inputMode="numeric"
+              size={2}
+              placeholder={typeof butt?.qty === "number" && o.joint === "" ? String(butt.qty) : "1"}
+              value={o.qty}
+              onInput={(e) => setOptions({ qty: (e.currentTarget as HTMLInputElement).value })}
+            />{" "}
+            per end
+          </label>
+        )}
       </div>
-      <div class="tp-row">
-        <label>
-          <input
-            type="checkbox"
-            checked={o.rings.base}
-            onChange={() => setOptions({ rings: { ...o.rings, base: !o.rings.base } })}
-          />{" "}
-          base ring
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={o.rings.top}
-            onChange={() => setOptions({ rings: { ...o.rings, top: !o.rings.top } })}
-          />{" "}
-          top ring
-        </label>
-        <label title="A shelf ring, its top face this high above the base">
-          shelf at{" "}
-          <input
-            data-testid="frame-shelf"
-            inputMode="decimal"
-            placeholder="none"
-            value={o.shelf}
-            onInput={(e) => setOptions({ shelf: (e.currentTarget as HTMLInputElement).value })}
-          />
-        </label>
-      </div>
-      <div class="tp-row">
-        <label>
-          corners{" "}
-          <select
-            value={o.corner ?? ""}
-            onChange={(e) => {
-              const v = (e.currentTarget as HTMLSelectElement).value;
-              setOptions({ corner: v === "" ? undefined : (v as CornerRule) });
-            }}
-          >
-            <option value="">the project's rule</option>
-            {CORNER_RULES.map((r) => (
-              <option key={r} value={r}>
-                {CORNER_WORDS[r]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label title="Each butt's connector: an item id; the project's default butt when empty">
-          connector{" "}
-          <input
-            data-testid="frame-connector"
-            placeholder="the default"
-            value={o.connector}
-            onInput={(e) => setOptions({ connector: (e.currentTarget as HTMLInputElement).value })}
-          />
-        </label>
-        <label title="Write W, D and H as params, and the frame's points from them">
-          <input
-            type="checkbox"
-            checked={o.params}
-            onChange={() => setOptions({ params: !o.params })}
-          />{" "}
-          as params
-        </label>
-      </div>
+      <details class="frame-more">
+        <summary>More options</summary>
+        <div class="tp-row">
+          <span>corner at</span>
+          {([0, 1, 2] as const).map((i) => (
+            <label key={i} class="frame-at-field">
+              <span class="frame-axis" aria-hidden="true">
+                {"xyz"[i]}
+              </span>
+              <input
+                class="frame-at"
+                data-testid={`frame-at-${"xyz"[i]}`}
+                aria-label={`corner ${"xyz"[i]}`}
+                inputMode="decimal"
+                value={at[i]}
+                onInput={(e) => {
+                  const v = Number((e.currentTarget as HTMLInputElement).value);
+                  if (!Number.isFinite(v)) return;
+                  const next: [number, number, number] = [at[0], at[1], at[2]];
+                  next[i] = v;
+                  setDraft({ at: next });
+                }}
+              />
+            </label>
+          ))}
+        </div>
+        <div class="tp-row">
+          <label>
+            <input
+              type="checkbox"
+              data-testid="frame-base"
+              checked={o.rings.base}
+              onChange={() => setOptions({ rings: { ...o.rings, base: !o.rings.base } })}
+            />{" "}
+            base ring
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              data-testid="frame-top"
+              checked={o.rings.top}
+              onChange={() => setOptions({ rings: { ...o.rings, top: !o.rings.top } })}
+            />{" "}
+            top ring
+          </label>
+          <label title="A shelf ring, its top face this high above the base">
+            shelf at{" "}
+            <input
+              data-testid="frame-shelf"
+              inputMode="decimal"
+              placeholder="none"
+              value={o.shelf}
+              onInput={(e) => setOptions({ shelf: (e.currentTarget as HTMLInputElement).value })}
+            />
+          </label>
+        </div>
+        <div class="tp-row">
+          <label>
+            corners{" "}
+            <select
+              data-testid="frame-corner"
+              value={o.corner ?? ""}
+              onChange={(e) => {
+                const v = (e.currentTarget as HTMLSelectElement).value;
+                setOptions({ corner: v === "" ? undefined : (v as CornerRule) });
+              }}
+            >
+              <option value="">the project's rule</option>
+              {CORNER_RULES.map((r) => (
+                <option key={r} value={r}>
+                  {CORNER_WORDS[r]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label title="Write W, D and H as params, and the frame's points from them">
+            <input
+              type="checkbox"
+              data-testid="frame-params"
+              checked={o.params}
+              onChange={() => setOptions({ params: !o.params })}
+            />{" "}
+            as params
+          </label>
+        </div>
+      </details>
       <div class="frame-numbers" data-testid="frame-numbers" aria-live="polite">
-        {"why" in cmd ? (
-          <p class="hint-text">{cmd.why}</p>
+        {"why" in batch ? (
+          <p class="hint-text">{batch.why}</p>
         ) : numbers === undefined ? (
           <p class="hint-text">working out the cut lengths…</p>
         ) : "why" in numbers ? (
@@ -255,9 +392,10 @@ export function FrameForm({ onDone }: { onDone?: () => void }) {
         type="submit"
         class="btn primary"
         data-testid="frame-create"
-        disabled={"why" in cmd || busy.value || (numbers !== undefined && "why" in numbers)}
+        disabled={"why" in batch || busy.value || (numbers !== undefined && "why" in numbers)}
+        title={"why" in batch ? batch.why : undefined}
       >
-        Make the frame
+        {inCard ? "Make a box frame" : "Make the frame"}
       </button>
       <Errors outcome={outcome} />
     </form>

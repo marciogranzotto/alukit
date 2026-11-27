@@ -129,7 +129,140 @@ test("the example loads the skill's work table as one step", async ({ page }) =>
   expect(Object.keys((await doc()).bars ?? {})).toHaveLength(0);
 });
 
-test.fixme("the box frame way reads READY with the order's date pinned (S5.7's frame form)", () => {});
+interface OrderJson {
+  status: string;
+  oldest_read: string;
+  suppliers: { reasons: { rule: string }[] }[];
+  diagnostics: { code: string }[];
+}
+
+interface ProblemsJson {
+  problems: { code: string; group: string; from: string[] }[];
+}
+
+/** `alukit order --format json` on the served project, as of a date. */
+async function order(asOf?: string): Promise<OrderJson> {
+  const r = await cli([
+    "order",
+    served.dir,
+    "--format",
+    "json",
+    ...(asOf ? ["--as-of", asOf] : []),
+  ]);
+  return JSON.parse(r.out) as OrderJson;
+}
+
+/** `alukit problems --json` today: the readiness pill's warnings are its order-judged ones. */
+async function orderWarnings(): Promise<string[]> {
+  const r = await cli(["problems", served.dir, "--json"]);
+  return (JSON.parse(r.out) as ProblemsJson).problems
+    .filter((p) => p.from.includes("order") && p.group !== "blocks-order")
+    .map((p) => p.code);
+}
+
+/** The box frame from the start card, 1000 × 600 × 800 of the 40 × 40 size, joined as given. */
+async function boxFrame(page: Page, joint: string): Promise<void> {
+  await open(page);
+  const card = page.getByTestId("start-card");
+  // Step 1, shared by both ways (review M1): the size, and its commonest profile first (M8).
+  await card.locator('.profile-chip[data-size="40 × 40"]').click();
+  await expect(card.getByTestId("start-profile")).toHaveValue("forseti:PF40-01");
+  await expect(card.getByTestId("option-finish")).toHaveValue("anodised");
+  // Step 2: the frame, its corners joined with what fits the profile first (review B1).
+  const form = card.getByTestId("frame-form");
+  await form.getByTestId("frame-w").fill("1000");
+  await form.getByTestId("frame-d").fill("600");
+  await form.getByTestId("frame-h").fill("800");
+  const fits = form.locator('[data-testid="frame-joint"] optgroup[label="Fits these bars"] option');
+  await expect(fits.first()).toBeAttached();
+  await expect(fits.filter({ hasText: "CT38-06" })).toHaveCount(1);
+  await form.getByTestId("frame-joint").selectOption(joint);
+  await expect(form.getByTestId("frame-numbers")).toContainText("posts 4 × 800");
+  await form.getByTestId("frame-create").click();
+  await waitDrawn(page, 1);
+  await expect(card).toBeHidden();
+  // Made from the card, the frame shows its cut list: Select, and the sheets open (review m11).
+  expect(await page.evaluate(() => window.__alukit?.tool().name)).toBe("select");
+  expect(await logLength()).toBe(1);
+}
+
+test("the box frame way, joined with a bracket that fits, reads READY and buys the brackets", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await boxFrame(page, "forseti:CT38-06");
+  // One step: the profile and the connector became the project's defaults, with the frame.
+  expect((await doc()).defaults).toMatchObject({
+    bar: { item: "forseti:PF40-01", opt: { finish: "anodised" } },
+    butt: { connector: "forseti:CT38-06" },
+  });
+  // What the person sees: READY, and no warning about joining, as the CLI says today.
+  const pill = page.getByTestId("readiness");
+  await expect(pill).toHaveAttribute("data-status", "READY");
+  const warned = await orderWarnings();
+  expect(warned).not.toContain("butt-no-connector");
+  await expect(pill).toHaveAttribute("data-warnings", String(warned.length));
+  // The order is complete, its date pinned to the oldest price read: the brackets bought (16, as
+  // `alukit add frame --connector` buys them), and no rule judging the joints.
+  const pinned = (await order()).oldest_read;
+  const o = await order(pinned);
+  expect(o.status).toBe("READY");
+  expect(o.suppliers.flatMap((s) => s.reasons.map((r) => r.rule))).toEqual([]);
+  expect(o.diagnostics.map((d) => d.code)).not.toContain("butt-no-connector");
+  const text = (await cli(["order", served.dir, "--as-of", pinned])).out;
+  expect(text).toContain("16 forseti:CT38-06");
+  await page.getByRole("tab", { name: "Order & costs" }).click();
+  const sheet = page.getByTestId("order");
+  await sheet.getByTestId("as-of").fill(pinned);
+  await expect(sheet.getByTestId("verdict")).toHaveAttribute("data-status", "READY");
+  await expect(sheet.getByTestId("verdict")).toHaveAttribute("data-warnings", "0");
+  await sheet.getByRole("button", { name: /^Show \d+ lines$/ }).click();
+  await expect(sheet).toContainText("CT38-06");
+  expect(errors).toEqual([]);
+});
+
+test("the box frame way, joined with nothing, reads ready with a warning, and its fix joins it", async ({
+  page,
+}) => {
+  await boxFrame(page, "-");
+  expect((await doc()).defaults).not.toHaveProperty("butt");
+  // Never a plain READY while nothing joins the butts (review B1): the pill warns, and says why.
+  const pill = page.getByTestId("readiness");
+  await expect(pill).toHaveAttribute("data-status", "READY");
+  const warned = await orderWarnings();
+  expect(warned).toContain("butt-no-connector");
+  await expect(pill).toHaveAttribute("data-warnings", String(warned.length));
+  await expect(pill).toContainText(/Ready, \d+ warnings?/);
+  await expect(pill).toHaveAttribute("title", /no connector/);
+  // The order says the same, as the CLI does: the rule warns, the verdict asks to check first.
+  const pinned = (await order()).oldest_read;
+  const o = await order(pinned);
+  expect(o.status).toBe("READY");
+  expect(o.suppliers.flatMap((s) => s.reasons.map((r) => r.rule))).toContain("no-connector");
+  await page.getByRole("tab", { name: "Order & costs" }).click();
+  const sheet = page.getByTestId("order");
+  await sheet.getByTestId("as-of").fill(pinned);
+  const verdict = sheet.getByTestId("verdict");
+  await expect(verdict).toHaveAttribute("data-status", "READY");
+  await expect(verdict).toContainText("Ready, but check first");
+  await expect(sheet.getByTestId("verdict-warnings")).toContainText("no connector");
+
+  // The problem's fix: a connector, fit first, as the project's default butt connector, one step.
+  await page.getByRole("tab", { name: "Problems" }).click();
+  const row = page
+    .getByTestId("problems")
+    .locator('li.problem[data-problem^="butt-no-connector"]')
+    .first();
+  await row.getByRole("button", { name: "Set a connector for all 8…" }).click();
+  await row.getByTestId("connector-fix").selectOption("forseti:CT38-06");
+  await row.getByTestId("connector-apply").click();
+  await waitDrawn(page, 2);
+  expect((await doc()).defaults).toMatchObject({ butt: { connector: "forseti:CT38-06" } });
+  expect(await orderWarnings()).not.toContain("butt-no-connector");
+  await expect(pill).toHaveAttribute("data-warnings", String((await orderWarnings()).length));
+  expect((await cli(["order", served.dir, "--as-of", pinned])).out).toContain("16 forseti:CT38-06");
+});
 
 test("Esc closes the start card, and the help shows it again", async ({ page }) => {
   await open(page);

@@ -244,17 +244,26 @@ function ProjectMenu() {
 // ---------------------------------------------------------------------------------------------
 // The order's readiness (D-UX-3)
 
-/** The pill: always in sight; it opens Order & costs, where the blockers are listed. */
+/**
+ * The pill: always in sight; it opens Order & costs, whose verdict strip lists what holds the
+ * order or what it warns about. Ready with warnings shows in the warning's look, and its title
+ * names them (docs/ux/review-phase4.md B1).
+ */
 function ReadinessPill() {
   const r = readiness();
   if (!r) return null;
+  const why =
+    r.status === "READY" && r.warnings.length > 0
+      ? `. It can be sent, but check first: ${r.warnings.join("; ")}`
+      : "";
   return (
     <button
       type="button"
       class={`pill${r.stale ? " stale" : ""}`}
       data-testid="readiness"
       data-status={r.status}
-      title={`The order: ${r.text}${r.stale ? " (being checked again)" : ""}. Opens Order & costs`}
+      data-warnings={r.status === "READY" ? r.warnings.length : undefined}
+      title={`The order: ${r.text}${r.stale ? " (being checked again)" : ""}${why}. Opens Order & costs`}
       onClick={() => openSheet("order")}
     >
       {r.glyph && <StatusGlyph status={r.glyph} size={12} />}

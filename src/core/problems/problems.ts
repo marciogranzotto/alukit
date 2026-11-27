@@ -1,4 +1,5 @@
 import type { CheckOutput } from "../check/check.ts";
+import { buttSystems } from "../check/joints.ts";
 import { checkedOrder, type ModelOutputs } from "../check/outputs.ts";
 import { idList } from "../commands/words.ts";
 import { offerMatches } from "../cutlist/cutlist.ts";
@@ -115,13 +116,16 @@ export function problemsOf(input: ProblemsInput): ProblemsAnswer {
   };
   const drafts: Draft[] = [];
 
-  // 1. The check's diagnostics, in its order. A `check-error` reason quotes an error this way.
+  // 1. The check's diagnostics, in its order. A `check-error` reason quotes an error this way;
+  // a `no-connector` reason names the butts the check notes one by one.
   const quoted = new Map<string, Draft>();
+  const noted = new Map<string, Draft>();
   for (const d of input.diagnostics) {
     const p = fromDiagnostic(d, ctx);
     drafts.push(p);
     const as = `${d.code}${d.entity ? ` ${d.entity}` : ""}: ${d.message}`;
     if (d.severity === "error" && !quoted.has(as)) quoted.set(as, p);
+    if (d.code === "butt-no-connector" && d.entity) noted.set(d.entity, p);
   }
 
   // 2. The order's reasons, by supplier as the order lists them, each one problem.
@@ -132,15 +136,20 @@ export function problemsOf(input: ProblemsInput): ProblemsAnswer {
       let p = r.rule === "check-error" ? quoted.get(r.message) : reasons.get(key);
       if (!p) {
         p = fromReason(r, ctx);
-        drafts.push(p);
+        if (r.rule === "no-connector") foldNotes(p, r.entities ?? [], noted, drafts);
+        else drafts.push(p);
       }
       reasons.set(key, p);
       p.rule = r.rule;
       p.suppliers = [...(p.suppliers ?? []), s.supplier];
       if (!p.from.includes("order")) p.from = [...p.from, "order"];
-      // Blocking wins; an error the order only warns about stays an error.
+      // Blocking wins; an error the order only warns about stays an error, and a note it warns
+      // about is a warning.
       if (r.action === "block") p.group = "blocks-order";
-      else p.warns = true;
+      else {
+        p.warns = true;
+        if (p.group === "note") p.group = "warning";
+      }
     }
   }
 
@@ -187,6 +196,29 @@ export function problemsOf(input: ProblemsInput): ProblemsAnswer {
   };
 }
 
+/**
+ * The order's `no-connector` reason, which names the butts the check notes one by one: one
+ * problem in the first note's place, from the check and the order, the notes it names folded in.
+ */
+function foldNotes(
+  p: Draft,
+  butts: readonly string[],
+  noted: ReadonlyMap<string, Draft>,
+  drafts: Draft[],
+): void {
+  const notes = new Set(butts.flatMap((b) => noted.get(b) ?? []));
+  const at = drafts.findIndex((x) => notes.has(x));
+  if (at < 0) {
+    drafts.push(p);
+    return;
+  }
+  p.from = ["check"];
+  drafts.splice(at, 1, p);
+  for (let i = drafts.length - 1; i > at; i--) {
+    if (notes.has(drafts[i] as Draft)) drafts.splice(i, 1);
+  }
+}
+
 // ---------------------------------------------------------------------------------------------
 // The check's diagnostics
 
@@ -216,6 +248,7 @@ function fromDiagnostic(d: Diagnostic, ctx: Ctx): Draft {
       commands: [{ cmd: "autoConnect", args: { end: d.entity } }],
     });
   }
+  if (d.code === "butt-no-connector") Object.assign(p, connectorWords(names, ctx));
   if (d.code === "no-offer" && d.entity) {
     const asked = askedOf(d.refs ?? [], d.entity, ctx);
     const opt = asked ? optText(asked) : "";
@@ -307,6 +340,9 @@ function fromReason(r: Reason, ctx: Ctx): Draft {
         p,
         optionWords(item, askedOf(entities.slice(1), item, ctx) ?? {}, entities.slice(1), ctx),
       );
+    case "no-connector":
+      // The check's note is the same problem, which the reason joins (above); alone, it reads so.
+      return Object.assign(p, { code: "butt-no-connector" }, connectorWords(entities, ctx));
     case "stale-price": {
       const read = /price read (\d{4}-\d{2}-\d{2})/.exec(r.message)?.[1];
       if (read) {
@@ -327,6 +363,33 @@ function openItem(id: string, text: string, scope: readonly string[], named: rea
     title: `Open item ${id}: ${text}`,
     targets: [id, ...new Set([...scope, ...named])],
     fixes: [{ label: `Resolve ${id}…`, kind: "resolve-open", open: id } as Fix],
+  };
+}
+
+/**
+ * Butts that name no connector (review B1, `check/joints.ts`): how many, what follows, and one
+ * fix choosing a connector that fits their bars, as the project's default butt connector.
+ */
+function connectorWords(
+  butts: readonly string[],
+  ctx: Ctx,
+): Pick<Problem, "title" | "detail" | "fixes"> {
+  const one = butts.length === 1;
+  return {
+    title: one
+      ? `${butts[0]} names no connector: the order buys nothing to join its ends`
+      : `${butts.length} butts name no connector: the order buys nothing to join them`,
+    detail: `Neither ${one ? "the butt" : "these butts"} nor the project name a connector, so nothing is bought or machined to hold the ends. Choose one, which becomes the project's default butt connector, or one per butt in the inspector.`,
+    fixes: [
+      {
+        label: one
+          ? `Set a connector for ${butts[0]}…`
+          : `Set a connector for all ${butts.length}…`,
+        kind: "connector",
+        butts: [...butts],
+        systems: buttSystems(ctx.derived, butts),
+      },
+    ],
   };
 }
 

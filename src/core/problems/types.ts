@@ -73,4 +73,10 @@ export type Fix = { label: string } & (
   | { kind: "set-price"; item: string }
   | { kind: "param"; param: string }
   | { kind: "lock-update"; item: string }
+  /**
+   * Choose a connector for butts that name none (review B1): the app opens a picker of the
+   * connectors that fit `systems` (the joined bars' systems) and sends one step: the project's
+   * `defaults.butt`, which every one of `butts` takes, as do the butts made later.
+   */
+  | { kind: "connector"; butts: string[]; systems: string[] }
 );

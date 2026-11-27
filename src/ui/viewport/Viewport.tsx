@@ -23,7 +23,15 @@ import { theme } from "../theme/theme.ts";
 import { viewTheme } from "../theme/tokens.ts";
 import { Callout, Gizmo, HoverLabel, Legend, SelectionLabel, usePointer } from "./Overlays.tsx";
 import { ViewControls } from "./ViewControls.tsx";
-import { colourBy, drawnCorners, ghostsRest, showJoints, showProblems, viewer } from "./viewer.ts";
+import {
+  colourBy,
+  drawnCorners,
+  ghostsRest,
+  jointMarkers,
+  showJoints,
+  showProblems,
+  viewer,
+} from "./viewer.ts";
 import { badgesOf } from "./words.ts";
 
 /**
@@ -50,6 +58,11 @@ export interface ViewportSlots {
   centre?: ComponentChildren;
   bottom?: ComponentChildren;
   topRight?: ComponentChildren;
+  /**
+   * The message lane (docs/ux/review-phase4.md M4): under the view controls' last row, from the
+   * tool rail's right edge to the view's, its messages stacked so none covers another or a tool.
+   */
+  lane?: ComponentChildren;
 }
 
 /** Snapshot mode's state: "ready" once the named view is drawn, or why it cannot be. */
@@ -154,6 +167,7 @@ export function Viewport({
           const corners = m ? cornersOf(m) : [];
           drawnCorners.value = corners;
           v.setCorners(showJoints.value ? corners : []);
+          v.setJoinedShown(jointMarkers.value === "all");
         }),
         // What a row, a chip or the pointer is over: the bodies its refs stand for, tinted.
         effect(() => {
@@ -204,8 +218,15 @@ export function Viewport({
         <div class="tool-rail" data-testid="tool-rail">
           {slots.left}
         </div>
-        <div class="toolbar" data-testid="toolbar">
-          <ViewControls />
+        <div class="viewport-head">
+          <div class="toolbar" data-testid="toolbar">
+            <ViewControls />
+          </div>
+          {slots.lane && (
+            <div class="message-lane" data-testid="message-lane">
+              {slots.lane}
+            </div>
+          )}
         </div>
       </div>
       <SelectionLabel />

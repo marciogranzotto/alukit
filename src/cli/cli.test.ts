@@ -287,6 +287,8 @@ describe("alukit derive, cutlist and bom", () => {
   });
 
   it("exits 1 when a supplier is blocked, and says why on stderr", async () => {
+    const unjoined = (c: string) =>
+      `info butt-no-connector ${c}: ${c} names no connector, and the project names no default butt connector: the order buys nothing to join its ends`;
     const r = await capture(["order", project("cart"), "--as-of", "2026-11-26"]);
     expect(r.code).toBe(1);
     expect(r.out.join("\n")).toMatch(/^## test-vendor: BLOCKED$/m);
@@ -294,7 +296,10 @@ describe("alukit derive, cutlist and bom", () => {
       "warn connection c21: b18.a's end face overhangs b9's face +x by 30.00 mm: 2969.10 of its 4969.10 mm² (59.8 %) bear on nothing",
       "warn connection c22: b18.b's end face overhangs b10's face -x by 30.00 mm: 2969.10 of its 4969.10 mm² (59.8 %) bear on nothing",
       "warn connection c33: b32.b's end face overhangs b31's end b by 16.28 mm: 662.74 of its 2262.74 mm² (29.3 %) bear on nothing",
+      // The cart's 18 butts that name no connector, a note each, among the other infos by id.
+      ...["c1", "c2", "c5", "c6", "c7", "c8", "c10", "c11", "c12", "c21", "c22"].map(unjoined),
       "info fit c23: test-geo:WSH-M10 gives no outside diameter (d2_mm), so its seats are not checked: c23",
+      ...["c26", "c27", "c28", "c29", "c30", "c31", "c32"].map(unjoined),
       "info fit c35: test-gen:SCR-M5x25 gives no bearing diameter (dw_mm, dk_mm or s_mm), so its seats are not checked: c35",
       "BLOCKED local: open-item: O2: price the sensor bracket with the local shop",
       "BLOCKED local: missing-price: project:angle-a: no price",

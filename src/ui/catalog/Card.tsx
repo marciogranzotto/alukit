@@ -15,10 +15,39 @@ import { arm, cardOf, closeCatalog, pin } from "./state.ts";
  * selected bars or parts, and, for a bar, make it the project's default. Owner: S2.
  */
 
-/** A card's numbers in words: what the key means, and its unit. */
+/** A profile's shape in words (review m10: the card said "shape tslot"). */
+const SHAPES: Readonly<Record<string, string>> = {
+  tslot: "T-slot",
+  vslot: "V-slot",
+  rail: "linear guide",
+  flat: "flat bar",
+  tube: "tube",
+  angle: "angle",
+};
+
+/** A system in words: `forseti:s40-c8` reads "Forseti 40 series, 8 mm slot". */
+function systemWords(v: string): string {
+  const m = /^(?:([^:]+):)?s(\d+)-c(\d+)$/.exec(v);
+  if (!m) return v;
+  const vendor = m[1] ? `${m[1].charAt(0).toUpperCase()}${m[1].slice(1)} ` : "";
+  return `${vendor}${m[2]} series, ${m[3]} mm slot`;
+}
+
+const FIDELITY: Readonly<Record<string, string>> = {
+  exact: "exact, from the vendor's drawing",
+  parametric: "parametric, drawn from its sizes",
+};
+
+/** A card's values in words: what the key means, its unit, and its value said plainly. */
 const WORDS: Readonly<
-  Record<string, { label: string; unit?: string; fmt?: (v: number) => string }>
+  Record<
+    string,
+    { label: string; unit?: string; fmt?: (v: number) => string; say?: (v: string) => string }
+  >
 > = {
+  shape: { label: "Shape", say: (v) => SHAPES[v] ?? v },
+  system: { label: "System", say: systemWords },
+  fidelity: { label: "Section", say: (v) => FIDELITY[v] ?? v },
   mass_kg_per_m: { label: "Mass", unit: "kg/m", fmt: (v) => kgPerM(v) },
   area_mm2: { label: "Section area", unit: "mm²" },
   Ix_mm4: { label: "Second moment of area, x", unit: "mm⁴" },
@@ -38,7 +67,12 @@ const SRC: Readonly<Record<string, string>> = {
 
 function Value({ d }: { d: CardValue }) {
   const w = WORDS[d.key];
-  const text = typeof d.value === "number" && w?.fmt ? w.fmt(d.value) : String(d.value);
+  const text =
+    typeof d.value === "number" && w?.fmt
+      ? w.fmt(d.value)
+      : typeof d.value === "string" && w?.say
+        ? w.say(d.value)
+        : String(d.value);
   return (
     <tr>
       <th scope="row">{w?.label ?? d.key.replace(/_/g, " ")}</th>

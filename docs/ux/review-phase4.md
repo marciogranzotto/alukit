@@ -5,6 +5,10 @@ merged, at `f264ea5`. It judges the running app against the goals of the three r
 ([flows and IA](flows-and-ia.md) = A, [heuristics and first run](heuristics-and-first-run.md) = B,
 [visual design](visual-design.md) = C) and the [plan](plan.md). It changes no code.*
 
+*Since fixed: the polish pass took up these findings; what changed, what it decided differently
+and what it left is in [polish-decisions.md](polish-decisions.md). The findings below describe
+the app at `f264ea5`.*
+
 *Labels: **measured** means seen in the running app (Playwright) or printed by the CLI. **Read**
 means read in the code at `f264ea5`, cited by file. **Inferred** means a judgement or an estimate.*
 

@@ -4,7 +4,7 @@ import { shown } from "../focus.ts";
 import { problemList } from "../problems/source.ts";
 import { ago, who, whoWhat } from "../steps.ts";
 import { connection, heardAt, log, model, notice, summary } from "../store.ts";
-import { toolPrompt } from "../tools/state.ts";
+import { activeTool, toolPrompt } from "../tools/state.ts";
 import { presence, stepToasts } from "./presence.ts";
 
 /**
@@ -100,7 +100,8 @@ export function StatusBar() {
           {showing}
         </span>
       )}
-      {prompt && !showing && (
+      {/* The command bar says the prompt while a tool is on (review m2); in Select, here. */}
+      {prompt && !showing && activeTool.value === "select" && (
         <span class="prompt" data-testid="tool-prompt">
           {prompt}
         </span>

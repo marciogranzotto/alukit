@@ -149,6 +149,13 @@
   background: var(--ready-wash);
 }
 
+/* Ready, with warnings (review B1): never a plain green ready */
+.topbar .pill[data-status="READY"]:not([data-warnings="0"]) {
+  border-color: var(--warn);
+  color: var(--warn);
+  background: var(--warn-wash);
+}
+
 .topbar .pill[data-status="BLOCKED"] {
   border-color: var(--blocked);
   color: var(--blocked);
@@ -657,10 +664,25 @@
   box-shadow: inset 3px 0 var(--sel);
 }
 
+/* Columns (review M7): the id, the words (cut short), then the figure, right-aligned and whole */
 .tree .row .id {
   flex: none;
+  min-width: 3.5ch;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+
+/* A new row whose group head carries the mark (review p3): an edge, not a word */
+.tree .row.new {
+  box-shadow: inset 2px 0 0 var(--info);
+}
+
+.tree .row .figure {
+  flex: none;
+  margin-left: auto;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
 }
 
 .tree .row.copy .id {
@@ -956,6 +978,11 @@
   color: var(--warn);
 }
 
+/* A price on one line, never wrapped digit by digit (review m10) */
+.card-detail .offers .n {
+  white-space: nowrap;
+}
+
 .card-detail .offers {
   margin-top: var(--sp-4);
 }
@@ -1050,17 +1077,19 @@
 /* ------------------------------------------------------------------------------------------- */
 /* Toasts, at the viewport's top right: they never take the canvas's clicks, only their buttons */
 
+/* In the message lane, after the label and the steps, in its right part (review M4) */
 .toasts {
-  position: absolute;
-  top: 48px;
-  right: var(--sp-4);
-  z-index: 15;
+  align-self: flex-end;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: var(--sp-3);
-  width: min(380px, calc(100% - 2 * var(--sp-4)));
+  width: min(380px, 100%);
   pointer-events: none;
+}
+
+.toasts:empty {
+  display: none;
 }
 
 .toast {
@@ -1253,28 +1282,33 @@
   color: var(--act);
 }
 
+/*
+ * The tool's steps, in the message lane (review M4): its × in the first column, so it is never
+ * cut off; the steps wrap rather than run out of the box.
+ */
 .coach {
-  position: absolute;
-  top: 48px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 12;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: var(--sp-5);
-  max-width: calc(100% - 2 * var(--sp-6));
-  padding: var(--sp-3) var(--sp-5);
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-3) var(--sp-5) var(--sp-3) var(--sp-3);
   background: var(--bg-panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-float);
-  white-space: nowrap;
-  overflow: hidden;
+  pointer-events: auto;
+}
+
+.coach > .close {
+  grid-column: 1;
+  grid-row: 1 / span 2;
 }
 
 .coach ol {
+  grid-column: 2;
   display: flex;
-  gap: var(--sp-5);
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-5);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1294,17 +1328,11 @@
 }
 
 .coach .note {
+  grid-column: 2;
   color: var(--text-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .last-good {
-  position: absolute;
-  top: 48px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 11;
   padding: var(--sp-2) var(--sp-5);
   background: var(--blocked-wash);
   border: 1px solid var(--blocked);

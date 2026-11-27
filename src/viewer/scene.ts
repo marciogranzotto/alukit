@@ -48,7 +48,17 @@ import { rodMesh } from "../mesh/solids.ts";
 import { finishTone, partTone } from "../mesh/style.ts";
 import { Ground } from "./ground.ts";
 import { Labels } from "./labels.ts";
-import { edgeColour, fogColour, GHOST_EDGES, Glyphs, Look, MIX, mix, THREE_UP } from "./look.ts";
+import {
+  edgeColour,
+  fogColour,
+  GHOST_EDGES,
+  type Glyph,
+  Glyphs,
+  Look,
+  MIX,
+  mix,
+  THREE_UP,
+} from "./look.ts";
 import { CORNER_PREFIX, MarkerLayer, type MarkerPoint } from "./markers.ts";
 
 export { CORNER_PREFIX };
@@ -222,6 +232,11 @@ export interface Viewer {
   fitBox(box: [V3, V3]): void;
   /** Draws a marker at each corner, by its state. */
   setCorners(c: readonly CornerMarker[]): void;
+  /**
+   * Whether a joined corner's marker is drawn always, or only while it is hovered or selected
+   * (the default: open and failed corners always are; review m8).
+   */
+  setJoinedShown(all: boolean): void;
   /** Draws each problem on its entities, by group: a tinted outline and a glyph. */
   setProblemBadges(b: readonly ProblemBadge[]): void;
   /** Colours bodies by their finish (today's look) or by their item, from the swatches. */
@@ -257,6 +272,8 @@ const MAX_RANGES = 64;
 /** Joint markers and problem badges, CSS pixels. */
 const JOINT_PX = 13;
 const BADGE_PX = 16;
+/** The joint glyphs drawn only while emphasised, by default (review m8). */
+const JOINED_QUIET: ReadonlySet<Glyph> = new Set<Glyph>(["joined"]);
 
 /** A mesh from src/mesh as a geometry three can draw. */
 function geometryOf(d: MeshData): BufferGeometry {
@@ -323,6 +340,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   const overlay = new Overlay(theme, glyphs, dpr);
   world.add(overlay.group);
   const joints = new MarkerLayer("joints", glyphs, JOINT_PX, dpr, 900);
+  // Joined corners are drawn while hovered or selected, until the view asks for every one (m8).
+  joints.setQuiet(JOINED_QUIET);
   const badges = new MarkerLayer("badges", glyphs, BADGE_PX, dpr, 910);
   world.add(joints.group, badges.group);
   world.updateMatrixWorld(true);
@@ -861,17 +880,18 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   /** An entity's edges now: colour and alpha for its outline, alpha for its detail. */
   function edgeLook(id: string, body: Hex): { colour: Hex; outline: number; detail: number } {
     const ghosted = ghost !== undefined && !ghost.has(id) && !selection.has(id);
+    // Only what blocks or errs outlines its bar, in red; a warning keeps its triangle badge and
+    // leaves the amber band to the selection, which its outline was read as (review m1).
     const badge = badgeOf.get(id);
+    const red = badge !== undefined && badge !== "warn";
     const colour = selection.has(id)
       ? theme.edge.selected
-      : badge
-        ? badge === "warn"
-          ? theme.status.warn
-          : theme.status.blocked
+      : red
+        ? theme.status.blocked
         : edgeColour(theme, body);
     return {
       colour,
-      outline: ghosted ? GHOST_EDGES.outline : badge ? 1 : theme.edge.outline,
+      outline: ghosted ? GHOST_EDGES.outline : red ? 1 : theme.edge.outline,
       detail: ghosted ? GHOST_EDGES.detail / theme.edge.detail : 1,
     };
   }
@@ -1550,6 +1570,10 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     setCorners(c) {
       corners = c;
       drawCorners();
+      invalidate();
+    },
+    setJoinedShown(all) {
+      joints.setQuiet(all ? new Set() : JOINED_QUIET);
       invalidate();
     },
     setProblemBadges(b) {

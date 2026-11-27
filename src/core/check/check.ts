@@ -7,11 +7,13 @@ import type { ItemSource } from "../items.ts";
 import { QUANTUM, quantize } from "../quantum.ts";
 import { TOL } from "../tolerances.ts";
 import { dist, type V3 } from "../vec.ts";
+import { unjoinedButts, unjoinedMessage } from "./joints.ts";
 import { type Accessor, modelScope, PendingAccessor } from "./model.ts";
 
 /**
  * `alukit check` on a derived model (design §5.5): derive's own diagnostics, the cut list's,
- * unconnected ends, and the project's checks with their margins (§4.9). The file-level checks
+ * unconnected ends, butts that name no connector, and the project's checks with their margins
+ * (§4.9). The file-level checks
  * (the lock behind the catalogs, a file not in canonical form) belong to the caller, which reads
  * the files. The M4a server runs the same function after each step.
  */
@@ -197,12 +199,26 @@ export function unconnectedEnds(derived: Derived, d: Diagnostics): void {
   });
 }
 
+/**
+ * Butts that name no connector, and no project default (`joints.ts`; review B1): a note on each,
+ * as an unconnected end is one per corner, so a step's new and resolved diagnostics name the butts
+ * it made or joined. A note, not a warning: the joint derives, and what it means for the order is
+ * the order rule `no-connector`'s to judge, which a project may make block or turn off (a frame
+ * welded, or joined with hardware bought elsewhere).
+ */
+export function noConnector(derived: Derived, d: Diagnostics): void {
+  for (const butt of unjoinedButts(derived)) {
+    d.info("butt-no-connector", butt, unjoinedMessage([butt]));
+  }
+}
+
 /** Everything `alukit check` reports about a derived model. */
 export function checkModel(input: CheckInput): CheckOutput {
   const d = new Diagnostics();
   for (const x of input.derived.diagnostics) d.add(x);
   for (const x of cutList({ derived: input.derived, items: input.items }).diagnostics) d.add(x);
   unconnectedEnds(input.derived, d);
+  noConnector(input.derived, d);
   const checks = projectChecks(input, d);
   return { checks, diagnostics: sortDiagnostics(d.sorted()) };
 }

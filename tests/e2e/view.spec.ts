@@ -371,7 +371,7 @@ test("a selected bar hidden behind another shows through it; its label gives its
   served = await serve("cart");
   await openTab(page, served, 0);
   const b9 = (await derivedBars(served.dir)).b9 as DerivedBar;
-  // The problem badges off: the warning on b9 tints its outline a yellow near the selection's.
+  // The problem badges off, so only the selection draws in amber.
   await page.getByTestId("toggle-problems").click();
   // From the top, the base rail b9 lies under the top rail b5 and the flat bar on it.
   await page.getByTestId("projection").click();

@@ -35,6 +35,36 @@ export interface CatalogEntry {
   size_mm?: readonly [number, number];
   /** The lowest regular price it is sold at, per metre or per unit (BE-12). */
   from?: FromPrice;
+  /**
+   * How many offers sell it (finishes, lengths): with two profiles of one size and system, the
+   * one sold in more ways is the common one, which the start card lists first (review M8).
+   */
+  offers?: number;
+  /** A bar's shape (`tslot`, `rail`, …): the start card offers frame profiles, not rails. */
+  shape?: string;
+  /** A bar's system, as a full id (`forseti:s40-c8`): what decides which connectors fit it. */
+  system?: string;
+  /**
+   * The systems a connector or an accessory fits, as full ids: the connector pickers list those
+   * that fit the joined bars first (docs/ux/review-phase4.md B1).
+   */
+  fits?: string[];
+}
+
+/**
+ * A bar's shape and system, and what a connector or an accessory fits, the references as full
+ * ids (`fullRef`'s rule: a reference with no catalog is in the item's own).
+ */
+function fitsOf(item: Item, catalog: string): Pick<CatalogEntry, "shape" | "system" | "fits"> {
+  const o = item as Record<string, unknown>;
+  const full = (r: string) => (r.includes(":") ? r : `${catalog}:${r}`);
+  const out: Pick<CatalogEntry, "shape" | "system" | "fits"> = {};
+  if (item.kind === "bar" && typeof o.shape === "string") out.shape = o.shape;
+  if (item.kind === "bar" && typeof o.system === "string") out.system = full(o.system);
+  if (Array.isArray(o.fits)) {
+    out.fits = o.fits.filter((x): x is string => typeof x === "string").map(full);
+  }
+  return out;
 }
 
 export function localId(ref: string | undefined): string | undefined {
@@ -79,7 +109,8 @@ export function catalogIndex(
     for (const li of cat.items.values()) {
       seen.add(li.id);
       const size = li.item.kind === "bar" ? sizeOf(fromLive, li.id) : undefined;
-      const from = fromPrice(fromLive.offers(li.id));
+      const offers = fromLive.offers(li.id);
+      const from = fromPrice(offers);
       out.push({
         id: li.id,
         catalog: cat.id,
@@ -92,6 +123,8 @@ export function catalogIndex(
         live: true,
         ...(size ? { size_mm: size } : {}),
         ...(from ? { from } : {}),
+        ...(offers.length > 0 ? { offers: offers.length } : {}),
+        ...fitsOf(li.item, cat.id),
       });
     }
   }
@@ -102,7 +135,8 @@ export function catalogIndex(
     const isLive = cat?.items.has(id.slice(catalog.length + 1)) === true;
     const source = isLive ? fromLive : fromLock;
     const size = e.item.kind === "bar" && source ? sizeOf(source, id) : undefined;
-    const from = source ? fromPrice(source.offers(id)) : undefined;
+    const offers = source ? source.offers(id) : [];
+    const from = source ? fromPrice(offers) : undefined;
     out.push({
       id,
       catalog,
@@ -115,6 +149,8 @@ export function catalogIndex(
       live: isLive,
       ...(size ? { size_mm: size } : {}),
       ...(from ? { from } : {}),
+      ...(offers.length > 0 ? { offers: offers.length } : {}),
+      ...fitsOf(e.item, catalog),
     });
   }
   return out.sort((a, b) => compareIds(a.id, b.id));

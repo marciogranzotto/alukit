@@ -1,6 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
-import type { ListedEntry } from "../../server/catalog.ts";
-import { fetchCatalogItems } from "../client/catalog.ts";
+import { buttSystems, ConnectorSelect } from "../common/ConnectorSelect.tsx";
 import { EntityChips } from "../common/EntityChip.tsx";
 import { cornersOf } from "../corners.ts";
 import type { Model } from "../model.ts";
@@ -187,19 +185,52 @@ export function PartFields({ m, id }: { m: Model; id: string }) {
   );
 }
 
-/** The catalog's connectors, for a butt's connector field; fetched once per mount. */
-function useConnectors(): ListedEntry[] {
-  const [list, setList] = useState<ListedEntry[]>([]);
-  useEffect(() => {
-    let live = true;
-    void fetchCatalogItems({ kind: "connector", limit: 200 }).then((r) => {
-      if (live && r.ok) setList(r.value.items);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-  return list;
+/**
+ * The Connector field of one butt or several (docs/ux/review-phase4.md B1): the connectors that
+ * fit the joined bars first, the others after; the project's default, or none, leads. A change is
+ * one step, a `setConnection` per butt.
+ */
+export function ButtConnector({ m, butts }: { m: Model; butts: readonly string[] }) {
+  const { outcome, send } = useSend();
+  const conns = (isObject(m.doc.connections) ? m.doc.connections : {}) as Record<string, O>;
+  const own = butts.map((id) =>
+    typeof conns[id]?.connector === "string" ? conns[id]?.connector : "",
+  );
+  const same = own.every((c) => c === own[0]);
+  const butt = isObject(m.defaults.butt) ? m.defaults.butt : {};
+  const fallback = typeof butt.connector === "string" ? butt.connector : undefined;
+  const one = butts.length === 1;
+  return (
+    <>
+      <Row label="Connector" fields={["connector"]} testid="row-connector">
+        <ConnectorSelect
+          testid="field-connector"
+          label={one ? "The connector that holds each end" : "The connector of every selected butt"}
+          value={same ? String(own[0] ?? "") : "-mixed"}
+          systems={buttSystems(m, butts)}
+          lead={[
+            ...(same ? [] : [{ value: "-mixed", label: "several: keep each", disabled: true }]),
+            {
+              value: "",
+              label: fallback ? `the project's default: ${fallback}` : "none named",
+            },
+          ]}
+          others
+          disabled={readOnly() || busy.value}
+          onChange={(v) =>
+            void send(
+              butts.map((id) => ({
+                cmd: "setConnection",
+                args: { id, set: { connector: v === "" ? null : v } },
+              })),
+              one ? `connector of ${butts[0]}` : `connector of ${butts.length} butts`,
+            )
+          }
+        />
+      </Row>
+      <RowErrors outcome={outcome} />
+    </>
+  );
 }
 
 /** The bars a butt may run through instead: the others where its ends meet bars. */
@@ -215,12 +246,9 @@ function throughChoices(m: Model, ends: readonly string[], now: string): string[
 
 function ButtRows({ m, id, w }: { m: Model; id: string; w: O }) {
   const { outcome, send } = useSend();
-  const connectors = useConnectors();
   const ends = Array.isArray(w.ends) ? (w.ends as string[]) : [];
   const through = typeof w.through === "string" ? w.through : "";
-  const connector = typeof w.connector === "string" ? w.connector : "";
   const butt = isObject(m.defaults.butt) ? m.defaults.butt : {};
-  const fallback = typeof butt.connector === "string" ? butt.connector : undefined;
   const set = (patch: O, what: string) =>
     void send([{ cmd: "setConnection", args: { id, set: patch } }], what);
   const throughList = throughChoices(m, ends, through);
@@ -254,30 +282,7 @@ function ButtRows({ m, id, w }: { m: Model; id: string; w: O }) {
           (pointRefWords(w.through)?.text ?? "a body")
         )}
       </Row>
-      <Row label="Connector" fields={["connector"]} testid="row-connector">
-        <select
-          class="insp-select"
-          data-testid="field-connector"
-          aria-label="The connector that holds each end"
-          value={connector}
-          disabled={readOnly() || busy.value}
-          onChange={(e) => {
-            const v = (e.currentTarget as HTMLSelectElement).value;
-            set({ connector: v === "" ? null : v }, `connector of ${id}`);
-          }}
-        >
-          <option value="">{fallback ? `(project default: ${fallback})` : "none named"}</option>
-          {(connectors.some((c) => c.id === connector) || connector === ""
-            ? connectors
-            : [{ id: connector, name: "", code: connector } as ListedEntry, ...connectors]
-          ).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.code ?? c.id}
-              {c.name ? ` · ${c.name}` : ""}
-            </option>
-          ))}
-        </select>
-      </Row>
+      <ButtConnector m={m} butts={[id]} />
       <Row label="Quantity" fields={["qty"]} testid="row-qty">
         <CommitInput
           label="Connectors per end"

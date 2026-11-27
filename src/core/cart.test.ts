@@ -5,12 +5,19 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { type Bom, bom } from "./bom/bom.ts";
 import { bomCsv, bomJson, bomMarkdown } from "./bom/format.ts";
-import { checkedBom, checkedCutList, checkedMachining, modelOutputs } from "./check/outputs.ts";
+import { checkModel } from "./check/check.ts";
+import {
+  checkedBom,
+  checkedCutList,
+  checkedMachining,
+  checkedOrder,
+  modelOutputs,
+  outputAccessors,
+} from "./check/outputs.ts";
 import { type CutList, cutList } from "./cutlist/cutlist.ts";
 import { cutListCsv, cutListJson, cutListMarkdown } from "./cutlist/format.ts";
 import { derive } from "./derive/derive.ts";
 import { derivedJson, jsonText } from "./derive/output.ts";
-import { sortDiagnostics } from "./diagnostics.ts";
 import { machiningJson, machiningMarkdown } from "./machining/format.ts";
 import type { MachiningSheet } from "./machining/machining.ts";
 import {
@@ -21,7 +28,7 @@ import {
   orderJson,
   orderMarkdown,
 } from "./order/format.ts";
-import { type Order, order } from "./order/order.ts";
+import type { Order } from "./order/order.ts";
 import { type OpenedProject, openProject } from "./project/open.ts";
 import { projectItems } from "./project-items/source.ts";
 import { FIXTURES, lockStamp, mergePatch, oldestCutRead, readJson, withStamp } from "./testing.ts";
@@ -44,18 +51,17 @@ const MAIN = fileURLToPath(new URL("../cli/main.ts", import.meta.url));
 /** The order's date in the hand script: no price is stale but the nuts', read 56 days before. */
 const AS_OF = "2026-11-26";
 
+/** The order as `alukit order` builds it: after the checks, whose diagnostics it carries. */
 function cartOrder(project: OpenedProject, raw: unknown = project.raw): Order {
   const derived = derive(raw, project.items);
-  const cl = cutList({ derived, items: project.items });
-  const b = bom({ derived, items: project.items });
-  return order({
+  const outputs = modelOutputs(derived, project.items);
+  const check = checkModel({
+    raw,
     derived,
     items: project.items,
-    bom: b,
-    cutList: cl,
-    diagnostics: sortDiagnostics([...derived.diagnostics, ...cl.diagnostics, ...b.diagnostics]),
-    asOf: AS_OF,
+    accessors: outputAccessors(outputs),
   });
+  return checkedOrder(outputs, check.diagnostics, { asOf: AS_OF });
 }
 
 /** The machining sheet as `alukit machining` builds it, with every problem met on the way. */
@@ -215,8 +221,9 @@ describe("the cart", () => {
       ["test-fab", "READY", []],
       ["test-gen-vendor", "BLOCKED", ["open-item"]],
       ["test-geo-vendor", "READY", ["stale-price"]],
-      ["test-steel", "READY", []],
-      ["test-vendor", "BLOCKED", ["est-price"]],
+      // 18 butts name no connector and the cart no default: a warning for the bars' suppliers.
+      ["test-steel", "READY", ["no-connector"]],
+      ["test-vendor", "BLOCKED", ["est-price", "no-connector"]],
       [null, "BLOCKED", ["placeholder", "missing-price"]],
     ]);
     // 77 screws: the chosen bracket kits bring 40, and §5.4's example covers the 37 left with

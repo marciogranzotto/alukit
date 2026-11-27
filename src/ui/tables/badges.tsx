@@ -42,10 +42,28 @@ export function OrderBadge() {
   if (!m || got === undefined || "error" in got) return null;
   const things = thingsToResolve(got.value);
   if (things === 0) {
-    return got.value.suppliers.length === 0 ? null : (
+    if (got.value.suppliers.length === 0) return null;
+    // The order's own warnings, each once (`order.warnings`; review M3, B1).
+    const warns = new Set(
+      got.value.suppliers.flatMap((s) =>
+        s.reasons.filter((r) => r.action === "warn").map((r) => `${r.rule}|${r.message}`),
+      ),
+    ).size;
+    return warns === 0 ? (
       <span class="badge ok" title="Every supplier can be ordered from">
         <StatusGlyph status="ready" size={12} />
         <span class="sr-only">Ready to order</span>
+      </span>
+    ) : (
+      <span
+        class="badge"
+        title={`Ready to order, with ${plural(warns, "warning")} to check before it is sent`}
+      >
+        <span class="badge-n warn">
+          <StatusGlyph status="warn" size={12} />
+          {warns}
+          <span class="sr-only"> {warns === 1 ? "warning" : "warnings"}: ready to order</span>
+        </span>
       </span>
     );
   }
@@ -63,30 +81,39 @@ export function OrderBadge() {
   );
 }
 
-/** The Problems badge: what blocks the order, then the warnings, each as a glyph and a number. */
+/**
+ * The Problems badge: what blocks the order and the errors, then the warnings, each as a glyph and
+ * a number, counted as the sheet lists them (docs/ux/review-phase4.md M3).
+ */
 export function ProblemsBadge() {
-  const { blocks, warnings } = problemCounts.value;
-  if (blocks === 0 && warnings === 0) {
+  const { blocks, errors, warnings } = problemCounts.value;
+  if (blocks === 0 && errors === 0 && warnings === 0) {
     return (
-      <span class="badge ok" title="Every check passes">
-        <StatusGlyph status="ready" size={12} /> <span class="sr-only">Every check passes</span>
+      <span class="badge ok" title="Nothing blocks the order, and no errors or warnings">
+        <StatusGlyph status="ready" size={12} /> <span class="sr-only">No errors or warnings</span>
       </span>
     );
   }
+  // What blocks the order and the errors share the red mark, as both must be fixed.
+  const severe = [
+    blocks > 0 ? `${blocks} ${blocks === 1 ? "blocks" : "block"} the order` : "",
+    errors > 0 ? plural(errors, "error") : "",
+  ].filter((x) => x !== "");
+  const title = [...severe, ...(warnings > 0 ? [plural(warnings, "warning")] : [])].join(", ");
   return (
-    <span class="badge" title={`${blocks} block the order, ${warnings} warnings`}>
-      {blocks > 0 && (
+    <span class="badge" title={title}>
+      {blocks + errors > 0 && (
         <span class="badge-n blocked">
           <StatusGlyph status="blocked" size={12} />
-          {blocks}
-          <span class="sr-only"> block the order</span>
+          {blocks + errors}
+          <span class="sr-only"> ({severe.join(", ")})</span>
         </span>
       )}
       {warnings > 0 && (
         <span class="badge-n warn">
           <StatusGlyph status="warn" size={12} />
           {warnings}
-          <span class="sr-only"> warnings</span>
+          <span class="sr-only">{warnings === 1 ? " warning" : " warnings"}</span>
         </span>
       )}
     </span>

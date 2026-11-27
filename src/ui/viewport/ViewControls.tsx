@@ -5,7 +5,15 @@ import { selection } from "../focus.ts";
 import { Icon, type IconName } from "../icons/Icons.tsx";
 import { chord, onKey } from "../keys.ts";
 import { model } from "../store.ts";
-import { colourBy, projection, sectionPlane, showJoints, showProblems, viewer } from "./viewer.ts";
+import {
+  colourBy,
+  type JointMarkers,
+  jointMarkers,
+  projection,
+  sectionPlane,
+  showProblems,
+  viewer,
+} from "./viewer.ts";
 
 /**
  * The view controls over the viewport (design §8): standard views, perspective or orthographic,
@@ -149,12 +157,26 @@ function Labelled({ icon, word }: { icon: IconName; word: string }) {
 }
 
 /** A display toggle: pressed while what it shows is drawn. */
+/** The Joints button's three states, in the order a press steps through them (review m8). */
+const NEXT_JOINTS: Readonly<Record<JointMarkers, JointMarkers>> = {
+  problems: "off",
+  off: "all",
+  all: "problems",
+};
+const JOINT_TITLES: Readonly<Record<JointMarkers, string>> = {
+  problems:
+    "Joint markers at the open (ring) and failed (cross) corners; a joined one (dot) when hovered or selected. Press: none",
+  off: "No joint markers. Press: a marker at every corner",
+  all: "A joint marker at every corner: dot joined, ring open, cross failed. Press: the open and failed only",
+};
+
 function Toggle({
   on,
   testid,
   icon,
   word,
   title,
+  state,
   onClick,
 }: {
   on: boolean;
@@ -162,6 +184,7 @@ function Toggle({
   icon: IconName;
   word: string;
   title: string;
+  state?: string;
   onClick: () => void;
 }) {
   return (
@@ -169,6 +192,7 @@ function Toggle({
       type="button"
       class={on ? "tb on" : "tb"}
       data-testid={testid}
+      data-state={state}
       aria-pressed={on}
       aria-label={word}
       title={title}
@@ -228,13 +252,14 @@ export function ViewControls() {
       </fieldset>
       <fieldset class="tb-group" aria-label="Show">
         <Toggle
-          on={showJoints.value}
+          on={jointMarkers.value !== "off"}
           testid="toggle-joints"
           icon="joints"
-          word="Joints"
-          title="Joint markers at every corner: filled joined, ring open, cross failed"
+          word={jointMarkers.value === "all" ? "Joints: all" : "Joints"}
+          title={JOINT_TITLES[jointMarkers.value]}
+          state={jointMarkers.value}
           onClick={() => {
-            showJoints.value = !showJoints.value;
+            jointMarkers.value = NEXT_JOINTS[jointMarkers.value];
           }}
         />
         <Toggle
@@ -242,7 +267,7 @@ export function ViewControls() {
           testid="toggle-problems"
           icon="problems"
           word="Problems"
-          title="Problems drawn on their parts: octagon blocks or errs, triangle warns"
+          title="Problems drawn on their parts: an octagon and a red outline blocks or errs, a triangle warns"
           onClick={() => {
             showProblems.value = !showProblems.value;
           }}

@@ -222,22 +222,32 @@ export const patternState = signal<{
 
 export const measureState = signal<{ a?: Snap; b?: Snap }>({});
 
-/** The box frame's options (D-UX-8, BE-6), shared by the tool's command bar and its form. */
+/** The box frame's "Joined with" when the person joins the corners themselves (review B1). */
+export const JOIN_NONE = "-";
+
+/** The box frame's options (D-UX-8, BE-6): its form holds them (review M6). */
 export interface FrameOptions {
   rings: { base: boolean; top: boolean };
   /** A shelf ring, its top face this high above the base: typed, empty for none. */
   shelf: string;
   /** Which bar runs through at each corner; the project's `defaults.corner` when unset. */
   corner?: CornerRule | undefined;
-  /** Each butt's connector: an item id, empty for the project's `defaults.butt`. */
-  connector: string;
+  /**
+   * How the corners are joined (docs/ux/review-phase4.md B1): a connector's id; `JOIN_NONE`,
+   * nothing, said so; or empty, not chosen yet, which is the project's default butt connector
+   * when it has one and must be chosen when it has none.
+   */
+  joint: string;
+  /** Connectors per butting end, typed: empty for one. */
+  qty: string;
   /** Write W, D and H as params, and the frame's points from them. */
   params: boolean;
 }
 export const frameOptions = signal<FrameOptions>({
   rings: { base: true, top: true },
   shelf: "",
-  connector: "",
+  joint: "",
+  qty: "",
   params: false,
 });
 
@@ -254,6 +264,12 @@ export interface FrameDraft {
   h: string;
 }
 export const frameDraft = signal<FrameDraft>({ w: "", d: "", h: "" });
+
+/**
+ * The box frame panel's dry run in a line ("posts 4 × 800 · top ring 2 × 1000, 2 × 520"), which
+ * the command bar shows while the frame is drawn (review m9); undefined while there is none.
+ */
+export const frameNumbers = signal<string | undefined>(undefined);
 
 /** Which value the box frame's gesture asks for next. */
 export function frameStage(d: FrameDraft): "corner" | "size" | "height" | "done" {

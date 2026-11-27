@@ -3,6 +3,7 @@ import type { ItemCard } from "../../server/catalog.ts";
 import { get } from "../api.ts";
 import { type PaletteItem, palette } from "../palette.ts";
 import { readPref, writePref } from "../shell/prefs.ts";
+import { dismissStart, startShown } from "../shell/start.ts";
 import { summary } from "../store.ts";
 import { activeTool, type ToolName } from "../tools/state.ts";
 
@@ -117,9 +118,11 @@ export const recent = signal<readonly BinItem[]>(readPref(RECENT, [], isBinList,
 
 /**
  * Arms an item: a bar for the draw tool, anything else for the place tool, and switches to that
- * tool. The palette is kept for the tab's session (S2.4).
+ * tool. The palette is kept for the tab's session (S2.4). The start card closes: the person has
+ * chosen to draw, and its tool must not work unseen behind the card (review m4).
  */
 export function arm(card: ItemCard, opt: Readonly<Record<string, string>>): void {
+  if (startShown.peek()) dismissStart();
   const item = paletteItem(card, opt);
   const isBar = card.entry.kind === "bar";
   palette.value = isBar ? { ...palette.value, bar: item } : { ...palette.value, part: item };

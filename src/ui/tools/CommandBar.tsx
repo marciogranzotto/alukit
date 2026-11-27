@@ -1,8 +1,9 @@
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { anchorPoint } from "#core/derive/frame.ts";
 import type { CornerRule } from "#core/project/schema.ts";
 import { GROUND } from "../../viewer/workplane.ts";
 import { Icon } from "../icons/Icons.tsx";
+import { anchorWords } from "../inspector/BarFields.tsx";
 import { optionsText } from "../options.ts";
 import type { PaletteItem } from "../palette.ts";
 import { palette } from "../palette.ts";
@@ -17,7 +18,7 @@ import {
   fieldDone,
   fieldWanted,
   frameDraft,
-  frameOptions,
+  frameNumbers,
   frameStage,
   hint,
   jointPreview,
@@ -100,7 +101,7 @@ function AnchorPicker({ bar }: { bar: PaletteItem }) {
   return (
     <fieldset class="cb-opt cb-anchor" data-testid="draw-anchor" data-anchor={o.anchor}>
       <legend title="Where the bar's line runs through its section (A cycles)">
-        Anchor {o.anchor}
+        Anchor: {anchorWords(o.anchor)}
       </legend>
       <span class="cb-anchor-pad" style={{ width: `${size}px`, height: `${size}px` }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
@@ -141,21 +142,25 @@ function CornerSelect({
   testid: string;
 }) {
   const own = (model.value?.defaults.corner as CornerRule | undefined) ?? "vertical";
+  // Short words in the select, so it is never cut; the long ones in each option's title (m3).
   return (
     <label class="cb-opt" title="At a corner, which bar runs through; the other butts on it">
       Corners{" "}
       <select
         data-testid={testid}
         value={value ?? ""}
+        title={CORNER_WORDS[value ?? own]}
         onChange={(e) => {
           const v = (e.currentTarget as HTMLSelectElement).value;
           onChange(v === "" ? undefined : (v as CornerRule));
         }}
       >
-        <option value="">the project's: {CORNER_WORDS[own]}</option>
+        <option value="" title={`the project's rule: ${CORNER_WORDS[own]}`}>
+          project's: {CORNER_SHORT[own]}
+        </option>
         {CORNER_RULES.map((r) => (
-          <option key={r} value={r}>
-            {CORNER_WORDS[r]}
+          <option key={r} value={r} title={CORNER_WORDS[r]}>
+            {CORNER_SHORT[r]}
           </option>
         ))}
       </select>
@@ -163,9 +168,27 @@ function CornerSelect({
   );
 }
 
+/** The corner rules in a word or two, for the command bar's select (review m3). */
+const CORNER_SHORT: Readonly<Record<CornerRule, string>> = {
+  vertical: "post through",
+  x: "X bar through",
+  y: "Y bar through",
+  first: "first through",
+};
+
 function DrawOptions() {
   const o = drawOptions.value;
   const bar = palette.value.bar;
+  // The options' panel closes on a press anywhere else, so it never stays over the view.
+  const more = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const close = (e: PointerEvent) => {
+      const d = more.current;
+      if (d?.open && !d.contains(e.target as Node)) d.open = false;
+    };
+    document.addEventListener("pointerdown", close, true);
+    return () => document.removeEventListener("pointerdown", close, true);
+  }, []);
   return (
     <>
       <Armed which="bar" />
@@ -182,42 +205,50 @@ function DrawOptions() {
       >
         Roll {o.roll}°
       </button>
-      <span class="cb-opt" title="The plane a free line (Shift) draws in; W picks a face">
-        Plane{" "}
-        <span data-testid="draw-plane">
-          {pickingPlane.value ? "click a face…" : workPlane.value.label}
-        </span>
-        {workPlane.value !== GROUND && (
-          <button type="button" class="cb-btn" onClick={() => (workPlane.value = GROUND)}>
-            ground
-          </button>
-        )}
-      </span>
       {o.lock && (
         <span class="cb-opt cb-lock" data-testid="draw-lock">
           locked to {o.lock.toUpperCase()}
         </span>
       )}
-      <label class="cb-opt" title="Butt the bar's ends where they close on other bars">
-        <input
-          type="checkbox"
-          data-testid="draw-autoconnect"
-          checked={o.autoConnect}
-          onChange={() => {
-            drawOptions.value = { ...o, autoConnect: !o.autoConnect };
-          }}
-        />{" "}
-        Join ends
-      </label>
-      {o.autoConnect && (
-        <CornerSelect
-          testid="draw-corner"
-          value={o.prefer}
-          onChange={(v) => {
-            drawOptions.value = { ...drawOptions.value, prefer: v };
-          }}
-        />
-      )}
+      {/* The less frequent options, so the bar keeps to one row (review M5). */}
+      <details class="cb-more" ref={more}>
+        <summary data-testid="draw-options" title="The work plane, joining ends, the corner rule">
+          Options{workPlane.value !== GROUND || !o.autoConnect ? " •" : ""}
+        </summary>
+        <div class="cb-more-panel">
+          <span class="cb-opt" title="The plane a free line (Shift) draws in; W picks a face">
+            Plane{" "}
+            <span data-testid="draw-plane">
+              {pickingPlane.value ? "click a face…" : workPlane.value.label}
+            </span>
+            {workPlane.value !== GROUND && (
+              <button type="button" class="cb-btn" onClick={() => (workPlane.value = GROUND)}>
+                ground
+              </button>
+            )}
+          </span>
+          <label class="cb-opt" title="Butt the bar's ends where they close on other bars">
+            <input
+              type="checkbox"
+              data-testid="draw-autoconnect"
+              checked={o.autoConnect}
+              onChange={() => {
+                drawOptions.value = { ...o, autoConnect: !o.autoConnect };
+              }}
+            />{" "}
+            Join ends
+          </label>
+          {o.autoConnect && (
+            <CornerSelect
+              testid="draw-corner"
+              value={o.prefer}
+              onChange={(v) => {
+                drawOptions.value = { ...drawOptions.value, prefer: v };
+              }}
+            />
+          )}
+        </div>
+      </details>
     </>
   );
 }
@@ -245,49 +276,6 @@ function PlaceOptions() {
             </option>
           ))}
         </select>
-      </label>
-    </>
-  );
-}
-
-function FrameOptions() {
-  const o = frameOptions.value;
-  const set = (next: Partial<typeof o>) => {
-    frameOptions.value = { ...frameOptions.value, ...next };
-  };
-  return (
-    <>
-      <Armed which="bar" />
-      <span class="cb-opt">
-        Rings{" "}
-        <label>
-          <input
-            type="checkbox"
-            data-testid="frame-base"
-            checked={o.rings.base}
-            onChange={() => set({ rings: { ...o.rings, base: !o.rings.base } })}
-          />{" "}
-          base
-        </label>{" "}
-        <label>
-          <input
-            type="checkbox"
-            data-testid="frame-top"
-            checked={o.rings.top}
-            onChange={() => set({ rings: { ...o.rings, top: !o.rings.top } })}
-          />{" "}
-          top
-        </label>
-      </span>
-      <CornerSelect testid="frame-corner" value={o.corner} onChange={(v) => set({ corner: v })} />
-      <label class="cb-opt" title="Write W, D and H as params, and the frame's points from them">
-        <input
-          type="checkbox"
-          data-testid="frame-params"
-          checked={o.params}
-          onChange={() => set({ params: !o.params })}
-        />{" "}
-        As params W, D, H
       </label>
     </>
   );
@@ -323,6 +311,10 @@ function valueWords(tool: ToolName): { text: string; error: boolean } | undefine
     const { start, end } = drawState.value;
     const axis = drawOptions.value.lock ?? end?.axis;
     if (!start) return { text: `${words}: click a start point first`, error: false };
+    // No way to go yet (review M2): the pointer has not left the start, and no axis is locked.
+    const away = end !== undefined && end.p.some((c, i) => Math.abs(c - (start.p[i] ?? 0)) > 1e-6);
+    if (!axis && !away)
+      return { text: `${words} from ${start.label}: point the way`, error: false };
     const k = axis ? { x: 0, y: 1, z: 2 }[axis] : undefined;
     const sign =
       k !== undefined && end ? ((end.p[k] as number) >= (start.p[k] as number) ? 1 : -1) : 1;
@@ -351,14 +343,14 @@ function Result() {
   if (!r) return null;
   if (r.error)
     return (
-      <output class="cb-chip error" data-testid="tool-result" data-error="true">
+      <output class="cb-chip error" data-testid="tool-result" data-error="true" title={r.error}>
         {r.error}
       </output>
     );
   const step = heard.value.find((s) => s.rev === r.rev);
   const text = step?.text ?? (r.created.length > 0 ? `made ${r.created.join(", ")}` : "done");
   return (
-    <output class="cb-chip" data-testid="tool-result">
+    <output class="cb-chip" data-testid="tool-result" title={text}>
       {text}
     </output>
   );
@@ -428,6 +420,7 @@ function ValueField({ tool }: { tool: ToolName }) {
         id="command-result"
         class={words?.error ? "cb-eval error" : "cb-eval"}
         data-testid="command-result"
+        title={words?.text}
       >
         {words?.text ?? ""}
       </output>
@@ -440,42 +433,48 @@ function ValueField({ tool }: { tool: ToolName }) {
   );
 }
 
+/**
+ * The bar is a row of the canvas column under the 3D view, not over it (review M5): the view
+ * never runs under it, and Fit frames into what is left. In Select it holds the view's keys, so
+ * the view keeps its height when a tool turns on. One row at 1280 px and wider; the prompt is
+ * cut short with its words in the title, and announced, since the status bar no longer repeats
+ * it (m2). The box frame's options are its form's alone (M6).
+ */
 export function CommandBar() {
   const tool = activeTool.value;
-  if (!model.value) return <Hint />;
+  const prompt = toolPrompt.value;
   return (
     <>
       <Hint />
-      {tool === "select" ? (
-        <div class="viewport-help">
+      {/* The row is there before the model too, so the view never changes height under it. */}
+      {tool === "select" || !model.value ? (
+        <div class="command-row viewport-help" data-testid="viewport-help">
           drag: orbit · right-drag: pan · wheel: zoom · Shift-drag: box select · Delete: remove the
           selection · ?: keys
         </div>
       ) : (
         <section
-          class="command-bar"
+          class="command-row command-bar"
           data-testid="command-bar"
           data-tool={tool}
           aria-label={`${TOOL_NAMES[tool]}: command bar`}
         >
-          <div class="cb-row">
-            <span class="cb-tool">
-              <Icon name={tool} /> {TOOL_NAMES[tool]}
-            </span>
-            <span class="cb-prompt" data-testid="command-prompt">
-              {toolPrompt.value}
-            </span>
-            <Result />
-          </div>
-          {(TAKES_VALUE.has(tool) || tool === "measure") && (
-            <div class="cb-row">
-              {TAKES_VALUE.has(tool) && <ValueField tool={tool} />}
-              {tool === "draw" && <DrawOptions />}
-              {tool === "place" && <PlaceOptions />}
-              {tool === "frame" && <FrameOptions />}
-              {tool === "measure" && <MeasureResult />}
-            </div>
+          <span class="cb-tool">
+            <Icon name={tool} /> {TOOL_NAMES[tool]}
+          </span>
+          <span class="cb-prompt" data-testid="command-prompt" title={prompt} aria-live="polite">
+            {prompt}
+          </span>
+          {TAKES_VALUE.has(tool) && <ValueField tool={tool} />}
+          {tool === "draw" && <DrawOptions />}
+          {tool === "place" && <PlaceOptions />}
+          {tool === "measure" && <MeasureResult />}
+          {tool === "frame" && frameNumbers.value && (
+            <output class="cb-chip" data-testid="frame-result" title={frameNumbers.value}>
+              {frameNumbers.value}
+            </output>
           )}
+          <Result />
         </section>
       )}
     </>

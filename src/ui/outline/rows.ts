@@ -1,5 +1,6 @@
 import { compareIds } from "#core/ids.ts";
 import type { Problem, ProblemGroup } from "#core/problems/types.ts";
+import { sizeOf } from "../catalog/SectionThumb.tsx";
 import { type Corner, cornerRef } from "../corners.ts";
 import { mm } from "../format.ts";
 import type { Model } from "../model.ts";
@@ -17,8 +18,15 @@ export interface Row {
   /** The ref a click selects: an entity id or `corner:<key>`. */
   id: string;
   kind: EntityKind | "corner";
-  /** What a person calls it, after the id: label, item, figure. */
+  /** What a person calls it, after the id: for a bar its label, else its item's code and size. */
   text: string;
+  /**
+   * Its figure, in a right-aligned column of its own (docs/ux/review-phase4.md M7): a bar's or a
+   * run's length, so a narrow outline cuts the words, never the number.
+   */
+  figure: string;
+  /** Everything in words, the item's full name too: the row's tooltip, and what the filter reads. */
+  title: string;
   tags: string[];
   /** A pattern copy, which derive makes from its template. */
   copy: boolean;
@@ -81,11 +89,16 @@ export function rowsOf(m: Model, kind: EntityKind, names = itemNames(m)): Row[] 
     const o = isObject(v) ? v : {};
     const label = typeof o.label === "string" ? o.label : "";
     let parts: string[];
+    // The words before the figure, when not all of `parts` but the last (a bar's).
+    let short: string | undefined;
+    let figure = "";
     switch (kind) {
       case "bars": {
         const b = m.derived.bars[id];
         const item = b?.item ?? (typeof o.item === "string" ? o.item : undefined);
-        parts = [label, name(item), b ? `${mm(b.cut_mm)} mm` : "does not derive"];
+        figure = b ? `${mm(b.cut_mm)} mm` : "";
+        parts = [label, name(item), b ? figure : "does not derive"];
+        short = label || barShort(m, id, item) || (b ? "" : "does not derive");
         break;
       }
       case "parts": {
@@ -107,7 +120,9 @@ export function rowsOf(m: Model, kind: EntityKind, names = itemNames(m)): Row[] 
           : Array.isArray(o.bars)
             ? (o.bars as unknown[]).map(String)
             : [];
-        parts = [label, bars.join(", "), r ? `${mm(r.len_mm)} mm` : ""];
+        figure = r ? `${mm(r.len_mm)} mm` : "";
+        parts = [label, bars.join(", "), figure];
+        short = [label, bars.join(", ")].filter((x) => x !== "").join(" · ");
         break;
       }
       case "patterns": {
@@ -123,14 +138,26 @@ export function rowsOf(m: Model, kind: EntityKind, names = itemNames(m)): Row[] 
         parts = [label, v3(Array.isArray(v) ? v : o.at)];
         break;
     }
+    const title = parts.filter((x) => x !== "").join(" · ");
     return {
       id,
       kind,
-      text: parts.filter((x) => x !== "").join(" · "),
+      text: short ?? title,
+      figure,
+      title,
       tags: Array.isArray(o.tags) ? (o.tags as unknown[]).map(String) : [],
       copy: id.includes("@"),
     };
   });
+}
+
+/** A bar with no label in a few words: its item's code and its section's size, `PF40-01 40×40`. */
+function barShort(m: Model, id: string, item: string | undefined): string {
+  const e = item ? m.items[item] : undefined;
+  const code = typeof e?.code === "string" ? e.code : (item?.split(":").pop() ?? "");
+  const section = m.display?.sections[m.display.bars[id]?.section ?? ""];
+  const size = section ? sizeOf({ thumb: section }) : undefined;
+  return [code, size ? `${size[0]}×${size[1]}` : ""].filter((x) => x !== "").join(" ");
 }
 
 const KINDS: readonly [EntityKind, string][] = [
@@ -187,6 +214,7 @@ export function matches(r: Row, filter: string): boolean {
   return (
     f === "" ||
     r.id.toLowerCase().includes(f) ||
+    r.title.toLowerCase().includes(f) ||
     r.text.toLowerCase().includes(f) ||
     r.tags.some((t) => t.toLowerCase().includes(f))
   );

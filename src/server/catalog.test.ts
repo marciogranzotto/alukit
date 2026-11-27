@@ -51,6 +51,10 @@ describe("the index", () => {
       live: true,
       size_mm: [40, 40],
       from: { minor: 12650, currency: "BRL", per: "m" },
+      // What the start card and the connector pickers sort and fit by (review M8, B1).
+      offers: 2,
+      shape: "tslot",
+      system: "test:s40-c8",
     });
     expect(entries.find((e) => e.id === "test:FOOT-M8")).toMatchObject({
       kind: "accessory",

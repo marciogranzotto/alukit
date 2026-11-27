@@ -37,9 +37,22 @@ export const RULE_WORDS: Readonly<Record<string, string>> = {
   "check-error": "Check error",
   "out-of-stock": "Out of stock",
   "option-not-sold": "Option not sold",
+  "no-connector": "No connector",
 };
 
-export function ProblemRow({ p, compact = false }: { p: Problem; compact?: boolean }) {
+export function ProblemRow({
+  p,
+  compact = false,
+  inCallout = false,
+}: {
+  p: Problem;
+  compact?: boolean;
+  /**
+   * In Show's callout (review m7): no Show inside Show, and the diagnostic's own words (its
+   * measurement: "b18.b overhangs b9 by 30.00") under the title when they say more.
+   */
+  inCallout?: boolean;
+}) {
   const m = model.value;
   const look = GROUP_LOOK[p.group];
   const ids = m ? resolveTargets(m, p.targets).ids : [];
@@ -70,6 +83,11 @@ export function ProblemRow({ p, compact = false }: { p: Problem; compact?: boole
           {p.title}
         </div>
         {!compact && p.detail && <div class="problem-detail">{p.detail}</div>}
+        {inCallout && p.raw && p.raw !== p.title && (
+          <div class="problem-detail" data-testid="callout-detail">
+            {p.raw}
+          </div>
+        )}
         <div class="problem-meta">
           <span class="code" title={p.raw}>
             {p.code}
@@ -84,7 +102,7 @@ export function ProblemRow({ p, compact = false }: { p: Problem; compact?: boole
         </div>
       </div>
       <FixControls p={p}>
-        {p.targets.length > 0 && (
+        {p.targets.length > 0 && !inCallout && (
           <button
             type="button"
             class="btn"

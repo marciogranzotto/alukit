@@ -1,3 +1,4 @@
+import { unjoinedButts, unjoinedMessage } from "../check/joints.ts";
 import type { Derived } from "../derive/derive.ts";
 import type { Diagnostic } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
@@ -20,6 +21,7 @@ import { cmp, type Key, optText, type Reason, readOf, type Work } from "./types.
  * | `out-of-stock` | block | the supplier, as read |
  * | `option-not-sold` | block | the supplier that sells the item, but not in these options |
  * | `stale-price` | warn | the supplier whose price was read more than 30 days before the order |
+ * | `no-connector` | warn | butts naming no connector, with no project default: their bars' suppliers |
  */
 
 export const RULE_DEFAULTS: Readonly<Record<OrderRule, RuleAction>> = {
@@ -31,6 +33,7 @@ export const RULE_DEFAULTS: Readonly<Record<OrderRule, RuleAction>> = {
   "out-of-stock": "block",
   "option-not-sold": "block",
   "stale-price": "warn",
+  "no-connector": "warn",
 };
 
 /** A price is stale when read more than this many days before the order's date. */
@@ -166,6 +169,11 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
       add("stale-price", at, `${what}: price read ${read}, ${age} days before ${ctx.asOf}`, [item]);
     }
   }
+  // Butts that buy nothing to hold their ends (review B1), in the check's words (`joints.ts`):
+  // a connection that buys nothing reaches the suppliers of the bars whose cuts it decides.
+  const butts = unjoinedButts(derived);
+  if (butts.length > 0) add("no-connector", reach(butts), unjoinedMessage(butts), butts);
+
   for (const [k, e] of services) {
     const what = k.slice(k.indexOf("\u0000") + 1);
     add(

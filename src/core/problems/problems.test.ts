@@ -58,11 +58,18 @@ describe("the cart's problems", () => {
     const diagnostics = sortDiagnostics([...m.catalogs, ...m.check.diagnostics]);
     expect(p).toMatchObject({ schema: "alukit.problems/1", rev: 0, variant: null, as_of: AS_OF });
 
-    for (const d of diagnostics) {
+    // The notes on butts that name no connector are the no-connector reason's one problem.
+    const notes = diagnostics.filter((d) => d.code === "butt-no-connector");
+    for (const d of diagnostics.filter((x) => !notes.includes(x))) {
       expect(
         p.problems.filter((x) => x.from.includes("check") && x.raw === d.message),
       ).toHaveLength(1);
     }
+    expect(notes).toHaveLength(18);
+    const unjoined = p.problems.filter((x) => x.code === "butt-no-connector");
+    expect(unjoined.map((x) => [x.rule, x.group, x.from, x.targets])).toEqual([
+      ["no-connector", "warning", ["check", "order"], notes.map((d) => d.entity)],
+    ]);
     const reasons = order.suppliers.flatMap((s) => s.reasons.map((r) => ({ ...r, s: s.supplier })));
     for (const r of reasons) {
       const found = p.problems.filter((x) => x.from.includes("order") && x.raw === r.message);
@@ -76,14 +83,16 @@ describe("the cart's problems", () => {
       ...reasons.map((r) => r.message),
     ]);
     expect(p.problems.every((x) => printed.has(x.raw))).toBe(true);
-    expect(p.problems).toHaveLength(diagnostics.length + reasons.length);
+    // One problem per reason, over every supplier it holds; the notes folded into one.
+    const distinct = new Map(reasons.map((r) => [`${r.rule} ${r.message}`, r]));
+    expect(p.problems).toHaveLength(diagnostics.length - notes.length + distinct.size);
 
     // Grouped by consequence, ids unique; the order's summary counts its problems.
     const rank = p.problems.map((x) => GROUPS.indexOf(x.group));
     expect(rank).toEqual([...rank].sort((a, b) => a - b));
     expect(new Set(p.problems.map((x) => x.id)).size).toBe(p.problems.length);
-    const blocks = reasons.filter((r) => r.action === "block").length;
-    expect(p.order).toEqual({ status: "BLOCKED", blocks, warnings: reasons.length - blocks });
+    const blocks = [...distinct.values()].filter((r) => r.action === "block").length;
+    expect(p.order).toEqual({ status: "BLOCKED", blocks, warnings: distinct.size - blocks });
     expect(p.problems.filter((x) => x.group === "blocks-order")).toHaveLength(blocks);
   });
 

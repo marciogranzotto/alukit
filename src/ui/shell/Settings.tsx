@@ -4,6 +4,7 @@ import type { Order } from "#core/order/types.ts";
 import type { BuiltinCatalog, ItemCard } from "../../server/catalog.ts";
 import { get, getAtRev } from "../api.ts";
 import { cardOf } from "../catalog/state.ts";
+import { ConnectorSelect } from "../common/ConnectorSelect.tsx";
 import { Errors } from "../Feedback.tsx";
 import { plural } from "../format.ts";
 import type { Model } from "../model.ts";
@@ -41,6 +42,10 @@ interface Form {
   kerf: string;
   trim: string;
   corner: string;
+  /** The default butt connector (review B1), which every butt that names none takes. */
+  buttConnector: string;
+  /** Connectors per butting end, typed: empty for one. */
+  buttQty: string;
   /** The order rules the document sets; "" leaves a rule at its default. */
   rules: Record<string, string>;
 }
@@ -50,6 +55,7 @@ const rateOf = (r: unknown) => (typeof r === "number" ? String(r) : num(obj(r).v
 export function formOf(doc: Record<string, unknown>): Form {
   const defaults = obj(doc.defaults);
   const bar = obj(defaults.bar);
+  const butt = obj(defaults.butt);
   const cutting = obj(defaults.cutting);
   return {
     name: str(doc.name),
@@ -62,6 +68,8 @@ export function formOf(doc: Record<string, unknown>): Form {
     kerf: num(cutting.kerf_mm),
     trim: num(cutting.trim_mm),
     corner: str(defaults.corner),
+    buttConnector: str(butt.connector),
+    buttQty: num(butt.qty),
     rules: Object.fromEntries(Object.entries(obj(doc.order_rules)).map(([k, v]) => [k, str(v)])),
   };
 }
@@ -134,6 +142,16 @@ export function settingsPatch(
   }
   if (Object.keys(cutting).length > 0) defaults.cutting = cutting;
   if (was.corner !== now.corner) defaults.corner = now.corner === "" ? null : now.corner;
+  const butt: Record<string, unknown> = {};
+  if (was.buttConnector !== now.buttConnector)
+    butt.connector = now.buttConnector === "" ? null : now.buttConnector;
+  if (was.buttQty !== now.buttQty) {
+    const q = typedNumber(now.buttQty);
+    if (q !== null && !(Number.isInteger(q) && (q as number) >= 1))
+      bad = "connectors per end: a whole number, 1 or more";
+    butt.qty = q;
+  }
+  if (Object.keys(butt).length > 0) defaults.butt = butt;
   if (Object.keys(defaults).length > 0) patch.defaults = defaults;
 
   const rules = mapPatch(was.rules, now.rules, (_k, t) => t);
@@ -143,6 +161,19 @@ export function settingsPatch(
 }
 
 const CURRENCIES = ["BRL", "USD", "EUR", "GBP", "CNY", "JPY"];
+
+/** The order rules in words, their codes shown small beside them (review m10; design §5.5). */
+const RULE_LABELS: Readonly<Record<string, string>> = {
+  "check-error": "An error in the model",
+  "open-item": "An open item",
+  placeholder: "A placeholder",
+  "missing-price": "A price is missing",
+  "est-price": "A price is an estimate",
+  "out-of-stock": "Out of stock",
+  "option-not-sold": "An option is not sold",
+  "stale-price": "A price is over 30 days old",
+  "no-connector": "Butts with no connector",
+};
 const CORNER_WORDS: Readonly<Record<string, string>> = {
   "": "the default: a vertical bar runs through",
   vertical: "a vertical bar runs through",
@@ -429,6 +460,33 @@ function SettingsForm({ m }: { m: Model }) {
             ))}
           </select>
         </Field>
+        <Field label="Default butt connector" for="settings-butt">
+          <ConnectorSelect
+            id="settings-butt"
+            testid="settings-butt"
+            label="The connector every butt that names none takes"
+            value={f.buttConnector}
+            systems={card?.entry.system ? [card.entry.system] : []}
+            lead={[{ value: "", label: "none: each butt names its own" }]}
+            others
+            onChange={(v) => set({ buttConnector: v })}
+          />
+          {f.buttConnector !== "" && (
+            <label>
+              ×{" "}
+              <input
+                data-testid="settings-butt-qty"
+                aria-label="Connectors per butting end"
+                inputMode="numeric"
+                size={3}
+                placeholder="1"
+                value={f.buttQty}
+                onInput={(e) => set({ buttQty: (e.currentTarget as HTMLInputElement).value })}
+              />{" "}
+              per end
+            </label>
+          )}
+        </Field>
         <Field label="Saw kerf, mm" for="settings-kerf">
           <input
             data-testid="settings-kerf"
@@ -458,7 +516,9 @@ function SettingsForm({ m }: { m: Model }) {
           <div class="rules">
             {Object.keys(rules).map((rule) => (
               <label key={rule} class="rule">
-                <span>{rule}</span>
+                <span>
+                  {RULE_LABELS[rule] ?? rule} <code class="sub">{rule}</code>
+                </span>
                 <select
                   data-testid={`settings-rule-${rule}`}
                   value={f.rules[rule] ?? ""}

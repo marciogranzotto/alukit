@@ -2074,6 +2074,7 @@ error.
 | `out-of-stock` (as read) | block | that supplier |
 | `option-not-sold` ("not sold with finish red"; with none chosen, "sold only with finish anodised or black; choose one", *2.3*) | block | that supplier |
 | `stale-price` (older than 30 days before the order's date) | warn | that supplier |
+| `no-connector` (butts that name no connector, while the project names no default butt connector: nothing is bought to join them; [polish](ux/polish-decisions.md) 1) | warn | the suppliers of the butted bars |
 
 The order list reports **READY** or **BLOCKED** per supplier, with every reason. `alukit order`
 exits non-zero when any supplier is blocked, so an agent cannot hand over a blocked list by

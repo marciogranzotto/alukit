@@ -6,7 +6,7 @@ import { ItemSwatch } from "../common/ItemSwatch.tsx";
 import { Num } from "../common/Num.tsx";
 import { mm, qty } from "../format.ts";
 import type { Model } from "../model.ts";
-import { registerSheet, selectionOnly } from "../sheets/registry.ts";
+import { selectionOnly } from "../sheets/registry.ts";
 import { outputPath } from "../store.ts";
 import {
   anySelected,

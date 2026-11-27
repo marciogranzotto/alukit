@@ -28,6 +28,11 @@
  * view controls' bar at the right, wrapping when the viewport is narrow.
  */
 
+/*
+ * No stacking context of its own (no z-index): the rail and the toolbar sit at 3, over the scene's
+ * labels, and the message lane at 13, over the start card (12), so a toast about what the card did
+ * is seen (review M4).
+ */
 .viewport-top {
   position: absolute;
   top: 6px;
@@ -37,23 +42,54 @@
   gap: 8px;
   align-items: flex-start;
   pointer-events: none;
-  z-index: 3;
 }
 
 .tool-rail {
+  position: relative;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   gap: 4px;
   align-items: stretch;
 }
 
-.toolbar {
+/* The view controls, and under their last row the message lane */
+.viewport-head {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toolbar {
+  position: relative;
+  z-index: 3;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 4px;
   align-items: center;
+}
+
+/*
+ * The message lane (review M4): from the rail's right edge plus 8 px to the view's right edge,
+ * under the toolbar's last row. Top to bottom: what is shown (the read-only label), the tool's
+ * steps, then the toasts, which keep to its right part. Only their buttons take clicks.
+ */
+.message-lane {
+  position: relative;
+  z-index: 13;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.message-lane > * {
+  max-width: 100%;
 }
 
 .viewport-top .tb {
@@ -294,7 +330,11 @@
   color: var(--text-2);
 }
 
-/* The orientation gizmo: bottom left, above the help line; its ends are buttons */
+/*
+ * The orientation gizmo: bottom left, where S3.9 put it; its ends are buttons. Not lower: at 6 px
+ * from the canvas's foot Chrome draws it a sub-pixel differently once the toolbar's layers change
+ * (measured in view.spec's section test, 168 pixels; none at 24 px).
+ */
 .gizmo {
   position: absolute;
   left: 6px;
@@ -341,6 +381,18 @@
   top: -5px;
   width: 10px;
   height: 10px;
+}
+
+/* A 24 px target around each end, however small it is drawn (review p1; WCAG 2.5.8) */
+.gizmo-end::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
 }
 
 .gizmo-end:hover {

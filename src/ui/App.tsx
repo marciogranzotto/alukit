@@ -152,17 +152,20 @@ export function App() {
               tool={activeTool.value}
               slots={{
                 left: <ToolRail />,
-                centre: (
+                centre: <StartCard />,
+                // One lane of messages under the view controls (review M4): what is shown, the
+                // tool's steps, then the toasts.
+                lane: (
                   <>
-                    <StartCard />
-                    <Coach />
                     <LastGood />
+                    <Coach />
+                    <Toasts />
                   </>
                 ),
-                bottom: <CommandBar />,
-                topRight: <Toasts />,
               }}
             />
+            {/* A row under the view, not over it (review M5). */}
+            <CommandBar />
             <StatusBar />
           </main>
           <ColumnSplitter side="right" />
