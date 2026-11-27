@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
 import type { ComponentChildren, RefObject } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { compareIds } from "#core/ids.ts";
 import { StatusGlyph } from "./common/StatusGlyph.tsx";
 import { onKey } from "./keys.ts";
@@ -103,7 +103,7 @@ export function TopBar() {
 
 /** Closes a popover on a pointer press outside `anchor` and on Esc, while it is open. */
 function useDismiss(open: boolean, close: () => void, anchor: RefObject<HTMLElement | null>): void {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const outside = (e: PointerEvent) => {
       if (anchor.current && !anchor.current.contains(e.target as Node)) close();

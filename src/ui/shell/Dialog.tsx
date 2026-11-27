@@ -1,5 +1,5 @@
 import type { ComponentChildren, TargetedKeyboardEvent } from "preact";
-import { useEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 import { onKey } from "../keys.ts";
 
 /**
@@ -31,7 +31,8 @@ export function Dialog({
   close.current = onClose;
   const id = useRef(`dialog-${Math.random().toString(36).slice(2, 8)}`);
 
-  useEffect(() => {
+  // Before the dialog paints, so a key pressed as soon as it shows (Esc) is its own.
+  useLayoutEffect(() => {
     const before = document.activeElement;
     const level = ++depth;
     const first =

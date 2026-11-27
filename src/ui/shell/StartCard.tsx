@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useState } from "preact/hooks";
 import skill from "../../../skills/alukit/SKILL.md?raw";
 import type { CatalogTree, ItemCard, ListedEntry } from "../../server/catalog.ts";
 import { get } from "../api.ts";
@@ -334,7 +334,8 @@ export function StartCard() {
   const m = model.value;
   const [cats, setCats] = useState<Catalogs | undefined>();
   const catalogsKey = JSON.stringify(m?.doc.catalogs ?? []);
-  useEffect(() => {
+  // Before the card paints: an Esc pressed as soon as it shows closes it.
+  useLayoutEffect(() => {
     if (!shown) return;
     return onKey(
       "overlay",
