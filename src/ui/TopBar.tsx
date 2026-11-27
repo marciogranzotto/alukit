@@ -1,20 +1,24 @@
 import { signal } from "@preact/signals";
-import { useState } from "preact/hooks";
+import type { ComponentChildren, RefObject } from "preact";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { compareIds } from "#core/ids.ts";
+import { StatusGlyph } from "./common/StatusGlyph.tsx";
+import { onKey } from "./keys.ts";
+import { openSheet } from "./sheets/registry.ts";
+import { helpOpen } from "./shell/Help.tsx";
+import { readiness } from "./shell/readiness.ts";
+import { settingsOpen } from "./shell/Settings.tsx";
+import { showStart } from "./shell/start.ts";
+import { requestRedo, requestUndo, stepLabel } from "./shell/Undo.tsx";
 import {
   busy,
   chooseVariant,
-  connection,
   exportGlb,
   model,
-  notice,
   type RevisionInfo,
-  redo,
-  restore,
   revisions,
   saveRevision,
   summary,
-  undo,
   type Verification,
   variant,
   verifyRevision,
@@ -22,87 +26,248 @@ import {
 import { ThemeSwitch } from "./theme/ThemeSwitch.tsx";
 
 /**
- * The top bar (design §8): project, variant, undo and redo naming the step, the revision, the
- * read-only banner's restore, export, and the link.
+ * The top bar (design §8, D-UX-3, D-UX-14, D-UX-19, D-UX-20; S2.6): the Project menu (settings,
+ * revisions, export, help, the start card), the variant, Undo and Redo naming whose step they
+ * take back, the order's readiness, whether what the server holds is saved as a revision, the
+ * theme and help. The connection and the step counter are the status bar's (S2.7); the
+ * read-only banner and its restore are shell/ReadOnly.tsx's. Owner: S2.
  */
+
+/** Why the history buttons are off, in words (S2.14: a disabled control says why). */
+function historyWhy(kind: "undo" | "redo"): string | undefined {
+  const s = summary.value;
+  if (s?.status.readOnly) return "Read-only: fix the file, or restore the last good state";
+  if (busy.value) return "Waiting for the server's answer";
+  if (!(kind === "undo" ? s?.undo : s?.redo))
+    return kind === "undo" ? "Nothing to undo" : "Nothing to redo";
+  return undefined;
+}
+
 export function TopBar() {
   const s = summary.value;
-  const drawn = model.value?.rev;
-  const readOnly = s?.status.readOnly === true;
-  const conn = connection.value;
+  const undoWhy = historyWhy("undo");
+  const redoWhy = historyWhy("redo");
   return (
     <header class="topbar">
       <span class="brand">AluKit</span>
-      <span class="project">{s?.name ?? model.value?.name ?? ""}</span>
+      <ProjectMenu />
       <VariantSwitcher />
       <button
         type="button"
+        class="undo-btn"
         data-testid="undo"
-        disabled={!s?.undo || readOnly || busy.value}
+        disabled={undoWhy !== undefined}
         title={
-          s?.undo ? `Undo rev ${s.undo.rev}: ${s.undo.what} (${s.undo.source})` : "Nothing to undo"
+          undoWhy ??
+          (s?.undo ? `Undo step ${s.undo.rev}, ${stepLabel(s.undo)} (Ctrl+Z)` : undefined)
         }
-        onClick={() => void undo()}
+        onClick={requestUndo}
       >
-        Undo{s?.undo ? ` ${s.undo.what}` : ""}
+        Undo{s?.undo ? ` · ${stepLabel(s.undo)}` : ""}
       </button>
       <button
         type="button"
+        class="redo-btn"
         data-testid="redo"
-        disabled={!s?.redo || readOnly || busy.value}
+        disabled={redoWhy !== undefined}
         title={
-          s?.redo ? `Redo rev ${s.redo.rev}: ${s.redo.what} (${s.redo.source})` : "Nothing to redo"
+          redoWhy ??
+          (s?.redo ? `Redo step ${s.redo.rev}, ${stepLabel(s.redo)} (Ctrl+Shift+Z)` : undefined)
         }
-        onClick={() => void redo()}
+        onClick={requestRedo}
       >
-        Redo{s?.redo ? ` ${s.redo.what}` : ""}
+        Redo{s?.redo ? ` · ${stepLabel(s.redo)}` : ""}
       </button>
       <span class="spacer" />
-      {notice.value && (
-        <span class={notice.value.error ? "notice error" : "notice"} data-testid="notice">
-          {notice.value.text}
-        </span>
-      )}
-      <span
-        class="rev"
-        data-testid="rev"
-        data-rev={s?.rev ?? ""}
-        data-drawn={drawn ?? ""}
-        title={drawn !== undefined && s && drawn !== s.rev ? `drawing rev ${drawn}` : "revision"}
-      >
-        {s ? `rev ${s.rev}` : ""}
-      </span>
+      <ReadinessPill />
       <Revisions />
+      <ThemeSwitch />
+      <button
+        type="button"
+        class="help-btn"
+        data-testid="help-open"
+        aria-label="Keys and help"
+        title="Keys and help (?)"
+        onClick={() => {
+          helpOpen.value = true;
+        }}
+      >
+        ?
+      </button>
+    </header>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Popovers: a menu and the revisions, each closing on a click outside it and on Esc (S2.15)
+
+/** Closes a popover on a pointer press outside `anchor` and on Esc, while it is open. */
+function useDismiss(open: boolean, close: () => void, anchor: RefObject<HTMLElement | null>): void {
+  useLayoutEffect(() => {
+    if (!open) return;
+    const outside = (e: PointerEvent) => {
+      if (anchor.current && !anchor.current.contains(e.target as Node)) close();
+    };
+    document.addEventListener("pointerdown", outside, true);
+    const off = onKey(
+      "overlay",
+      (e) => {
+        if (e.key !== "Escape") return false;
+        close();
+        anchor.current?.querySelector<HTMLElement>("[aria-expanded]")?.focus();
+        return true;
+      },
+      50,
+    );
+    return () => {
+      document.removeEventListener("pointerdown", outside, true);
+      off();
+    };
+  }, [open]);
+}
+
+function Popover({
+  open,
+  setOpen,
+  label,
+  button,
+  children,
+  class: cls,
+  testid,
+}: {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  label: ComponentChildren;
+  button: { class?: string; testid: string; title?: string; data?: Record<string, string> };
+  children: ComponentChildren;
+  class: string;
+  testid: string;
+}) {
+  const anchor = useRef<HTMLSpanElement>(null);
+  useDismiss(open, () => setOpen(false), anchor);
+  return (
+    <span class="menu-anchor" ref={anchor}>
+      <button
+        type="button"
+        class={button.class}
+        data-testid={button.testid}
+        title={button.title}
+        aria-expanded={open}
+        aria-haspopup="true"
+        {...(button.data ?? {})}
+        onClick={() => setOpen(!open)}
+      >
+        {label}
+      </button>
+      {open && (
+        <div class={`popover ${cls}`} data-testid={testid}>
+          {children}
+        </div>
+      )}
+    </span>
+  );
+}
+
+const menuOpen = signal(false);
+const revisionsOpen = signal(false);
+
+/** The Project menu: the project's name opens it. */
+function ProjectMenu() {
+  const s = summary.value;
+  const name = s?.name ?? model.value?.name ?? "Project";
+  const pick = (f: () => void) => () => {
+    menuOpen.value = false;
+    f();
+  };
+  return (
+    <Popover
+      open={menuOpen.value}
+      setOpen={(v) => {
+        menuOpen.value = v;
+      }}
+      label={
+        <>
+          {name} <span aria-hidden="true">▾</span>
+        </>
+      }
+      button={{
+        class: "menu-btn project",
+        testid: "project-menu",
+        title: "The project: settings, revisions, export",
+      }}
+      class="menu"
+      testid="project-menu-list"
+    >
+      <button
+        type="button"
+        data-testid="menu-settings"
+        onClick={pick(() => {
+          settingsOpen.value = true;
+        })}
+      >
+        Project settings…
+      </button>
+      <button
+        type="button"
+        data-testid="menu-revisions"
+        onClick={pick(() => {
+          revisionsOpen.value = true;
+        })}
+      >
+        Revisions…
+      </button>
       <button
         type="button"
         data-testid="export"
         disabled={!model.value || busy.value}
         title={`Download the model as binary glTF${model.value?.variant ? `, variant ${model.value.variant}` : ""} (alukit export glb)`}
-        onClick={() => void exportGlb()}
+        onClick={pick(() => void exportGlb())}
       >
         Export GLB
       </button>
-      <ThemeSwitch />
-      <span class={`conn ${conn}`} data-testid="connection" title="the server's event stream">
-        {conn === "live"
-          ? "live"
-          : conn === "connecting"
-            ? "connecting"
-            : conn === "lost"
-              ? "reconnecting"
-              : "no access"}
-      </span>
-      {readOnly && (
-        <button type="button" class="restore" onClick={() => void restore()} disabled={busy.value}>
-          Restore last good
-        </button>
-      )}
-    </header>
+      <hr />
+      <button
+        type="button"
+        onClick={pick(() => {
+          helpOpen.value = true;
+        })}
+      >
+        Keys and help <kbd>?</kbd>
+      </button>
+      <button type="button" data-testid="menu-start" onClick={pick(showStart)}>
+        Show the start card
+      </button>
+    </Popover>
   );
 }
 
+// ---------------------------------------------------------------------------------------------
+// The order's readiness (D-UX-3)
+
+/** The pill: always in sight; it opens Order & costs, where the blockers are listed. */
+function ReadinessPill() {
+  const r = readiness();
+  if (!r) return null;
+  return (
+    <button
+      type="button"
+      class={`pill${r.stale ? " stale" : ""}`}
+      data-testid="readiness"
+      data-status={r.status}
+      title={`The order: ${r.text}${r.stale ? " (being checked again)" : ""}. Opens Order & costs`}
+      onClick={() => openSheet("order")}
+    >
+      {r.glyph && <StatusGlyph status={r.glyph} size={12} />}
+      {r.text}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Variants (§4.10, D-UX-19)
+
 /**
- * The variant every view derives (§4.10): the model, the scene, the drawer's outputs and the
+ * The variant every view derives (§4.10): the model, the scene, the sheets' outputs and the
  * export. The default is the document's (or the document as written, when it names none), as
  * the CLI without `--variant`. Shown only when the document lists variants.
  */
@@ -117,7 +282,7 @@ function VariantSwitcher() {
       class="variant"
       title="The variant every view derives; edits go to the document as written"
     >
-      variant{" "}
+      Variant{" "}
       <select
         data-testid="variant"
         data-drawn={m.variant ?? ""}
@@ -138,7 +303,28 @@ function VariantSwitcher() {
   );
 }
 
-const revisionsOpen = signal(false);
+/**
+ * The strip under the top bar while the tab shows a variant the person picked (D-UX-19): edits
+ * still go to the document as written, which the strip says, with the way back.
+ */
+export function VariantStrip() {
+  const m = model.value;
+  const v = variant.value;
+  if (!m || v === undefined || m.variant !== v) return null;
+  return (
+    <div class="variant-strip" data-testid="variant-strip" role="status">
+      <span>
+        Viewing <strong>{v}</strong>. Edits go to the base document.
+      </span>
+      <button type="button" class="btn" onClick={() => chooseVariant(undefined)}>
+        Back to the default
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Revisions (§4.13, D-UX-20)
 
 /** A verification's result in a few words (§4.13): zero drift, or what moved. */
 function verifyText(v: Verification | { error: string }): { text: string; ok: boolean } {
@@ -162,33 +348,33 @@ function verifyText(v: Verification | { error: string }): { text: string; ok: bo
 }
 
 /**
- * The revision (§4.13, §8's top bar): whether what the server holds is a saved revision, and
- * the revisions themselves, saved and verified through the server (`alukit revision save` and
- * `verify` say the same).
+ * Whether what the server holds is a saved revision, "Saved as Quote 1" or "Not saved" (D-UX-20),
+ * and the revisions themselves, saved and verified through the server (`alukit revision save`
+ * and `verify` say the same).
  */
 function Revisions() {
   const r = revisions.value;
   const at = r?.revisions.find((x) => x.stamp.hash === r.current);
   return (
-    <span class="revisions-anchor">
-      <button
-        type="button"
-        data-testid="revision"
-        data-saved={at?.name ?? ""}
-        aria-expanded={revisionsOpen.value}
-        title={
-          at
-            ? `What the server holds is the saved revision "${at.name}"`
-            : "What the server holds is not saved as a revision"
-        }
-        onClick={() => {
-          revisionsOpen.value = !revisionsOpen.value;
-        }}
-      >
-        Revision: {at ? at.name : "unsaved"}
-      </button>
-      {revisionsOpen.value && <RevisionPanel />}
-    </span>
+    <Popover
+      open={revisionsOpen.value}
+      setOpen={(v) => {
+        revisionsOpen.value = v;
+      }}
+      label={at ? `Saved as ${at.name}` : "Not saved"}
+      button={{
+        class: "saved",
+        testid: "revision",
+        title: at
+          ? `What the server holds is the saved revision "${at.name}"`
+          : "What the server holds is not saved as a named revision",
+        data: { "data-saved": at?.name ?? "" },
+      }}
+      class="revisions"
+      testid="revisions"
+    >
+      <RevisionPanel />
+    </Popover>
   );
 }
 
@@ -212,19 +398,21 @@ function RevisionPanel() {
     setChecked((c) => ({ ...c, [x.file]: v }));
   };
   return (
-    <div class="popover revisions" data-testid="revisions">
+    <>
       <form class="tp-row" onSubmit={(e) => void save(e)}>
         <input
           data-testid="revision-name"
+          aria-label="The revision's name"
           placeholder="a name, e.g. Quote 1"
           value={name}
           onInput={(e) => setName((e.currentTarget as HTMLInputElement).value)}
         />
         <button
           type="submit"
-          class="tp-btn"
+          class="btn"
           data-testid="revision-save"
           disabled={readOnly || busy.value || name.trim() === ""}
+          title={readOnly ? "Read-only: fix the file, or restore the last good state" : undefined}
         >
           Save revision
         </button>
@@ -254,7 +442,7 @@ function RevisionPanel() {
                   </span>{" "}
                   <button
                     type="button"
-                    class="tp-btn"
+                    class="btn"
                     data-testid="revision-verify"
                     onClick={() => void verify(x)}
                   >
@@ -271,45 +459,6 @@ function RevisionPanel() {
           })}
         </ul>
       )}
-    </div>
-  );
-}
-
-/** Why the project is read-only (§7.1): every tab shows it, until the file is valid again. */
-export function ReadOnlyBanner() {
-  const st = summary.value?.status;
-  if (!st?.readOnly) return null;
-  return (
-    <div class="banner" data-testid="read-only" role="alert">
-      <strong>Read-only.</strong> {st.message}
-      {st.diagnostics.length > 1 && (
-        <ul>
-          {st.diagnostics.slice(0, 8).map((d) => (
-            <li key={`${d.code}${d.entity}${d.message}`}>
-              {d.entity ? `${d.entity}: ` : ""}
-              {d.message}
-            </li>
-          ))}
-        </ul>
-      )}
-      <span class="hint">
-        {st.reason === "file"
-          ? "Fix the file, or restore the last good state the server holds."
-          : "Free the disk or fix the folder's permissions, then restore."}
-      </span>
-    </div>
-  );
-}
-
-/** What a tab shows when it has no token: the address `alukit serve` printed carries it. */
-export function NoAccess() {
-  const conn = connection.value;
-  if (conn !== "no-token" && conn !== "refused") return null;
-  return (
-    <div class="banner" role="alert" data-testid="no-access">
-      {conn === "no-token"
-        ? "This tab has no access token. Open the address that alukit serve printed: it carries one."
-        : "The server refused this tab's token: it has restarted. Open the address it printed."}
-    </div>
+    </>
   );
 }

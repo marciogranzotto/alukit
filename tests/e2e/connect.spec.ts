@@ -1,7 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { cli, openTab, type Served, scratchProject, serve, waitDrawn } from "./helpers.ts";
+import {
+  cli,
+  lastStepWords,
+  openTab,
+  type Served,
+  scratchProject,
+  serve,
+  waitDrawn,
+} from "./helpers.ts";
 
 /**
  * The connect tool's pivots and fastened face joints (design §8, §4.5). A face connection made
@@ -167,6 +175,8 @@ test("a pivot carries the ends picked, pointing them at itself in one step", asy
   };
   expect(d.bars.b35?.ends.a.by).toBe("c36");
   expect(d.diagnostics.filter((x) => x.severity === "error" && x.entity === "c36")).toEqual([]);
-  // One step: undo takes back the connection and the end it set.
-  await expect(page.getByTestId("undo")).toContainText("addConnection, setBar");
+  // One step: undo takes back the connection and the end it set, and names the step in words.
+  await expect(page.getByTestId("undo")).toHaveText(
+    `Undo · you: ${await lastStepWords(served.dir)}`,
+  );
 });

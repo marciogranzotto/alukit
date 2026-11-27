@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { cli, openTab, type Served, serve } from "./helpers.ts";
+import { cli, lastStepWords, openTab, type Served, serve } from "./helpers.ts";
 
 /**
  * M4a, done when (design §12): a CLI command appears in two open tabs within 1 s, at the same
@@ -51,14 +51,20 @@ test("a CLI command appears in two open tabs within 1 s, at the same revision", 
   });
   expect(shown - r.exitedAt).toBeLessThan(1000);
 
+  // Each tab says who made the step and what it was: the step counter, Undo, a toast.
+  const words = await lastStepWords(served.dir);
+  expect(words).toBe("add bar b35");
   for (const t of tabs) {
-    await expect(t.getByTestId("rev")).toHaveText("rev 1");
-    await expect(t.getByTestId("undo")).toHaveText("Undo addBar");
+    await expect(t.getByTestId("rev")).toHaveText("Step 1");
+    await expect(t.getByTestId("undo")).toHaveText(`Undo · e2e: ${words}`);
+    await expect(t.getByTestId("step-toast")).toContainText(`e2e: ${words}`);
     await expect(t.getByTestId("tree").locator('[data-id="b35"]')).toBeVisible();
   }
 
-  // Undo from one tab is the server's undo: both tabs follow.
+  // Undo from one tab is the server's undo: both tabs follow. The step was the CLI's, so the
+  // tab asks first (D-UX-14).
   await tabs[1]?.getByTestId("undo").click();
+  await tabs[1]?.getByTestId("undo-confirm").click();
   await Promise.all(
     tabs.map((t) =>
       t.waitForFunction(

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { cli, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
+import { cli, lastStepWords, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
 
 /**
  * The drawer's record sheets (design §8, §4.12): open items (in Problems), params and decisions
@@ -73,8 +73,10 @@ test("adds an open item and resolves it, each one step that undo takes back", as
   expect(d.open?.map((o) => o.id)).toEqual(["O1", "O2"]);
   expect(d.decisions).toMatchObject([{ id: "D1", resolves: "O3" }]);
 
-  // Undo takes back the resolution, then the item itself.
-  await expect(page.getByTestId("undo")).toContainText("resolveOpen");
+  // Undo takes back the resolution, then the item itself; it names the step in words.
+  await expect(page.getByTestId("undo")).toHaveText(
+    `Undo · you: ${await lastStepWords(served.dir)}`,
+  );
   await page.getByTestId("undo").click();
   await waitDrawn(page, 3);
   await expect(decisions.locator("tr[data-decision]")).toHaveCount(0);
@@ -94,8 +96,8 @@ test("adds an open item and resolves it, each one step that undo takes back", as
 
 test("sets a param and records a decision; a refusal is shown in the tab", async ({ page }) => {
   await openTab(page, served, 0);
-  await page.getByRole("tab", { name: "Params" }).click();
-  const tab = page.getByTestId("params");
+  // The params are in the project panel, the inspector with nothing selected (D-UX-4, S2.12).
+  const tab = page.getByTestId("project-panel").getByTestId("params");
   const w = tab.locator('tr[data-param="W"]');
   await expect(w.getByTestId("param-value")).toHaveText("1200");
 

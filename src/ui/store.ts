@@ -1,14 +1,16 @@
-import { signal } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
 import type { ProblemsAnswer } from "#core/problems/types.ts";
 import { ApiError, adoptToken, download, get, post, readEvents } from "./api.ts";
+import { fetchProblems } from "./client/problems.ts";
 import { extendHook } from "./hook.ts";
-import type { Diagnostic, LogEntry, Model, Summary } from "./model.ts";
+import type { Diagnostic, LogEntry, Model, RevEvent, Summary } from "./model.ts";
 
 /**
  * The tab's state (design §7.1: a tab holds no unsaved state). The server's revision, status and
  * undo and redo steps arrive on the event stream; the model of a revision is fetched once per
- * revision. Every edit is a request to the server, whose answer comes back as the next event.
- * The selection lives in focus.ts, with the hover and Show; it is re-exported here.
+ * revision, and its problems with it. Every edit is a request to the server, whose answer comes
+ * back as the next event. The selection lives in focus.ts, with the hover and Show; it is
+ * re-exported here. Owner: S2.
  */
 
 export { select, selection } from "./focus.ts";
@@ -19,8 +21,9 @@ export const connection = signal<Connection>("connecting");
 export const summary = signal<Summary | undefined>(undefined);
 export const model = signal<Model | undefined>(undefined);
 /**
- * The problems of the drawn revision (`alukit.problems/1`), once something asks for them: S2.6
- * fetches them each revision through src/ui/client/problems.ts. Until BE-3 lands nothing does.
+ * The problems of the drawn revision (`alukit.problems/1`), fetched for each revision drawn, in
+ * the tab's variant and at the order's date, through src/ui/client/problems.ts (S2.6). Undefined
+ * while the server has no `/api/problems` (before BE-3) or has not answered for this revision.
  */
 export const problems = signal<ProblemsAnswer | undefined>(undefined);
 export const log = signal<LogEntry[]>([]);
@@ -32,9 +35,44 @@ export const asOf = signal<string | undefined>(undefined);
  * `?variant=`, as the CLI takes `--variant`. Edits still go to the document as written.
  */
 export const variant = signal<string | undefined>(undefined);
-/** The last answer worth telling: a refusal, a failure. */
-export const notice = signal<{ text: string; error: boolean } | undefined>(undefined);
+
+/**
+ * The last answer worth telling that no form shows where it happened: a refusal, a failure, an
+ * export done. The toasts show it (shell/Toasts.tsx). `refs` are what a refusal names (the
+ * entity and refs of its errors), which the toast offers to select; `n` counts notices, so the
+ * same text told again is a new notice.
+ */
+export interface Notice {
+  text: string;
+  error: boolean;
+  refs?: string[];
+  n: number;
+}
+export const notice = signal<Notice | undefined>(undefined);
+let notices = 0;
+
+/** Tells something in a toast: a refusal or a failure when `error`. */
+export function tell(text: string, error: boolean, refs: readonly string[] = []): void {
+  notice.value = { text, error, ...(refs.length > 0 ? { refs: [...refs] } : {}), n: ++notices };
+}
+
 export const busy = signal(false);
+
+/**
+ * The steps as this tab heard them (§7.1's `rev` events), newest last: who made each, its words,
+ * what it created, removed and changed, and when the tab heard it. Steps made before the tab
+ * opened are only in the log, with no time.
+ */
+export interface HeardStep extends RevEvent {
+  /** When the tab heard it, ms since the epoch. */
+  at: number;
+}
+export const heard = signal<readonly HeardStep[]>([]);
+
+/** When the tab heard the step that made `rev`, if it did. */
+export function heardAt(rev: number): number | undefined {
+  return heard.peek().find((s) => s.rev === rev)?.at;
+}
 
 /** An output's path with the variant and, when given, the order's date. */
 export function outputPath(path: string, opts: { asOf?: string | undefined } = {}): string {
@@ -66,7 +104,7 @@ async function ensureModel(rev: number): Promise<void> {
         m = await get<Model>(outputPath("/api/model"));
       } catch (e) {
         if (asked !== undefined && e instanceof ApiError && e.status === 400) {
-          notice.value = { text: `variant ${asked}: ${e.message}`, error: true };
+          tell(`variant ${asked}: ${e.message}`, true);
           variant.value = undefined;
           continue;
         }
@@ -78,13 +116,29 @@ async function ensureModel(rev: number): Promise<void> {
       if (variant.value !== asked) continue;
       drawnFor = asked;
       model.value = m;
+      void refreshProblems(m);
       if (m.rev >= wanted) break;
     }
   } catch (e) {
-    notice.value = { text: `cannot load the model: ${(e as Error).message}`, error: true };
+    tell(`cannot load the model: ${(e as Error).message}`, true);
   } finally {
     fetching = false;
   }
+}
+
+/**
+ * Asks for the problems of the drawn model, in its variant and at the order's date (S2.6). An
+ * answer that comes back after the tab has moved on is dropped, so `problems` only ever holds
+ * the drawn revision's. A server with no `/api/problems` leaves it undefined.
+ */
+async function refreshProblems(m: Model): Promise<void> {
+  const date = asOf.peek();
+  const got = await fetchProblems({
+    ...(m.variant !== null ? { variant: m.variant } : {}),
+    ...(date !== undefined ? { asOf: date } : {}),
+  });
+  if (model.peek() !== m || asOf.peek() !== date) return;
+  problems.value = got.ok ? got.value : undefined;
 }
 
 /** Derives in another variant: every view follows (§4.10). */
@@ -119,6 +173,7 @@ function onEvent(event: string, data: string): void {
         undo: e.undo,
         redo: e.redo,
       };
+      heard.value = [...heard.value.slice(-49), { ...(e as RevEvent), at: Date.now() }];
       void ensureModel(e.rev);
       void refreshLog();
       void refreshRevisions();
@@ -132,6 +187,12 @@ function onEvent(event: string, data: string): void {
 
 /** Connects, and reconnects after a pause while the server is away. */
 export async function start(): Promise<void> {
+  // A new date for the order: the drawn revision's problems, judged at it.
+  effect(() => {
+    void asOf.value;
+    const m = model.peek();
+    if (m) void refreshProblems(m);
+  });
   if (!adoptToken()) {
     connection.value = "no-token";
     return;
@@ -162,22 +223,33 @@ async function send(path: string, body: unknown, what: string): Promise<void> {
       body,
     );
     if (r.body.ok === false || r.status >= 400) {
-      notice.value = {
-        text: `${what}: ${r.body.status?.message ?? r.body.message ?? `the server answered ${r.status}`}`,
-        error: true,
-      };
-    } else notice.value = undefined;
+      tell(
+        `${what}: ${r.body.status?.message ?? r.body.message ?? `the server answered ${r.status}`}`,
+        true,
+      );
+    }
   } catch (e) {
-    notice.value = { text: `${what}: ${(e as Error).message}`, error: true };
+    tell(`${what}: ${(e as Error).message}`, true);
   } finally {
     busy.value = false;
   }
 }
 
-/** A command's complaint, as the server words it: the field it is about, when it names one. */
+/**
+ * A command's complaint, as the server words it: its code, the entity and field it is about, and
+ * the other entities it names (`refs`), when it names them.
+ */
 export interface CommandError {
+  code?: string;
+  entity?: string;
   field?: string;
+  refs?: string[];
   message: string;
+}
+
+/** The entities a refusal names: each error's entity and refs, once each, in order. */
+export function refusalRefs(errors: readonly CommandError[]): string[] {
+  return [...new Set(errors.flatMap((e) => [...(e.entity ? [e.entity] : []), ...(e.refs ?? [])]))];
 }
 
 /** What a batch came to: the entities it created and the diagnostics it added, or why not. */
@@ -187,14 +259,15 @@ export type CommandOutcome =
 
 /**
  * Sends a batch of commands as one step (§7.1: a gesture is committed as one command batch, with
- * source `ui`), and resolves with what it came to. A refusal is also shown as the notice, naming
- * the command and why. `strict` refuses the batch when another step came first: for a batch
- * that names an id it expects to create (a pivot its carried ends point to).
+ * source `ui`), and resolves with what it came to. `strict` refuses the batch when another step
+ * came first: for a batch that names an id it expects to create (a pivot its carried ends point
+ * to). A refusal is shown where the action happened (U30): a caller that shows it itself, under
+ * its form, passes `inline`; any other refusal is told in a toast, naming the command and why.
  */
 export async function sendCommands(
   commands: readonly { cmd: string; args?: unknown }[],
   what: string,
-  opts: { strict?: boolean } = {},
+  opts: { strict?: boolean; inline?: boolean } = {},
 ): Promise<CommandOutcome> {
   busy.value = true;
   try {
@@ -214,7 +287,6 @@ export async function sendCommands(
       ...(opts.strict ? { strict: true } : {}),
     });
     if (r.status === 200 && r.body.ok !== false) {
-      notice.value = undefined;
       return {
         ok: true,
         rev: r.body.rev ?? -1,
@@ -229,11 +301,11 @@ export async function sendCommands(
       : r.body.kind === "stale"
         ? "the project changed meanwhile; try again on the new revision"
         : (r.body.status?.message ?? r.body.message ?? `the server answered ${r.status}`);
-    notice.value = { text: `${what}: ${why}`, error: true };
+    if (!opts.inline) tell(`${what}: ${why}`, true, refusalRefs(errors));
     return { ok: false, why, errors };
   } catch (e) {
     const why = (e as Error).message;
-    notice.value = { text: `${what}: ${why}`, error: true };
+    if (!opts.inline) tell(`${what}: ${why}`, true);
     return { ok: false, why, errors: [] };
   } finally {
     busy.value = false;
@@ -253,9 +325,9 @@ export async function exportGlb(): Promise<void> {
   busy.value = true;
   try {
     const name = await download(outputPath("/api/export/glb"));
-    notice.value = { text: `exported ${name}`, error: false };
+    tell(`exported ${name}`, false);
   } catch (e) {
-    notice.value = { text: `export: ${(e as Error).message}`, error: true };
+    tell(`export: ${(e as Error).message}`, true);
   } finally {
     busy.value = false;
   }
@@ -291,7 +363,7 @@ export async function saveRevision(name: string): Promise<string | undefined> {
       name,
     });
     if (r.status !== 200) return r.body.message ?? `the server answered ${r.status}`;
-    notice.value = { text: `saved ${r.body.file}`, error: false };
+    tell(`saved ${r.body.file}`, false);
     await refreshRevisions();
     return undefined;
   } catch (e) {
@@ -321,7 +393,47 @@ export async function verifyRevision(name: string): Promise<Verification | { err
 
 export const undo = () => send("/api/undo", { source: "ui" }, "undo");
 export const redo = () => send("/api/redo", { source: "ui" }, "redo");
-export const restore = () => send("/api/restore", {}, "restore");
+
+/** What restoring the last good state came to (§7.1, BE-9). */
+export interface Restored {
+  ok: boolean;
+  rev?: number;
+  /**
+   * The files the server kept the rejected text in (BE-9), relative to the project: the
+   * document's and, when it differed, the lock's. Empty when the files already held the state.
+   */
+  kept: string[];
+  message?: string;
+}
+
+/**
+ * Writes the state the server holds over the files (§7.1's "restore last good"), and resolves
+ * with the answer: the revision, the files the server kept the rejected text in (BE-9's `kept`,
+ * in `.alukit/rejected/`), or why it could not.
+ */
+export async function restore(): Promise<Restored> {
+  busy.value = true;
+  try {
+    const r = await post<{ ok?: boolean; rev?: number; kept?: unknown; message?: string }>(
+      "/api/restore",
+      {},
+    );
+    const ok = r.status === 200 && r.body.ok !== false;
+    const kept = Array.isArray(r.body.kept)
+      ? r.body.kept.filter((k): k is string => typeof k === "string")
+      : [];
+    return {
+      ok,
+      kept,
+      ...(typeof r.body.rev === "number" ? { rev: r.body.rev } : {}),
+      ...(ok ? {} : { message: r.body.message ?? `the server answered ${r.status}` }),
+    };
+  } catch (e) {
+    return { ok: false, kept: [], message: (e as Error).message };
+  } finally {
+    busy.value = false;
+  }
+}
 
 extendHook({
   rev: () => summary.value?.rev,

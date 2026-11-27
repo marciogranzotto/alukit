@@ -181,16 +181,52 @@ end, an item with no offer) and reports your checks.
 `alukit serve <dir>` prints an address with a token and opens it. The server answers only its own page,
 and the token changes on every start.
 
-The left side has the **Project** tree (bars, connections, parts, patterns, items) and the
-**Catalog** browser (vendor, kind, family, search; each card shows the section, key data with its
-source, options and offers, and **Set as palette**). The centre is the 3D view, the right side
-the properties of the selection (every catalog number says where it comes from), and the bottom
-drawer holds the outputs and the document's records.
+The window has five parts, each resizable by the splitter beside it (drag it, or focus it and
+use the arrow keys; the sizes are kept in your browser):
 
-The top bar has the project's name, the **variant** every view shows (when the project has
-variants; edits still go to the document), undo and redo naming the step, the **revision** (its
-name when the current state is a saved revision, else "unsaved"; click it to save one or verify
-one), and **Export GLB**, which downloads the variant shown as `alukit export glb` writes it.
+- **The left column**: the **parts bin** on top (what is armed for drawing and placing, the items
+  this project uses, the ones you pinned and the ones armed lately; click one to arm it), and the
+  **outline** under it, one tree of bars, joints, parts, patterns, runs and points. A row reads
+  label · item · cut length; a mark shows a problem. Joints are grouped by corner. Filter it, or
+  group it by tag. The arrow keys walk it, Enter selects.
+- **The catalog** opens wide over the left column and the 3D view with `/` or **Browse catalog…**:
+  a search (a size such as `40x40`, a code, a name), a row of kinds that follows the active tool,
+  vendor › kind › family, and the results with their size, mass per metre and lowest price. A
+  card says the item's data in words with its source, its options (only a value someone sells is
+  preselected) and its offers. **Use for drawing** (or **Use for placing**) arms it, **Add to bin**
+  keeps it at hand, **Replace selected** gives the selected bars or parts this item, and **Make it
+  the default** writes the project's default bar. `Esc` closes it; it keeps its search and card.
+- **The 3D view** in the middle, with the tools on its left edge and the views on top. Under it
+  the **status bar**: the connection, the step counter with who made the last step and when, what
+  the tool asks for next, who else is editing, and the units.
+- **The right column**: the active tool's form, then the inspector. With nothing selected the
+  inspector is the **project panel**: First steps (on a project that started empty), the
+  project's bars, parts, joints, mass, likely cost and order state, and the **params**, each
+  editable in place. **Settings…** opens the project settings.
+- **The sheets** below: Cut list, BOM, Machining, Order & costs, Problems and Records, each tab
+  with its count. `T` collapses or opens them, `Shift+T` maximizes them over the view; drag their
+  top edge to resize. An empty project starts with them collapsed; they open on the cut list once
+  there is something to cut.
+
+The top bar has the **Project** menu (settings, revisions, Export GLB, help, the start card),
+the **variant** every view shows (when the project has variants; a strip says that edits still go
+to the base document), Undo and Redo naming whose step they take back (`Undo · claude: add bar
+b35`; undoing another source's step asks first), the order's state (**Ready to order**,
+**Blocked · n things to resolve**, **Nothing to order**; click it for Order & costs), whether the
+current state is a saved revision (**Saved as Quote 1** or **Not saved**; click it to save or
+verify one), the theme and `?`. **Export GLB** downloads the variant shown as `alukit export glb`
+writes it.
+
+An empty project opens with the **start card**: the catalogs it can draw from, the currency, and
+the ways in: **Draw the first bar** (a size, the profile and its finish, which become the default
+bar, then three steps that tick as you draw) or **Load the example** (the skill's work table, as
+one step). `Esc` closes it; **Show the start card** in help brings it back.
+
+When another source edits the project (an agent through the CLI, a hand edit, another tab), a
+toast says who and what, with **Show** and **Undo it**; the outline marks what it made, "new ·
+claude", until your next step. Your own step gets a toast when it did more than it made: a cut
+that auto-connect moved, an entity removed. A refused command says why where you made it, or in a
+toast with the whole message, **Copy** and **Select the places** it names.
 
 | Tool | Key | How |
 |---|---|---|
@@ -223,11 +259,22 @@ square to X, Y or Z: move it with its slider, **Flip** shows the other side. It 
 what you see; clicks and snaps ignore what it hides. Anything the tools do not cover is one
 `alukit do` away.
 
-Every gesture is one step in the history. The drawer's tabs hold the outputs described next; its
-Order and Costs tabs have a date for the staleness of prices. Its **Open items**, **Params** and
-**Decisions** tabs edit those records: add or resolve an open item, set or remove a param, record
-a decision, each one step that undo takes back. If the file on disk stops being valid, a banner
-says why and the tools are disabled until it is fixed.
+Every gesture is one step in the history. The sheets hold the outputs described next; Order &
+costs has a date for the staleness of prices. Problems lists what stands between the project and
+an order, each with its fixes and **Show**, which selects what it is about, frames it and opens
+its outline row (`Esc` leaves Show). Problems also holds the open items, and Records the
+decisions and the history: add or resolve an open item, record a decision, set a param in the
+project panel, each one step that undo takes back.
+
+If the file on disk stops being valid, a banner lists each error with the entity and field it is
+in (and the name you likely meant, for a field the format does not know), the view says it shows
+the last good state, and the tools are disabled until the file is fixed. **Restore last good**
+asks first, then writes the server's state over the files and names the copy it kept of the
+rejected text, in `.alukit/rejected/`.
+
+`?` lists every key, what the snap names by the pointer mean, and a switch that turns off the
+single-key shortcuts (a letter, `/`, `?`) for screen readers and speech input; the buttons and
+the keys with Ctrl or Cmd still work.
 
 ## Reading the outputs
 

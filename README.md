@@ -40,10 +40,12 @@ alukit serve ~/frames/my-frame             # prints http://127.0.0.1:<port>/#t=<
 (`ALUKIT_PROJECT=~/frames/my-frame pnpm dev` does the same inside Vite's dev server, with hot
 reload, and prints the address with its token.)
 
-In the browser, open the **Catalog** tab, choose a profile and press **Set as palette**, then
-press `B` and click twice to draw a bar (or click once, type a length and press Enter). Draw a
-leg, then a rail onto its top: the ends butt where they meet. See the [guide](docs/guide.md) for
-the tools and keys.
+The empty project opens with a start card over the 3D view. Under **Draw the first bar**, pick a
+size (40 × 40), the profile and its finish, and press **Start drawing**: that profile becomes the
+project's default bar and the draw tool is on. Click a start point, type a length and press Enter
+(or click the end). Draw a leg, then a rail onto its top: the ends butt where they meet, and a
+toast says what moved. Or press **Load the example** for the skill's work table. Press `?` for
+every key; see the [guide](docs/guide.md) for the layout and the tools.
 
 Read what you drew from a terminal, while the server runs or not:
 
@@ -174,3 +176,6 @@ Node, TypeScript, Vite and Vitest all resolve.
 
 [MIT](LICENSE). Use anything here as you like; keeping the copyright notice (attribution) is the
 only condition.
+
+The app bundles the IBM Plex Sans and IBM Plex Mono fonts, © IBM Corp., under the
+[SIL Open Font License 1.1](src/ui/fonts/OFL.txt).

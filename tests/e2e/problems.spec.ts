@@ -6,9 +6,9 @@ import { cli, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
  * S4.8): each blocker has an action that is one step, a list moves with the keys, and an empty
  * project says what is missing, with the next step as a button.
  *
- * Two checks wait for BE-3 (`alukit problems`, S1.6) and skip until the CLI has it: the rail's
- * count of what blocks the order equals the server's `blocks-order` problems, and a project with a
- * bar that has no finish is offered "Set anodised" and "Set black".
+ * Two checks read `alukit problems` (BE-3, S1.6) as their oracle: what a row's Enter selects is
+ * the problem's targets, and the rail's count of what blocks the order equals the server's
+ * `blocks-order` problems.
  */
 
 let served: Served;
@@ -75,9 +75,21 @@ test.describe("on the cart", () => {
     await expect(rows.nth(1)).toBeFocused();
     await page.keyboard.press("ArrowUp");
     await expect(rows.first()).toBeFocused();
-    // Enter shows what the row is about: it is selected.
+    // Enter shows what the row is about: what it targets is selected. The app reads the
+    // server's problems (BE-3, S2.6), whose joint problem at c21 names the two bars it joins too.
     await page.keyboard.press("Enter");
-    await expect(page.getByTestId("properties").locator("h2")).toContainText("c21");
+    const id = await rows.first().getAttribute("data-problem");
+    const answer = JSON.parse((await cli(["problems", served.dir, "--json"])).out) as {
+      problems: { id: string; targets: string[] }[];
+    };
+    const targets = answer.problems.find((p) => p.id === id)?.targets ?? [];
+    expect(targets).toContain("c21");
+    for (const t of targets) {
+      await expect(page.getByTestId("tree").locator(`[data-id="${t}"]`)).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    }
   });
 
   test("a status is a shape and a word, never a colour alone", async ({ page }) => {
@@ -102,7 +114,12 @@ test.describe("on the cart", () => {
     page,
   }) => {
     const printed = await cli(["problems", served.dir, "--json"]);
-    test.skip(printed.code !== 0, "alukit problems is not built yet (BE-3, S1.6)");
+    // `alukit problems` exits 1 while something blocks the order (s1-decisions 13): only an
+    // answer that is not the JSON means the command is missing.
+    test.skip(
+      !printed.out.trimStart().startsWith("{"),
+      "alukit problems is not built (BE-3, S1.6)",
+    );
     const answer = JSON.parse(printed.out) as {
       order: { blocks: number };
       problems: { group: string }[];
@@ -124,6 +141,8 @@ test.describe("on an empty project", () => {
 
   test("each sheet says what is missing and offers the next step", async ({ page }) => {
     await openTab(page, served, 0);
+    // An empty project's sheets start collapsed (S2.2): open the cut list.
+    await page.getByRole("tab", { name: "Cut list" }).click();
     const cut = page.getByTestId("cutlist");
     await expect(cut).toContainText("Nothing to cut yet");
     await expect(cut.getByRole("button", { name: /Draw a bar/ })).toBeVisible();

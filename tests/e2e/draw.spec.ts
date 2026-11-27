@@ -99,6 +99,10 @@ test("draws the cart's base frame with the mouse; its cut list and BOM equal the
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await openTab(page, served, 0);
+  // An empty project shows the start card over the viewport: Esc closes it first (plan §5.10).
+  await expect(page.getByTestId("start-card")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("start-card")).toBeHidden();
   let rev = 0;
   const next = async () => {
     rev++;

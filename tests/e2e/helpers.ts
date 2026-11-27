@@ -67,7 +67,23 @@ export async function serve(project = "cart"): Promise<Served> {
   await cp(join(FIXTURES, "catalogs"), join(base, "catalogs"), { recursive: true });
   const dir = join(base, ...project.split("/"));
   await cp(join(FIXTURES, ...project.split("/")), dir, { recursive: true });
+  return serveAt(dir, base);
+}
 
+/**
+ * A project as `alukit new` makes it, with the options given (the README's first run:
+ * `--catalog forseti --currency BRL`), in a scratch folder, served by `alukit serve`.
+ */
+export async function serveNew(args: string[] = []): Promise<Served> {
+  const base = await mkdtemp(join(tmpdir(), "alukit-e2e-new-"));
+  const dir = join(base, "project");
+  const made = await cli(["new", dir, ...args]);
+  if (made.code !== 0) throw new Error(`alukit new failed: ${made.err}`);
+  return serveAt(dir, base);
+}
+
+/** `alukit serve` on a folder; stopping it removes `base`, the scratch folder it is in. */
+async function serveAt(dir: string, base: string): Promise<Served> {
   const child: ChildProcess = spawn(process.execPath, [MAIN, "serve", dir, "--no-open"], {
     cwd: ROOT,
     stdio: ["ignore", "pipe", "pipe"],
@@ -225,6 +241,18 @@ export async function waitDrawn(page: Page, rev: number, timeout = 15_000): Prom
 export function numberText(printed: string): RegExp {
   const escaped = [...printed].map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(escaped.join(" ?"));
+}
+
+/**
+ * The newest step's words as `alukit log --json` gives them (BE-4's `text`, else the commands'
+ * names): what the top bar's Undo names, an oracle independent of the app.
+ */
+export async function lastStepWords(dir: string): Promise<string> {
+  const r = await cli(["log", dir, "--json"]);
+  const entries = (JSON.parse(r.out) as { entries: { what: string; text?: string }[] }).entries;
+  const last = entries[entries.length - 1];
+  if (!last) throw new Error("the log is empty");
+  return last.text ?? last.what;
 }
 
 /** The number of bars `alukit derive --json` reports: an oracle independent of the app. */

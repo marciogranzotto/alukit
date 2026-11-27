@@ -85,15 +85,18 @@ test("the variant switch derives every view in that variant, as --variant does",
 test("the export button downloads the GLB alukit export glb writes", async ({ page }) => {
   await openTab(page, served, 0);
   const downloading = page.waitForEvent("download");
+  // Export is in the Project menu (S2.6).
+  await page.getByTestId("project-menu").click();
   await page.getByTestId("export").click();
   const d = await downloading;
   expect(d.suggestedFilename()).toBe("Cart-synthetic.glb");
+  // The tab says so in a toast, which goes by itself after a few seconds.
+  await expect(page.getByTestId("notice")).toHaveText("exported Cart-synthetic.glb");
   const got = join(served.dir, "..", "from-the-tab.glb");
   await d.saveAs(got);
   const want = join(served.dir, "..", "from-the-cli.glb");
   expect((await cli(["export", "glb", served.dir, "-o", want])).code).toBe(0);
   expect((await readFile(got)).equals(await readFile(want))).toBe(true);
-  await expect(page.getByTestId("notice")).toHaveText("exported Cart-synthetic.glb");
 });
 
 test("saves a revision from the top bar and verifies it, as alukit revision does", async ({
@@ -101,12 +104,12 @@ test("saves a revision from the top bar and verifies it, as alukit revision does
 }) => {
   await openTab(page, served, 0);
   const button = page.getByTestId("revision");
-  await expect(button).toHaveText("Revision: unsaved");
+  await expect(button).toHaveText("Not saved");
   await button.click();
   const panel = page.getByTestId("revisions");
   await panel.getByTestId("revision-name").fill("Quote 1");
   await panel.getByTestId("revision-save").click();
-  await expect(button).toHaveText("Revision: Quote 1");
+  await expect(button).toHaveText("Saved as Quote 1");
   const list = JSON.parse((await cli(["revision", "list", served.dir, "--json"])).out) as {
     name: string;
   }[];
@@ -119,5 +122,5 @@ test("saves a revision from the top bar and verifies it, as alukit revision does
   // An edit from the CLI moves the project away from what was saved.
   await cli(["do", served.dir, '{"cmd":"setParam","args":{"name":"W","value":"1250"}}']);
   await waitDrawn(page, 1);
-  await expect(button).toHaveText("Revision: unsaved");
+  await expect(button).toHaveText("Not saved");
 });
