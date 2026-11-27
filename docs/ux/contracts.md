@@ -175,7 +175,8 @@ S3 ([s3-decisions.md](s3-decisions.md)) changed these contracts. Each adds, exce
   still send `point` for every station; S5 maps a face centre to `face` and a part's origin to
   `datum`.
 - **The viewer** (`src/viewer/scene.ts`): S0's no-ops are built. It adds `camera()`
-  (`CameraState`: position, target, right, up, in the world), `renderStats()` (`RenderStats`:
+  (`CameraState`: position, target, right, up, in the world, and `moving` from the moment a
+  move is asked for until it rests, which scripts wait on), `renderStats()` (`RenderStats`:
   frames, render ms, hover picks and their ms) and `CORNER_PREFIX` (`corner:`; also in
   `markers.ts`). `ViewerStats` adds `outlineSegments`, `detailSegments`, `joints` (joined, open,
   failed) and `badges`. `fitBox(box)` takes a world box and keeps the view's direction.

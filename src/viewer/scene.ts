@@ -149,6 +149,12 @@ export interface CameraState {
   /** Screen right and screen up, as world directions. */
   right: V3;
   up: V3;
+  /**
+   * Whether the camera is on its way somewhere: from the moment a move starts (a standard view,
+   * a fit, a Show; set when the call is made, before any frame) until it comes to rest. A script
+   * waits for false, not for the camera to look still between two frames.
+   */
+  moving: boolean;
 }
 
 /**
@@ -1554,6 +1560,9 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         target: fromThree([target.x, target.y, target.z]),
         right,
         up,
+        // camera-controls marks a transition active when it is asked for, and rested when the
+        // camera's change per frame falls below its rest threshold (0.01 mm here).
+        moving: controls.active,
       };
     },
     renderStats: () => ({ ...stats }),

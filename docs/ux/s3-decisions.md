@@ -208,8 +208,15 @@ and C's [rendering spec](visual-design.md#5-the-3d-view-rendering-spec). Labels 
   order's O1 (c35: the camera's target in its box, the direction kept, the rest dimmed until
   Esc), colour by item (the legend equals the BOM's items; an entry frames b18 and dims the
   rest), and the gizmo. The pixel tests turn the problem badges off, whose warning tint is near
-  the selection's amber and the open ring's yellow. The projection is checked by `aria-pressed`; the section test
-  moves the pointer off the viewport before its last picture.
+  the selection's amber and the open ring's yellow. The projection is checked by
+  `aria-pressed`; the section test moves the pointer off the viewport before its last picture.
+- **The tests wait for the camera to rest, not to look still.** The old wait (the camera in the
+  same place twice, 120 ms apart) could pass before a move's first frame when frames are slow:
+  **measured**, the first full gate failed the black profile test with a contrast of 1.01 (the
+  pixels read were background) and a repeat failed "looks from standard views" once. The viewer
+  now says `moving` in `camera()` from the call that starts a move until camera-controls marks
+  it rested, and view.spec waits for `moving` to be false. Twenty runs of view.spec then passed
+  at a load average of 30 to 41.
 - The background is a gradient, so "the cart draws its bars" and `png.ts`'s `coverage`
   (snapshot.spec) count a pixel as drawn when it differs from its row's commonest colour; the
   assertions are the same.

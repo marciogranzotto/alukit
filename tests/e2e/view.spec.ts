@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { cornersOf } from "../../src/ui/corners.ts";
 import type { Model } from "../../src/ui/model.ts";
 import { resolveTargets } from "../../src/ui/targets.ts";
@@ -131,15 +131,7 @@ test("looks from standard views, orthographic or not, and fits to the selection"
 }) => {
   served = await serve("base-frame/cli");
   await openTab(page, served, 0);
-  const settle = async () => {
-    let last = "";
-    for (let i = 0; i < 100; i++) {
-      const now = JSON.stringify(await screen(page, [0, 0, 0]));
-      if (now === last) return;
-      last = now;
-      await page.waitForTimeout(120);
-    }
-  };
+  const settle = () => atRest(page);
   // Top, orthographic: world X to the right, Y up the screen.
   await page.getByTestId("projection").click();
   await expect(page.getByTestId("projection")).toHaveAttribute("aria-pressed", "true");
@@ -255,14 +247,37 @@ function corners(b: DerivedBar): V3[] {
   return out;
 }
 
-/** The camera at rest: the same place twice, a moment apart. */
-async function settle(page: Page) {
-  let last = "";
-  for (let i = 0; i < 100; i++) {
-    const now = JSON.stringify(await page.evaluate(() => window.__alukit?.camera()));
-    if (now === last) return;
-    last = now;
-    await page.waitForTimeout(120);
+/**
+ * The camera at rest. A move (a view, a fit, a Show) marks the camera moving when it is asked for,
+ * before any frame draws, so this cannot see it still before the move has begun, however slow
+ * the frames are.
+ */
+async function atRest(page: Page) {
+  await expect.poll(() => page.evaluate(() => window.__alukit?.camera()?.moving)).toBe(false);
+}
+
+/** Where the camera looks from: eye minus target, a unit vector to two decimals. */
+async function lookingFrom(page: Page): Promise<number[]> {
+  const c = await page.evaluate(() => window.__alukit?.camera());
+  const d = [0, 1, 2].map((i) => (c?.position[i] as number) - (c?.target[i] as number));
+  const n = Math.hypot(...d);
+  return d.map((x) => Math.round((x / n) * 100) / 100 + 0);
+}
+
+/** Clicks what turns the view; at rest, the camera looks from `from`. */
+async function turnTo(page: Page, button: Locator, from: number[]) {
+  await button.click();
+  await atRest(page);
+  expect(await lookingFrom(page)).toEqual(from);
+}
+
+/** Once the camera is at rest after a Show, its target lies in the box framed. */
+async function framed(page: Page, box: readonly V3[]) {
+  await atRest(page);
+  const t = (await page.evaluate(() => window.__alukit?.camera()))?.target;
+  for (let i = 0; i < 3; i++) {
+    expect(t?.[i]).toBeGreaterThanOrEqual(Math.min(...box.map((c) => c[i] as number)) - 1);
+    expect(t?.[i]).toBeLessThanOrEqual(Math.max(...box.map((c) => c[i] as number)) + 1);
   }
 }
 
@@ -360,8 +375,7 @@ test("a selected bar hidden behind another shows through it; its label gives its
   await page.getByTestId("toggle-problems").click();
   // From the top, the base rail b9 lies under the top rail b5 and the flat bar on it.
   await page.getByTestId("projection").click();
-  await page.getByTestId("view-top").click();
-  await settle(page);
+  await turnTo(page, page.getByTestId("view-top"), [0, 0, 1]);
   const pts = await Promise.all(corners(b9).map((c) => screen(page, c)));
   const rect = {
     x0: Math.min(...pts.map((p) => p[0])) - 2,
@@ -393,8 +407,7 @@ test("a black profile's edges stand out from the background, at 3:1 or more", as
   await page.getByTestId("toggle-problems").click();
   // From the front, b9's underside is a silhouette against the background, between the slats.
   await page.getByTestId("projection").click();
-  await page.getByTestId("view-front").click();
-  await settle(page);
+  await turnTo(page, page.getByTestId("view-front"), [0, -1, 0]);
   const b9 = (await derivedBars(served.dir)).b9 as DerivedBar;
   const bottom = Math.min(...corners(b9).map((c) => c[2]));
   const [x, y] = await screen(page, [225, 0, bottom]);
@@ -474,7 +487,7 @@ test("Show on a problem frames its targets, keeping the direction, and dims the 
     .click();
   await expect(page.getByTestId("callout")).toBeVisible();
   await expect(page.getByTestId("callout")).toContainText("Others dimmed");
-  await settle(page);
+  await framed(page, box);
   const after = await page.evaluate(() => window.__alukit?.camera());
   for (let i = 0; i < 3; i++) {
     expect(after?.target[i]).toBeGreaterThanOrEqual((box[0][i] as number) - 1);
@@ -527,9 +540,9 @@ test("colour by item lists the BOM's items; an entry shows what uses it, the res
   const before = await page.evaluate(() => window.__alukit?.camera());
   await page.getByTestId("legend").locator('[data-item="test-geo:RHS-100x50x4"]').click();
   await expect(page.getByTestId("callout")).toBeVisible();
-  await settle(page);
-  const after = await page.evaluate(() => window.__alukit?.camera());
   const box = corners(b18);
+  await framed(page, box);
+  const after = await page.evaluate(() => window.__alukit?.camera());
   for (let i = 0; i < 3; i++) {
     const lo = Math.min(...box.map((c) => c[i] as number)) - 1;
     const hi = Math.max(...box.map((c) => c[i] as number)) + 1;
@@ -558,18 +571,10 @@ test("colour by item lists the BOM's items; an entry shows what uses it, the res
 test("the gizmo's ends turn the view to look along their axis", async ({ page }) => {
   served = await serve("cart");
   await openTab(page, served, 0);
-  const from = async () => {
-    await settle(page);
-    const c = await page.evaluate(() => window.__alukit?.camera());
-    const d = [0, 1, 2].map((i) => (c?.position[i] as number) - (c?.target[i] as number));
-    const n = Math.hypot(...d);
-    return d.map((x) => Math.round((x / n) * 100) / 100 + 0);
-  };
   const gizmo = page.getByTestId("gizmo");
-  await gizmo.getByRole("button", { name: "Top view" }).click();
-  expect(await from()).toEqual([0, 0, 1]);
-  await gizmo.getByRole("button", { name: "Right view" }).click();
-  expect(await from()).toEqual([1, 0, 0]);
-  await gizmo.getByRole("button", { name: "Front view" }).click();
-  expect(await from()).toEqual([0, -1, 0]);
+  await turnTo(page, gizmo.getByRole("button", { name: "Top view" }), [0, 0, 1]);
+  await turnTo(page, gizmo.getByRole("button", { name: "Right view" }), [1, 0, 0]);
+  await turnTo(page, gizmo.getByRole("button", { name: "Front view" }), [0, -1, 0]);
+  // At rest, still looking from the front.
+  expect(await lookingFrom(page)).toEqual([0, -1, 0]);
 });
