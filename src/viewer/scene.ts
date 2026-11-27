@@ -48,7 +48,7 @@ import { fastenerMatrix, holeMatrix, partShape } from "../mesh/place.ts";
 import { rodMesh } from "../mesh/solids.ts";
 import { finishTone, partTone } from "../mesh/style.ts";
 import { Ground } from "./ground.ts";
-import { Labels } from "./labels.ts";
+import { Labels, type PageBox } from "./labels.ts";
 import {
   edgeColour,
   fogColour,
@@ -70,6 +70,7 @@ import {
   type GizmoPart,
   type GizmoSpec,
   gizmoDrag,
+  gizmoFootprint,
   gizmoPartAt,
   mmPerPx,
 } from "./gizmo.ts";
@@ -250,6 +251,11 @@ export interface Viewer {
   setGizmo(spec: GizmoSpec | undefined): void;
   /** The gizmo shown now. */
   gizmo(): GizmoSpec | undefined;
+  /**
+   * Where on the page a press is the shown gizmo's (`gizmoFootprint`), CSS pixels; empty with
+   * none. The labels over the view keep clear of it, so a press on a part reaches it (E2).
+   */
+  gizmoFootprint(): readonly PageBox[];
   /**
    * Calls back while an axes gizmo's part is dragged: at the press (`start`), as the pointer
    * moves, and as it comes up (`end`), with how far along the part and, on a ring, how far
@@ -1445,7 +1451,17 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   rectEl.className = "select-box";
   rectEl.hidden = true;
   container.appendChild(rectEl);
-  const labels = new Labels(container, (p) => project(p));
+  const labels = new Labels(
+    container,
+    (p) => project(p),
+    () => gizmoBoxes(),
+  );
+
+  /** The shown gizmo's footprint on the page, which the labels keep clear of. */
+  function gizmoBoxes(): PageBox[] {
+    const g = gizmo.shown();
+    return g ? gizmoFootprint(g, project, "parts" in g ? mmPerPxAt(g.at) : 1) : [];
+  }
 
   function castFrom(clientX: number, clientY: number): void {
     const r = renderer.domElement.getBoundingClientRect();
@@ -1984,6 +2000,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       invalidate();
     },
     gizmo: () => gizmo.shown(),
+    gizmoFootprint: gizmoBoxes,
     onGizmoDrag(cb) {
       gizmoCbs.add(cb);
       return () => gizmoCbs.delete(cb);

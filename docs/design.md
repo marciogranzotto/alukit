@@ -550,8 +550,9 @@ commands or the outputs changes; `alukit query` gains one form.
   pans; a pinch zooms in both, and in perspective it dollies (e2 18, 19). Call 88.
 - §8: **the palette arms the document's default bar whenever it has no bar and the default
   changes**, so after the start card's frame B draws a bar of its profile (the audit's D1; e2 20).
-- §8: **labels over the view stay inside it**; the selected bar's label was cut off at the view's
-  right edge (e2 21).
+- §8: **labels over the view stay inside it, and clear of the gizmo**; the selected bar's label
+  was cut off at the view's right edge, and could cover Rotate's ring and take its press (e2 21,
+  23).
 
 ### 3D editing, E1
 

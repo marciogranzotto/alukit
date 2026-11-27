@@ -169,6 +169,57 @@ test("the size readout: the model's W × D × H, or the selection's; Alt shows i
   expect(await links()).toBe(before);
 });
 
+test("the selected bar's label keeps clear of the gizmo: a press anywhere on Rotate's ring reaches it", async ({
+  page,
+}) => {
+  // ux/move's b3, a free brace: alone selected, its label sits at its middle, which is where
+  // Rotate stands its rings (the selection's centre). From the top, in orthographic, the Z ring
+  // is a circle 0.78 of the 96 px arrow round that point.
+  served = await serve("ux/move");
+  await openTab(page, served, 0);
+  await page.getByTestId("projection").click();
+  await page.getByTestId("view-top").click();
+  await atRest(page);
+  await selectByIds(page, ["b3"]);
+  const label = page.getByTestId("selection-label");
+  await expect(label).toBeVisible();
+  await page.mouse.move(5, 5);
+  await page.keyboard.press("q");
+  await expect
+    .poll(() => page.evaluate(() => window.__alukit?.gizmo()))
+    .toMatchObject({ parts: ["ring-x", "ring-y", "ring-z"] });
+  const g = await page.evaluate(() => window.__alukit?.gizmo());
+  if (!g || !("at" in g)) throw new Error("no rings");
+  const c = await screen(page, g.at as V3);
+  const r = 0.78 * 96;
+  // Every point of the ring is the canvas's, not the label's: a press there reaches the ring.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        ([cx, cy, rr]) => {
+          const covered: number[] = [];
+          for (let deg = 0; deg < 360; deg += 10) {
+            const a = (deg * Math.PI) / 180;
+            const el = document.elementFromPoint(cx + rr * Math.cos(a), cy + rr * Math.sin(a));
+            if (el?.closest('[data-testid="selection-label"]')) covered.push(deg);
+          }
+          return covered;
+        },
+        [c[0], c[1], r] as const,
+      ),
+    )
+    .toEqual([]);
+  // The label is still shown, inside the view, and says the bar's cut.
+  await expect(label).toBeVisible();
+  const vb = await page.getByTestId("viewport").boundingBox();
+  const lb = await label.boundingBox();
+  if (!vb || !lb) throw new Error("no box");
+  expect(lb.x).toBeGreaterThanOrEqual(vb.x);
+  expect(lb.x + lb.width).toBeLessThanOrEqual(vb.x + vb.width);
+  expect(lb.y).toBeGreaterThanOrEqual(vb.y);
+  expect(lb.y + lb.height).toBeLessThanOrEqual(vb.y + vb.height);
+});
+
 const middle = (b: DerivedBar): V3 => [
   (b.a[0] + b.b[0]) / 2,
   (b.a[1] + b.b[1]) / 2,

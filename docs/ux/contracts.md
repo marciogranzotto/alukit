@@ -468,8 +468,11 @@ tool"). Each adds.*
   is not drawn. A box drawn right to left gets the class `crossing`.
 - **`src/viewer/pick.ts`**: `boxTakes(points, rect, "window" | "crossing")`, `convexHull(points)`,
   `ScreenRect` (e2 10).
-- **`src/viewer/labels.ts`** (S3's): `placeInside(el, at, view)`, `nudgeInside(box, view, gap)`,
-  `EDGE_GAP_PX`; `Labels` and the anchored overlays place inside the view (e2 21).
+- **`src/viewer/labels.ts`** (S3's): `placeInside(el, at, view, avoid?)`, `nudgeInside(box, view,
+  gap)`, `clearOf(box, view, avoid, gap)`, `EDGE_GAP_PX`; `Labels` takes an `avoid` provider. The
+  labels and the anchored overlays place inside the view and clear of the gizmo (e2 21, 23).
+- **`src/viewer/gizmo.ts`** (E3's): `gizmoFootprint(spec, project, mmPerPx)`, where on the screen a
+  press is the gizmo's; **`Viewer.gizmoFootprint()`**, the shown gizmo's, on the page (e2 23).
 - **`src/ui/catalog/state.ts`**: `keepPalette()` starts the palette and arms `defaults.bar` whenever
   the palette has no bar and the default changes; `startPalette` is gone (e2 20).
 

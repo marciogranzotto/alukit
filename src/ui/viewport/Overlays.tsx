@@ -24,8 +24,9 @@ import { endsWords, hoverWords, itemCode, legendItems } from "./words.ts";
 const css = (c: number) => `#${c.toString(16).padStart(6, "0")}`;
 
 /**
- * Keeps an element at a world point's place in the viewport, after every frame, inside the view:
- * a label by a bar near an edge is moved back in, not cut off (`placeInside`).
+ * Keeps an element at a world point's place in the viewport, after every frame, inside the view
+ * and clear of the gizmo: a label by a bar near an edge is moved back in, not cut off, and one
+ * over a gizmo's part is moved off it, so a press there reaches the gizmo (`placeInside`).
  */
 function useAnchor(at: V3 | undefined, host: { current: HTMLElement | null }) {
   useEffect(() => {
@@ -40,7 +41,7 @@ function useAnchor(at: V3 | undefined, host: { current: HTMLElement | null }) {
         return;
       }
       el.style.visibility = "";
-      placeInside(el, s, parent.getBoundingClientRect());
+      placeInside(el, s, parent.getBoundingClientRect(), v.gizmoFootprint());
     };
     place();
     return v.onRender(place);

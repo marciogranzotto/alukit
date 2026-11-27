@@ -24,7 +24,7 @@ sources); `first-run.spec`'s, `labels.test.ts`, `pick.test.ts`, `query.test.ts`,
 | E2.6 | Mouse or Trackpad navigation; a pinch dollies | `navigation.spec` |
 | E2.7 | D1: the palette follows `defaults.bar` | `first-run.spec` "after the start card's frame…" |
 | E2.8 | Ctrl+A, H, Shift+H, Alt+H as actions, in the help | `keys.spec` "Ctrl+A selects all…"; `registry.test.ts` |
-| — | The selected bar's label (and every label over the view) kept inside it | `select.spec` "the selected bar's label…"; `labels.test.ts` |
+| — | The selected bar's label (and every label over the view) kept inside it, and clear of the gizmo | `select.spec` "the selected bar's label…" (both); `labels.test.ts`, `gizmo.test.ts` |
 | — | `camera().moving` false after a move made at once | `select.spec` (it waited forever before) |
 
 D6 (design §8 says Select works "or by tag") is true now: a click on a tag's head, or "Select
@@ -92,6 +92,7 @@ On the audit's frame (`tests/fixtures/brace`), 1440 × 900, dark theme.
 | 20 | **The palette follows the document's default bar while it has none**: `keepPalette` owns the palette's life in a tab, kept for the session, started from what the tab had or from the default, and armed with the default whenever the palette has no bar and the default changes, whoever changed it (the start card's frame, settings, an agent). A bar the person armed is never replaced | D1's cause (**read**): `startPalette` ran once, on the first model (`App.tsx`). The fix is where the palette lives, not in the start card's frame form, so a default set by settings or an agent arms too |
 | 21 | **Every label over the view stays inside it**: placed at its point, measured with its margins and CSS translate, and moved back by its overflow, 4 px from the edges (`placeInside`): the selected bar's label, Show's callout, the tools' labels, the size box's | The coordinator's note (**measured**: the label's right edge at 1132 px against the view's 954). One placement for every label |
 | 22 | **`camera().moving` turns false at the first frame that changes nothing**, besides camera-controls' rest. camera-controls marks itself rested only when an eased move settles, so after a fit made at once (the first model, a projection switch) `moving` stayed true for ever | **Measured** while writing E2's tests: a script waiting for rest after switching to orthographic timed out. The fix reads camera-controls' `sleep`, `wake` and `transitionstart` events (**read**: camera-controls 3.1.2 leaves `active` true after a move made at once, and sends `sleep` when its moves settle) |
+| 23 | **Every label over the view keeps clear of the gizmo**: the viewer gives the shown gizmo's footprint on the screen (`gizmoFootprint`: for the axes, the box round an arrow's length along each axis both ways, padded by a press's reach, 8 px; for handles, a box as far as a press grabs each, 12 px), and a label over it moves the shortest way out (up, down, left or right; on a tie the vertical) that stays inside the view and clear of every footprint; with no such place it stays in the view | The coordinator's note after E3 landed (**measured**: on ux/move's b3 in Rotate, the label covered the Z ring's point at 0°, so a press there went to the label; `select.spec` checks that every 10° of the ring is the canvas's under the pointer). A box, not the rings' exact shape: the corners it keeps free are few pixels, and one rule serves arrows, rings and handles. The labels follow the gizmo every frame, as they follow their points |
 
 ## Files outside E2's ownership
 
@@ -103,7 +104,9 @@ On the audit's frame (`tests/fixtures/brace`), 1440 × 900, dark theme.
 - `src/ui/App.tsx`: the one-shot `startPalette` call removed (decision 20).
 - `src/ui/viewport/Viewport.tsx`, `Overlays.tsx` (S3's, no editing owner): the viewer follows
   `hidden`; the anchored labels place inside the view.
-- `src/viewer/labels.ts` (S3's): `placeInside`, `nudgeInside`.
+- `src/viewer/labels.ts` (S3's): `placeInside`, `nudgeInside`, `clearOf`.
+- `src/viewer/gizmo.ts` and its test (E3's): `gizmoFootprint`, one pure function added
+  (decision 23).
 - `src/ui/styles/shell.css`, `viewport.css`: the strip, the readout, hidden rows, the help's
   navigation choice, the crossing box.
 - `tests/e2e/keys.spec.ts`, `first-run.spec.ts`: E2.8's and E2.7's tests, as their tasks say.
