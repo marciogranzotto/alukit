@@ -422,6 +422,22 @@ describe("the BOM's formats (§5.4)", () => {
     expect(md).toContain("## Fasteners");
     expect(md).toContain("Total mass: 1.509 kg.");
   });
+
+  it("marks an estimated mass in Markdown as it marks a computed one", () => {
+    const d = run({
+      bars: { b1: { a: [0, 0, 0], b: [1000, 0, 0] } },
+      parts: { p1: { item: "test-gen:TNUT-M5", qty: 4, unplaced: true, why: "spares" } },
+    });
+    const b = bom({ derived: d, items });
+    // Both masses are `est` (the CSV's mass_src above): the Markdown says so beside each.
+    expect(b.groups.flatMap((g) => g.lines.map((l) => l.mass_src))).toEqual(["est", "est"]);
+    const md = bomMarkdown(b);
+    expect(md).toContain(
+      "| test:TS40 | Profile 40x40 (parametric) | finish anodised | 1 | 1000.00 | 1.493 | 1.493 (est) | b1 |",
+    );
+    expect(md).toContain("| 0.004 | 0.016 (est) |");
+    expect(md).toContain("estimated (est)");
+  });
 });
 
 describe("a hole into the end a butt bears on (§3.4, acceptance gap A4)", () => {
