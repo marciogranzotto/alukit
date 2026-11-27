@@ -48,7 +48,7 @@ import { fastenerMatrix, holeMatrix, partShape } from "../mesh/place.ts";
 import { rodMesh } from "../mesh/solids.ts";
 import { finishTone, partTone } from "../mesh/style.ts";
 import { Ground } from "./ground.ts";
-import { Labels } from "./labels.ts";
+import { Labels, type PageBox } from "./labels.ts";
 import {
   edgeColour,
   fogColour,
@@ -70,11 +70,12 @@ import {
   type GizmoPart,
   type GizmoSpec,
   gizmoDrag,
+  gizmoFootprint,
   gizmoPartAt,
   mmPerPx,
 } from "./gizmo.ts";
 import { Overlay, type OverlayState } from "./overlay.ts";
-import { hitOn } from "./pick.ts";
+import { boxTakes, hitOn, type ScreenRect } from "./pick.ts";
 import type { P2, Ray } from "./snap.ts";
 import type { Hex, ViewTheme } from "./theme.ts";
 import { type DocView, fromThree, isStandard, viewFrom } from "./views.ts";
@@ -202,6 +203,8 @@ export interface CornerMarker {
   state: "joined" | "open" | "failed";
   /** The bar that runs through, when one does. */
   through?: string;
+  /** The bars that meet here: while every one is hidden, the marker is not drawn (E-UX-9). */
+  bars?: readonly string[];
 }
 
 /** A problem drawn on the entities it is about (S3.7). */
@@ -249,6 +252,11 @@ export interface Viewer {
   /** The gizmo shown now. */
   gizmo(): GizmoSpec | undefined;
   /**
+   * Where on the page a press is the shown gizmo's (`gizmoFootprint`), CSS pixels; empty with
+   * none. The labels over the view keep clear of it, so a press on a part reaches it (E2).
+   */
+  gizmoFootprint(): readonly PageBox[];
+  /**
    * Calls back while an axes gizmo's part is dragged: at the press (`start`), as the pointer
    * moves, and as it comes up (`end`), with how far along the part and, on a ring, how far
    * round. A press on a part is the gizmo's, before a grab, a tool or the camera. Returns the
@@ -271,7 +279,11 @@ export interface Viewer {
    * pans. Returns the undo.
    */
   onContextMenu(cb: (hit: Hit | undefined, client: readonly [number, number]) => void): () => void;
-  /** The entities hidden from the view (E-UX-9). A no-op until E2.4 builds hiding. */
+  /**
+   * The bodies hidden from the view (E-UX-9), by id (a bar, a part, a pattern copy, a connection's
+   * fasteners): not drawn, not picked, left out of a box select, the x-ray, the badges, and the
+   * joint markers whose bars are all hidden; the camera fits what is left. No material changes.
+   */
   setHidden(ids: ReadonlySet<string>): void;
   /**
    * Looks from a standard view (iso, top, front, right or side, left, back, bottom), fitted to
@@ -280,6 +292,8 @@ export interface Viewer {
   setView(name: string, views?: Readonly<Record<string, DocView>>, animate?: boolean): boolean;
   setProjection(p: Projection): void;
   projection(): Projection;
+  /** How the camera takes a wheel: Mouse (it zooms) or Trackpad (it pans); a pinch zooms in both. */
+  setNavigation(n: Navigation): void;
   fitView(): void;
   /** Fits the camera to the given entities, or to the whole model when there are none. */
   fitSelection(ids: ReadonlySet<string>): void;
@@ -323,12 +337,29 @@ export interface Viewer {
   onRender(cb: () => void): () => void;
   /** A tool's label at a world point (S5's joint preview); undefined `at` takes it away. */
   setLabel(key: string, at: V3 | undefined, text?: string): void;
+  /**
+   * The size box (E2.5): a box's edges in world coordinates (Z up, mm), over every body, with
+   * the words for its width, depth and height by its edges along X, Y and Z (labels `size-w`,
+   * `size-d`, `size-h`); undefined takes it away.
+   */
+  setDimensions(
+    d: { box: readonly [V3, V3]; words: readonly [string, string, string] } | undefined,
+  ): void;
   /** The camera in world coordinates: for the orientation gizmo, and for tests. */
   camera(): CameraState;
   /** What drawing has cost so far (frames, CPU ms): S3.13's measure. */
   renderStats(): RenderStats;
   dispose(): void;
 }
+
+/**
+ * How the camera takes a wheel (E-UX-17): `mouse`, the wheel zooms; `trackpad`, a two-finger
+ * scroll pans. A pinch zooms in both.
+ */
+export type Navigation = "mouse" | "trackpad";
+
+/** A Mac, whose wheel steps camera-controls scales as it does here (its own test, read). */
+const MAC = /Mac/.test(globalThis.navigator?.platform ?? "");
 
 /** What a standard view fits when the model is empty: a metre cube on the ground (three's frame). */
 const EMPTY_BOX = new Box3(new Vector3(0, 0, -1000), new Vector3(1000, 1000, 0));
@@ -385,6 +416,14 @@ function bodyMaterial(opts: ConstructorParameters<typeof MeshLambertMaterial>[0]
     polygonOffsetUnits: 1,
     ...opts,
   });
+}
+
+/** An instanced mesh's matrices as placed, kept to put a hidden instance back, none hidden. */
+function placedOf(mesh: InstancedMesh): { placed: Float32Array; off: boolean[] } {
+  return {
+    placed: (mesh.instanceMatrix.array as Float32Array).slice(),
+    off: Array.from({ length: mesh.count }, () => false),
+  };
 }
 
 /** Where an entity's edges sit in a merged edge buffer: first vertex and count. */
@@ -449,6 +488,24 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   let camera: PerspectiveCamera | OrthographicCamera = persp;
   const controls = new CameraControls(camera, renderer.domElement);
   controls.setTarget(0, 0, 0, false);
+  /**
+   * Whether the camera has stopped changing. camera-controls' `active` turns false only when an
+   * eased move comes to rest: after a move made at once (a fit when the first model comes, a
+   * change of projection) it stays true, though nothing moves (**read**: its `update` checks for
+   * rest only between two frames that both changed). Its `sleep` event, the first frame that
+   * changes nothing, says so; `transitionstart`, sent when an eased move is asked for, and
+   * `wake`, the first frame that changes, end it.
+   */
+  let asleep = true;
+  controls.addEventListener("transitionstart", () => {
+    asleep = false;
+  });
+  controls.addEventListener("wake", () => {
+    asleep = false;
+  });
+  controls.addEventListener("sleep", () => {
+    asleep = true;
+  });
 
   let dirty = true;
   const invalidate = () => {
@@ -494,6 +551,13 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     tones: Hex[];
     fixed?: boolean;
     shown: Hex[];
+    /**
+     * Each instance's matrix as placed, 16 floats each: a hidden instance's matrix is zeroed (it
+     * draws nothing), and this puts it back (E-UX-9: hiding changes no material).
+     */
+    placed: Float32Array;
+    /** Which instances are hidden now. */
+    off: boolean[];
   }
   interface Single {
     mesh: Mesh;
@@ -548,6 +612,25 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   xray.raycast = () => {};
   xray.frustumCulled = false;
   world.add(xray);
+  /**
+   * The size box (E2.5): the edges of a box in world coordinates, over every body, with its three
+   * sizes as labels. Built here with its material, so the viewer links its program before the
+   * first frame and showing it links nothing (E-UX-19).
+   */
+  const dimensionMaterial = new LineBasicMaterial({
+    transparent: true,
+    opacity: 0.9,
+    depthTest: false,
+    depthWrite: false,
+    fog: false,
+  });
+  const dimensions = new LineSegments(emptyGeometry(), dimensionMaterial);
+  dimensions.name = "size box";
+  dimensions.renderOrder = 805;
+  dimensions.raycast = () => {};
+  dimensions.frustumCulled = false;
+  dimensions.visible = false;
+  world.add(dimensions);
 
   let counts: ViewerStats = {
     bars: 0,
@@ -567,6 +650,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     badges: 0,
   };
   let selection: ReadonlySet<string> = new Set();
+  /** The bodies hidden (E-UX-9), by id: not drawn, not picked, their markers not drawn. */
+  let hiddenIds: ReadonlySet<string> = new Set();
   let highlight: ReadonlySet<string> = new Set();
   let hovered: ReadonlySet<string> = new Set();
   let ghost: ReadonlySet<string> | undefined;
@@ -589,6 +674,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     for (const m of [contextCapMaterial, contextSideMaterial]) m.opacity = theme.translucent;
     xrayMaterial.color.setHex(theme.selection);
     xrayMaterial.opacity = theme.edge.xray;
+    dimensionMaterial.color.setHex(theme.tool);
   };
   applyThemeMaterials();
 
@@ -799,7 +885,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       mesh.computeBoundingSphere();
       content.add(mesh);
       owned.push({ dispose: () => mesh.dispose() });
-      instanced.push({ mesh, ids, items, tones, shown: tones.map(() => -1) });
+      instanced.push({ mesh, ids, items, tones, shown: tones.map(() => -1), ...placedOf(mesh) });
       instancedCount += g.bars.length;
     }
 
@@ -909,6 +995,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         tones: ids.map(() => theme.body.hole),
         fixed: true,
         shown: ids.map(() => -1),
+        ...placedOf(mesh),
       });
     }
 
@@ -940,6 +1027,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         items: rods.map((f) => (ctx ? "" : f.item)),
         tones: ids.map(() => tone),
         shown: ids.map(() => -1),
+        ...placedOf(mesh),
       });
       if (ctx) context += rods.length;
     }
@@ -1009,6 +1097,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
 
   /** An entity's edges now: colour and alpha for its outline, alpha for its detail. */
   function edgeLook(id: string, body: Hex): { colour: Hex; outline: number; detail: number } {
+    // A hidden bar's edges stay in the merged buffers, drawn with no alpha: nothing is rebuilt.
+    if (hiddenIds.has(id)) return { colour: body, outline: 0, detail: 0 };
     const ghosted = ghost !== undefined && !ghost.has(id) && !selection.has(id);
     // Only what blocks or errs outlines its bar, in red; a warning keeps its triangle badge and
     // leaves the amber band to the selection, which its outline was read as (review m1).
@@ -1104,6 +1194,37 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     invalidate();
   }
 
+  /**
+   * Hides and shows bodies by what draws them, never by their materials (E-UX-9, E-UX-19): an
+   * instance's matrix is zeroed, so it draws nothing, and put back from where it was placed; a
+   * body of its own and its edges are made invisible; a bar's edges in the merged buffers take no
+   * alpha (`edgeLook`). The x-ray, the joint markers and the badges leave out what is hidden.
+   */
+  function applyHidden(): void {
+    for (const g of instanced) {
+      const a = g.mesh.instanceMatrix.array as Float32Array;
+      let changed = false;
+      g.ids.forEach((id, i) => {
+        const off = hiddenIds.has(id);
+        if (g.off[i] === off) return;
+        g.off[i] = off;
+        if (off) a.fill(0, i * 16, i * 16 + 16);
+        else a.set(g.placed.subarray(i * 16, i * 16 + 16), i * 16);
+        changed = true;
+      });
+      if (changed) g.mesh.instanceMatrix.needsUpdate = true;
+    }
+    for (const s of single) {
+      const on = !hiddenIds.has(s.id);
+      s.mesh.visible = on;
+      if (s.edges) s.edges.visible = on;
+    }
+    paint();
+    buildXray();
+    drawCorners();
+    drawBadges();
+  }
+
   /** The selection's outline again, on top of everything, faint: where it continues, hidden. */
   function buildXray(): void {
     const pts: number[] = [];
@@ -1111,13 +1232,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       const pos = (outline.lines.geometry.getAttribute("position") as BufferAttribute)
         .array as Float32Array;
       for (const id of selection) {
+        if (hiddenIds.has(id)) continue;
         const r = outline.ranges.get(id);
         if (r)
           for (let k = r.start * 3; k < (r.start + r.count) * 3; k++) pts.push(pos[k] as number);
       }
     }
     for (const s of single) {
-      if (!selection.has(s.id) || !s.edges) continue;
+      if (!selection.has(s.id) || !s.edges || hiddenIds.has(s.id)) continue;
       const pos = (s.edges.geometry.getAttribute("position") as BufferAttribute)
         .array as ArrayLike<number>;
       const frame = s.mesh.matrix.elements;
@@ -1139,6 +1261,19 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     const box = new Box3();
     for (const c of content.children) if (!(c instanceof LineSegments)) box.expandByObject(c);
     return box.isEmpty() ? EMPTY_BOX.clone() : box;
+  }
+
+  /**
+   * The box of what is drawn now, in three's frame, which the camera fits: the model's, less what
+   * is hidden (an isolated corner is framed alone); the model's when nothing is shown.
+   */
+  function shownBox(): Box3 {
+    if (hiddenIds.size === 0 || !model) return modelBox();
+    const ids = new Set(
+      [...Object.keys(model.bars), ...Object.keys(model.parts)].filter((id) => !hiddenIds.has(id)),
+    );
+    const box = boxOf(ids);
+    return box.isEmpty() ? modelBox() : box;
   }
 
   /** The box of some entities in three's frame: bars by their corners, parts by their meshes. */
@@ -1238,7 +1373,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     const dir = new Vector3(from[0], from[2], -from[1]).normalize();
     // Exactly down or up: lean a hair toward world −Y, so the screen's up is world +Y.
     if (Math.abs(dir.y) > 1 - 1e-9) dir.set(0, Math.sign(dir.y), 1e-6).normalize();
-    fitThreeBox(modelBox(), animate, dir);
+    fitThreeBox(shownBox(), animate, dir);
     return true;
   }
 
@@ -1255,18 +1390,55 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       ortho.updateProjectionMatrix();
       camera = ortho;
       controls.camera = ortho;
-      controls.mouseButtons.wheel = CameraControls.ACTION.ZOOM;
+      applyNavigation();
       void controls.setLookAt(pos.x, pos.y, pos.z, target.x, target.y, target.z, false);
     } else {
       const d = h / (2 * ortho.zoom * tanHalf);
       const at = pos.clone().sub(target).normalize().multiplyScalar(d).add(target);
       camera = persp;
       controls.camera = persp;
-      controls.mouseButtons.wheel = CameraControls.ACTION.DOLLY;
+      applyNavigation();
       void controls.setLookAt(at.x, at.y, at.z, target.x, target.y, target.z, false);
     }
     invalidate();
   }
+
+  // ---------------------------------------------------------------------------------------------
+  // Navigation (E-UX-17): Mouse or Trackpad
+
+  let navigation: Navigation = "mouse";
+
+  /**
+   * What the wheel does: with a mouse, what the view calls zoom, a dolly in perspective (the field
+   * of view stays as fits and the gizmo's size read it) and the zoom in orthographic; with a
+   * trackpad, a two-finger scroll, which the browser sends as a wheel, pans.
+   */
+  function applyNavigation(): void {
+    controls.mouseButtons.wheel =
+      navigation === "trackpad"
+        ? CameraControls.ACTION.TRUCK
+        : camera === ortho
+          ? CameraControls.ACTION.ZOOM
+          : CameraControls.ACTION.DOLLY;
+  }
+
+  /**
+   * A pinch, which the browser sends as a wheel with Ctrl (and a mouse's Ctrl + wheel), zooms in
+   * either mode. camera-controls zooms the lens on one, in perspective too (**read**: its wheel
+   * handler takes ZOOM whenever `ctrlKey` is set), which would leave the field of view that fits,
+   * the gizmo's size and the projection switch read behind. In perspective the pinch is taken here
+   * first and dollies, by camera-controls' own wheel step and scale (`_dollyInternal`), so a
+   * pinch and a wheel move alike; in orthographic its zoom is the view's zoom, and stays its own.
+   */
+  const onPinch = (e: WheelEvent) => {
+    if (!e.ctrlKey || camera === ortho || !controls.enabled) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const step = e.deltaY / ((MAC ? -1 : -3) * 10);
+    const r = controls.getSpherical(new Spherical(), true).radius;
+    void controls.dollyTo(r * 0.95 ** (step * controls.dollySpeed), true);
+  };
+  renderer.domElement.addEventListener("wheel", onPinch, { capture: true, passive: false });
 
   // ---------------------------------------------------------------------------------------------
   // Picking: click, hover, and box select with Shift held
@@ -1279,7 +1451,17 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   rectEl.className = "select-box";
   rectEl.hidden = true;
   container.appendChild(rectEl);
-  const labels = new Labels(container, (p) => project(p));
+  const labels = new Labels(
+    container,
+    (p) => project(p),
+    () => gizmoBoxes(),
+  );
+
+  /** The shown gizmo's footprint on the page, which the labels keep clear of. */
+  function gizmoBoxes(): PageBox[] {
+    const g = gizmo.shown();
+    return g ? gizmoFootprint(g, project, "parts" in g ? mmPerPxAt(g.at) : 1) : [];
+  }
 
   function castFrom(clientX: number, clientY: number): void {
     const r = renderer.domElement.getBoundingClientRect();
@@ -1309,7 +1491,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       const g = instanced.find((x) => x.mesh === h.object);
       const s = single.find((x) => x.mesh === h.object);
       const id = g && h.instanceId !== undefined ? g.ids[h.instanceId] : s?.id;
-      if (!id || skip?.has(id)) continue;
+      // What is hidden is not there to pick either: the ray goes on to what is behind it.
+      if (!id || skip?.has(id) || hiddenIds.has(id)) continue;
       const r = raycaster.ray;
       const ray: Ray = {
         o: fromThree([r.origin.x, r.origin.y, r.origin.z]),
@@ -1353,28 +1536,35 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
   }
 
-  /** Entities whose body lies wholly inside a screen rectangle (window selection). */
-  function inside(x0: number, y0: number, x1: number, y1: number): string[] {
+  /**
+   * What a box drawn on the screen takes (E-UX-10): as a window, the entities whose body lies
+   * wholly inside it; as a crossing, those whose body's outline touches it (`boxTakes`). A body
+   * with a corner behind the camera is never wholly inside; a crossing reads the corners in front.
+   */
+  function boxed(rect: ScreenRect, mode: "window" | "crossing"): string[] {
     if (!model) return [];
     const r = renderer.domElement.getBoundingClientRect();
     const toWorld = world.matrixWorld;
     const v = new Vector3();
-    const within = (pts: readonly (readonly [number, number, number])[]) =>
-      pts.every(([a, b, c]) => {
+    const within = (pts: readonly (readonly [number, number, number])[]) => {
+      const seen: P2[] = [];
+      let behind = false;
+      for (const [a, b, c] of pts) {
         v.set(a, b, c).applyMatrix4(toWorld).project(camera);
-        if (v.z < -1 || v.z > 1) return false;
-        const sx = r.left + ((v.x + 1) / 2) * r.width;
-        const sy = r.top + ((1 - v.y) / 2) * r.height;
-        return sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1;
-      });
+        if (v.z < -1 || v.z > 1) behind = true;
+        else seen.push([r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height]);
+      }
+      return mode === "window" && behind ? false : boxTakes(seen, rect, mode);
+    };
     const out: string[] = [];
     for (const [id, bar] of Object.entries(model.bars)) {
+      if (hiddenIds.has(id)) continue;
       const view = model.display.bars[id];
       const section = view ? model.display.sections[view.section] : undefined;
       if (view && section && within(barCorners(bar, section, view))) out.push(id);
     }
     for (const s of single) {
-      if (!model.parts[s.id]) continue;
+      if (!model.parts[s.id] || hiddenIds.has(s.id)) continue;
       const g = s.mesh.geometry;
       g.computeBoundingBox();
       const b = g.boundingBox as Box3;
@@ -1514,6 +1704,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     if (!down?.box) return;
     const cr = container.getBoundingClientRect();
     rectEl.hidden = false;
+    // Right to left is a crossing, drawn dashed; left to right a window, drawn solid (E-UX-10).
+    rectEl.classList.toggle("crossing", e.clientX < down.x);
     rectEl.style.left = `${Math.min(down.x, e.clientX) - cr.left}px`;
     rectEl.style.top = `${Math.min(down.y, e.clientY) - cr.top}px`;
     rectEl.style.width = `${Math.abs(e.clientX - down.x)}px`;
@@ -1557,11 +1749,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       controls.enabled = true;
       if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
       if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) {
-        const ids = inside(
-          Math.min(d.x, e.clientX),
-          Math.min(d.y, e.clientY),
-          Math.max(d.x, e.clientX),
-          Math.max(d.y, e.clientY),
+        const ids = boxed(
+          {
+            x0: Math.min(d.x, e.clientX),
+            y0: Math.min(d.y, e.clientY),
+            x1: Math.max(d.x, e.clientX),
+            y1: Math.max(d.y, e.clientY),
+          },
+          e.clientX < d.x ? "crossing" : "window",
         );
         selectCb(ids, additive ? "add" : "replace");
         return;
@@ -1590,14 +1785,18 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   // Markers: the joints and the problem badges
 
   const JOINT_GLYPH = { joined: "joined", open: "open", failed: "failed" } as const;
+  /** A corner is drawn while one of its bars is (a corner given no bars always is). */
+  const cornerShown = (c: CornerMarker) =>
+    !c.bars || c.bars.length === 0 || c.bars.some((b) => !hiddenIds.has(b));
   function drawCorners(): void {
     const colour = {
       joined: theme.status.ready,
       open: theme.status.warn,
       failed: theme.status.blocked,
     };
+    const shown = corners.filter(cornerShown);
     joints.set(
-      corners.map(
+      shown.map(
         (c): MarkerPoint => ({
           key: c.key,
           at: c.at,
@@ -1607,7 +1806,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       ),
     );
     counts.joints = { joined: 0, open: 0, failed: 0 };
-    for (const c of corners) counts.joints[c.state]++;
+    for (const c of shown) counts.joints[c.state]++;
     emphasiseCorners();
   }
 
@@ -1640,7 +1839,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     const pts: MarkerPoint[] = [];
     for (const [id, sev] of badgeOf) {
       const at = anchorOf(id);
-      if (!at) continue;
+      if (!at || hiddenIds.has(id)) continue;
       pts.push({
         key: id,
         at,
@@ -1756,10 +1955,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     setModel(m) {
       model = m;
       build(m);
-      paint();
-      buildXray();
-      drawCorners();
-      drawBadges();
+      // Paints, and draws the x-ray, the markers and the badges, with what stays hidden left out.
+      applyHidden();
       // The first model is shown whole, even an empty one; later revisions keep the view.
       if (!fitted) {
         fitView();
@@ -1803,6 +2000,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       invalidate();
     },
     gizmo: () => gizmo.shown(),
+    gizmoFootprint: gizmoBoxes,
     onGizmoDrag(cb) {
       gizmoCbs.add(cb);
       return () => gizmoCbs.delete(cb);
@@ -1814,16 +2012,21 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       menuCbs.add(cb);
       return () => menuCbs.delete(cb);
     },
-    setHidden() {
-      // E2.4 draws hidden bodies hidden, and Select's own pick passes them over.
+    setHidden(ids) {
+      hiddenIds = ids;
+      applyHidden();
     },
     setView,
     setProjection,
     projection: () => (camera === ortho ? "orthographic" : "perspective"),
+    setNavigation(n) {
+      navigation = n;
+      applyNavigation();
+    },
     fitView,
     fitSelection(ids) {
-      const box = ids.size > 0 ? boxOf(ids) : modelBox();
-      fitThreeBox(box.isEmpty() ? modelBox() : box, true);
+      const box = ids.size > 0 ? boxOf(ids) : shownBox();
+      fitThreeBox(box.isEmpty() ? shownBox() : box, true);
     },
     renderNow() {
       controls.update(0);
@@ -1901,11 +2104,11 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       applyThemeMaterials();
       if (model) {
         build(model);
-        paint();
-        buildXray();
+        applyHidden();
+      } else {
+        drawCorners();
+        drawBadges();
       }
-      drawCorners();
-      drawBadges();
       invalidate();
     },
     onRender(cb) {
@@ -1914,6 +2117,34 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     },
     setLabel(key, at, text) {
       labels.set(key, at, text);
+    },
+    setDimensions(d) {
+      if (!d) {
+        dimensions.visible = false;
+        for (const k of ["size-w", "size-d", "size-h"]) labels.set(k, undefined);
+        invalidate();
+        return;
+      }
+      const [lo, hi] = d.box;
+      const pts: number[] = [];
+      const corner = (i: number): V3 => [
+        i & 1 ? hi[0] : lo[0],
+        i & 2 ? hi[1] : lo[1],
+        i & 4 ? hi[2] : lo[2],
+      ];
+      // The twelve edges: each pair of corners that differ along one axis.
+      for (let i = 0; i < 8; i++)
+        for (const bit of [1, 2, 4]) if (!(i & bit)) pts.push(...corner(i), ...corner(i | bit));
+      dimensions.geometry.dispose();
+      const g = new BufferGeometry();
+      g.setAttribute("position", new Float32BufferAttribute(pts, 3));
+      dimensions.geometry = g;
+      dimensions.visible = true;
+      const mid = (a: number, b: number) => (a + b) / 2;
+      labels.set("size-w", [mid(lo[0], hi[0]), lo[1], lo[2]], d.words[0]);
+      labels.set("size-d", [hi[0], mid(lo[1], hi[1]), lo[2]], d.words[1]);
+      labels.set("size-h", [hi[0], lo[1], mid(lo[2], hi[2])], d.words[2]);
+      invalidate();
     },
     camera() {
       const pos = controls.getPosition(new Vector3());
@@ -1928,8 +2159,9 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         right,
         up,
         // camera-controls marks a transition active when it is asked for, and rested when the
-        // camera's change per frame falls below its rest threshold (0.01 mm here).
-        moving: controls.active,
+        // camera's change per frame falls below its rest threshold (0.01 mm here); a move made
+        // at once is over at the first frame that changes nothing (`asleep`).
+        moving: controls.active && !asleep,
       };
     },
     renderStats: () => ({ ...stats }),
@@ -1940,6 +2172,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointerleave", onLeave);
+      el.removeEventListener("wheel", onPinch, { capture: true });
       clear();
       release(owned);
       release(retired);
@@ -1952,6 +2185,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       glyphs.dispose();
       labels.dispose();
       xray.geometry.dispose();
+      dimensions.geometry.dispose();
+      dimensionMaterial.dispose();
       for (const m of [capMaterial, sideMaterial, outlineMaterial, detailMaterial, xrayMaterial]) {
         m.dispose();
       }

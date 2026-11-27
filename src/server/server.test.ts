@@ -461,6 +461,34 @@ describe("the order and the costs (§5.4, §4.11)", () => {
     }
   });
 
+  it("selects as alukit query does: the app's selection verbs ask it (E2.2)", async () => {
+    const f = await fixture();
+    const cart = join(f.dir, "..", "..", "cart");
+    const r = await serve({ ...f, dir: cart });
+    const ids = async (selector: string) => {
+      const cli = await capture(["query", cart, selector, "--json", "--limit", "500"]);
+      expect(cli.code, cli.err).toBe(0);
+      return (JSON.parse(cli.out) as { entities: { id: string }[] }).entities.map((e) => e.id);
+    };
+    for (const selector of ["like:b1", "like:b2 by tag", "connected:b9", "connected*:b9", "bars"]) {
+      const served = await text(r, `api/query?select=${encodeURIComponent(selector)}`);
+      expect(served.status, selector).toBe(200);
+      expect(served.rev).toBe("0");
+      expect(JSON.parse(served.body), selector).toEqual({
+        ok: true,
+        rev: 0,
+        selector,
+        ids: await ids(selector),
+      });
+    }
+    const bad = await text(r, `api/query?select=${encodeURIComponent("like:b99")}`);
+    expect([bad.status, JSON.parse(bad.body)]).toEqual([
+      400,
+      { ok: false, message: "there is no entity b99" },
+    ]);
+    expect((await text(r, "api/query")).status).toBe(400);
+  });
+
   it("answers the machining sheet as alukit machining --format json, byte for byte", async () => {
     const f = await fixture();
     const cart = join(f.dir, "..", "..", "cart");

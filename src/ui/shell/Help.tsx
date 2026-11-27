@@ -2,6 +2,7 @@ import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { helpSections } from "../actions/registry.ts";
 import { describeKeys, type KeyHelpRow, letterKeys, onKey, setLetterKeys } from "../keys.ts";
+import { navigation, setNavigation } from "../viewport/navigation.ts";
 import { Dialog } from "./Dialog.tsx";
 import { showStart } from "./start.ts";
 
@@ -112,6 +113,26 @@ function HelpDialog() {
             Single-key shortcuts (a letter, a digit, <kbd>/</kbd>, <kbd>?</kbd>). Off, only the
             buttons and the keys with Ctrl or Cmd act; typing into a tool still works.
           </label>
+          <fieldset class="help-switch help-nav">
+            <legend>Navigating the view</legend>
+            {(
+              [
+                ["mouse", "Mouse: drag to orbit, right-drag to pan, the wheel zooms"],
+                ["trackpad", "Trackpad: drag to orbit, two fingers pan, pinch to zoom"],
+              ] as const
+            ).map(([n, words]) => (
+              <label key={n}>
+                <input
+                  type="radio"
+                  name="navigation"
+                  data-testid={`nav-${n}`}
+                  checked={navigation.value === n}
+                  onChange={() => setNavigation(n)}
+                />{" "}
+                {words}
+              </label>
+            ))}
+          </fieldset>
         </section>
         <section aria-labelledby="help-snaps">
           <h3 id="help-snaps">What the pointer snaps to</h3>

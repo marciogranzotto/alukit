@@ -1,6 +1,6 @@
 import type { BarJson, V3 } from "../mesh/model.ts";
 import type { Hit } from "./scene.ts";
-import { type Face, q, type Ray } from "./snap.ts";
+import { type Face, type P2, q, type Ray } from "./snap.ts";
 
 /**
  * What a pick lands on, found analytically from the derived model, as snapping is (design §8;
@@ -95,4 +95,98 @@ export function hitOn(
   const h = bar ? barHit(ray, bar) : undefined;
   if (!h) return { id, p, normal };
   return { id, p, normal: h.normal, face: h.face, station: { bar: id, at_mm: h.at_mm } };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Box selection (docs/ux/editing-audit.md E-UX-10, E2.3): a window takes what lies wholly inside
+// the box, a crossing what it touches. A body is the outline its corners project to: the convex
+// hull of a box's eight corners is exactly the box's silhouette, in either projection.
+
+/** A rectangle on the page, CSS pixels: x0 ≤ x1, y0 ≤ y1. */
+export interface ScreenRect {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/** z of (a − o) × (b − o): positive when o, a, b turn one way, negative the other, 0 in a line. */
+const turn = (o: P2, a: P2, b: P2) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+
+/** The convex hull of some points, in order round it (Andrew's monotone chain). */
+export function convexHull(pts: readonly P2[]): P2[] {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (p.length <= 2) return p;
+  const half = (list: readonly P2[]) => {
+    const out: P2[] = [];
+    for (const x of list) {
+      while (out.length >= 2 && turn(out[out.length - 2] as P2, out[out.length - 1] as P2, x) <= 0)
+        out.pop();
+      out.push(x);
+    }
+    out.pop();
+    return out;
+  };
+  return [...half(p), ...half([...p].reverse())];
+}
+
+const insideRect = (p: P2, r: ScreenRect) =>
+  p[0] >= r.x0 && p[0] <= r.x1 && p[1] >= r.y0 && p[1] <= r.y1;
+
+/** Whether a point lies in a convex polygon given in order round it (on an edge counts). */
+function insideHull(p: P2, hull: readonly P2[]): boolean {
+  if (hull.length < 3) return false;
+  let sign = 0;
+  for (let i = 0; i < hull.length; i++) {
+    const t = turn(hull[i] as P2, hull[(i + 1) % hull.length] as P2, p);
+    if (t === 0) continue;
+    if (sign === 0) sign = Math.sign(t);
+    else if (Math.sign(t) !== sign) return false;
+  }
+  return true;
+}
+
+/** Whether two segments meet, touching included. */
+function segmentsMeet(a: P2, b: P2, c: P2, d: P2): boolean {
+  const d1 = turn(c, d, a);
+  const d2 = turn(c, d, b);
+  const d3 = turn(a, b, c);
+  const d4 = turn(a, b, d);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0)))
+    return true;
+  const on = (p: P2, q1: P2, q2: P2) =>
+    Math.min(q1[0], q2[0]) <= p[0] &&
+    p[0] <= Math.max(q1[0], q2[0]) &&
+    Math.min(q1[1], q2[1]) <= p[1] &&
+    p[1] <= Math.max(q1[1], q2[1]);
+  return (
+    (d1 === 0 && on(a, c, d)) ||
+    (d2 === 0 && on(b, c, d)) ||
+    (d3 === 0 && on(c, a, b)) ||
+    (d4 === 0 && on(d, a, b))
+  );
+}
+
+/**
+ * Whether a box drawn on the screen takes a body whose corners project to `pts`: as a window,
+ * when every corner is inside it; as a crossing, when the body's outline touches it (a corner
+ * inside the box, a corner of the box inside the outline, or an edge of each crossing). Pure.
+ */
+export function boxTakes(pts: readonly P2[], r: ScreenRect, mode: "window" | "crossing"): boolean {
+  if (pts.length === 0) return false;
+  if (mode === "window") return pts.every((p) => insideRect(p, r));
+  const hull = convexHull(pts);
+  if (hull.some((p) => insideRect(p, r))) return true;
+  const box: P2[] = [
+    [r.x0, r.y0],
+    [r.x1, r.y0],
+    [r.x1, r.y1],
+    [r.x0, r.y1],
+  ];
+  if (box.some((p) => insideHull(p, hull))) return true;
+  const edges = (poly: readonly P2[]) =>
+    poly.length < 2 ? [] : poly.map((p, i) => [p, poly[(i + 1) % poly.length] as P2] as const);
+  for (const [a, b] of edges(hull))
+    for (const [c, d] of edges(box)) if (segmentsMeet(a, b, c, d)) return true;
+  return false;
 }

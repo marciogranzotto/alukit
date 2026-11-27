@@ -2,7 +2,7 @@ import { effect, signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { CatalogOverlay } from "./catalog/CatalogOverlay.tsx";
 import { PartsBin } from "./catalog/PartsBin.tsx";
-import { keepPalette, startPalette } from "./catalog/state.ts";
+import { keepPalette } from "./catalog/state.ts";
 import { showKey } from "./focus.ts";
 import { Inspector } from "./inspector/Inspector.tsx";
 import { listenKeys, onKey } from "./keys.ts";
@@ -75,7 +75,6 @@ const rightWidth = signal(readPref(COLUMN.right.key, COLUMN.right.initial, isNum
  */
 function useWiring(): void {
   useEffect(() => {
-    let started = false;
     const offs = [
       listenKeys(),
       onKey("app", undoKey),
@@ -85,11 +84,7 @@ function useWiring(): void {
       keepPalette(),
       wirePresence(),
       model.subscribe((m) => {
-        if (!m) return;
-        noteProject(m);
-        if (started) return;
-        started = true;
-        void startPalette(m.defaults);
+        if (m) noteProject(m);
       }),
       // First steps' last step: the order's sheet has been open.
       effect(() => {

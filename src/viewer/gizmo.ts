@@ -186,6 +186,56 @@ export function handleAt(
   return best?.key;
 }
 
+/** A box on the screen, CSS pixels, as `getBoundingClientRect` gives one. */
+export interface ScreenBox {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * Where on the screen a press is the gizmo's (added by E2, so the labels over the view keep clear
+ * of it: docs/ux/e2-decisions.md): for axes, the box round the projected ends of an arrow's
+ * length along each axis both ways (every arrow, cone, ring and square lies inside it), padded by
+ * how near a press takes a part; for handles, a box round each, as far as a press grabs it. Empty
+ * when nothing projects. Pure.
+ */
+export function gizmoFootprint(spec: GizmoSpec, project: Project, mmPerPx: number): ScreenBox[] {
+  const square = (s: P2, r: number): ScreenBox => ({
+    left: s[0] - r,
+    top: s[1] - r,
+    right: s[0] + r,
+    bottom: s[1] + r,
+  });
+  if ("handles" in spec) {
+    const r = Math.max(GRAB_PX, HANDLE_HOT_PX / 2);
+    return spec.handles.flatMap((h) => {
+      const s = project(h.at);
+      return s ? [square(s, r)] : [];
+    });
+  }
+  const size = GIZMO_PX * mmPerPx;
+  const ends: P2[] = [];
+  for (const u of Object.values(UNIT)) {
+    for (const sign of [1, -1]) {
+      const s = project(addScaled(spec.at, u, sign * size));
+      if (s) ends.push(s);
+    }
+  }
+  if (ends.length === 0) return [];
+  const xs = ends.map((s) => s[0]);
+  const ys = ends.map((s) => s[1]);
+  return [
+    {
+      left: Math.min(...xs) - GIZMO_HIT_PX,
+      top: Math.min(...ys) - GIZMO_HIT_PX,
+      right: Math.max(...xs) + GIZMO_HIT_PX,
+      bottom: Math.max(...ys) + GIZMO_HIT_PX,
+    },
+  ];
+}
+
 /**
  * What a drag on a part comes to, from the ray at the press to the ray now: along an arrow, the
  * pointer's ray read on its axis; in a plane, where the rays cross it; round a ring, the angle

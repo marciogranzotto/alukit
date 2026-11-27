@@ -4,7 +4,7 @@ import { get } from "../api.ts";
 import { type PaletteItem, palette } from "../palette.ts";
 import { readPref, writePref } from "../shell/prefs.ts";
 import { dismissStart, startShown } from "../shell/start.ts";
-import { summary } from "../store.ts";
+import { model, summary } from "../store.ts";
 import { activeTool, type ToolName } from "../tools/state.ts";
 
 /**
@@ -166,36 +166,62 @@ const PALETTE = "alukit.palette";
 const isPalette = (x: unknown): x is { bar?: PaletteItem; part?: PaletteItem } =>
   typeof x === "object" && x !== null && !Array.isArray(x);
 
-/** Keeps the palette for the tab's session; returns the undo. */
-export function keepPalette(): () => void {
-  return palette.subscribe((p) => writePref(PALETTE, p, "session"));
-}
-
 /** The palette this tab had, if it had one. */
 export function savedPalette(): { bar?: PaletteItem; part?: PaletteItem } {
   return readPref(PALETTE, {}, isPalette, "session");
 }
 
-/**
- * The palette a tab starts with (S2.4, U28): what it had this session, else the document's
- * `defaults.bar`, armed with no options of its own, so the bars drawn take `defaults.bar.opt` as
- * derive gives it. Before, the palette started empty in every tab and every session, and Draw
- * said "click a start point" while a click did nothing (B F7, F33).
- */
-export async function startPalette(defaults: Readonly<Record<string, unknown>>): Promise<void> {
-  const saved = savedPalette();
-  if (saved.bar || saved.part) {
-    palette.value = saved;
-    return;
-  }
+/** The document's default bar as the palette reads it: its item, or nothing. */
+function defaultBar(defaults: Readonly<Record<string, unknown>>): string | undefined {
   const bar = defaults.bar as { item?: unknown } | undefined;
-  if (typeof bar?.item !== "string" || palette.peek().bar) return;
+  return typeof bar?.item === "string" ? bar.item : undefined;
+}
+
+/**
+ * Arms the document's default bar while the palette has none, with no options of its own, so the
+ * bars drawn take `defaults.bar.opt` as derive gives it.
+ */
+async function armDefault(item: string): Promise<void> {
+  if (palette.peek().bar) return;
   try {
-    const card = await cardOf(bar.item);
+    const card = await cardOf(item);
     if (card.entry.kind === "bar" && !palette.peek().bar) {
       palette.value = { ...palette.peek(), bar: paletteItem(card, {}) };
     }
   } catch {
     // The default names an item no catalog holds: derive says so; the palette stays empty.
   }
+}
+
+/**
+ * The palette's life in a tab (S2.4, U28; editing audit D1): kept for the tab's session; started
+ * from what the tab had this session, else from the document's `defaults.bar`; and armed with
+ * `defaults.bar` whenever the palette has no bar and the default changes, whoever changed it (the
+ * start card's box frame, project settings, an agent). Before, the default was read once, from
+ * the first model, so a frame made from the start card left Draw saying "no bar in the palette"
+ * until a reload (D1); before S2.4 the palette started empty in every tab (B F7, F33). A bar the
+ * person armed is never replaced: the default arms only an empty palette. Returns the undo.
+ */
+export function keepPalette(): () => void {
+  const offSave = palette.subscribe((p) => writePref(PALETTE, p, "session"));
+  /** The default the palette last saw; undefined until the first model. */
+  let seen: { item: string | undefined } | undefined;
+  const offModel = model.subscribe((m) => {
+    if (!m) return;
+    const item = defaultBar(m.defaults);
+    if (seen === undefined) {
+      seen = { item };
+      const saved = savedPalette();
+      if (saved.bar || saved.part) palette.value = saved;
+      else if (item) void armDefault(item);
+      return;
+    }
+    if (item === seen.item) return;
+    seen = { item };
+    if (item) void armDefault(item);
+  });
+  return () => {
+    offSave();
+    offModel();
+  };
 }

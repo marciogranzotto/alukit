@@ -3,6 +3,7 @@ import { compareIds } from "#core/ids.ts";
 import type { Ref } from "#core/problems/types.ts";
 import type { SelectMode } from "../viewer/scene.ts";
 import { extendHook } from "./hook.ts";
+import type { Model } from "./model.ts";
 import { model } from "./store.ts";
 import { resolveTargets } from "./targets.ts";
 
@@ -89,14 +90,62 @@ export function clearShow(): void {
 }
 
 /**
- * What the view hides and isolates (docs/ux/editing-audit.md E-UX-9): view state, like the
- * section plane, never a step, per tab. `hidden` are the entities not drawn; picks and snaps pass
- * them over (the tools give it as their `skip`). `isolated` is what Isolate keeps, the rest
- * hidden; undefined when nothing is isolated. Nothing sets them until E2.4 builds hide and
- * isolate.
+ * What the view hides and isolates (docs/ux/editing-audit.md E-UX-9, E2.4): view state, like the
+ * section plane, never a step, per tab. `hidden` are the bodies not drawn (bars, parts, pattern
+ * copies, a connection's fasteners, by id); picks and snaps pass them over (the tools give it as
+ * their `skip`, and the viewer's own pick reads it through `setHidden`). `isolated` is what
+ * Isolate keeps, the rest being in `hidden`; undefined when nothing is isolated. Isolate writes
+ * the rest into `hidden` rather than keeping a second set, so every reader of `hidden` (the
+ * tools' snaps, the viewer) passes over it with no change (e2 6).
  */
 export const hidden = signal<ReadonlySet<string>>(new Set());
 export const isolated = signal<ReadonlySet<string> | undefined>(undefined);
+
+/**
+ * The bodies the view draws for a model: every derived bar and placed part (pattern copies
+ * included) and every connection that draws fasteners.
+ */
+export function drawnBodies(m: Model): string[] {
+  const out = new Set<string>(Object.keys(m.derived.bars));
+  for (const [id, p] of Object.entries(m.derived.parts)) if (!p.unplaced) out.add(id);
+  for (const f of m.display.fasteners) out.add(f.connection);
+  return [...out];
+}
+
+/** The bodies that draw some refs, as the view lights them on a hover (src/ui/targets.ts). */
+export function bodiesOf(m: Model, refs: readonly string[]): string[] {
+  return resolveTargets(m, refs).bodies;
+}
+
+/** Hides what draws the refs, and takes what it hid out of the selection. */
+export function hide(m: Model, refs: readonly string[]): void {
+  const off = bodiesOf(m, refs);
+  hidden.value = new Set([...hidden.peek(), ...off]);
+  const gone = new Set(off);
+  select(
+    [...selection.peek()].filter((id) => !gone.has(id)),
+    "replace",
+  );
+}
+
+/** Shows only what draws the refs: every other body is hidden. */
+export function isolate(m: Model, refs: readonly string[]): void {
+  const keep = new Set(bodiesOf(m, refs));
+  isolated.value = keep;
+  hidden.value = new Set(drawnBodies(m).filter((id) => !keep.has(id)));
+}
+
+/** Shows everything again. */
+export function showAll(): void {
+  if (hidden.peek().size > 0) hidden.value = new Set();
+  if (isolated.peek() !== undefined) isolated.value = undefined;
+}
+
+/** How many of the model's bodies are hidden now: what the strip says. */
+export function hiddenCount(m: Model | undefined, h: ReadonlySet<string>): number {
+  if (!m || h.size === 0) return 0;
+  return drawnBodies(m).filter((id) => h.has(id)).length;
+}
 
 declare module "./hook.ts" {
   interface AlukitHook {

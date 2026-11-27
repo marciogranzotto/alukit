@@ -5,6 +5,7 @@ import {
   type GizmoPart,
   type GizmoView,
   gizmoDrag,
+  gizmoFootprint,
   gizmoPartAt,
   handleAt,
   mmPerPx,
@@ -95,5 +96,30 @@ describe("sizes and handles", () => {
     expect(handleAt(handles, [8, 0], project)).toBe("a");
     expect(handleAt(handles, [12, 0], project)).toBe("b");
     expect(handleAt(handles, [10, 30], project)).toBeUndefined();
+  });
+});
+
+describe("gizmoFootprint: where on the screen a press is the gizmo's (E2: labels keep clear)", () => {
+  it("axes: the square round every arrow's tip and ring, and the reach of a press", () => {
+    // From the top at 1 mm a pixel: ±96 along X and Y, and Z seen end on, padded by 8.
+    const r = 96 + 8;
+    expect(gizmoFootprint(spec, project, 1)).toEqual([{ left: -r, top: -r, right: r, bottom: r }]);
+    // Half the zoom, the same 96 px: its size is the screen's.
+    expect(gizmoFootprint({ at: [100, 0, 0], parts: ALL }, project, 2)).toEqual([
+      { left: 100 - 2 * 96 - 8, top: -2 * 96 - 8, right: 100 + 2 * 96 + 8, bottom: 2 * 96 + 8 },
+    ]);
+  });
+
+  it("handles: a square round each, as far as a press grabs it", () => {
+    const handles = {
+      handles: [
+        { key: "a", at: [0, 0, 0] as V3 },
+        { key: "b", at: [300, 0, 0] as V3 },
+      ],
+    };
+    expect(gizmoFootprint(handles, project, 1)).toEqual([
+      { left: -12, top: -12, right: 12, bottom: 12 },
+      { left: 288, top: -12, right: 312, bottom: 12 },
+    ]);
   });
 });
