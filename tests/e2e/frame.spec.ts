@@ -124,9 +124,11 @@ test("the start card's box frame makes the same frame, with its numbers from a d
   await form.getByTestId("frame-w").fill("1000");
   await form.getByTestId("frame-d").fill("600");
   await form.getByTestId("frame-h").fill("W - 400");
-  // Until the corners' joint is chosen, the frame says so rather than being made (review B1).
+  // Until the corners' joint is chosen the frame is not made (review B1), but its cut lengths
+  // show, with what the choice will change (review N4).
   const numbers = form.getByTestId("frame-numbers");
-  await expect(numbers).toContainText("Joined with");
+  await expect(numbers).toContainText("posts 4 × 800");
+  await expect(form.getByTestId("frame-joint-pending")).toBeVisible();
   await expect(form.getByTestId("frame-create")).toBeDisabled();
   await form.getByTestId("frame-joint").selectOption("-");
   // The numbers come from the dry run: 800 posts, 1000 and 520 rails (40 lost at each butt).
