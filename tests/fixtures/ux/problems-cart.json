@@ -1,0 +1,157 @@
+{
+  "schema": "alukit.problems/1",
+  "rev": 0,
+  "variant": null,
+  "as_of": "2026-11-26",
+  "order": { "status": "BLOCKED", "blocks": 6, "warnings": 1 },
+  "problems": [
+    {
+      "id": "open-item/O2/local",
+      "code": "open-item",
+      "rule": "open-item",
+      "group": "blocks-order",
+      "title": "Open item O2: price the sensor bracket with the local shop",
+      "detail": "It holds the order from local until it is resolved.",
+      "raw": "O2: price the sensor bracket with the local shop",
+      "suppliers": ["local"],
+      "targets": ["O2"],
+      "fixes": [{ "label": "Resolve O2…", "kind": "resolve-open", "open": "O2" }],
+      "from": ["order", "open"]
+    },
+    {
+      "id": "missing-price/project:angle-a/local",
+      "code": "missing-price",
+      "rule": "missing-price",
+      "group": "blocks-order",
+      "title": "No price for the sensor bracket (project:angle-a)",
+      "detail": "The order from local waits for its price: a quote from the shop that bends it.",
+      "raw": "project:angle-a: no price",
+      "suppliers": ["local"],
+      "targets": ["project:angle-a"],
+      "fixes": [{ "label": "Set a price…", "kind": "set-price", "item": "project:angle-a" }],
+      "from": ["order"]
+    },
+    {
+      "id": "open-item/O1/test-gen-vendor",
+      "code": "open-item",
+      "rule": "open-item",
+      "group": "blocks-order",
+      "title": "Open item O1: confirm the rail screws' length against the rail's counterbore",
+      "detail": "It holds the order from test-gen-vendor until it is resolved.",
+      "raw": "O1: confirm the rail screws' length against the rail's counterbore",
+      "suppliers": ["test-gen-vendor"],
+      "targets": ["O1"],
+      "fixes": [{ "label": "Resolve O1…", "kind": "resolve-open", "open": "O1" }],
+      "from": ["order", "open"]
+    },
+    {
+      "id": "est-price/test:PSU-24V/test-vendor",
+      "code": "est-price",
+      "rule": "est-price",
+      "group": "blocks-order",
+      "title": "The price of the power supply (test:PSU-24V) is an estimate",
+      "detail": "The order from test-vendor waits for a price read from a source.",
+      "raw": "test:PSU-24V: the price of test:PSU-24V is an estimate",
+      "suppliers": ["test-vendor"],
+      "targets": ["test:PSU-24V"],
+      "fixes": [{ "label": "Set a sourced price…", "kind": "set-price", "item": "test:PSU-24V" }],
+      "from": ["order"]
+    },
+    {
+      "id": "placeholder/project:motor/-",
+      "code": "placeholder",
+      "rule": "placeholder",
+      "group": "blocks-order",
+      "title": "The gear motor (project:motor) is a placeholder, not a part to order",
+      "detail": "Replace it with a catalog item, or order it by hand and leave it out.",
+      "raw": "project:motor: a placeholder, not a part to order",
+      "suppliers": [null],
+      "targets": ["project:motor"],
+      "fixes": [],
+      "from": ["order"]
+    },
+    {
+      "id": "missing-price/test:SPL-STUD/-",
+      "code": "missing-price",
+      "rule": "missing-price",
+      "group": "blocks-order",
+      "title": "No supplier sells the splice stud (test:SPL-STUD)",
+      "detail": "No catalog offers it, so it has no price and no supplier to order from.",
+      "raw": "test:SPL-STUD: no offer",
+      "suppliers": [null],
+      "targets": ["test:SPL-STUD"],
+      "fixes": [{ "label": "Set a price…", "kind": "set-price", "item": "test:SPL-STUD" }],
+      "from": ["order"]
+    },
+    {
+      "id": "connection/c21",
+      "code": "connection",
+      "group": "warning",
+      "title": "b18's end a overhangs b9's face by 30 mm",
+      "detail": "60 % of the end face bears on nothing: the joint is weaker than a full butt.",
+      "raw": "b18.a's end face overhangs b9's face +x by 30.00 mm: 2969.10 of its 4969.10 mm² (59.8 %) bear on nothing",
+      "targets": ["c21", "b18", "b9"],
+      "fixes": [],
+      "from": ["check"]
+    },
+    {
+      "id": "connection/c22",
+      "code": "connection",
+      "group": "warning",
+      "title": "b18's end b overhangs b10's face by 30 mm",
+      "detail": "60 % of the end face bears on nothing: the joint is weaker than a full butt.",
+      "raw": "b18.b's end face overhangs b10's face -x by 30.00 mm: 2969.10 of its 4969.10 mm² (59.8 %) bear on nothing",
+      "targets": ["c22", "b18", "b10"],
+      "fixes": [],
+      "from": ["check"]
+    },
+    {
+      "id": "connection/c33",
+      "code": "connection",
+      "group": "warning",
+      "title": "b32's end b overhangs b31's end by 16.28 mm",
+      "detail": "29 % of the end face bears on nothing.",
+      "raw": "b32.b's end face overhangs b31's end b by 16.28 mm: 662.74 of its 2262.74 mm² (29.3 %) bear on nothing",
+      "targets": ["c33", "b32", "b31"],
+      "fixes": [],
+      "from": ["check"]
+    },
+    {
+      "id": "stale-price/test-geo:NUT-M10/test-geo-vendor",
+      "code": "stale-price",
+      "rule": "stale-price",
+      "group": "warning",
+      "title": "The nuts' price (test-geo:NUT-M10) was read 56 days ago",
+      "detail": "Read on 2026-10-01; check it before sending the order to test-geo-vendor.",
+      "raw": "test-geo:NUT-M10-100: price read 2026-10-01, 56 days before 2026-11-26",
+      "suppliers": ["test-geo-vendor"],
+      "targets": ["test-geo:NUT-M10"],
+      "fixes": [
+        { "label": "Update the price…", "kind": "lock-update", "item": "test-geo:NUT-M10" }
+      ],
+      "from": ["order"]
+    },
+    {
+      "id": "fit/c23",
+      "code": "fit",
+      "group": "note",
+      "title": "c23's washers' seats are not checked",
+      "detail": "test-geo:WSH-M10 gives no outside diameter.",
+      "raw": "test-geo:WSH-M10 gives no outside diameter (d2_mm), so its seats are not checked: c23",
+      "targets": ["c23"],
+      "fixes": [],
+      "from": ["check"]
+    },
+    {
+      "id": "fit/c35",
+      "code": "fit",
+      "group": "note",
+      "title": "c35's screw heads' seats are not checked",
+      "detail": "test-gen:SCR-M5x25 gives no bearing diameter.",
+      "raw": "test-gen:SCR-M5x25 gives no bearing diameter (dw_mm, dk_mm or s_mm), so its seats are not checked: c35",
+      "targets": ["c35"],
+      "fixes": [],
+      "from": ["check"]
+    }
+  ]
+}
