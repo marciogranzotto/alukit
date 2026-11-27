@@ -121,7 +121,8 @@ anything, and each has a default in place.
 | UX redesign, phase 2: one plan | **done** (03:27); decisions taken (03:31) | `docs/ux/plan.md`: 68 problems (14 plain bugs), 26 decisions, six streams |
 | UX redesign, phase 3, S0: shared contracts | **done**, merged (04:33), pushed | `docs/ux/contracts.md`; no visible change (32 app states pixel-compared) |
 | UX S4: visual system and sheets | **done**, merged (05:27), pushed | Tokens at WCAG 2.2 AA in both themes, IBM Plex bundled (OFL), one table system, the order's verdict strip with an action per blocker, Problems grouped by consequence. `docs/ux/s4-decisions.md` |
-| UX S1 core, server, CLI / S3 3D view | running (Opus, worktrees), launched 04:35 | |
+| UX S1: core, server, CLI | **done**, merged (06:11), pushed | The problem model (`/api/problems`, `alukit problems`), dry run, `addFrame`, the corner rule (call 6 decided), `setProject`, steps in words, restore keeping what it overwrites, and the plain bugs. No golden value moved. `docs/ux/s1-decisions.md` |
+| UX S3: 3D view | running (Opus, worktree), launched 04:35 | |
 | UX S2: app shell and IA | running (Opus, worktree), launched 05:30 | S5 tools follows S3 | task flows and IA; heuristics and first run; visual design and 3D readability |
 | F2: end-hole axis, butt end-face coverage, head seats | **done**, merged (03:30), pushed | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
 | X1–X3, X5, X6 plus F2a/F2b: blind fasteners, a butt's stack of bodies, plain bars held by a drilled-hole screw, taps over groove openings, sleeves through both walls, head sizes from standards, butt screws seat-checked | **done**, merged (05:00), pushed | Goldens G39–G45; calls 45–51. Note: `docs/notes/x1-x3-f2ab.md`. |
@@ -216,6 +217,12 @@ anything, and each has a default in place.
   - Head placement in butts is read from the connector's `requires`.
   - A face tap errors only when over half its drill circle is in a groove opening.
   - "Both walls" must be stated for a sleeve.
+- **S1's output changes (`docs/ux/s1-decisions.md`).**
+  - `option-not-sold` says what is sold.
+  - `alukit log` prints steps in words.
+  - Catalog search ranks a matching size first.
+  - Catalog entries carry a `from` price.
+  - Restore keeps what it overwrites in `.alukit/rejected/`.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. Since 05:29 it exempts the licence texts shipped with bundled assets
   (`**/OFL.txt`, `**/LICENSE.txt`, `**/LICENSE.md`), since IBM Plex's licence must ship with the
@@ -738,3 +745,10 @@ anything, and each has a default in place.
   - access holes positioned across their face;
   - the connector's own head seat-checked;
   - F7 confirmed with a failing test before any change.
+- **06:07**: S1 finished (S1.1–S1.14, two drops).
+  - New endpoints: `GET /api/problems`, `dryRun`, and `prefer` on catalog search.
+  - New commands: `setProject` and `addFrame`, plus the `defaults.corner` rule.
+  - New CLI: `alukit problems`, `do --dry-run`, `add frame`, `catalog search --prefer`, `snapshot --theme`, and `--as agent:<name>`.
+  - On a 1,008-bar project, problems take 23 ms (2–3 ms cached), and a dry run of one bar and joint 144–167 ms. So S5's previews should dry-run on snap or after a pause, not on every pointer move.
+  - A top-ring-only frame gives the skill's worked example byte for byte.
+- **06:11**: S1 merged. Two conflicts, both sections each side had added (the design changelog and `contracts.md`), so both were kept. The regenerated skill docs matched. Gate PASS, 946 tests.
