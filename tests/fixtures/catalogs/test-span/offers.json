@@ -1,0 +1,27 @@
+{
+  "schema": "alukit.offers/1",
+  "offers": {
+    "SQ40-c": {
+      "item": "SQ40",
+      "sale": {
+        "mode": "cut",
+        "min_mm": 40,
+        "max_mm": 3000,
+        "tol_mm": 1,
+        "res_mm": 1,
+        "step_mm": 10
+      },
+      "price": { "regular_minor": 12650, "per": "m", "read": "2026-11-26", "src": "src" }
+    },
+    "SQ40-3000": {
+      "item": "SQ40",
+      "sale": { "mode": "stock", "length_mm": 3000 },
+      "price": { "regular_minor": 33000, "per": "bar", "read": "2026-11-26", "src": "src" }
+    },
+    "SQ40-6000": {
+      "item": "SQ40",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 60000, "per": "bar", "read": "2026-11-26", "src": "src" }
+    }
+  }
+}

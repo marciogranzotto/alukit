@@ -1,0 +1,22 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G38",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-span"],
+  "currency": "BRL",
+  "defaults": {
+    "bar": { "item": "test-span:SQ40" },
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [2000, 0, 0], "label": "lower beam, square cut" },
+    "b2": { "a": [0, 0, 1040], "b": [2000, 0, 1040], "label": "upper beam, square cut; its lower face 1000 above b1's upper face" },
+    "b3": { "a": { "on": { "bar": "b1", "at_mm": 500 } }, "b": { "on": { "bar": "b2", "at_mm": 1020 } }, "ends": { "a": { "cut": "angle" }, "b": { "cut": "angle" } }, "label": "brace, 1 across for 2 up, both ends cut on horizontal faces: parallel cuts" },
+    "b4": { "a": { "on": { "bar": "b1", "at_mm": 1600 } }, "b": { "on": { "bar": "b2", "at_mm": 1600 } }, "label": "post, square cut" },
+    "b5": { "a": { "on": { "bar": "b1", "at_mm": 1200 } }, "b": { "on": { "bar": "b4", "at_mm": 400 } }, "ends": { "a": { "cut": "angle" }, "b": { "cut": "angle" } }, "label": "knee brace at 45°, from b1's upper face to the post's side: cuts closing toward the corner (a trapezoid)" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b3.a", "b4.a", "b5.a"] },
+    "c2": { "type": "butt", "through": "b2", "ends": ["b3.b", "b4.b"] },
+    "c3": { "type": "butt", "through": "b4", "ends": ["b5.b"] }
+  }
+}

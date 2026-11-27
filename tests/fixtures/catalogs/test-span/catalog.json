@@ -1,0 +1,20 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-span",
+  "name": "Span test catalog (synthetic)",
+  "vendor": "test-span-vendor",
+  "currency": "BRL",
+  "prov": {
+    "src": "est",
+    "note": "synthetic test data for a piece's span (G38), not a vendor's"
+  },
+  "items": {
+    "SQ40": {
+      "kind": "bar",
+      "name": "Square bar 40x40, cut to length or in stock bars (synthetic, G38)",
+      "shape": "flat",
+      "section": "SQ40",
+      "material": "test:al-6063-t5"
+    }
+  }
+}
