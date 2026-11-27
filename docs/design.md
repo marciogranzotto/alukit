@@ -3591,25 +3591,6 @@ reasons. Marking the room is the run's own change, in its project.
     E2.1, because the menu's first test opens it so: on what is under the pointer, selected first
     when it is not, else on the selection, in Select only. A greyed entry says why it cannot run.
     The outline's rows, the menu key and Shift+F10 stay E2.1's (e0 10, 11).
-85. *New in 2.3, 3D editing E2, open.* Isolate hides the rest: it writes every other drawn body into
-    the hidden set, rather than ghosting it as E-UX-9 said, so nothing put out of the way is picked
-    or snapped to, and Show's ghost stays Show's. What hides is what draws the selection (a corner
-    its bars, a joint its fasteners and bars), and hiding takes it out of the selection (e2 12, 13).
-86. *New in 2.3, 3D editing E2, open.* Ctrl/Cmd+A selects the document's bars and placed parts that
-    the view draws and does not hide, not pattern copies, connections, nodes or runs; it acts
-    anywhere but in a text field, where the audit said only on the view or the outline (e2 7).
-87. *New in 2.3, 3D editing E2, open.* A box drawn right to left is a crossing and takes a body
-    whose outline (the hull of its projected corners) touches it; left to right a window takes a
-    body wholly inside. The crossing is drawn dashed and the window, dashed before, solid (e2 10).
-88. *New in 2.3, 3D editing E2, open.* Navigation is Mouse (the wheel zooms) or Trackpad (a
-    two-finger scroll pans), per browser, Mouse by default. A pinch, or Ctrl + wheel, dollies in
-    perspective in both, where camera-controls zoomed the lens; in orthographic it zooms (e2 18,
-    19).
-89. *New in 2.3, 3D editing E2, open.* "The same tags" is `like:<id> by tag`, the entities of its
-    kind carrying every tag it carries, in `alukit query` and the app alike; the app's selection
-    verbs ask the server (`GET /api/query`), which holds the derived model, rather than bring the
-    schema into the page (e2 5, 6).
-
 80. *New in 2.3, gap X11, open.* Context is a field of the member, `context: true` on a bar, a placed
     part or a butt's through body, not a kind of item or a field of a placeholder: one item is built
     in one place and context in another (an existing frame extended with new bars of its profile, a
@@ -3634,6 +3615,24 @@ reasons. Marking the room is the run's own change, in its project.
     moved by the room; no `bbox()` of everything drawn, since no check has asked for one. The view
     draws context translucent in one neutral tone, whatever its item, and the GLB keeps it, flagged,
     in its own material, so the frame exports in its room (x11 13, 15, 16).
+85. *New in 2.3, 3D editing E2, open.* Isolate hides the rest: it writes every other drawn body into
+    the hidden set, rather than ghosting it as E-UX-9 said, so nothing put out of the way is picked
+    or snapped to, and Show's ghost stays Show's. What hides is what draws the selection (a corner
+    its bars, a joint its fasteners and bars), and hiding takes it out of the selection (e2 12, 13).
+86. *New in 2.3, 3D editing E2, open.* Ctrl/Cmd+A selects the document's bars and placed parts that
+    the view draws and does not hide, not pattern copies, connections, nodes or runs; it acts
+    anywhere but in a text field, where the audit said only on the view or the outline (e2 7).
+87. *New in 2.3, 3D editing E2, open.* A box drawn right to left is a crossing and takes a body
+    whose outline (the hull of its projected corners) touches it; left to right a window takes a
+    body wholly inside. The crossing is drawn dashed and the window, dashed before, solid (e2 10).
+88. *New in 2.3, 3D editing E2, open.* Navigation is Mouse (the wheel zooms) or Trackpad (a
+    two-finger scroll pans), per browser, Mouse by default. A pinch, or Ctrl + wheel, dollies in
+    perspective in both, where camera-controls zoomed the lens; in orthographic it zooms (e2 18,
+    19).
+89. *New in 2.3, 3D editing E2, open.* "The same tags" is `like:<id> by tag`, the entities of its
+    kind carrying every tag it carries, in `alukit query` and the app alike; the app's selection
+    verbs ask the server (`GET /api/query`), which holds the derived model, rather than bring the
+    schema into the page (e2 5, 6).
 
 ## 15. Review 1 resolution
 
