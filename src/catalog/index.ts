@@ -6,8 +6,10 @@ export {
   checkCatalog,
   computedValues,
   MISMATCH,
+  mismatchTolerance,
   type PropertyRow,
   TRACED_AREA,
+  TRACED_INERTIA,
 } from "./check.ts";
 export { type Diagnostic, type Severity, sortDiagnostics } from "./diagnostics.ts";
 export { parseJson } from "./json.ts";

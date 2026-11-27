@@ -69,7 +69,13 @@ rings, scaled by the printed width, centred, and turned into the section frame. 
 measured on those outlines and checked against the printed opening. A section's cores, where an
 end tap is cut, are the bores its page prints: on an exact outline, the holes whose inscribed
 circle is a printed diameter, each count checked; on a parametric envelope, `bores` at the printed
-positions, with the base-40 corner holes measured on the exact outlines that have them. Each core
+positions, with the base-40 corner holes measured on the exact outlines that have them. Where a
+page draws the section as a raster image, the build traces it (`TRACES` in `tables.py`, `trace.py`):
+the image's 50 % coverage contour, its scale and its outline stroke's margin fitted to the
+dimensions the page prints, the margin taken off by an exact inner offset. A trace becomes the
+section (fidelity `traced`) only within 2 % of the published area and 4 % of the published
+inertias; otherwise the section stays the envelope and its note gives the trace's errors
+([`docs/notes/forseti-traced-sections.md`](../../docs/notes/forseti-traced-sections.md)). Each core
 carries the threads the vendor labels it with, from `CORE_THREADS` in `tables.py`: the drawing's
 label where it prints one, else the shop description's, checked to be in it
 ([`docs/notes/section-cores.md`](../../docs/notes/section-cores.md)).
@@ -80,7 +86,8 @@ label where it prints one, else the shop description's, checked to be in it
 are emitted, how attributes classify, which pages hold which profile, which kit lines name no
 code, the catalogue's IX/IY convention (IX is about the axis along the long side). A review reads
 that file, not the code. A product no rule names becomes a `generic` item, so every orderable SKU has an offer; every profile
-stem has a section (exact where the page draws a vector outline, otherwise a parametric T-slot envelope).
+stem has a section (exact where the page draws a vector outline, traced where its raster drawing
+passes the check, otherwise a parametric T-slot envelope).
 Choices of M2b are in `docs/notes/m2b-decisions.md`.
 
 | Module | Does |
@@ -88,6 +95,8 @@ Choices of M2b are in `docs/notes/m2b-decisions.md`.
 | `fetch.py` | the snapshot |
 | `store.py` | reads a snapshot: products, variations, prices, cut rules |
 | `pdfcat.py` | the catalogue's tables, vector outlines and groove measurements |
+| `trace.py` | raster drawings traced into outlines: coverage contours, the stroke's margin calibrated and taken off, bores snapped |
+| `raster.py` | `read-groove`'s raw readings of one groove off a raster image |
 | `geometry.py` | rings, nesting and section properties (standard library) |
 | `build.py` | profiles, the M2a hardware families, kits, and the coverage check |
 | `rest.py` | the rest of the shop (M2b): every other product, classified by the rules in `tables.py` into fastener, connector, accessory, panel or `generic` |

@@ -7,7 +7,7 @@
     "ref": "pdf:catalogo_forsetiA4.pdf#p14",
     "method": "generator",
     "read": "2026-11-26",
-    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the page draws this profile as a raster image. The cores are labelled M14 by the shop's description. The closed faces of the corner (de canto) variant are not modelled"
+    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the page draws this profile as a raster image. The cores are labelled M14 by the shop's description. The closed faces of the corner (de canto) variant are not modelled. A trace of the page's raster image was left out: against the published values the area -6.57 %, Ix -7.31 %, Iy -5.46 %, beyond the 2 % (area) and 4 % (inertia) a trace is held to"
   },
   "generator": "tslot",
   "params": {
