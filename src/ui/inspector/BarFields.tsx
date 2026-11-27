@@ -12,6 +12,7 @@ import { pointParam } from "../records/Params.tsx";
 import { busy } from "../store.ts";
 import { typedValue } from "../tools/typed.ts";
 import { useReplaceAsked } from "./actions.ts";
+import { contextBatch, contextOf } from "./context.ts";
 import { CommitInput, Row, RowErrors, readOnly, useSend, WordsRow } from "./Fields.tsx";
 import { lengthMode, lengthPatch } from "./length.ts";
 import { barsLike, chosenOption, replaceBatch } from "./replace.ts";
@@ -26,7 +27,7 @@ import { endWords, isObject, written } from "./words.ts";
 type O = Record<string, unknown>;
 
 /** The fields a bar's rows show, so the rest are listed as words below them. */
-const SHOWN = new Set(["item", "opt", "a", "b", "anchor", "roll_deg", "label", "tags"]);
+const SHOWN = new Set(["item", "opt", "a", "b", "anchor", "roll_deg", "label", "tags", "context"]);
 
 /** An item's card, fetched once per item; undefined while it loads or when it cannot be had. */
 export function useCard(id: string | undefined): ItemCard | undefined {
@@ -468,6 +469,38 @@ function EndRows({ m, id }: { m: Model; id: string }) {
   );
 }
 
+/**
+ * Context (gap X11): a bar's or a placed part's checkbox. Context is drawn and checked against (a
+ * wall, a floor, a bench it stands beside), but not cut, counted, bought or weighed. One step.
+ */
+export function ContextRow({ m, id }: { m: Model; id: string }) {
+  const { outcome, send } = useSend();
+  const f = contextOf(m, id);
+  if (!f.can) return null;
+  return (
+    <>
+      <Row label="Context" fields={["context"]} testid="row-context">
+        <label>
+          <input
+            type="checkbox"
+            data-testid="field-context"
+            checked={f.on}
+            disabled={readOnly() || busy.value}
+            onChange={(e) =>
+              void send(
+                contextBatch(m, id, (e.currentTarget as HTMLInputElement).checked),
+                `context ${id}`,
+              )
+            }
+          />{" "}
+          not built or bought: drawn and checked against
+        </label>
+      </Row>
+      <RowErrors outcome={outcome} />
+    </>
+  );
+}
+
 /** A label and tags: any taggable entity's. */
 export function LabelRows({ m, id }: { m: Model; id: string }) {
   const w = written(m, id);
@@ -544,6 +577,7 @@ export function BarFields({ m, id }: { m: Model; id: string }) {
           <RollRow m={m} id={id} />
           <EndRows m={m} id={id} />
           <LabelRows m={m} id={id} />
+          <ContextRow m={m} id={id} />
           {rest.map(([k, v]) => (
             <WordsRow key={k} label={k.replace(/_/g, " ")} v={v} fields={[k]} />
           ))}

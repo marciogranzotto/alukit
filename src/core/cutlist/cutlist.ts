@@ -491,10 +491,14 @@ function identity(p: Oriented & { cut_mm: number }): string {
   return JSON.stringify([p.cut_mm, q(p.span), p.ends, physicalList(p), railKey(rail)]);
 }
 
-/** The pieces of the document's bars, with their machining and rail holes. */
+/**
+ * The pieces of the document's bars, with their machining and rail holes. A bar marked context is
+ * not cut (gap X11): it stands where it is; its machining is made in place (`inPlace`).
+ */
 export function barPieces(derived: Derived): Piece[] {
   const out: Piece[] = [];
   for (const [id, b] of derived.bars) {
+    if (b.context) continue;
     if (b.lengths.cut <= 0) continue; // reported by derive
     const rail = railOf(b);
     out.push({
@@ -513,24 +517,60 @@ export function barPieces(derived: Derived): Piece[] {
   return out;
 }
 
-/** Fasteners and sleeves cut from bar stock (§4.5): square pieces with no machining. */
+/**
+ * Fasteners and sleeves cut from bar stock (§4.5): square pieces with no machining. Those of a
+ * connection whose every member is context are the context's own, not cut (gap X11).
+ */
 export function stockPieces(derived: Derived): Piece[] {
-  return derived.pieces.map((p) => ({
-    source: p.source,
-    item: p.item,
-    opt: p.opt,
-    cut: p.len,
-    centre: p.len,
-    short: p.len,
-    span: p.len,
-    ends: { a: "square", b: "square" },
-    machining: [],
-  }));
+  return derived.pieces
+    .flatMap((p) => (p.context ? [] : [p]))
+    .map((p) => ({
+      source: p.source,
+      item: p.item,
+      opt: p.opt,
+      cut: p.len,
+      centre: p.len,
+      short: p.len,
+      span: p.len,
+      ends: { a: "square", b: "square" },
+      machining: [],
+    }));
 }
 
 /** Every piece the derived model cuts from bar stock: its bars, then its fasteners and sleeves. */
 export function derivedPieces(derived: Derived): Piece[] {
   return [...barPieces(derived), ...stockPieces(derived)];
+}
+
+/** A context bar's machining that the build makes, where the bar stands (gap X11). */
+export interface InPlace {
+  bar: string;
+  item: string;
+  opt: Readonly<Record<string, string>>;
+  /** As the cut list words it, from the bar's own ends: it is not turned, since it is not cut. */
+  machining: Machining[];
+}
+
+/**
+ * The machining made in place on each bar marked context, in id order (gap X11): the holes a
+ * person writes on it and the machining a connection with a built member makes in it (a hole the
+ * build drills to fix itself to a wall). What a connection whose every member is context makes is
+ * the context's own, already there, and is not listed. Bars with none are left out.
+ */
+export function inPlace(derived: Derived): InPlace[] {
+  const out: InPlace[] = [];
+  for (const [id, b] of derived.bars) {
+    if (!b.context) continue;
+    const own = b.ops.filter((op) => op.by === undefined || !derived.context.has(op.by));
+    if (own.length === 0) continue;
+    out.push({
+      bar: id,
+      item: b.placed.item.id,
+      opt: b.placed.opt,
+      machining: machiningOf({ ...b, ops: own }).sort(cmpMachining),
+    });
+  }
+  return out.sort((a, b) => compareIds(a.bar, b.bar));
 }
 
 // ---------------------------------------------------------------------------------------------

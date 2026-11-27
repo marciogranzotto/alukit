@@ -13,7 +13,8 @@ import { rodRing } from "./solids.ts";
 
 /**
  * The bodies of a derived model as points (design §4.9's `bbox()`): what the viewer draws and the
- * GLB holds (§8, §9), from the same shapes and the same placement, so the three agree.
+ * GLB holds (§8, §9) of the build, from the same shapes and the same placement, so the three
+ * agree. Context (gap X11) is drawn and exported too, flagged, and is not in it.
  *
  * - A bar: its section's box swept between its end planes, exact for every planar cut. Its mesh
  *   is its section's display outline, which fills that box on a T-slot, a flat or a hollow
@@ -106,7 +107,11 @@ export function fastenerPoints(f: ViewFastener): V3[] {
   return out;
 }
 
-/** Every body of the model, and the placed parts that give no box. */
+/**
+ * Every body of the build, and its placed parts that give no box. What is context is drawn but is
+ * not the build (gap X11): a bar or a part marked so, and a context connection's fasteners, are
+ * left out, so a wall or a floor slab does not move `bbox()`.
+ */
 export function modelBodies(
   derived: Derived,
   items: ItemSource,
@@ -114,9 +119,12 @@ export function modelBodies(
   const own = projectItems(items, derived.doc);
   const bodies: Body[] = [];
   const noBox: NoBox[] = [];
-  for (const [id, b] of derived.bars) bodies.push({ id, kind: "bar", points: bodyCorners(b) });
+  for (const [id, b] of derived.bars) {
+    if (!b.context) bodies.push({ id, kind: "bar", points: bodyCorners(b) });
+  }
   const views = displayParts(derived, own);
   for (const [id, p] of derived.parts) {
+    if (p.placed && p.context) continue;
     const view = views[id];
     const placed = partShape(partJson(p) as PartJson, view);
     if (!placed) continue;
@@ -127,6 +135,7 @@ export function modelBodies(
     bodies.push({ id, kind: "part", points: partPoints(placed) });
   }
   for (const f of displayFasteners(derived, own)) {
+    if (f.context) continue;
     bodies.push({ id: fastenerId(f), kind: "fastener", points: fastenerPoints(f) });
   }
   return { bodies, noBox: noBox.sort((a, b) => compareIds(a.id, b.id)) };

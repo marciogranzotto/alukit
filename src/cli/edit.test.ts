@@ -405,6 +405,58 @@ describe("alukit do", () => {
     expect(bad.code).toBe(1);
     expect(JSON.parse(read(join(dir, "alukit.json")))).toEqual(doc);
   });
+
+  it("marks a member context with setPart and setBar, and the BOM, order and bbox follow (X11)", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "golden-gen", "G51");
+    const original = read(join(dir, "alukit.json"));
+    const step = async (cmd: object) => {
+      const r = await capture(["do", dir, JSON.stringify(cmd)]);
+      expect(r.code, r.err).toBe(0);
+    };
+    const bom = async () => {
+      const r = await capture(["bom", dir, "--format", "json"]);
+      expect(r.code, r.err).toBe(0);
+      const b = JSON.parse(r.out);
+      return {
+        lines: b.groups.flatMap((g: { lines: { item: string }[] }) => g.lines.map((l) => l.item)),
+        context: (b.context ?? []).map((c: { id: string }) => c.id),
+      };
+    };
+    const ordered = async () => (await capture(["order", dir, "--as-of", "2026-11-26"])).code;
+    // As written: the bench, the floor and the wall are context, and the order is ready.
+    expect(await bom()).toEqual({
+      lines: ["test:TS40", "test:BRK-40"],
+      context: ["b3", "b4", "b5", "p2", "p3"],
+    });
+    expect(await ordered()).toBe(0);
+    // The floor unmarked: a placeholder to buy, which holds the order.
+    await step({ cmd: "setPart", args: { id: "p2", set: { context: null } } });
+    expect(await bom()).toEqual({
+      lines: ["test:TS40", "test:BRK-40", "project:FLOOR"],
+      context: ["b3", "b4", "b5", "p3"],
+    });
+    expect(await ordered()).toBe(1);
+    // A post of the frame marked context: out of the BOM; its bracket stays.
+    await step({ cmd: "setBar", args: { id: "b1", set: { context: true } } });
+    expect((await bom()).context).toEqual(["b1", "b3", "b4", "b5", "p3"]);
+    expect((await capture(["fmt", "--check", dir])).code).toBe(0);
+    const doc = JSON.parse(read(join(dir, "alukit.json")));
+    expect(doc.bars.b1.context).toBe(true);
+    expect(doc.parts.p2.context).toBeUndefined();
+    // Back as it was, byte for byte.
+    await step({ cmd: "setBar", args: { id: "b1", set: { context: null } } });
+    await step({ cmd: "setPart", args: { id: "p2", set: { context: true } } });
+    expect(read(join(dir, "alukit.json"))).toBe(original);
+    // Only true marks a member context: anything else is refused, and nothing is written.
+    const bad = await capture([
+      "do",
+      dir,
+      JSON.stringify({ cmd: "setPart", args: { id: "p2", set: { context: "yes" } } }),
+    ]);
+    expect(bad.code).toBe(1);
+    expect(read(join(dir, "alukit.json"))).toBe(original);
+  });
 });
 
 describe("alukit add", () => {

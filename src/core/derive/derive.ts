@@ -7,6 +7,7 @@ import { projectItems } from "../project-items/source.ts";
 import type { V3 } from "../vec.ts";
 import { attach } from "./attach.ts";
 import { Ctx } from "./context.ts";
+import { contextIds } from "./context-ids.ts";
 import { resolveEnds } from "./ends.ts";
 import { expandPatterns } from "./patterns.ts";
 import { nodePoint, placeBar, placePivot, placeRun } from "./place.ts";
@@ -106,6 +107,8 @@ export interface DerivedBar {
   ops: ResolvedOp[];
   /** A rail's hole layout (§4.7). */
   rail?: RailLayout;
+  /** Context, not part of the build (gap X11): drawn and checked against, not cut or counted. */
+  context?: true;
 }
 
 export interface Derived {
@@ -145,6 +148,13 @@ export interface Derived {
    * whose fasteners and machining are in `hardware`, `pieces` and the bars' ops. Not bought.
    */
   recipes: readonly HardwareUse[];
+  /**
+   * What is context, not part of the build (gap X11): the bars and placed parts marked so, and
+   * the connections whose every member is (`context-ids.ts`). Each is flagged where it is
+   * derived too (a bar, a part, a face connection's result, the hardware, pieces and recipes
+   * a context connection brings), so the outputs about what is built and bought leave it out.
+   */
+  context: ReadonlySet<string>;
   diagnostics: Diagnostic[];
 }
 
@@ -171,8 +181,10 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
   const params = ctx.allParams();
 
   // Stage 2: pattern copies, then everything placed in id order (each resolves its own
-  // dependencies first).
+  // dependencies first). What is context follows from the expanded entities (X11).
   expandPatterns(ctx);
+  const context = contextIds(ctx);
+  const flag = (id: string) => (context.has(id) ? { context: true as const } : {});
   const nodes = new Map<string, V3>();
   for (const id of sortedKeys(ctx.nodes)) {
     const v = nodePoint(ctx, id);
@@ -201,7 +213,7 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
   const bars = new Map<string, DerivedBar>();
   for (const [id, pb] of placed) {
     const l = s3.lengths.get(id);
-    if (l) bars.set(id, { placed: pb, ...l, ops: resolveOps(ctx, id) });
+    if (l) bars.set(id, { placed: pb, ...l, ops: resolveOps(ctx, id), ...flag(id) });
   }
   // Last, each butt's end faces on the faces they bear on, on the trimmed bars.
   const butts = buttSeats(ctx, bars, s3.seats);
@@ -214,6 +226,15 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
     if (seats) butts.set(id, { ...seats, heads });
   }
 
+  // What context brings is flagged where it is derived (X11): its parts and face connections,
+  // and the hardware, pieces and recipes of its connections (a piece `c1.f1` is c1's).
+  const marked = <T extends object>(x: T, id: string): T =>
+    context.has(id) ? { ...x, context: true as const } : x;
+  const parts = new Map([...gen.parts].map(([id, p]) => [id, p.placed ? marked(p, id) : p]));
+  const fastenings = new Map([...gen.fastenings].map(([id, f]) => [id, marked(f, id)]));
+  const pieces = gen.pieces.map((p) => marked(p, p.source.replace(/\.[fs]\d+$/, "")));
+  const uses = (hw: readonly HardwareUse[]) => hw.map((h) => marked(h, h.source));
+
   return {
     doc: ctx.doc,
     ...(v.variant !== undefined ? { variant: v.variant } : {}),
@@ -225,11 +246,12 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
     faces: s3.faces,
     claims: s3.claims,
     butts,
-    parts: gen.parts,
-    fastenings: gen.fastenings,
-    pieces: gen.pieces,
-    hardware: gen.hardware,
-    recipes: gen.recipes,
+    parts,
+    fastenings,
+    pieces,
+    hardware: uses(gen.hardware),
+    recipes: uses(gen.recipes),
+    context,
     diagnostics: ctx.d.sorted(),
   };
 }
