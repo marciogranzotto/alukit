@@ -689,3 +689,7 @@ anything, and each has a default in place.
   - No earlier diagnostics moved.
 - **05:00**: Merged. Three conflicted files, every hunk the branch's side being a superset or a
   re-wrap; no duplicate sections or call numbers. Gate PASS (891 tests).
+- **05:03**: The reference project's round-3 heads arrived. Acceptance run 6 (decided frame) and run 3
+  (alternative frame) launched, using the new constructs. They run the CLI from a frozen detached
+  worktree at `eb14da6`, so `main` can take the UX streams' merges meanwhile without changing the
+  code under them.
