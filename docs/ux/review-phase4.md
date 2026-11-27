@@ -524,3 +524,92 @@ Keep each of these through the fixes above. Several of the fixes extend them.
 | [12](img/review4/12-warning-only.png) | An unjoined corner: warnings on the bars and in the outline, a green ✓ on the Problems tab |
 | [13](img/review4/13-delete-cascade.png) | Delete on a post: the cascade dialog |
 | [14](img/review4/14-cart-1280-light.png) | The cart at 1280 × 800, light |
+
+## 9. Re-check after the polish pass
+
+*2026-11-27. An independent re-check of the findings above on the polished app (trunk at
+`eeacb34`, which merges the [polish pass](polish-decisions.md)). It is not taken from the polish
+notes: each row was reproduced in the running app. No code was changed. Labels as in the
+Method: **measured** is seen in the running app or printed by the CLI; **inferred** is an
+estimate.*
+
+**Method.** `pnpm build`, then `alukit serve` on a scratch copy of `tests/fixtures/cart` and on
+fresh `alukit new --catalog forseti --currency BRL` projects. Playwright scripts in headless
+Chromium, one browser and one page at a time, under `nice -n 10`, at 1440 × 900 (dark) and
+1280 × 800 (light). The CLI was the oracle (`alukit order`, `problems`). The scripts were
+throwaway and are not committed. Times are KLM estimates with the operator values of section 2
+(inferred); clicks, keys and the step counts are measured. Screenshots are in
+[`img/review4-recheck/`](img/review4-recheck/), cited as R1 to R10.
+
+### 9.1 The blocker and the majors
+
+| # | Status | Evidence (measured) |
+|---|---|---|
+| B1, bracket path | **Fixed** | The box frame form asks "Joined with" (31 connectors that fit the profile first, then "Nothing"). With CT38-06 the pill reads "Ready to order", 0 warnings; `alukit order` buys `16 forseti:CT38-06` beside the 12 bars (1 209.76 BRL, against 1 133.44 BRL without brackets); the BOM has 2 lines ([R1](img/review4-recheck/01-frame-bracket-ready.png)). The make button is disabled until a joint is chosen |
+| B1, "Nothing" path | **Fixed** | The pill reads "Ready, 1 warning" in the warning style, its title says "8 butts name no connector: the order buys nothing to join them". The Order sheet's verdict reads "Ready, but check first" and lists it. `alukit order` prints `warn no-connector`. Never a plain green READY ([R2](img/review4-recheck/02-frame-nothing-warns.png)). The Problems tab lists one warning with "Set a connector for all 8…"; picking CT38-06 there is one step, after which the pill reads "Ready to order", 0 warnings, and Problems says "Every check passes" ([R3](img/review4-recheck/03-nothing-problem-and-fix.png)). Settings now has "Default butt connector"; a butt's Connector select lists "Fits these bars" (31) before "Other connectors" (66) |
+| M1 | **Fixed** | One step 1, "The profile" (chips, profile, finish), above two equal ways, "A box frame" and "Or the first bar". The amber gate copy is gone; the card starts on the project's profile, and the make button says what is missing ([R4](img/review4-recheck/04-start-card-1280.png)) |
+| M2 | **Fixed** | Click on the grid, type `800`, Enter with the pointer unmoved: the command bar's result reads "Which way? Move the pointer, or press → ← ↑"; the typed value's words say "point the way"; the coach says "Point the way, type the length, press Enter" ([R5](img/review4-recheck/05-first-bar-no-direction.png)). See N2, N3 |
+| M3 | **Fixed** | On the cart the Problems tab reads "6 (6 block the order)" and "5 warnings", the sheet's summary 6 / 0 / 5 / 2. The two counts agree |
+| M4 | **Fixed** | One lane under the view controls holds the read-only label, then the coach, then toasts. Three stacked agent toasts and the read-only label ("The files have an error: this is the last good state, step 5") sit under the toolbar, none over the rail or toggles ([R8](img/review4-recheck/08-readonly-and-toasts.png)). The coach wraps with its × in the first column; the frame tool's reads "Click a corner · W, D · H" at 1280 |
+| M5 | **Fixed** | The command bar is a 44 px row below the canvas, one row at 1280 and at 1440 (Plane, Join ends and Corners are in an Options popover). The canvas is 399 px at 1280 × 800 in Select and in Draw alike, so Fit cannot run under the bar: the bar is not over the canvas |
+| M6 | **Fixed** | With the frame tool on, the bar holds the prompt, the value and its result ("1000 mm × 600 mm", "H 800 mm"). Typing `1000,600` Enter `800` fills the panel's W, D and H before Enter, and the dry run's numbers show in both ("posts 4 × 800 · base ring 2 × 920, 2 × 520 · …") ([R6](img/review4-recheck/06-frame-tool-typing.png)). See N3, N4 |
+| M7 | **Fixed** | Outline rows are id, label, then the length in a right-aligned column, never cut ("b5 top rail, front: 80 f… 1200.00 mm"); the cart's unlabelled bars read "TS40 40×40" ([R7](img/review4-recheck/07-cart-overview.png)) |
+| M8 | **Fixed** | The 40 × 40 chip preselects "Básico – Canal 8" (PF40-01). The chips are 11, with no linear guides; names lead with what differs ("Básico – Canal 8 · 126.50/m"). The catalog browser itself is another matter (N6) |
+
+### 9.2 Minor and polish
+
+| # | Status | Evidence (measured) |
+|---|---|---|
+| m1 | **Fixed** | Cart: the two warned bars (b9, b10) carry the warning badge and no outline; the only amber on a bar is the selection ([R10](img/review4-recheck/10-show-callout-and-inspector.png)) |
+| m2 | **Fixed** | The status bar carries the drag and orbit keys in Select and no prompt while a tool is on; the command bar holds the prompt |
+| m3 | **Partly** | "Anchor: centre" is in words. The Corners select is now inside the Options popover, which I did not open, so its wording was not checked |
+| m4 | **Fixed** | Browse catalog, a profile, Use for drawing: the start card closes; the tool is Draw |
+| m5 | **Fixed** | At 1280 × 800 the card is 558 px with a profile chosen and does not scroll; W, D, H, Joined with and Make up front, the rest under "More options"; the example is a one-line way |
+| m6 | **Fixed** | The butt's Connector select is 213 px wide and ends inside the window (right edge 1417 of 1440), grouped fit-first |
+| m7 | **Partly, as claimed** | The callout drops the inner Show, says "target 1 of 3" and shows the measurement ("b18.a's end face overhangs b9's face +x by 30.00 mm …"); its title is still the generic "A joint problem at c21" |
+| m8 | **Fixed** | A frame with all corners joined draws no markers at rest; hovering a corner draws its marker with the label "Corner (0, 0, 0) · c1 butt · b1 runs through · joined". The Joints button steps problems, off, all, then problems again |
+| m9 | **Partly, as claimed** | The dry run's numbers show in the bar; the view still draws a line, not the box |
+| m10 | **Fixed for what is claimed** | The catalog card reads "T-slot", "Forseti 40 series, 8 mm slot", "exact, from the vendor's drawing"; Settings' order rules are in words |
+| m11 | **Fixed** | Made from the card, the frame leaves the tool on Select and the sheets open on its cut list (R1, R2) |
+| p1 | **Fixed** | A gizmo end takes a hit out to 10 px from its centre and misses at 13 (a 24 px target); the small ends were 10 px |
+| p2 | **Fixed** | A disabled "Make a box frame" is neutral (grey text on a plain fill), not a dimmed accent |
+| p3 | **Fixed** | Five agent bars give one "5 new · claude" mark on the group head |
+| p4 | **Fixed** | The frame panel opens "Profile: … Change". The x, y, z prefixes were not looked at closely |
+
+### 9.3 The three timed flows, before and after
+
+Before is section 3's figures. After is counted on the polished app with the same operators.
+Clicks, keys and step counts are measured; seconds are KLM estimates (inferred).
+
+| Flow | Before | After |
+|---|---|---|
+| **A first bar**, target 30 s | 3 clicks, 4 keys, about 22 s without a stall, about 34 s with stalls A to C (the gated box frame column, the unannounced direction, five 70-character profile names) | **3 clicks** (the 40 × 40 chip, "Draw the first bar", a point on the grid) and **4 keys** (`800`, Enter), plus moving the pointer: about **22 s**, with no stall left. The profile is already the common one, the coach says "Point the way", and typing too early now answers. Machine time from the chip to the drawn bar: 3.3 s, page already open |
+| **A box frame**, target 60 s | Through the card's own path: 5 clicks, 17 keys, about 43 s (31 s with the first profile row; 53 to 63 s with stall D). Through the chips: 5 clicks, 12 keys | **4 clicks** (the chip, the W field, "Joined with", Make the frame) and **12 keys** (`1000` Tab `600` Tab `800`): about **27 s** (5.1 reading the card, 2.7 the chip, 5.6 the three fields, about 7 choosing a joint, 6.3 reading the numbers and Make). No detour to a catalog. The joint is a new decision: reading 31 long connector names could add 10 s, so 27 to 37 s |
+| **A READY order, template path** | READY on the same 43 s path, but the order held no connector. Brackets took a typed id before Make, or about 24 clicks after | **The same 4 clicks and 12 keys give a READY order with 16 brackets**, 1 209.76 BRL, nothing to add afterwards. Choosing "Nothing" takes the same 4 clicks and gives "Ready, 1 warning" with a one-step fix |
+
+All three meet their targets (inferred). The box frame flow changed most: one click and five keys
+fewer, and what it buys is now an order that builds the frame.
+
+### 9.4 New findings from the polish pass
+
+| # | Severity | Finding | Evidence |
+|---|---|---|---|
+| N1 | **major** | **The inspector's `butt-no-connector` problem row is laid out wrong.** In the right column its title wraps one word per line ("8 / butts / name / no / connector: …"), the row is 389 px tall, and the Show and "Set a connector for all 8…" buttons sit over the first words. It appears whenever a butt, or a selection that holds one, is selected, which is where the Fix is offered. The same problem in the Problems and Order sheets is laid out correctly, so it is the compact row in the inspector. The Fix still works, but the words are hard to read | [R9](img/review4-recheck/09-butt-inspector-layout-bug.png), [R10](img/review4-recheck/10-show-callout-and-inspector.png) (third problem). Measured on the 8-butt frame and on the cart (18 butts) |
+| N2 | minor | **The "Which way?" message stays after the pointer shows the way.** After the refused Enter, moving the pointer to +z 400 changed the prompt to "From grid … to +z 400", but the result still ended "Which way? Move the pointer, or press → ← ↑" until Enter | Measured, command bar text after the move |
+| N3 | minor | **Command bar words are cut off at 1440 px.** In the one row, "800 mm from g…", the item name and the key words of "Which way? Move…" are ellipsised, and the frame's prompt "Click the height, or type it (H) and …" is cut too. The message is what the row exists to say | [R5](img/review4-recheck/05-first-bar-no-direction.png), [R6](img/review4-recheck/06-frame-tool-typing.png) |
+| N4 | minor | **The frame's cut lengths are hidden until a joint is chosen.** With "Joined with" on "Choose how…", the panel shows "choose how the corners are joined: Joined with" and no numbers, though W, D and H are typed. M6 asked for the numbers while typing | Measured: they appeared only after CT38-06 was chosen. The line also repeats the field's label |
+| N5 | polish | **"First steps" leaves "Choose a profile to draw with" unticked** after a box frame whose profile was chosen on the card, while "Draw a bar" and "Join two bars" are ticked | [R2](img/review4-recheck/02-frame-nothing-warns.png) |
+| N6 | polish | **Catalog browser, empty search:** the linear guides come first, with black thumbnails in the light theme. The card's chips were fixed (M8); the browser was not | Measured at 1280 × 800, light |
+| N7 | polish | **The coach's items flow inline** ("1. Click where the bar starts   2. Point the way …" on one line, "3." below) instead of a list, in the Draw tool | [R5](img/review4-recheck/05-first-bar-no-direction.png) |
+
+N1 is the one to fix before the next release; the others can wait. The polish notes list m7's
+specific titles, m9's ghost bars and m10's built-in catalog list as not done; this re-check
+agrees with each.
+
+### 9.5 Notes on the record
+
+- The polish notes say the e2e tests for M2, M5 and M6 (`polish.spec.ts`) were written after
+  their fixes. All three reproduce as fixed here, in the running app, from the review's own steps,
+  so the after-the-fact tests did not hide a miss.
+- Not re-checked: the dark and light contrast sweep, the Corners select's wording (m3), the
+  x, y, z prefixes (p4) and the Options popover's contents.
