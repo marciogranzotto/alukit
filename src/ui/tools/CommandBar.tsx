@@ -98,16 +98,10 @@ function AnchorPicker({ bar }: { bar: PaletteItem }) {
     return p ? [4 + (p[0] - x0) * k, size - 4 - (p[1] - y0) * k] : undefined;
   };
   return (
-    <div
-      class="cb-opt cb-anchor"
-      role="group"
-      aria-label={`Anchor (A): ${o.anchor}`}
-      data-testid="draw-anchor"
-      data-anchor={o.anchor}
-    >
-      <span title="Where the bar's line runs through its section (A cycles)">
+    <fieldset class="cb-opt cb-anchor" data-testid="draw-anchor" data-anchor={o.anchor}>
+      <legend title="Where the bar's line runs through its section (A cycles)">
         Anchor {o.anchor}
-      </span>
+      </legend>
       <span class="cb-anchor-pad" style={{ width: `${size}px`, height: `${size}px` }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
           <rect class="cb-anchor-box" x={4} y={size - 4 - h * k} width={w * k} height={h * k} />
@@ -132,7 +126,7 @@ function AnchorPicker({ bar }: { bar: PaletteItem }) {
           );
         })}
       </span>
-    </div>
+    </fieldset>
   );
 }
 
@@ -408,6 +402,7 @@ function ValueField({ tool }: { tool: ToolName }) {
       <label class="cb-value">
         <span class="sr-only">{`${TOOL_NAMES[tool]}: value`}</span>
         <input
+          class="cb-field"
           ref={ref}
           data-testid="command-value"
           spellcheck={false}

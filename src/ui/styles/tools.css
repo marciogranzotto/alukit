@@ -80,7 +80,7 @@
   min-width: 0;
 }
 
-.cb-value input {
+.cb-field {
   width: 12em;
   font-family: var(--font-mono);
   font-size: var(--fs-mono);
@@ -91,7 +91,7 @@
   padding: 2px var(--sp-3);
 }
 
-.cb-value input:focus-visible {
+.cb-field:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
 }
@@ -172,6 +172,20 @@
 }
 
 /* The anchor picker: the section's box, a dot at each anchor (U40) */
+
+/* The anchor picker is a fieldset (its legend names it for assistive tech) laid out as one row. */
+.cb-anchor {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+/* A floated legend is laid out as ordinary content, so it stays in the row. */
+.cb-anchor legend {
+  float: left;
+  padding: 0;
+}
 
 .cb-anchor-pad {
   position: relative;

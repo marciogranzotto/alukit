@@ -314,3 +314,9 @@ marked **moved**, which §5.4 asked for.
 - **Help**: the tools describe their own `tools` (10) and `drawing` (20) key sections; S2's
   `Help.tsx` no longer does.
 - **Icons** (S4's file, cross-edited): adds `frame`.
+- **The inspector** (`src/ui/inspector/`): edits in place, Delete with its cascade (`delete-dialog`)
+  and the corner inspector, which the inspector shows for a selected corner (`corner:<key>`).
+  `Inspector` stays the right column's export.
+- **Toasts** (S2's `shell/Toasts.tsx`, cross-edited): the person's own step's toast offers "Undo
+  it" too (D-UX-13).
+- **`src/ui/testing.ts`**: `hostOf(dir)`, dry runs on a scratch project for unit tests.
