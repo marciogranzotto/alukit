@@ -1,0 +1,146 @@
+{
+  "case": "G32",
+  "rule": "a hole a sleeve passes takes a clearance over the sleeve's outside diameter: ISO 273 medium for a shank of that diameter, or the sleeve's clearance_mm (§4.5)",
+  "design": "G25's joint with a sleeve of bore + t (46.00) standing on the RHS's nut-side inner wall: it passes the head-side wall, whose four holes are Ø20 (ISO 273 medium for 18), the other twenty Ø11 (M10). With clearance_mm 1: Ø19; with 0: Ø18, the outside diameter. A 50 mm sleeve also enters the flat below the RHS 4 mm: its holes there are Ø11 with a counterbore Ø20 × 4",
+  "expect": {
+    "lines": {
+      "test:M10-ROD": [{ "count": 4, "cut_mm": 140 }],
+      "test-geo:TUBE-18x2": [{ "count": 4, "cut_mm": 46 }]
+    },
+    "holes": {
+      "total": 24,
+      "d_mm": [11, 20],
+      "per_bar": { "b1": 4, "b2": 4, "b3": 8, "b4": 4, "b5": 4 }
+    },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "clearance_mm 1",
+      "patch": {
+        "connections": {
+          "c1": {
+            "stack": [
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10",
+              {
+                "item": "test-geo:TUBE-18x2",
+                "inside": "b3",
+                "len_mm": "bore + sec(b3).t_mm",
+                "clearance_mm": 1
+              },
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "holes": {
+          "total": 24,
+          "d_mm": [11, 19],
+          "per_bar": { "b1": 4, "b2": 4, "b3": 8, "b4": 4, "b5": 4 }
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "clearance_mm 0",
+      "patch": {
+        "connections": {
+          "c1": {
+            "stack": [
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10",
+              {
+                "item": "test-geo:TUBE-18x2",
+                "inside": "b3",
+                "len_mm": "bore + sec(b3).t_mm",
+                "clearance_mm": 0
+              },
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "holes": {
+          "total": 24,
+          "d_mm": [11, 18],
+          "per_bar": { "b1": 4, "b2": 4, "b3": 8, "b4": 4, "b5": 4 }
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "a 50 mm sleeve, into the flat below",
+      "patch": {
+        "connections": {
+          "c1": {
+            "stack": [
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10",
+              { "item": "test-geo:TUBE-18x2", "inside": "b3", "len_mm": 50 },
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "lines": { "test-geo:TUBE-18x2": [{ "count": 4, "cut_mm": 50 }] },
+        "holes": {
+          "total": 24,
+          "d_mm": [11, 20],
+          "per_bar": { "b1": 4, "b2": 4, "b3": 8, "b4": 4, "b5": 4 }
+        },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 100,
+              "across": -15,
+              "d": 11,
+              "cbore": { "d": 20, "depth": 4 },
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 100,
+              "across": 15,
+              "d": 11,
+              "cbore": { "d": 20, "depth": 4 },
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 300,
+              "across": -15,
+              "d": 11,
+              "cbore": { "d": 20, "depth": 4 },
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 300,
+              "across": 15,
+              "d": 11,
+              "cbore": { "d": 20, "depth": 4 },
+              "by": "c1"
+            }
+          ]
+        },
+        "errors": []
+      }
+    }
+  ]
+}

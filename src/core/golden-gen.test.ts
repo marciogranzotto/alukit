@@ -188,7 +188,16 @@ const dirs = subdirs(join(FIXTURES, "golden-gen"));
 
 describe("golden generation cases (design §4.6)", () => {
   it("has one fixture per case G22–G26, and G30 on", () => {
-    expect(dirs.map((d) => basename(d))).toEqual(["G22", "G23", "G24", "G25", "G26", "G30", "G31"]);
+    expect(dirs.map((d) => basename(d))).toEqual([
+      "G22",
+      "G23",
+      "G24",
+      "G25",
+      "G26",
+      "G30",
+      "G31",
+      "G32",
+    ]);
   });
 
   for (const dir of dirs) {

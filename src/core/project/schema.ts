@@ -268,11 +268,22 @@ export const RailHolesSel = z.strictObject({
 });
 export type RailHolesSel = z.infer<typeof RailHolesSel>;
 
-/** A stack entry (§4.5): hardware from head to nut, or a sleeve cut from bar stock. */
+/**
+ * A stack entry (§4.5): hardware from head to nut, or a sleeve cut from bar stock. A wall or a
+ * layer the sleeve passes is drilled to clear it: ISO 273 medium for a shank of its outside
+ * diameter, or that diameter plus `clearance_mm` (acceptance gap A7).
+ */
 export const StackEntry = z.union([
   ItemRef,
   z.strictObject({ item: ItemRef, qty: z.int().min(1).optional() }),
-  z.strictObject({ item: ItemRef, inside: z.union([BarId, RunId]), len_mm: Expr }),
+  z.strictObject({
+    item: ItemRef,
+    inside: z.union([BarId, RunId]),
+    len_mm: Expr,
+    clearance_mm: Expr.optional().describe(
+      "the holes the sleeve passes: its outside diameter plus this; absent: ISO 273 medium for a shank of that diameter",
+    ),
+  }),
 ]);
 export type StackEntry = z.infer<typeof StackEntry>;
 

@@ -1,9 +1,10 @@
 /**
  * Metric threads and their clearance holes (design §4.5, call 27).
  *
- * A `bolt` through layers gets an ISO 273 medium-series clearance hole in each. The table is
- * ISO 273:1979's medium series, read from its identical national adoption IS 1821:1987, p. 2
- * (verified 2026-11-26), for thread diameters 1 to 150 mm.
+ * A `bolt` through layers gets an ISO 273 medium-series clearance hole in each, and a sleeve the
+ * hole of a shank of its outside diameter. The table is ISO 273:1979's medium series, read from
+ * its identical national adoption IS 1821:1987, p. 2 (verified 2026-11-26), for thread diameters
+ * 1 to 150 mm.
  */
 
 /** ISO 273 medium series: nominal thread diameter d → clearance hole d_h, in mm. */
@@ -74,6 +75,19 @@ export function threadDiameter(thread: string): number | undefined {
 export function clearanceHole(thread: string): number | undefined {
   const d = threadDiameter(thread);
   return d === undefined ? undefined : ISO273_MEDIUM.get(d);
+}
+
+/**
+ * The hole for a sleeve that passes a wall or a layer (acceptance gap A7): ISO 273's medium
+ * series for a shank of the sleeve's outside diameter, the series the bolts in the same joint
+ * take. ISO 273 sizes holes by the diameter of what passes them, so a sleeve of 16 takes 17.5 and
+ * one of 18 takes 20. An outside diameter between two of the table's takes the next one up, so its
+ * clearance is never less than the shank's below it (a 17.2 tube takes 18's 20; *inferred*: the
+ * standard tables only its own diameters). Past the table, 150 mm, there is none.
+ */
+export function sleeveHole(od: number): number | undefined {
+  for (const [d, h] of ISO273_MEDIUM) if (d >= od - 1e-9) return h;
+  return undefined;
 }
 
 /**

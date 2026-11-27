@@ -7,6 +7,7 @@ import type { ItemSource } from "../items.ts";
 import { order } from "../order/order.ts";
 import { openProject } from "../project/open.ts";
 import { FIXTURES, mergePatch } from "../testing.ts";
+import { sleeveHole } from "../threads.ts";
 import { type Derived, derive } from "./derive.ts";
 
 /**
@@ -225,7 +226,8 @@ describe("sleeves cut from stock (§4.5)", () => {
     const g25 = await openProject(join(FIXTURES, "golden-gen", "G25"));
     // G25's stack along +z: b1 0..10, b2 10..30, the RHS b3 30..80 (walls 30..34 and 76..80),
     // b4 80..100, b5 100.5..110.5. A 50 mm sleeve stands on the nut-side inner wall (z 76) and
-    // reaches back to z 26: through the entry wall whole, and 4 into b2's top.
+    // reaches back to z 26: through the entry wall whole, and 4 into b2's top. The sleeve's
+    // holes take ISO 273 medium for its 18 mm outside: 20 (acceptance gap A7; it was 18).
     const raw = mergePatch(g25.raw, {
       connections: {
         c1: {
@@ -244,16 +246,50 @@ describe("sleeves cut from stock (§4.5)", () => {
     const b2 = d.bars.get("b2")?.ops ?? [];
     expect(b2.length).toBe(4);
     for (const o of b2) {
-      expect(o.op === "hole" && [o.face, o.d, o.cbore]).toEqual(["+y", 11, { d: 18, depth: 4 }]);
+      expect(o.op === "hole" && [o.face, o.d, o.cbore]).toEqual(["+y", 11, { d: 20, depth: 4 }]);
     }
-    // The RHS: per station, the entry wall at the sleeve's 18 and the exit wall at 11, 4 deep.
+    // The RHS: per station, the entry wall at the sleeve's 20 and the exit wall at 11, 4 deep.
     const walls = (d.bars.get("b3")?.ops ?? []).map((o) => (o.op === "hole" ? [o.d, o.depth] : []));
-    expect(walls.filter(([dd]) => dd === 18).length).toBe(4);
+    expect(walls.filter(([dd]) => dd === 20).length).toBe(4);
     expect(walls.filter(([dd]) => dd === 11).length).toBe(4);
     expect(new Set(walls.map(([, depth]) => depth))).toEqual(new Set([4]));
     const cl = cutList({ derived: d, items: g25.items });
     const tube = cl.groups.find((g) => g.item === "test-geo:TUBE-18x2");
     expect(tube?.lines.map((l) => [l.count, l.cut_mm])).toEqual([[4, 50]]);
+  });
+
+  it("clears a sleeve by ISO 273 medium for a shank of its outside diameter (acceptance gap A7)", () => {
+    // Tabled diameters take their own row: 16 → 17.5, 18 → 20, 150 → 158.
+    expect([sleeveHole(16), sleeveHole(18), sleeveHole(150)]).toEqual([17.5, 20, 158]);
+    // Between rows, the next row up: a 17.2 mm tube is cleared as an 18 mm shank, 21.3 as 22.
+    expect([sleeveHole(17.2), sleeveHole(21.3)]).toEqual([20, 24]);
+    // Past the table there is no default; the sleeve must give clearance_mm.
+    expect(sleeveHole(152)).toBeUndefined();
+  });
+
+  it("takes a sleeve's clearance_mm as an expression, and refuses a negative one", async () => {
+    // A sleeve of bore + 4 passes the RHS's head-side wall: its four holes take 18 + 2.5.
+    const g25 = await openProject(join(FIXTURES, "golden-gen", "G25"));
+    const sleeve = (extra: Record<string, unknown>) =>
+      mergePatch(g25.raw, {
+        connections: {
+          c1: {
+            stack: [
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10",
+              { item: "test-geo:TUBE-18x2", inside: "b3", len_mm: "bore + 4", ...extra },
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10",
+            ],
+          },
+        },
+      });
+    const bad = derive(sleeve({ clearance_mm: -1 }), g25.items);
+    expect(diags(bad)).toEqual([["face", "c1"]]);
+    const ok = derive(sleeve({ clearance_mm: "2 * 1.25" }), g25.items);
+    expect(diags(ok)).toEqual([]);
+    const b3 = (ok.bars.get("b3")?.ops ?? []).map((o) => (o.op === "hole" ? o.d : 0));
+    expect(b3.filter((x) => x === 20.5).length).toBe(4);
   });
 });
 
