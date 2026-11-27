@@ -229,6 +229,7 @@ export function ReplaceForm({
       <label class="cd-row">
         <span>Profile</span>
         <select
+          class="insp-select"
           data-testid="replace-item"
           value={pick ?? ""}
           onChange={(e) => setChosen((e.currentTarget as HTMLSelectElement).value)}
@@ -322,6 +323,7 @@ function OptionRows({ m, id }: { m: Model; id: string }) {
             testid={`row-opt-${f.name}`}
           >
             <select
+              class="insp-select"
               data-testid={`field-opt-${f.name}`}
               aria-label={f.name}
               value={value ?? "-"}
@@ -341,6 +343,11 @@ function OptionRows({ m, id }: { m: Model; id: string }) {
               }}
             >
               {value === undefined && <option value="-">not chosen</option>}
+              {value !== undefined &&
+                value !== "" &&
+                !f.choices.some((c) => c.value === value) && (
+                  <option value={value}>{value} (not one of the item's)</option>
+                )}
               {f.choices.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.value === "" ? `(${c.label})` : c.label}
@@ -375,6 +382,7 @@ function AnchorRow({ m, id }: { m: Model; id: string }) {
     <>
       <Row label="Anchor" fields={["anchor", "off_mm"]} testid="row-anchor">
         <select
+          class="insp-select"
           data-testid="field-anchor"
           aria-label="Anchor: where the section sits on the bar's line"
           value={now}

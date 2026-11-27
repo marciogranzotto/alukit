@@ -3,7 +3,7 @@ import { compareIds } from "#core/ids.ts";
 import type { Problem } from "#core/problems/types.ts";
 import { EntityChips } from "../common/EntityChip.tsx";
 import { cornerKey } from "../corners.ts";
-import { select, selection, shown } from "../focus.ts";
+import { select, selection } from "../focus.ts";
 import { plural } from "../format.ts";
 import type { Model } from "../model.ts";
 import { ProblemList, ProblemRow } from "../problems/ProblemRow.tsx";
@@ -16,6 +16,7 @@ import { BarFields, ReplaceForm } from "./BarFields.tsx";
 import { CornerInspector } from "./CornerInspector.tsx";
 import { DeleteButton, DeleteFlow } from "./Delete.tsx";
 import { BarDerived, Item, OtherDerived, ProjectItem } from "./Derived.tsx";
+import { PointedField, pointedFor } from "./Fields.tsx";
 import { ConnectionFields, PartFields, PlainFields } from "./OtherFields.tsx";
 import { copyMembers } from "./remove.ts";
 import { copyOf, entityName, labelOf, NOUN, patternOf, type RefKind, refKind } from "./words.ts";
@@ -151,6 +152,27 @@ function One({ m, id }: { m: Model; id: string }) {
   const end = kind === "end" ? (id.split(".")[0] as string) : undefined;
   const barItem = m.derived.bars[id]?.item ?? m.derived.parts[id]?.item;
   return (
+    <PointedField.Provider value={pointedFor(m, id)}>
+      <EntityBody m={m} id={id} kind={kind} end={end} barItem={barItem} />
+    </PointedField.Provider>
+  );
+}
+
+/** One entity, ref or copy: its heading, problems, fields, derived values and item. */
+function EntityBody({
+  m,
+  id,
+  kind,
+  end,
+  barItem,
+}: {
+  m: Model;
+  id: string;
+  kind: RefKind;
+  end: string | undefined;
+  barItem: string | undefined;
+}) {
+  return (
     <div class="props" data-testid="properties" data-kind={kind}>
       <Head m={m} id={id} kind={kind} />
       <SelectionProblems m={m} ids={[id]} />
@@ -240,8 +262,6 @@ function ReplaceMany({ m, bars, item }: { m: Model; bars: string[]; item: string
 export function Inspector() {
   const m = model.value;
   const sel = [...selection.value];
-  // Read so a Show that points at a field re-renders the rows that light it.
-  void shown.value;
   return (
     <>
       <DeleteFlow />

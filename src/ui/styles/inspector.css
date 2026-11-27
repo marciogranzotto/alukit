@@ -80,8 +80,7 @@ table.kv.fields td {
   vertical-align: middle;
 }
 
-table.kv.fields select,
-.replace-form select {
+.insp-select {
   max-width: 100%;
   min-height: 24px;
   background: var(--bg-well);

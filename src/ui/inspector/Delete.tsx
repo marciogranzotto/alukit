@@ -114,7 +114,7 @@ export async function startDelete(): Promise<void> {
   }
   const t = deleteTargets(m, sel);
   if (t.entities.length === 0 && t.copies.length === 0) {
-    tell(`Delete: ${t.others.map((o) => `${o.id} is ${o.why}`).join("; ")}`, false);
+    tell(`Delete: nothing to delete; ${[...new Set(t.others.map((o) => o.why))].join("; ")}`, false);
     return;
   }
   planning.value = true;

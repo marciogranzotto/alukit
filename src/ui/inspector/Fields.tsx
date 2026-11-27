@@ -1,8 +1,10 @@
-import type { ComponentChildren } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { type ComponentChildren, createContext } from "preact";
+import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import { Errors } from "../Feedback.tsx";
 import { shown } from "../focus.ts";
+import type { Model } from "../model.ts";
 import { busy, type CommandOutcome, model, sendCommands, summary } from "../store.ts";
+import { resolveTargets } from "../targets.ts";
 import type { Command } from "./remove.ts";
 import { valueWords } from "./words.ts";
 
@@ -21,6 +23,21 @@ export function pointsAt(field: string | undefined, fields: readonly string[]): 
   return fields.some((f) => field === f || field.startsWith(`${f}.`) || field.startsWith(`${f}/`));
 }
 
+/**
+ * The field the last Show points at, when what it showed is the entity in the inspector (a Show
+ * of another entity leaves this one's rows unlit), and the Show's count, so showing it again
+ * scrolls to it again. The inspector provides it per entity.
+ */
+export const PointedField = createContext<{ field?: string; n: number } | undefined>(undefined);
+
+/** What `PointedField` holds for an entity: the Show's field when the Show named it. */
+export function pointedFor(m: Model, id: string): { field?: string; n: number } | undefined {
+  const s = shown.value;
+  if (s?.field === undefined) return undefined;
+  const named = s.refs.includes(id) || resolveTargets(m, s.refs).ids.includes(id);
+  return named ? { field: s.field, n: s.n } : undefined;
+}
+
 /** One row: its label, its body, and the fields it shows. */
 export function Row({
   label,
@@ -33,7 +50,7 @@ export function Row({
   children: ComponentChildren;
   testid?: string;
 }) {
-  const s = shown.value;
+  const s = useContext(PointedField);
   const pointed = pointsAt(s?.field, fields);
   const ref = useRef<HTMLTableRowElement>(null);
   useEffect(() => {

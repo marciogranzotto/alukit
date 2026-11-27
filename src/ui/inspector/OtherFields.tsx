@@ -54,6 +54,7 @@ function StationRows({ m, id, on }: { m: Model; id: string; on: O }) {
     <>
       <Row label="On" fields={["on.bar", "on"]} testid="row-station-bar">
         <select
+          class="insp-select"
           data-testid="field-station-bar"
           aria-label="The bar or run it sits on"
           value={bar}
@@ -69,6 +70,7 @@ function StationRows({ m, id, on }: { m: Model; id: string; on: O }) {
       </Row>
       <Row label="Face" fields={["on.face", "on.groove"]} testid="row-station-face">
         <select
+          class="insp-select"
           data-testid="field-station-face"
           aria-label="The face or groove it sits on"
           value={where}
@@ -103,6 +105,7 @@ function StationRows({ m, id, on }: { m: Model; id: string; on: O }) {
         />{" "}
         mm from{" "}
         <select
+          class="insp-select"
           data-testid="field-station-from"
           aria-label="Counted from"
           value={typeof on.from === "string" ? on.from : "a"}
@@ -230,6 +233,7 @@ function ButtRows({ m, id, w }: { m: Model; id: string; w: O }) {
       <Row label="Through" fields={["through"]} testid="row-through">
         {typeof w.through === "string" ? (
           <select
+            class="insp-select"
             data-testid="field-through"
             aria-label="The bar the ends butt into"
             value={through}
@@ -252,6 +256,7 @@ function ButtRows({ m, id, w }: { m: Model; id: string; w: O }) {
       </Row>
       <Row label="Connector" fields={["connector"]} testid="row-connector">
         <select
+          class="insp-select"
           data-testid="field-connector"
           aria-label="The connector that holds each end"
           value={connector}
