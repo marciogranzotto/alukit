@@ -1937,7 +1937,7 @@ says so.
 | M4c (*2.3*) | The v1 gaps between this design and the build: the variant switch, export and revisions in the top bar, the section plane, the Open items, Params and Decisions tabs, pivots and fastened face joints in Connect, `catalog search` and `catalog import`, `derive --select` | each missing feature of the design-vs-built record ([`notes/design-vs-built.md`](notes/design-vs-built.md), entries 3, 4, 5, 12) is built and tested, and no golden value moves. **Done** ([m4c](notes/m4c-decisions.md)) |
 | Gaps (*2.3*) | The model gaps the acceptance found (§13): fit by role (A1), joint recipes (A2), face contact on a section's inner faces (A3), end holes (A4), cost lines in variants (A5), `services_on` lists (A6), a sleeve's hole clearance (A7) | each is closed at its root, with a failing test written first; G29–G32 (§4.6) pass against independent hand scripts; G1–G28 and the cart's outputs do not move. **Done** ([acceptance gaps](notes/acceptance-gaps.md), [A3](notes/a3-face-contact.md)) |
 | Gaps, run 2 (*2.3*) | The gaps the acceptance's second run found (§13): a through-fastener for two ends (A9), a connector's machining at positions (A8) | each is closed at its root, with failing tests written first; G33–G34 (§4.6) pass against independent hand scripts; G1–G32, the cart's and the base frame's outputs do not move. **Done** ([acceptance gaps, second run](notes/acceptance-gaps-2.md)) |
-| **Acceptance** | §13 | §13. Run 1 and run 2: tests 1–4 passed; both failed on model gaps, now fixed; the next run is pending |
+| **Acceptance** | §13 | §13. **Passed on run 3.** Runs 1 and 2 passed tests 1–4 and failed on model gaps, which were fixed at their root (G29–G34) |
 
 ## 13. Acceptance (review B2, M9)
 
@@ -1988,7 +1988,15 @@ one stud through a tube in one sleeve into a bush on each side could be written 
 everything, or with a `fit` error on the second end. A second gap, A8, moved no test but put a
 connector's several taps and holes, and a splice's several studs' taps, at one point without a
 diagnostic. Both are fixed at their root (§3.4, §4.5, §5.5), with golden cases G33 and G34 (§4.6;
-[notes](notes/acceptance-gaps-2.md)). **The next run: verdict pending.**
+[notes](notes/acceptance-gaps-2.md)).
+
+**Third run, 2026-11-26** (*2.3*): **acceptance passed.** With A8's and A9's constructs in the
+document, tests 1–4 passed with no exception, and every compared number equals the second run's.
+`held_by` removed the second run's two `fit` errors, and the positioned machining took the coincident
+ops from 16 to none and the splice taps to the record's count. AluKit's `check` raised one error, a
+fault in the record itself (two screws of a joint leave the block they fix), confirmed by hand.
+One minor finding moved no test: an end tap is not checked against the section's cores, so a tap
+written with no position on a section with no centre core passes silently (a v1 limit, §5.5).
 
 ## 14. Calls made without asking (veto any)
 

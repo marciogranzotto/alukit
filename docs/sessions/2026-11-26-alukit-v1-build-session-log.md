@@ -49,7 +49,7 @@ in the gitignored `internal/session-notes.md`.*
 | Design draft 2.3: the design describes v1 as built | **done**, merged (22:07), pushed | 31 changelog bullets; all gap rules plus G28–G32; 15 design-vs-built entries changed to match the build, the rest stated as v1 limits; open calls left open. |
 | Acceptance run 2, internal | **ran** (22:09): tests 1–4 pass with **no exceptions**; overall fails narrowly on gap A9 | The record fixed its five errors (its Rev 3.5). Mass +0.03 %; cost to the cent, the heavier-wall variant included. A1–A7 all work in the frame. |
 | Gaps A9 (one through-fastener shared by two butting ends) and A8 (positions for a connector's machining) | **done**, merged (22:52), pushed | Goldens G33, G34. Note: `docs/notes/acceptance-gaps-2.md`; design 2.3, "After acceptance run 2". |
-| Acceptance run 3, internal | running (Opus, worktree), launched 22:55 | |
+| Acceptance run 3, internal | **PASS** (23:09) | Tests 1–4 pass with no exceptions; no AluKit failures. Design §13 records the verdict. |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -382,3 +382,14 @@ in the gitignored `internal/session-notes.md`.*
   - Left open: two ends that each set a sleeve on one axis with no hole aren't flagged (flagging
     them would change G30).
 - **22:52**: Merged without conflicts; gate PASS (699 tests).
+- **23:09**: **Acceptance run 3: PASS.** (Internal; sanitized here.)
+  - Tests 1–4 pass with no exceptions, every number identical to run 2's.
+  - `held_by` cleared run 2's `fit` errors. Positioned machining took coincident ops from 16 to 0 and
+    the splice taps to the record's count (20).
+  - `check` raised one error, a fault in the reference record: two screws of a diagonal's foot joint
+    cross the block's face plane 4.86 mm below the block. It was confirmed by hand, re-checked by the
+    coordinator (20 / cos 22.83° = 21.70 off a centre at z 104.84 → 83.14 against the block's
+    bottom at 88), and sent to that project's session.
+  - One minor AluKit finding, no test moved: an end tap isn't checked against the section's cores.
+    Listed as a v1 limit in §5.5 for now.
+  - Design §13 and the §12 row now record the pass.
