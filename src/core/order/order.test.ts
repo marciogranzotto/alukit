@@ -7,6 +7,7 @@ import type { Diagnostic } from "../diagnostics.ts";
 import type { ItemSource } from "../items.ts";
 import { openProject } from "../project/open.ts";
 import { FIXTURES, mergePatch } from "../testing.ts";
+import { coversText } from "./format.ts";
 import { type Order, order } from "./order.ts";
 
 /**
@@ -543,6 +544,57 @@ describe("costs (§4.11)", () => {
     ]);
     // Neither cost line names a supplier: the error holds whoever sells what is covered.
     expect(status(o)).toEqual({ "shop-a": "BLOCKED", "shop-eu": "READY" });
+  });
+
+  it("covers the machining on several suppliers' bars with one job (acceptance gap A6)", () => {
+    // A hole in shop-a's supplier-cut flat (shop-a drills it) and one in test-steel's RHS, sold
+    // in whole bars (the buyer has it drilled): one fabricator's job covers both.
+    const holes = {
+      bars: {
+        b1: { ops: [{ op: "hole", face: "+y", at_mm: 100, d_mm: 6.6 }] },
+        b3: {
+          item: "test:RHS-50x30x2",
+          a: [0, 300, 0],
+          b: [600, 300, 0],
+          ops: [{ op: "hole", face: "+y", at_mm: 200, d_mm: 11 }],
+        },
+      },
+    };
+    const both = { services_on: [{ supplier: "shop-a" }, { supplier: "test-steel" }] };
+    const o = run({ ...holes, costs: [cost("K1", both)] });
+    expect(o.diagnostics).toEqual([]);
+    const services = (item: string) =>
+      o.suppliers.flatMap((s) =>
+        s.lines.filter((l) => l.item === item).flatMap((l) => l.services ?? []),
+      );
+    expect(services("test-order:FLAT-O")).toEqual([
+      { what: "hole Ø6.60", count: 1, by: "supplier", covered_by: "K1" },
+    ]);
+    expect(services("test:RHS-50x30x2")).toEqual([
+      { what: "hole Ø11.00", count: 1, by: "buyer", covered_by: "K1" },
+    ]);
+    expect(reasons(o, "missing-price")).toEqual([]);
+    // The cost line keeps its list as written, and the order says what it covers.
+    const k1 = o.costs.find((c) => c.id === "K1");
+    expect(k1?.covers).toEqual(both);
+    expect(k1 && coversText(k1)).toBe("machining on shop-a's and test-steel's bars");
+
+    // A list names each supplier once.
+    const dup = run({
+      costs: [cost("K1", { services_on: [{ supplier: "shop-a" }, { supplier: "shop-a" }] })],
+    });
+    expect(dup.diagnostics.map((d) => [d.code, d.entity, d.message])).toEqual([
+      ["schema", "K1", expect.stringContaining("services_on names each supplier once")],
+    ]);
+
+    // A supplier in the list and in another cost line is covered twice.
+    const twice = run({
+      ...holes,
+      costs: [cost("K1", both), cost("K2", { services_on: { supplier: "test-steel" } })],
+    });
+    expect(twice.diagnostics.map((d) => [d.code, d.entity, d.message])).toEqual([
+      ["covers", "K1", "K1 and K2 both cover the machining on test:RHS-50x30x2-6000"],
+    ]);
   });
 
   it("warns about a band that selects no line, not about one a more specific band outranks", () => {

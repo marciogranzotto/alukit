@@ -6,7 +6,7 @@ import { type BuiltSection, buildSection, type CatalogSet } from "./link.ts";
 import { type LoadedCatalog, type LoadedItem, splitRef } from "./load.ts";
 import { CENTRED_NOTE } from "./rails.ts";
 import { isValuedObject, num, type Valued } from "./schema/common.ts";
-import type { BarItem } from "./schema/items.ts";
+import type { BarItem, Item } from "./schema/items.ts";
 
 /**
  * `alukit catalog check` (design §3.6): computed against published for every bar with a
@@ -409,6 +409,31 @@ function checkOffers(set: CatalogSet, cat: LoadedCatalog, add: Add): void {
     }
     if (!item) continue; // reported by the linker
     const it = item.value.item;
+    // A joint recipe has no body to sell: its fasteners are sold, its machining is a service.
+    const recipe = (x: Item) => x.kind === "connector" && x.recipe === true;
+    if (recipe(it)) {
+      add(
+        "error",
+        "offer-recipe",
+        `${item.id} is a joint recipe, which is not sold: offer its fasteners instead`,
+        [file],
+        entity,
+        "item",
+      );
+    }
+    offer.kit?.forEach((k, i) => {
+      const content = set.get("item", k.item, cat.id);
+      if (content && recipe(content.value.item)) {
+        add(
+          "error",
+          "offer-recipe",
+          `kit[${i}] is ${content.id}, a joint recipe, which is not sold`,
+          [file],
+          entity,
+          `kit/${i}/item`,
+        );
+      }
+    });
     const isBar = it.kind === "bar";
     if (isBar && !offer.sale)
       add(

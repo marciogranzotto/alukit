@@ -138,70 +138,99 @@ const Hole = z.strictObject({
   thread: Thread.optional(),
 });
 
-/** Brackets, plates, end connectors, cubes, gussets, hinges and splices. */
-export const ConnectorItem = z.strictObject({
-  ...envelope("connector"),
-  subtype: z.enum(["bracket", "plate", "end-connector", "cube", "gusset", "hinge", "splice"]),
-  fits: z.array(Ref).min(1).describe("the systems it fits"),
-  mass_kg: Valued.optional(),
-  bbox_mm: Bbox3.optional(),
-  datums: Datums.optional(),
-  frame: z
-    .strictObject({
-      x: Vec3,
-      y: Vec3,
-      note: z.string().optional(),
-    })
-    .optional()
-    .describe("the connector's own axes in its item frame (z = x × y); the rating directions"),
-  mounts: z
-    .array(
-      z.strictObject({
-        plane: z
-          .strictObject({ point_mm: Vec3, normal: Vec3 })
-          .describe("the face that bears on a bar"),
-        holes: z.array(Hole).optional(),
-        fasteners: z
-          .record(Ref, z.array(z.union([ItemQty, Sleeve])).min(1))
-          .optional()
-          .describe(
-            "the fastener set for each system it fits, used once per hole of the mount (review B3); it may list sleeves",
-          ),
-      }),
-    )
-    .optional(),
-  requires: z
-    .array(
-      z.strictObject({
-        op: z.enum(["end-tap", "access-hole", "through-hole", "counterbore"]),
-        on: z.enum(["butting", "through", "each"]).describe("which joined bar is machined"),
-        thread: Thread.optional(),
-        d_mm: Valued.optional(),
-        depth_mm: Valued.optional(),
-        from_end_mm: Valued.optional(),
+/** What a joint recipe (a connector with no body) cannot have: the fields that describe a body. */
+const BODY_FIELDS = ["mass_kg", "bbox_mm", "datums", "body", "mesh"] as const;
+
+/**
+ * Brackets, plates, end connectors, cubes, gussets, hinges and splices. A **joint recipe**
+ * (`recipe: true`; acceptance gap A2) is a connector with no body of its own: studs in tapped
+ * cores, a screw into a core, a bush and a sleeve. Its fastener sets, sleeves, splice parts and
+ * `requires` machining are generated and billed as any connector's; the recipe itself is not
+ * bought, weighs nothing and is never placed, so it has none of the fields that describe a body,
+ * and no offer sells it.
+ */
+export const ConnectorItem = z
+  .strictObject({
+    ...envelope("connector"),
+    subtype: z.enum(["bracket", "plate", "end-connector", "cube", "gusset", "hinge", "splice"]),
+    fits: z.array(Ref).min(1).describe("the systems it fits"),
+    recipe: z
+      .literal(true)
+      .optional()
+      .describe(
+        "a joint recipe: no body of its own; its fasteners and machining are billed, the recipe is not",
+      ),
+    mass_kg: Valued.optional(),
+    bbox_mm: Bbox3.optional(),
+    datums: Datums.optional(),
+    frame: z
+      .strictObject({
+        x: Vec3,
+        y: Vec3,
         note: z.string().optional(),
-      }),
-    )
-    .optional()
-    .describe("machining on the joined bars"),
-  spacer_mm: Valued.optional(),
-  body: z.strictObject({ size_mm: Vec3 }).optional().describe("a cube's box"),
-  pivot: z
-    .strictObject({
-      height_mm: Valued,
-      end_mm: Valued,
-      range_deg: z.tuple([z.number(), z.number()]),
-    })
-    .optional()
-    .describe("hinges"),
-  splice: z
-    .strictObject({
-      parts: z.array(ItemQty).min(1).describe("the stud or plates"),
-      tap: Thread.optional().describe("the tap each bar end needs"),
-      tap_depth_mm: Valued.optional(),
-    })
-    .optional(),
-});
+      })
+      .optional()
+      .describe("the connector's own axes in its item frame (z = x × y); the rating directions"),
+    mounts: z
+      .array(
+        z.strictObject({
+          plane: z
+            .strictObject({ point_mm: Vec3, normal: Vec3 })
+            .describe("the face that bears on a bar"),
+          holes: z.array(Hole).optional(),
+          fasteners: z
+            .record(Ref, z.array(z.union([ItemQty, Sleeve])).min(1))
+            .optional()
+            .describe(
+              "the fastener set for each system it fits, used once per hole of the mount (review B3); it may list sleeves",
+            ),
+        }),
+      )
+      .optional(),
+    requires: z
+      .array(
+        z.strictObject({
+          op: z.enum(["end-tap", "access-hole", "through-hole", "counterbore"]),
+          on: z.enum(["butting", "through", "each"]).describe("which joined bar is machined"),
+          thread: Thread.optional(),
+          d_mm: Valued.optional(),
+          depth_mm: Valued.optional(),
+          from_end_mm: Valued.optional(),
+          note: z.string().optional(),
+        }),
+      )
+      .optional()
+      .describe("machining on the joined bars"),
+    spacer_mm: Valued.optional(),
+    body: z.strictObject({ size_mm: Vec3 }).optional().describe("a cube's box"),
+    pivot: z
+      .strictObject({
+        height_mm: Valued,
+        end_mm: Valued,
+        range_deg: z.tuple([z.number(), z.number()]),
+      })
+      .optional()
+      .describe("hinges"),
+    splice: z
+      .strictObject({
+        parts: z.array(ItemQty).min(1).describe("the stud or plates"),
+        tap: Thread.optional().describe("the tap each bar end needs"),
+        tap_depth_mm: Valued.optional(),
+      })
+      .optional(),
+  })
+  .superRefine((c, ctx) => {
+    if (c.recipe !== true) return;
+    for (const f of BODY_FIELDS) {
+      if (c[f] !== undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: [f],
+          message: `a joint recipe has no body of its own, so no ${f}`,
+        });
+      }
+    }
+  });
 
 export const FastenerItem = z.strictObject({
   ...envelope("fastener"),

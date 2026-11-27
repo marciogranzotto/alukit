@@ -53,7 +53,7 @@ G1–G21 still pass unchanged.
 | 21 | `bolt`: a clearance hole in every layer. `screw`: clearance in every layer but the last, which is tapped (`tap_depth_mm`, else a hollow layer's wall, else through); the grip leaves the tapped layer out. `tnut`: nothing in the last layer; the station must land on a groove of the facing face (`fit` error otherwise), the T-nut must fit by its `fits` systems or its groove type, and the grip runs to the groove's lip | What each fastening holds; G25's grip includes the 0.5 gap |
 | 22 | A hollow layer (RHS, tube) gets one hole per wall, each as deep as the wall | Each wall is drilled |
 | 23 | A rail layer is not drilled where the station is one of its own holes | Its counterbored holes take the screw |
-| 24 | A sleeve `{inside, len_mm}` stands on the nut-side inner wall of its layer and reaches back toward the head. A wall or layer it passes whole is drilled to the sleeve's diameter; one it enters part way gets a counterbore of the sleeve's diameter and the depth it enters. `len_mm: "bore"` is the inside depth along the axis | The bore case (G25) needs nothing more; a longer sleeve then has one place to go |
+| 24 | A sleeve `{inside, len_mm}` stands on the nut-side inner wall of its layer and reaches back toward the head. A wall or layer it passes whole is drilled to the sleeve's diameter; one it enters part way gets a counterbore of the sleeve's diameter and the depth it enters. `len_mm: "bore"` is the inside depth along the axis. *Changed by [acceptance-gaps](acceptance-gaps.md) A7: the hole clears the sleeve (ISO 273 medium for its outside diameter, or `clearance_mm`)* | The bore case (G25) needs nothing more; a longer sleeve then has one place to go |
 | 25 | A fastener `{bar, len_mm}` and each sleeve are cut from bar stock as pieces `<connection>.f<k>` and `<connection>.s<n>` (numbered in station order), with the bar item's default options; they group and nest with the bars | G25's cut list |
 | 26 | The stack's items count once per station | G25's 8 washers and 8 nuts |
 
@@ -62,8 +62,8 @@ G1–G21 still pass unchanged.
 | # | Decision | Why |
 |---|---|---|
 | 27 | A butt counts its connector once per butting end (times `qty`); `defaults.butt` supplies the connector when the connection names none | One end connector per joint end |
-| 28 | A connector must fit every joined bar's system (`fit` error). Its mount's fastener set is the one keyed by a joined bar's system, the through bar's first; it counts once per mount hole and unit | §3.4: "a connector's fastener set once per hole" |
-| 29 | `requires`: once per butting end. An end tap goes in the butting end; an access hole on the butting bar's +y face, `from_end_mm` in from that end; a hole in the through bar where the butting bar's centre line, moved by the spacer, meets the face it butts into | The design names the ops, not where they go |
+| 28 | A connector must fit every joined bar's system (`fit` error). Its mount's fastener set is the one keyed by a joined bar's system, the through bar's first; it counts once per mount hole and unit. *Changed by [acceptance-gaps](acceptance-gaps.md) A1: fit by role; the through bar may be held by a sleeve in its bore* | §3.4: "a connector's fastener set once per hole" |
+| 29 | `requires`: once per butting end. An end tap goes in the butting end; an access hole on the butting bar's +y face, `from_end_mm` in from that end; a hole in the through bar where the butting bar's centre line, moved by the spacer, meets the face it butts into. *Extended by [acceptance-gaps](acceptance-gaps.md) A4: through an end, into the end face along the axis* | The design names the ops, not where they go |
 | 30 | A splice counts its `parts` as their own lines and taps both spliced ends with its `tap` | The cart's SPL-40 and its stud |
 
 ## The cut list and nesting (§5.3)

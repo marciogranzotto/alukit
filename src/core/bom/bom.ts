@@ -16,7 +16,8 @@ import { QUANTUM, quantize } from "../quantum.ts";
  * on a section symmetric about its box centre). Unplaced lines (§4.7) count with the item's other
  * uses and show their `why`. Prices, offers and covering cost lines are the order list's (§5.4,
  * M3b part 3). Project items (§4.8) group by their own kinds after §3.4's: a plate's and a bent
- * angle's mass is computed from its net volume (`calc`), a placeholder's is as entered.
+ * angle's mass is computed from its net volume (`calc`), a placeholder's is as entered. Joint
+ * recipes (§3.4) are listed apart, in no group: not bought, no mass, no mass warning.
  *
  * Each line's mass is rounded once to the 0.001 kg quantum; the total adds the rounded lines.
  */
@@ -61,9 +62,25 @@ export interface BomGroup {
   mass_kg: number;
 }
 
+/**
+ * A joint recipe the connections use (§3.4, acceptance gap A2): a connector with no body. It is
+ * not bought and weighs nothing; the fasteners, sleeves and machining it brings are on their own
+ * lines, which name its connections among their sources.
+ */
+export interface BomRecipe {
+  item: string;
+  name: string;
+  /** Uses: one per butting end and unit, as a connector counts. */
+  qty: number;
+  /** The connections that use it. */
+  sources: string[];
+}
+
 export interface Bom {
   schema: typeof BOM_SCHEMA;
   groups: BomGroup[];
+  /** Present when the connections use joint recipes; they are in no group and no total. */
+  recipes?: BomRecipe[];
   mass_kg: number;
   /** Items with no mass: their lines are left out of the totals. */
   mass_unknown: string[];
@@ -180,9 +197,26 @@ export function bom({ derived, items: catalogs }: BomInput): Bom {
     lines.sort((x, y) => compareIds(x.item, y.item) || cmp(optKey(x.opt), optKey(y.opt)));
     groups.push({ kind, lines, mass_kg: mass(lines.reduce((s, l) => s + (l.mass_kg ?? 0), 0)) });
   }
+
+  const recipes = new Map<string, BomRecipe>();
+  for (const r of derived.recipes) {
+    const found = items.item(r.item);
+    let e = recipes.get(r.item);
+    if (!e) {
+      e = { item: r.item, name: found.ok ? found.item.name : r.item, qty: 0, sources: [] };
+      recipes.set(r.item, e);
+    }
+    e.qty += r.qty;
+    if (!e.sources.includes(r.source)) e.sources.push(r.source);
+  }
+  const recipeList = [...recipes.values()]
+    .sort((x, y) => compareIds(x.item, y.item))
+    .map((r) => ({ ...r, sources: [...r.sources].sort(compareIds) }));
+
   return {
     schema: BOM_SCHEMA,
     groups,
+    ...(recipeList.length > 0 ? { recipes: recipeList } : {}),
     mass_kg: mass(groups.reduce((s, g) => s + g.mass_kg, 0)),
     mass_unknown: [...unknown].sort(compareIds),
     diagnostics: d.sorted(),

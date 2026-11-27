@@ -53,7 +53,21 @@ export interface EndTapMachining {
   depth_mm?: number;
 }
 
-export type Machining = HoleMachining | EndTapMachining;
+/**
+ * A hole into an end face, along the axis (acceptance gap A4): `off_mm` from the section's box
+ * centre in its x and y (absent at the centre), drilled `d_mm` or tapped, `depth_mm` deep or
+ * through the piece.
+ */
+export interface EndHoleMachining {
+  op: "end-hole";
+  from: "a" | "b";
+  off_mm?: [number, number];
+  d_mm?: number;
+  thread?: string;
+  depth_mm?: number;
+}
+
+export type Machining = HoleMachining | EndTapMachining | EndHoleMachining;
 
 /** A rail piece's holes (§4.7, §5.3: "rails also list E at each end"). */
 export interface PieceRail {
@@ -196,6 +210,17 @@ function machiningOf(b: DerivedBar, lp: { a: number; b: number }): Machining[] {
         ...(op.depth !== undefined ? { depth_mm: q(op.depth) } : {}),
       };
     }
+    if (op.op === "end-hole") {
+      const off = op.off ? ([q(op.off[0]), q(op.off[1])] as [number, number]) : undefined;
+      return {
+        op: "end-hole",
+        from: op.from,
+        ...(off && (off[0] !== 0 || off[1] !== 0) ? { off_mm: off } : {}),
+        ...(op.d !== undefined ? { d_mm: q(op.d) } : {}),
+        ...(op.thread ? { thread: op.thread } : {}),
+        ...(op.depth !== undefined ? { depth_mm: q(op.depth) } : {}),
+      };
+    }
     const s = op.from === "a" ? op.at : b.lengths.len - op.at;
     const across = op.across === undefined ? 0 : q(op.across);
     return {
@@ -245,6 +270,14 @@ function flipped(p: Oriented): Oriented {
     ends: { a: flipEnd(p.ends.b), b: flipEnd(p.ends.a) },
     machining: p.machining.map((m): Machining => {
       if (m.op === "end-tap") return { ...m, from: other(m.from) };
+      if (m.op === "end-hole") {
+        // In the end face, local x reverses and y stays.
+        return {
+          ...m,
+          from: other(m.from),
+          ...(m.off_mm ? { off_mm: [0 - m.off_mm[0], m.off_mm[1]] as [number, number] } : {}),
+        };
+      }
       const out: HoleMachining = { ...m, face: FLIP_FACE[m.face], from: other(m.from) };
       if (m.across_mm !== undefined && (m.face === "+y" || m.face === "-y")) {
         out.across_mm = 0 - m.across_mm;
@@ -273,16 +306,29 @@ function cmpVal(a: number | string | undefined, b: number | string | undefined):
   return cmp(String(a), String(b));
 }
 
+/** End taps, then holes into an end, then holes in the faces. */
+const OP_RANK: Record<Machining["op"], number> = { "end-tap": 0, "end-hole": 1, hole: 2 };
+
 /**
- * Machining as listed: from end a first; at each end its tap, then holes by position, face,
- * offset across and size.
+ * Machining as listed: from end a first; at each end its tap, then its end holes by place and
+ * size, then holes by position, face, offset across and size.
  */
 function cmpMachining(a: Machining, b: Machining): number {
-  const c =
-    cmpVal(a.from, b.from) || cmpVal(a.op === "end-tap" ? 0 : 1, b.op === "end-tap" ? 0 : 1);
+  const c = cmpVal(a.from, b.from) || cmpVal(OP_RANK[a.op], OP_RANK[b.op]);
   if (c !== 0) return c;
   if (a.op === "end-tap" || b.op === "end-tap") {
     return cmpVal(a.thread, b.thread) || cmpVal(a.depth_mm, b.depth_mm);
+  }
+  if (a.op === "end-hole" || b.op === "end-hole") {
+    const ea = a as EndHoleMachining;
+    const eb = b as EndHoleMachining;
+    return (
+      cmpVal(ea.off_mm?.[0] ?? 0, eb.off_mm?.[0] ?? 0) ||
+      cmpVal(ea.off_mm?.[1] ?? 0, eb.off_mm?.[1] ?? 0) ||
+      cmpVal(ea.d_mm, eb.d_mm) ||
+      cmpVal(ea.thread, eb.thread) ||
+      cmpVal(ea.depth_mm, eb.depth_mm)
+    );
   }
   return (
     cmpVal(a.at_mm, b.at_mm) ||
@@ -309,6 +355,17 @@ type Key = (string | number)[];
  */
 function physical(m: Machining, span: number): Key {
   if (m.op === "end-tap") return [0, m.from, m.thread, m.depth_mm ?? -1];
+  if (m.op === "end-hole") {
+    return [
+      0.5,
+      m.from,
+      m.off_mm?.[0] ?? 0,
+      m.off_mm?.[1] ?? 0,
+      m.d_mm ?? -1,
+      m.thread ?? "",
+      m.depth_mm ?? -1,
+    ];
+  }
   const pos = m.from === "a" ? m.at_mm : q(span - m.at_mm);
   const plain = m.depth_mm === undefined && !m.csk && !m.cbore;
   return [

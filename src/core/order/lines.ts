@@ -12,7 +12,7 @@ import type { Diagnostics } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
 import type { ItemSource, OfferInfo } from "../items.ts";
 import { PROJECT_ITEM } from "../project/parse.ts";
-import type { CostLine } from "../project/schema.ts";
+import { type CostLine, servicesOnSuppliers } from "../project/schema.ts";
 import { projectItems } from "../project-items/source.ts";
 import { cheapestCover } from "./cover.ts";
 import { amount, type Basis, basisPrice, fieldMoney, times } from "./price.ts";
@@ -75,6 +75,9 @@ export function serviceName(m: Machining): string {
   const depth = m.depth_mm === undefined ? "" : `, ${mm(m.depth_mm)} deep`;
   if (m.op === "end-tap") return `tap ${m.thread} in an end${depth}`;
   const what = m.thread ? `tapped hole ${m.thread}` : `hole Ø${mm(m.d_mm ?? 0)}`;
+  if (m.op === "end-hole") {
+    return `${what} into an end, along the axis${m.depth_mm === undefined ? ", through" : depth}`;
+  }
   const cbore = m.cbore ? `, counterbore Ø${mm(m.cbore.d_mm)} × ${mm(m.cbore.depth_mm)}` : "";
   const csk = m.csk ? `, countersink Ø${mm(m.csk.d_mm)} at ${m.csk.angle_deg.toFixed(2)}°` : "";
   return `${what}${depth}${cbore}${csk}`;
@@ -130,7 +133,7 @@ export function orderLines(ctx: LineContext): Work[] {
     if (!cov) continue;
     for (const it of cov.items ?? []) push(itemCover, it, c);
     if (cov.services && cov.supplier) push(servicesBy, cov.supplier, c);
-    if (cov.services_on) push(servicesOn, cov.services_on.supplier, c);
+    for (const s of servicesOnSuppliers(cov)) push(servicesOn, s, c);
   }
   /** The cost line that covers something, with an error naming both when two do. */
   /**

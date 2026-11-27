@@ -2,6 +2,7 @@ import { basename, join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { bom } from "./bom/bom.ts";
 import { cutList } from "./cutlist/cutlist.ts";
+import { machiningText } from "./cutlist/format.ts";
 import { type Derived, derive } from "./derive/derive.ts";
 import type { ItemSource } from "./items.ts";
 import { type MoneyOut, order } from "./order/order.ts";
@@ -12,6 +13,8 @@ import { FIXTURES, mergePatch, readJson, shown, subdirs } from "./testing.ts";
  * The generation and cost cases of design §4.6 (G22–G26), M3b's oracle: each folder holds a small
  * document and the values the design's table gives for it, to 0.01 mm, and for G26 to the minor
  * unit. A row's variations ("factory: b", "at at_mm 470") are merge patches of the same document.
+ * G30 on close the gaps the v1 acceptance found (`docs/notes/acceptance-gaps.md`); each has a
+ * hand calculation beside it, `by_hand.py`, that imports nothing from AluKit.
  */
 
 interface Expect {
@@ -25,10 +28,14 @@ interface Expect {
   fastenings?: Record<string, { count: number; grip_mm: number[] }>;
   /** Per part on a station: the bar it landed on and the distance from that bar's a. */
   parts?: Record<string, { bar: string; s_mm: number }>;
-  /** Per item: its cut-list lines. */
-  lines?: Record<string, { count: number; cut_mm: number }[]>;
+  /** Per item: its cut-list lines, and where given, each line's machining as the cut list words it. */
+  lines?: Record<string, { count: number; cut_mm: number; machining?: string[] }[]>;
+  /** Per bar: its ops as derive gives them (written, then generated), numbers to 0.01. */
+  ops?: Record<string, unknown[]>;
   /** Per item: its count among the connections' hardware. */
   hardware?: Record<string, number>;
+  /** Per joint recipe (a connector with no body, §3.4): its count; none when absent. */
+  recipes?: Record<string, number>;
   /** Generated holes: how many, their diameters, and how many per bar. */
   holes?: { total: number; d_mm: number[]; per_bar: Record<string, number> };
   /** The order list: per item, its one line's low, likely and high; and the total. */
@@ -48,6 +55,20 @@ interface Golden {
 }
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
+
+/** A value with every number rounded to 0.01 and undefined fields dropped, to compare ops. */
+function rounded(v: unknown): unknown {
+  if (typeof v === "number") return r2(v) + 0;
+  if (Array.isArray(v)) return v.map(rounded);
+  if (v && typeof v === "object") {
+    return Object.fromEntries(
+      Object.entries(v)
+        .filter(([, x]) => x !== undefined)
+        .map(([k, x]) => [k, rounded(x)]),
+    );
+  }
+  return v;
+}
 
 function check(d: Derived, items: ItemSource, want: Expect, label: string): void {
   const errors = shown(d.diagnostics, "error");
@@ -81,10 +102,18 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
   }
   for (const [item, lines] of Object.entries(want.lines ?? {})) {
     const g = cl.groups.find((x) => x.item === item);
+    // A line's machining, as the cut list prints it, is compared only where the case gives it.
     expect(
-      g?.lines.map((l) => ({ count: l.count, cut_mm: l.cut_mm })),
+      g?.lines.map((l, i) => ({
+        count: l.count,
+        cut_mm: l.cut_mm,
+        ...(lines[i]?.machining ? { machining: l.machining.map(machiningText) } : {}),
+      })),
       `${label}: ${item}'s cut-list lines`,
     ).toEqual(lines);
+  }
+  for (const [id, ops] of Object.entries(want.ops ?? {})) {
+    expect(rounded(d.bars.get(id)?.ops), `${label}: ${id}'s ops`).toEqual(ops);
   }
 
   for (const [id, s] of Object.entries(want.stations ?? {})) {
@@ -112,6 +141,9 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
     const n = d.hardware.filter((h) => h.item === item).reduce((s, h) => s + h.qty, 0);
     expect(n, `${label}: ${item}`).toBe(qty);
   }
+  const recipes: Record<string, number> = {};
+  for (const r of d.recipes) recipes[r.item] = (recipes[r.item] ?? 0) + r.qty;
+  expect(recipes, `${label}: recipes`).toEqual(want.recipes ?? {});
   if (want.holes) {
     const holes = [...d.bars.values()].flatMap((b) =>
       b.ops.flatMap((o) => (o.op === "hole" && o.by ? [{ bar: b.placed.id, d: o.d }] : [])),
@@ -155,8 +187,17 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
 const dirs = subdirs(join(FIXTURES, "golden-gen"));
 
 describe("golden generation cases (design §4.6)", () => {
-  it("has one fixture per case G22–G26", () => {
-    expect(dirs.map((d) => basename(d))).toEqual(["G22", "G23", "G24", "G25", "G26"]);
+  it("has one fixture per case G22–G26, and G30 on", () => {
+    expect(dirs.map((d) => basename(d))).toEqual([
+      "G22",
+      "G23",
+      "G24",
+      "G25",
+      "G26",
+      "G30",
+      "G31",
+      "G32",
+    ]);
   });
 
   for (const dir of dirs) {

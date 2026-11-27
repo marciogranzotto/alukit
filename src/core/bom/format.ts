@@ -57,6 +57,19 @@ export function bomMarkdown(b: Bom): string {
     }
     out.push("", `${kg(g.mass_kg)} kg.`, "");
   }
+  if (b.recipes && b.recipes.length > 0) {
+    out.push(
+      "## Joint recipes",
+      "",
+      "Connectors with no body of their own: not bought and weighing nothing. The fasteners, sleeves and machining each brings are on their own lines above, used by the same connections.",
+      "",
+      "| Item | Name | Uses | Used by |",
+      "|---|---|---:|---|",
+    );
+    for (const r of b.recipes)
+      out.push(`| ${r.item} | ${r.name} | ${r.qty} | ${r.sources.join(", ")} |`);
+    out.push("");
+  }
   out.push(`Total mass: ${kg(b.mass_kg)} kg.`);
   if (b.mass_unknown.length > 0) {
     out.push(`No mass for ${b.mass_unknown.join(", ")}: left out of the totals.`);
@@ -113,6 +126,14 @@ export function bomCsv(b: Bom): string {
           .join(","),
       );
     }
+  }
+  // Joint recipes: kind `recipe`, no mass; not bought (§3.4).
+  for (const r of b.recipes ?? []) {
+    rows.push(
+      ["recipe", r.item, r.name, "", r.qty, "", "", "", "", r.sources.join(" "), ""]
+        .map(csvCell)
+        .join(","),
+    );
   }
   return `${rows.join("\n")}\n`;
 }

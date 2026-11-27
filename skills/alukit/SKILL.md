@@ -37,7 +37,9 @@ then read the output.
   project's own bars and connectors (a pad strip, a fastening recipe) go in a **project-local
   catalog** named by path in `catalogs` (`"../my-parts"`), not in `items`: they need sections,
   systems and mounts, which a catalog holds. `items` is for plates, bent angles, generic items
-  and placeholders (`project:<id>`).
+  and placeholders (`project:<id>`). A joint with no body of its own (studs in tapped cores, a
+  bush and a sleeve) is a connector with `"recipe": true` and no mass or box: its fasteners and
+  machining are billed, the recipe is not, and no offer sells it.
 - **The lock pins catalog data.** Derive reads the lock, never the live catalogs. A command
   that names a new item pins it; `alukit lock update <dir>` refreshes entries and prints what
   moved (prices, sections, cut lengths). `--frozen` on any output makes a missing entry an error.
@@ -94,6 +96,13 @@ or `"square"`; `extend_mm` lengthens an end.
 | `face` | layers held face to face (`bars`, head to nut): `fastening` `none`, `bolt`, `tnut` or `screw`, a `fastener`, a `stack`, and `stations` (`at_mm`, `across_mm`, `rail_holes`) |
 
 A face connection never moves or cuts a bar; it checks contact and generates holes and hardware.
+A sleeve in its `stack` (`{ "item", "inside": "<hollow layer>", "len_mm": "bore" }`) clears the
+holes it passes by ISO 273 medium for its outside diameter, or by `clearance_mm` over it.
+
+A connector fits a butting bar by its system, and the through bar by its system or by the
+sleeve one of its mounts sets in the through bar's bore (an RHS or a tube). A hole a connector
+requires in the through bar of a butt through that bar's end goes into the end face, along its
+axis.
 
 **Parts** sit on a station (`"on"`, with `roll_deg`), at a world pose
 (`"at": { "pos", "rot_deg" }`), or are unplaced lines (`"qty", "unplaced": true, "why"`), counted
@@ -122,6 +131,8 @@ may read the model: `len(b3)`, `cut(b3)`, `pos(n3).z`, `dist(n1, n2)`, `bbox().z
 `cost()`, `cost(high)`, `count(tag:leg)`. `alukit check` reports each one's margin.
 
 **Buying.** `costs` are lines that are not parts (machining, labour, freight, contingency);
+they take `only_in` and `not_in` like entities, and `covers` prices generated work as a whole
+(`"services_on": [{ "supplier": "a" }, { "supplier": "b" }]` for one job on two suppliers' bars).
 `price_bands` give catalog prices a low and a high; `order` chooses an offer per item; `open`
 items with `"blocks": "order"` hold the order of their scope's suppliers.
 
@@ -374,7 +385,7 @@ string; `<…>` is a string of that form; `?` marks an optional field.
   - `{ type: "miter", ends: [<a bar end: "b7.a" or "b7.b">, <a bar end: "b7.a" or "b7.b">], connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
   - `{ type: "splice", ends: [<a bar end: "b7.a" or "b7.b">, <a bar end: "b7.a" or "b7.b">], gap_mm?: expr, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
   - `{ type: "pivot", base: { bar: <a bar: b<number>> | <a run: r<number>>, at_mm: expr, from?: "a" | "b" | "a.cut" | "b.cut", face?: "+x" | "-x" | "+y" | "-y", groove?: <a groove: "+y.1", numbered by increasing section coordinate>, off_mm?: [expr, expr] }, axis: "along" | "across", ends: [<a bar end: "b7.a" or "b7.b">, …], connector: <a connector with pivot geometry>, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
-  - `{ type: "face", bars: [<a bar: b<number>> | <a run: r<number>> | <a part: p<number>>, …], gaps_mm?: [expr, …], faces?: [["+x" | "-x" | "+y" | "-y", "+x" | "-x" | "+y" | "-y"], …], fastening: "none" | "bolt" | "tnut" | "screw", fastener?: <a catalog item: "<catalog>:<code>"> | { bar: <a catalog item: "<catalog>:<code>">, len_mm: expr }, stack?: [<a catalog item: "<catalog>:<code>"> | {item, qty?} | {item, inside, len_mm}, …], stations?: { at_mm?: [expr, …], across_mm?: [expr, …], rail_holes?: true | {along, every?, plus?}, pattern?: <a pattern: pt<number>> }, tap_depth_mm?: expr, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
+  - `{ type: "face", bars: [<a bar: b<number>> | <a run: r<number>> | <a part: p<number>>, …], gaps_mm?: [expr, …], faces?: [["+x" | "-x" | "+y" | "-y", "+x" | "-x" | "+y" | "-y"], …], fastening: "none" | "bolt" | "tnut" | "screw", fastener?: <a catalog item: "<catalog>:<code>"> | { bar: <a catalog item: "<catalog>:<code>">, len_mm: expr }, stack?: [<a catalog item: "<catalog>:<code>"> | {item, qty?} | {item, inside, len_mm, clearance_mm?}, …], stations?: { at_mm?: [expr, …], across_mm?: [expr, …], rail_holes?: true | {along, every?, plus?}, pattern?: <a pattern: pt<number>> }, tap_depth_mm?: expr, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
 - **`setConnection`** (connections): change a connection's fields; its type may change when the result is valid
   - `id`: `string` — the entity to change
   - `set`: `{ <key>: any }` — fields to change, as a JSON merge patch (RFC 7396): null removes a field

@@ -30,7 +30,8 @@ import { mapStringsWithPattern, type PathKey, propertySchema } from "../schema-w
  * - **Which variant.** The one named, else `variants.default`, else none: the document as
  *   written, with no params overridden and nothing swapped.
  * - **Scope.** An entity with `only_in` is in the variants it lists, and in no other (so not in
- *   the document derived with no variant); one with `not_in` is in every variant but those.
+ *   the document derived with no variant); one with `not_in` is in every variant but those. A
+ *   cost line takes them too, so a lump job priced for one option is in that option only.
  * - **What hangs on a left-out entity.** A list that can lose a member keeps its meaning
  *   (§6's cascade): a connection drops the ends of bars the variant leaves out, a run or a
  *   pattern's template its members, an open item its scope's members, each with an info. A
@@ -124,6 +125,12 @@ function memberText(x: unknown): string {
 /** Kinds whose lists may shrink, or which may go, with only an info. */
 const SOFT: ReadonlySet<Kind> = new Set(["connections", "runs", "patterns", "open"]);
 
+/**
+ * What takes `only_in` and `not_in`: the entity maps, and cost lines (acceptance gap A5), whose
+ * amounts may differ between options as a part's do.
+ */
+const SCOPED: readonly Kind[] = [...MAP_KINDS, "costs"];
+
 export function applyVariant(raw: unknown, items?: ItemSource, name?: string): VariantResult {
   if (!isObject(raw)) return { raw, omitted: [], diagnostics: [] };
   const d = new Diagnostics();
@@ -145,9 +152,9 @@ export function applyVariant(raw: unknown, items?: ItemSource, name?: string): V
   }
   const where = selected === undefined ? "the document without a variant" : `variant ${selected}`;
 
-  // Each entity's own scope.
+  // Each entity's own scope, and each cost line's.
   const out: string[] = [];
-  for (const kind of MAP_KINDS) {
+  for (const kind of SCOPED) {
     for (const id of entityIds(raw, kind)) {
       const s = scopeOf(getEntity(raw, id));
       const only = strings(s.only_in);

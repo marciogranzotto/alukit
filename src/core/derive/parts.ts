@@ -99,6 +99,17 @@ function placePart(
     return undefined;
   }
   const item = found.item;
+  if (item.kind === "connector" && item.recipe === true) {
+    if (report) {
+      d.error(
+        "part",
+        id,
+        `${found.id} is a joint recipe, with no body to place or buy: name it as a connection's connector`,
+        { field: "item" },
+      );
+    }
+    return undefined;
+  }
   const base = {
     id,
     item: found.id,

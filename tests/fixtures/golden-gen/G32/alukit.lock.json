@@ -1,0 +1,39 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-geo": { "hash": "sha256:5d41a6d7c43671052d74bf5387b76e9c3e428d09da74fbe3088f0ba9ae5f1718", "name": "Geometry test catalog (synthetic)", "vendor": "test-geo-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-geo:FB-50x10": { "hash": "sha256:940ba09dee00f3db3afa2356302471a9c006e588437214b4a945bd195aecdadc", "item": { "kind": "bar", "name": "Flat bar 50x10", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "shape": "flat", "section": "FB-50x10" } },
+    "test-geo:FB-50x20": { "hash": "sha256:41d9939b3b7c8a20337e4ec8fa1e72160764380f9a4438885de4291bc9e6d5dc", "item": { "kind": "bar", "name": "Flat bar 50x20", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "shape": "flat", "section": "FB-50x20" } },
+    "test-geo:NUT-M10": { "hash": "sha256:3167a88b8637c9f9b94cf02c5c35d828b9d6f5a1ce9cbc51d96841528f37e70e", "item": { "kind": "fastener", "name": "Hex nut M10", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "subtype": "nut", "thread": "M10", "mass_kg": 0.011 } },
+    "test-geo:RHS-100x50x4": { "hash": "sha256:99708e1b40c0d61f3e304669d1535e3e99c09078f51c004d69bb57a9d471286c", "item": { "kind": "bar", "name": "RHS 100x50x4", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "shape": "rhs", "section": "RHS-100x50x4" } },
+    "test-geo:TUBE-18x2": { "hash": "sha256:426aacabdde521462cd49a54cb72c82d9beff3b15c6ea13f4a7bfb1427a63abe", "item": { "kind": "bar", "name": "Tube 18x2", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "shape": "tube", "section": "TUBE-18x2" } },
+    "test-geo:WSH-M10": { "hash": "sha256:c574ba6ae54d3a9077b39bed51dd25775488fc455104be4ca26414b28f19904c", "item": { "kind": "fastener", "name": "Washer M10", "prov": { "src": "est", "note": "synthetic test data for the geometry core, not a vendor's" }, "subtype": "washer", "thread": "M10", "mass_kg": 0.004 } },
+    "test:M10-ROD": { "hash": "sha256:6b2d41b2ade0903ad5b375ba3f4f1b7ca49e2abcc5b65279b550ca06be29004e", "item": { "kind": "bar", "name": "Threaded rod M10", "material": "steel-8.8", "prov": { "src": "est", "note": "synthetic test data, not a vendor's" }, "shape": "threaded-rod", "section": "M10", "area_mm2": { "v": 58, "src": "src", "ref": "ISO 898-1, stress area of M10" }, "thread": "M10" } }
+  },
+  "offers": {
+    "test-geo:FB-50x10-3000": { "hash": "sha256:9d37b4cb7995c7bdcd49e6ff6dbbee7e54110fdedfd2640e38041fc21a317785", "offer": { "item": "FB-50x10", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 3000 }, "price": { "regular_minor": 4000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test-geo:FB-50x10-6000": { "hash": "sha256:b32d104b7f16875582c4311172c7670747eb29ab0a17dd8915ca348b76a3b571", "offer": { "item": "FB-50x10", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 7000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test-geo:FB-50x20-6000": { "hash": "sha256:fb2428e30bbbd71a9ca77ee7c3e6c7676e60338cadc53467071ded01cd10e3ce", "offer": { "item": "FB-50x20", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 13500, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test-geo:NUT-M10-100": { "hash": "sha256:c92741417da3143ca5969b8473b69d28cdebbc3d588b8f84af7664cb268f6ebb", "offer": { "item": "NUT-M10", "pack": 100, "price": { "regular_minor": 2600, "sale_minor": null, "per": "unit", "read": "2026-10-01", "src": "src" } } },
+    "test-geo:RHS-100x50x4-6000": { "hash": "sha256:cee16c444c9cb1a1b482d0cd67f88c3c23dd534d0337d2b0a72a8ef5eb4486b8", "offer": { "item": "RHS-100x50x4", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 28900, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test-geo:TUBE-18x2-6000": { "hash": "sha256:5b8167bc4ffd8c994b380ce80135d4f2625e9ec328bab6fa0026c03e9528a035", "offer": { "item": "TUBE-18x2", "supplier": "test-steel", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 5200, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test-geo:WSH-M10-100": { "hash": "sha256:710fdb11213cd81ce15b01f50a98f2b2cc10ded4cce2cc73789d385872a88145", "offer": { "item": "WSH-M10", "pack": 100, "price": { "regular_minor": 1800, "sale_minor": null, "per": "unit", "read": "2026-11-26", "src": "src" } } },
+    "test:M10-ROD-1000": { "hash": "sha256:282624d6958f124207304a8940c83f40fa4ff8c78961006e58f693713d2e9cef", "offer": { "item": "M10-ROD", "sale": { "mode": "stock", "length_mm": 1000 }, "price": { "regular_minor": 1250, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } }
+  },
+  "sections": {
+    "test-geo:FB-50x10": { "hash": "sha256:b797bebb37ad05884e8d076afb3dab529ca274ffeca4c45cb71eb4e1f3ea34e9", "section": { "schema": "alukit.section/1", "id": "FB-50x10", "fidelity": "parametric", "props_ok": true, "generator": "flat", "params": { "b_mm": 50, "t_mm": 10 } } },
+    "test-geo:FB-50x20": { "hash": "sha256:72198dc3393d1b1e37ce43da26732017652a0825cb392beff0846721ea5f82f6", "section": { "schema": "alukit.section/1", "id": "FB-50x20", "fidelity": "parametric", "props_ok": true, "generator": "flat", "params": { "b_mm": 50, "t_mm": 20 } } },
+    "test-geo:RHS-100x50x4": { "hash": "sha256:6186ad1c03840373d24d600286ba46daac27e1e0d48630069f28be0f471f3c56", "section": { "schema": "alukit.section/1", "id": "RHS-100x50x4", "fidelity": "parametric", "props_ok": true, "generator": "rhs", "params": { "b_mm": 50, "h_mm": 100, "t_mm": 4, "ro_mm": 6 } } },
+    "test-geo:TUBE-18x2": { "hash": "sha256:037103da1a83b6ccc09346b7aa9beec9d60c5158a620c89e97d378c14c7c8999", "section": { "schema": "alukit.section/1", "id": "TUBE-18x2", "fidelity": "parametric", "props_ok": true, "generator": "tube", "params": { "d_mm": 18, "t_mm": 2 } } },
+    "test:M10": { "hash": "sha256:53166fb40f79c659c46671e2d074cad094e4f44b3fd06426b52f0be05c07bbbd", "section": { "schema": "alukit.section/1", "id": "M10", "fidelity": "parametric", "props_ok": true, "generator": "threaded-rod", "params": { "d_mm": 10, "pitch_mm": 1.5 } } }
+  },
+  "materials": {
+    "test:s235": { "hash": "sha256:642f592f18278ab312b5939c9a0525dcc6ec0aa40a5c52253e599e27cf2ea6ab", "material": { "name": "Steel S235", "E_MPa": 210000, "G_MPa": 81000, "nu": 0.3, "density_kg_per_m3": 7850, "Rp02_MPa": 235, "Rm_MPa": 360, "alpha_per_K": 0.000012 } },
+    "test:steel-8.8": { "hash": "sha256:7e60784760ac4cd1d4682f67faea7f4a7ca71f74ee74efbcb23a526b615e479c", "material": { "name": "Steel, property class 8.8", "density_kg_per_m3": 7850 } }
+  },
+  "grooves": {},
+  "systems": {}
+}

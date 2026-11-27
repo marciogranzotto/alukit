@@ -3,7 +3,7 @@ import { type ExprScope, evalNumber } from "../expr.ts";
 import { compareIds } from "../ids.ts";
 import { type AnyItem, type BarItemInfo, fullRef } from "../items.ts";
 import type { Face, FaceConnT, StackEntry } from "../project/schema.ts";
-import { clearanceHole } from "../threads.ts";
+import { clearanceHole, sleeveHole } from "../threads.ts";
 import { TOL } from "../tolerances.ts";
 import { add, addScaled, angleDeg, cross, dot, neg, scale, sub, unit, type V3 } from "../vec.ts";
 import type { Ctx } from "./context.ts";
@@ -28,7 +28,8 @@ import type {
  * layer's face normal toward the second; it passes every layer. Then:
  *
  * - `bolt`: an ISO 273 medium clearance hole in every layer, both walls of a hollow one; where a
- *   sleeve passes a wall, that wall's hole takes the sleeve's outside diameter;
+ *   sleeve passes a wall, that wall's hole clears the sleeve: ISO 273 medium for a shank of its
+ *   outside diameter, or that diameter plus the sleeve's `clearance_mm`;
  * - `screw`: clearance holes in the layers before the last, a tapped hole in the last (its near
  *   wall when hollow, or to `tap_depth_mm`);
  * - `tnut`: clearance holes in the layers before the last; the last holds the T-nut in the groove
@@ -42,6 +43,8 @@ export interface GenOut {
   fastenings: Map<string, FaceResult>;
   pieces: StockPiece[];
   hardware: HardwareUse[];
+  /** Joint recipes the connections use (§3.4): not bought, so not hardware. */
+  recipes: HardwareUse[];
 }
 
 interface BodyFace {
@@ -243,6 +246,16 @@ interface Walk {
   /** Along the axis from the station point. */
   we: number;
   wx: number;
+}
+
+/** A sleeve of the stack: its stock, its hollow layer, its length, and the hole it takes. */
+interface StackSleeve {
+  item: string;
+  opt: Readonly<Record<string, string>>;
+  layer: number;
+  len_mm: number | string;
+  /** The diameter of a hole the sleeve passes: its outside diameter and a clearance. */
+  hole: number;
 }
 
 interface Hollow {
@@ -492,7 +505,7 @@ class FaceGen {
       }
 
       // Sleeves cut from bar stock, each in a hollow layer's bore, from its nut-side wall.
-      const sleeves: { piece: string; len: number; from: number; to: number; od: number }[] = [];
+      const sleeves: { piece: string; len: number; from: number; to: number; hole: number }[] = [];
       let sleevesOk = true;
       for (const sl of stack.sleeves) {
         const w = walk[sl.layer] as Walk;
@@ -515,7 +528,7 @@ class FaceGen {
         sleeveNo++;
         const piece = `${id}.s${sleeveNo}`;
         const to = bore.innerExit - w0;
-        sleeves.push({ piece, len, from: to - len, to, od: sl.od });
+        sleeves.push({ piece, len, from: to - len, to, hole: sl.hole });
         this.out.pieces.push({ source: piece, item: sl.item, opt: sl.opt, len });
       }
       if (!sleevesOk) continue;
@@ -563,8 +576,8 @@ class FaceGen {
             const hi = Math.min(z, sl.to);
             if (hi - lo <= TOL.len) continue;
             const full = sl.from <= a + TOL.len && sl.to >= z - TOL.len;
-            if (full || sg.wall) dd = Math.max(dd, sl.od);
-            else cbore = { d: sl.od, depth: hi - lo, atExit: sl.to >= z - TOL.len };
+            if (full || sg.wall) dd = Math.max(dd, sl.hole);
+            else cbore = { d: sl.hole, depth: hi - lo, atExit: sl.to >= z - TOL.len };
           }
           const wallDepth = hollow ? z - a : undefined;
           if (cbore?.atExit && sg.exit) {
@@ -663,25 +676,13 @@ class FaceGen {
   private stack(layers: Layer[]):
     | {
         hardware: { item: string; qty: number }[];
-        sleeves: {
-          item: string;
-          opt: Readonly<Record<string, string>>;
-          layer: number;
-          len_mm: number | string;
-          od: number;
-        }[];
+        sleeves: StackSleeve[];
         tnuts: { id: string; item: Item }[];
       }
     | undefined {
-    const { ctx, spec } = this;
+    const { ctx, spec, id } = this;
     const hardware: { item: string; qty: number }[] = [];
-    const sleeves: {
-      item: string;
-      opt: Readonly<Record<string, string>>;
-      layer: number;
-      len_mm: number | string;
-      od: number;
-    }[] = [];
+    const sleeves: StackSleeve[] = [];
     const tnuts: { id: string; item: Item }[] = [];
     const consider = (ref: string) => {
       const found = ctx.items.item(ref);
@@ -720,12 +721,41 @@ class FaceGen {
           return;
         }
         const [[x0], [x1]] = found.bar.section.bbox_mm;
+        const od = x1 - x0;
+        // The hole a wall or a layer takes where the sleeve passes it (acceptance gap A7).
+        let hole: number | undefined;
+        if (e.clearance_mm !== undefined) {
+          const c = ctx.num(id, `${field}/clearance_mm`, e.clearance_mm);
+          if (c === undefined) {
+            ok = false;
+            return;
+          }
+          if (c < 0) {
+            this.error("face", `${field}: clearance_mm is ${fmt(c)}; a hole clears its sleeve`, {
+              field: `${field}/clearance_mm`,
+            });
+            ok = false;
+            return;
+          }
+          hole = od + c;
+        } else {
+          hole = sleeveHole(od);
+          if (hole === undefined) {
+            this.error(
+              "face",
+              `${field}: no ISO 273 clearance for a sleeve of Ø${fmt(od)}; give its clearance_mm`,
+              { field },
+            );
+            ok = false;
+            return;
+          }
+        }
         sleeves.push({
           item: found.id,
           opt: stockOptions(ctx, found.bar),
           layer,
           len_mm: e.len_mm,
-          od: x1 - x0,
+          hole,
         });
         return;
       }

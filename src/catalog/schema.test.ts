@@ -236,6 +236,41 @@ describe("part frames (draft 2.1)", () => {
       expect(Item.safeParse(mount([screw, bad])).success, JSON.stringify(bad)).toBe(false);
     }
   });
+
+  it("a joint recipe has none of the fields that describe a body (acceptance gap A2)", () => {
+    const recipe = {
+      kind: "connector",
+      subtype: "splice",
+      name: "stud in tapped cores",
+      fits: ["s40-c8"],
+      recipe: true,
+      splice: { parts: [{ item: "STUD-M8", qty: 1 }], tap: "M8" },
+      prov,
+    };
+    expect(Item.safeParse(recipe).success).toBe(true);
+    for (const [field, value] of [
+      ["mass_kg", 0],
+      [
+        "bbox_mm",
+        [
+          [0, 0, 0],
+          [1, 1, 1],
+        ],
+      ],
+      ["datums", { mount: [0, 0, 0] }],
+      ["body", { size_mm: [40, 40, 40] }],
+      ["mesh", "stud.glb"],
+    ] as const) {
+      const r = Item.safeParse({ ...recipe, [field]: value });
+      expect(r.success, field).toBe(false);
+      expect(
+        r.error?.issues.map((i) => [i.path.join("/"), i.message]),
+        field,
+      ).toEqual([[field, `a joint recipe has no body of its own, so no ${field}`]]);
+    }
+    // Only `true` says so; a connector with a body leaves the field out.
+    expect(Item.safeParse({ ...recipe, recipe: false }).success).toBe(false);
+  });
 });
 
 describe("section files (design §3.5)", () => {

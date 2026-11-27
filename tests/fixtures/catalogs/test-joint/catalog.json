@@ -1,0 +1,118 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-joint",
+  "name": "Joint test catalog (synthetic)",
+  "vendor": "test-joint-vendor",
+  "currency": "BRL",
+  "prov": {
+    "src": "est",
+    "note": "synthetic test data for connector fit and machining, not a vendor's"
+  },
+  "items": {
+    "BUSH-M8": {
+      "kind": "fastener",
+      "subtype": "insert",
+      "name": "Core bush M16 outside, M8 inside (synthetic)",
+      "thread": "M8",
+      "mass_kg": 0.012
+    },
+    "BUSH-END": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Bush end cap (synthetic)",
+      "fits": ["test:s40-c8"],
+      "material": "test:al-6063-t5",
+      "mass_kg": 0.02,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "test:s40-c8": [
+              { "item": "BUSH-M8", "qty": 1 },
+              { "item": "test-geo:TUBE-18x2", "inside": "through", "len_mm": "bore" }
+            ]
+          }
+        }
+      ]
+    },
+    "BUSH-JOINT": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Bush joint: a bush in the core and a sleeve in the bore, no body (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "test:s40-c8": [
+              { "item": "BUSH-M8", "qty": 1 },
+              { "item": "test-geo:TUBE-18x2", "inside": "through", "len_mm": "bore" }
+            ]
+          }
+        }
+      ],
+      "requires": [{ "op": "through-hole", "on": "through", "d_mm": 9 }]
+    },
+    "BUSH-END-L": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Bush end cap, sleeve of a fixed length (synthetic)",
+      "fits": ["test:s40-c8"],
+      "material": "test:al-6063-t5",
+      "mass_kg": 0.02,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "test:s40-c8": [
+              { "item": "BUSH-M8", "qty": 1 },
+              { "item": "test-geo:TUBE-18x2", "inside": "through", "len_mm": 40 }
+            ]
+          }
+        }
+      ]
+    },
+    "BRK-T": {
+      "kind": "connector",
+      "subtype": "bracket",
+      "name": "T-slot angle bracket (synthetic)",
+      "fits": ["test:s40-c8"],
+      "material": "test:al-6063-t5",
+      "mass_kg": 0.05,
+      "mounts": [
+        {
+          "plane": { "point_mm": [20, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [20, 0, 0], "d_mm": 8.5 }],
+          "fasteners": {
+            "test:s40-c8": [
+              { "item": "test:SCR-M8x16", "qty": 1 },
+              { "item": "test:TNUT-M8", "qty": 1 }
+            ]
+          }
+        }
+      ]
+    },
+    "END-AX": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "End screw along the through bar (synthetic)",
+      "fits": ["test:s40-c8"],
+      "material": "test:s235",
+      "mass_kg": 0.03,
+      "requires": [{ "op": "through-hole", "on": "through", "d_mm": 9 }]
+    },
+    "END-AX-T": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "End screw tapped into the through bar (synthetic)",
+      "fits": ["test:s40-c8"],
+      "material": "test:s235",
+      "mass_kg": 0.03,
+      "requires": [{ "op": "through-hole", "on": "through", "thread": "M8", "depth_mm": 20 }]
+    }
+  }
+}

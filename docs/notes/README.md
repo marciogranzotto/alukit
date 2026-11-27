@@ -21,3 +21,4 @@ cite them as "m4a decision 13". Where the build differs from the design, see
 | [`m4c-decisions.md`](m4c-decisions.md) | M4c, the v1 gaps: `?variant=` on the API, export and revisions through the server, the variant switch, the section plane, the record tabs, pivots and fastened joints in Connect, `catalog search`/`import`, `derive --select`; the cart image's "brace" |
 | [`m5-decisions.md`](m5-decisions.md) | M5: variants, diff, revisions and their stamps, the GLB writer and its shared mesh modules, the agent skill |
 | [`m6-decisions.md`](m6-decisions.md) | M6: project items (plates, bent angles, generic items, placeholders), hole features, mass formulas, the machining sheet, gap G-B |
+| [`acceptance-gaps.md`](acceptance-gaps.md) | the gaps the v1 acceptance found: connector fit by role, joint recipes, a hole into an end a butt bears on, cost lines in variants, `services_on` lists, a sleeve's hole clearance; golden cases G30–G32 and suggested design wording |

@@ -268,11 +268,22 @@ export const RailHolesSel = z.strictObject({
 });
 export type RailHolesSel = z.infer<typeof RailHolesSel>;
 
-/** A stack entry (§4.5): hardware from head to nut, or a sleeve cut from bar stock. */
+/**
+ * A stack entry (§4.5): hardware from head to nut, or a sleeve cut from bar stock. A wall or a
+ * layer the sleeve passes is drilled to clear it: ISO 273 medium for a shank of its outside
+ * diameter, or that diameter plus `clearance_mm` (acceptance gap A7).
+ */
 export const StackEntry = z.union([
   ItemRef,
   z.strictObject({ item: ItemRef, qty: z.int().min(1).optional() }),
-  z.strictObject({ item: ItemRef, inside: z.union([BarId, RunId]), len_mm: Expr }),
+  z.strictObject({
+    item: ItemRef,
+    inside: z.union([BarId, RunId]),
+    len_mm: Expr,
+    clearance_mm: Expr.optional().describe(
+      "the holes the sleeve passes: its outside diameter plus this; absent: ISO 273 medium for a shank of that diameter",
+    ),
+  }),
 ]);
 export type StackEntry = z.infer<typeof StackEntry>;
 
@@ -622,16 +633,31 @@ export const CostKind = z.enum([
   "other",
 ]);
 
+/** The bars of one supplier, whose generated machining a cost line covers (§4.11). */
+const ServicesOn = z.strictObject({ supplier: SupplierId });
+
 /**
  * What a cost line prices as a whole (§4.11): the machining a supplier sells on its own bars
  * (`supplier` with `services: true`), the machining generated on bars bought from a supplier,
- * whoever does it (`services_on`), or the BOM lines of some items.
+ * whoever does it (`services_on`: one supplier's bars, or a list, for one job on several
+ * suppliers' bars; acceptance gap A6), or the BOM lines of some items.
  */
 export const Covers = z
   .strictObject({
     supplier: SupplierId.optional(),
     services: z.literal(true).optional(),
-    services_on: z.strictObject({ supplier: SupplierId }).optional(),
+    services_on: z
+      .union([
+        ServicesOn,
+        z
+          .array(ServicesOn)
+          .min(1)
+          .refine((l) => new Set(l.map((s) => s.supplier)).size === l.length, {
+            message: "services_on names each supplier once",
+          }),
+      ])
+      .optional()
+      .describe("{ supplier }, or a list of them: the machining on those suppliers' bars"),
     items: z.array(ItemRef).min(1).optional(),
   })
   .refine((c) => (c.supplier === undefined) === (c.services === undefined), {
@@ -642,12 +668,18 @@ export const Covers = z
   });
 export type Covers = z.infer<typeof Covers>;
 
+/** The suppliers whose bars' machining a cover names, in the order written. */
+export function servicesOnSuppliers(c: Covers): string[] {
+  if (c.services_on === undefined) return [];
+  return (Array.isArray(c.services_on) ? c.services_on : [c.services_on]).map((s) => s.supplier);
+}
+
 const MinorInt = z.int().nonnegative();
 
 /*
  * A cost line's fields in the design's order (§4.11): id, label, kind, supplier, the amounts,
- * provenance, blocks, then what it covers. The canonical form (§2) writes keys in the order the
- * schema declares them, so this order is the file's.
+ * provenance, blocks, then what it covers, then the variants it belongs to. The canonical form
+ * (§2) writes keys in the order the schema declares them, so this order is the file's.
  */
 const CostHead = {
   id: CostId,
@@ -657,6 +689,11 @@ const CostSupplier = { supplier: SupplierId.optional() };
 const CostTail = {
   ...ProvFields,
   blocks: z.literal("order").nullable().optional().describe('"order": hold its supplier\'s order'),
+};
+/** A cost line's variants (§4.10; acceptance gap A5), as an entity's: written last. */
+const CostScope = {
+  only_in: Common.only_in,
+  not_in: Common.not_in,
 };
 
 /** A cost line that is not a part (§4.11): low, likely and high in minor units. */
@@ -675,6 +712,7 @@ export const CostAmounts = z
       .describe("absent: the project's"),
     ...CostTail,
     covers: Covers.optional(),
+    ...CostScope,
   })
   .refine((c) => c.low_minor <= c.likely_minor && c.likely_minor <= c.high_minor, {
     message: "a cost line needs low_minor <= likely_minor <= high_minor",
@@ -688,6 +726,7 @@ export const CostPct = z.strictObject({
   pct: z.number().nonnegative(),
   of: z.literal("subtotal"),
   ...CostTail,
+  ...CostScope,
 });
 
 export const CostLine = z.union([CostPct, CostAmounts]);
