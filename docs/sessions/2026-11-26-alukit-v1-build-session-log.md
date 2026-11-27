@@ -901,3 +901,10 @@ anything, and each has a default in place.
   - **Streams:** E0 contracts (an action registry and context menu, face picking, gizmo pieces, view state, splitting the tools' wiring), E1 core and CLI, E2 selection, visibility and menus, E3 transform and copy tools, E4 bars and ends, E5 joints, patterns and parts.
   - 15 timed acceptance scenarios for the designer review.
 - **13:12**: The audit's `transform` command (move and rotate) went to the agent building the Move tool, so one command exists, not two. E1's other core tasks started. E0 waits for the end handles and Move tool to merge, since all three rework the tools' wiring and gizmos.
+- **13:46**: The traced sections finished.
+  - Forseti now has **18 real outlines of 27**: 9 exact, among them the 20x20 V-slot, whose drawing proved to be vector, and 8 traced from raster drawings.
+  - Each trace was validated against the published area (within 2 %) and inertias (within 4 %, justified by four profiles that have both kinds of drawing). The method and sources are in `docs/notes/forseti-traced-sections.md`.
+  - 10 stay generated, each for a stated reason: 5 traces fell outside tolerance (for example, a bore that traces Ø3.8 where Ø5 is printed), 1 drawing is only lines, and 4 profiles have no drawing at all.
+  - `catalog check` holds traced sections to the same tolerances.
+  - No mass, golden or acceptance result moved. Four groove disagreements are recorded, and the printed value wins.
+- **13:55**: Merged; gate PASS (1,162 tests). The tracing's open calls were renumbered 65–67 in the merge, since the F11/F12 batch had taken 63–64. The reference project published its decided frame's next revision, which AluKit's last run and byte-compares had passed.
