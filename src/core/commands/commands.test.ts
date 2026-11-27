@@ -424,6 +424,18 @@ describe("connections", () => {
     );
   });
 
+  it("moveEnd lengthens a bar onto another's line, and autoConnect joins it there (move.test.ts)", () => {
+    // G01's b2 freed from c1 and drawn short of b1, then moved back onto b1's line.
+    const bare = ok(g("G01"), { cmd: "removeEntity", args: { id: "c1" } }).state;
+    const short = ok(bare, { cmd: "setBar", args: { id: "b2", set: { a: [1000, 200, 0] } } });
+    const r = ok(
+      short.state,
+      { cmd: "moveEnd", args: { end: "b2.a", to: "b1" } },
+      { cmd: "autoConnect", args: { end: "b2.a", optional: true } },
+    );
+    expect(geometry(derived(r.state))).toEqual(geometry(derived(g("G01"))));
+  });
+
   it("autoConnect with optional does nothing where nothing butts, and connects where something does", () => {
     // The draw tool sends one for each end of the bar it adds, in the same batch (§7.1).
     const s = g("G01");

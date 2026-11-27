@@ -9,6 +9,7 @@ import {
 import { addFrame } from "./frame.ts";
 import { autoConnect, reverseBar, splitBar } from "./geometry.ts";
 import { mirror } from "./mirror.ts";
+import { moveEnd } from "./move.ts";
 import { array, explodePattern } from "./patterns.ts";
 import { setProject } from "./project.ts";
 import {
@@ -40,6 +41,7 @@ export const COMMAND_LIST: readonly CommandDef<never>[] = [
   moveNode,
   addBar,
   setBar,
+  moveEnd,
   reverseBar,
   splitBar,
   addFrame,

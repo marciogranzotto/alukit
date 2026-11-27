@@ -415,3 +415,78 @@
   translate: 0 calc(-100% - 10px);
   color: var(--text-1);
 }
+
+/*
+ * The selected bar's length label (docs/ux/drag-ends-decisions.md): the cut is a button, and a
+ * click opens a field in its place; what holds a locked end, by its handle.
+ */
+.sel-label .sel-len {
+  pointer-events: auto;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed currentColor;
+  padding: 0;
+  cursor: text;
+}
+
+.sel-label .sel-len:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.sel-label .sel-edit {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: 340px;
+  white-space: normal;
+  pointer-events: auto;
+}
+
+.sel-label .sel-field {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  width: 7em;
+  background: var(--bg-well);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 0 4px;
+}
+
+.sel-label .sel-field:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.sel-label .sel-sub,
+.sel-label .sel-note {
+  font-weight: 400;
+}
+
+.sel-label .sel-note {
+  display: block;
+  pointer-events: auto;
+  white-space: normal;
+  max-width: 320px;
+}
+
+.sel-label .sel-sub.error {
+  text-decoration: underline;
+}
+
+.end-note {
+  margin: 12px 0 0 12px;
+  max-width: 320px;
+  padding: 3px 7px;
+  border-radius: var(--radius-control);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-float);
+  color: var(--text-1);
+  font-size: var(--fs-small);
+  pointer-events: auto;
+}

@@ -392,7 +392,7 @@ test("a selected bar hidden behind another shows through it; its label gives its
   expect((await canvasPixels(page, rect)).filter(amber).length).toBeGreaterThan(200);
   expect((await canvasPixels(page, around(middle, 1))).filter(amber)).toHaveLength(0);
   await expect(page.getByTestId("selection-label")).toHaveText(
-    `${b9.cut_mm.toFixed(2)} mm  square · square`,
+    `cut ${b9.cut_mm.toFixed(2)} mm  square · square`,
   );
 });
 

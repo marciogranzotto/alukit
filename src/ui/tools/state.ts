@@ -127,6 +127,8 @@ export interface JointPreview {
   shape: string;
   /** The dry run's time, ms: for the decisions' note and the test hook. */
   ms: number;
+  /** Whether a joint is made, so Tab has something to flip; undefined reads as yes. */
+  joins?: boolean;
 }
 export const jointPreview = signal<JointPreview | undefined>(undefined);
 
@@ -138,6 +140,33 @@ export const jointPreview = signal<JointPreview | undefined>(undefined);
 export const lastResult = signal<
   { rev: number; created: readonly string[]; error?: string | undefined } | undefined
 >(undefined);
+
+/**
+ * A drag gesture on (drag.ts; docs/ux/drag-ends-decisions.md): an end handle dragged, or the
+ * selection moved. The command bar shows it whatever the tool, with its value field; the
+ * selected bar's label reads `reading` while an end is dragged.
+ */
+export interface Gesture {
+  kind: "end" | "move";
+  /** The command bar's title: "Drag end b3.b". */
+  title: string;
+  /** What it asks: drag, or type, and Enter. */
+  prompt: string;
+  /** What it comes to now: "cut 580 mm · length 600". */
+  reading: string;
+  /** The machine label of where it is: `on b1`, `at b2.a`, `touches b7`, `free`, `typed`. */
+  snap: string;
+  /** An end drag's bar and end. */
+  bar?: string;
+  end?: "a" | "b";
+}
+export const gesture = signal<Gesture | undefined>(undefined);
+
+/**
+ * The selected bar's length label being typed into (docs/ux/drag-ends-decisions.md): its bar and
+ * the end the typed length moves, which the handles draw larger.
+ */
+export const labelEdit = signal<{ bar: string; end: "a" | "b" } | undefined>(undefined);
 
 /** The draw tool's gesture, for the panel and the test hook. */
 export const drawState = signal<{ start?: DrawPoint; end?: DrawEnd }>({});

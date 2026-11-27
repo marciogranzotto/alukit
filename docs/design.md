@@ -442,6 +442,22 @@ output moved, nor the GLB's bytes (s3 10).
 - §6: **`addFrame` refuses a frame with no item** (none given, no default bar), saying so; it
   refused at its first corner as if no bar end met there (int 26).
 
+### End handles and the length label (after the UX redesign)
+
+The owner asked, using the app, to grab a bar's end and extend it, attaching to the bars it meets,
+and to type a new length on the selected bar's label. The note is
+[`ux/drag-ends-decisions.md`](ux/drag-ends-decisions.md) ("ends"). No golden value or derived
+output moved.
+
+- §6: **`moveEnd`** moves one end of a bar along its own axis, to a design length, a cut length, by
+  a distance, or onto another bar's line or end; `detach` frees an end a node, a station, another
+  bar's end or a butt holds; it refuses an end a pivot, miter, splice or its own plane sets, and a
+  coordinate a param drives (ends 9, 10, 15; calls 63, 64).
+- §8: the v1 limit on dragging bar ends is lifted: **end handles** on a selected bar drag an end
+  along its axis, snapping onto other bars' lines and ends and to whole millimetres of cut, with
+  the joint preview before the release and one step after it (ends 1–8). **The length label**
+  says "cut" and takes a typed cut length, moving the end the inspector's rule picks (ends 12–14).
+
 ## Draft 2.2 — what changed (2026-11-26)
 
 - **A shoe mitred square to a strut (gap G-A; §4.5, §16).** A plane's `normal` may name a bar:
@@ -2113,7 +2129,7 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
 
 | Group | Commands |
 |---|---|
-| Structure | `addNode` `moveNode` `addBar` `setBar` `reverseBar` `splitBar` (optionally adding a `splice`, and the run) `addFrame` (*2.3*) `addRun` `setRun` `removeEntity` |
+| Structure | `addNode` `moveNode` `addBar` `setBar` `moveEnd` (*2.3*) `reverseBar` `splitBar` (optionally adding a `splice`, and the run) `addFrame` (*2.3*) `addRun` `setRun` `removeEntity` |
 | Connections | `addConnection` `setConnection` `autoConnect` |
 | Parts and patterns | `addPart` `setPart` `addPattern` `setPattern` `explodePattern` `mirror` `array` |
 | Items | `addItem` `setItem` (project items) |
@@ -2156,6 +2172,19 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   (*2.3*, after the integration) a frame with no item, neither given nor the project's default
   bar, whose bars would have no section and so no end to butt
   ([int](ux/integration-decisions.md) 26).
+- **`moveEnd`** (*2.3*, after the UX redesign) moves one end of a bar along the bar's own axis,
+  the other end staying put: to a design length (`len_mm`; an expression over params is kept on a
+  bar along a world axis), a cut length (`cut_mm`, the end's own default plane taken after the
+  move; over params, the design length is written as the cut plus what the ends add or take, so
+  the param keeps driving the cut), by a distance (`by_mm`), or onto another bar (`to`: where the axis meets that bar's
+  design line, or that bar's end). An end a node, a station or another bar's end holds, or that a
+  butt lists among its butting ends, moves with `detach: true`, which writes it as coordinates and
+  drops it from its butt (the butt goes with its last end); the through bar's own end at a corner
+  moves without it. An end a pivot, miter, splice, a named `through_end` or its own plane sets is
+  refused, and so is a move that would overwrite a coordinate a param drives, naming the param,
+  or write a length over params where no coordinate can hold it.
+  The app's end handles and length label send it followed by an `autoConnect` with `end`, so an
+  end that lands on a bar joins it by the corner rule ([ends](ux/drag-ends-decisions.md) 9, 15).
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
   moves (`cuts`, before and after), the bars it adds with their cuts, what it removes, and the ends
@@ -2389,8 +2418,9 @@ As built (*2.3*):
   they open, from the server's origin under its `default-src 'self'`. No chunk passes Vite's
   500 kB advice.
 - **v1 limits** (v1.1): the inspector does not edit a face or pivot connection (a butt is
-  rearranged through its corner), and dragging an existing node or bar end is not built (gestures
-  are clicks; §7.1's rule for a drag stands).
+  rearranged through its corner), and dragging an existing node is not built. *2.3* (after the
+  UX redesign): **a bar end drags**, by its handle (below, Tools); §7.1's rule for a drag holds,
+  a local preview committed as one step on release ([ends](ux/drag-ends-decisions.md)).
 
 ### Tools
 
@@ -2446,6 +2476,26 @@ s5 9).
 - **Pattern** (`X`, *2.3*): select the template, pick the bar (or type a bar or run), type pitch
   and count. A pattern by a direction or by offsets is written by command in v1.
 - **Measure** (`M`): two snapped points, the distance and its components.
+
+**End handles** (*2.3*, after the UX redesign; [ends](ux/drag-ends-decisions.md) 1–11). One bar
+selected in Select shows a handle at each end's face, drawn over every body. Dragging one (press,
+drag, release; or click, move, click, as SketchUp's Move allows) moves that end along the bar's
+axis, the pointer's ray projected onto it. The end falls onto another bar's design line or end
+where the axis is inside that bar's box, stops on the face of a bar whose line it misses (no
+joint, and the words say so), and otherwise moves the cut in whole millimetres. A value typed
+meanwhile is the cut (`600`, `+50`, `=L - 40`, a param kept driving it); a cut that lands inside
+a bar it can join joins it. The
+selected bar's label, the pointer's tip and the command bar read "on b1 · cut 580 mm · length
+600", and the joint preview says what the release does ("will butt on b1 · cut 580", "frees it
+from c1"; `Tab` flips). The release is one step, `moveEnd` then `autoConnect`; `Esc` cancels. An
+end a node, another bar's end, a station or a butt holds is freed by the drag, which the preview
+says first; one a pivot, miter, splice or its own plane sets, or whose length a param drives, is
+locked, and pressing it says why ("driven by L: edit L").
+
+**The length label** (*2.3*; ends 12–14) says "cut 569.88 mm", and a click on it types a new cut:
+Enter commits, `Esc` leaves it. End b moves when it is free, else end a, the end drawn large while
+the field is open; a driven length says "driven by L: edit L"; with both ends held it says why.
+It joins and previews as a drag does.
 
 **The inspector** (*2.3*; s5 25–28) edits in place. A bar's new length moves end b along the bar,
 written as numbers; a coordinate a param drives says "driven by H: edit H" and is never
@@ -3011,6 +3061,19 @@ new head warnings each a bearing below half. Both frames now pass acceptance.
     pages print behind the covers, the rest `unread`. **v1 limit**: the other profiles drawn as
     raster images (bases 20, 30 and 45, the base-40 shop-only stems, the 50x50) still take their
     series' groove type, measured on another profile, until their images are read (v1.1).
+63. *New in 2.3, after the UX redesign, open.* Dragging a held end frees it: an end a node, a
+    station, another bar's end or a butt holds is written as coordinates and dropped from its butt
+    (the butt goes with its last end), said by the hint and the joint preview before the release,
+    and one undo takes it back. An end a pivot, miter, splice, a named `through_end` or its own
+    plane sets is locked instead, and so is one whose moving coordinate a param drives. The other
+    way, a held end that cannot be dragged until freed, would block most ends of a joined frame
+    ([ends](ux/drag-ends-decisions.md) 9, 10).
+64. *New in 2.3, after the UX redesign, open.* The selected bar's label edits the cut length, the
+    number it shows and the cut list prints, and says "cut"; a typed cut that puts the end inside a
+    bar it can join joins it there, at that bar's face. The inspector's Length field stays the
+    design length, "· cut" beside it. A typed cut that reads a param keeps it: the design length is
+    written as the cut plus what the ends add or take (`L - 40 + 20`), so the param keeps driving
+    the cut (D-UX-17); where no coordinate can hold it, the step is refused (ends 7, 8, 12).
 
 ## 15. Review 1 resolution
 

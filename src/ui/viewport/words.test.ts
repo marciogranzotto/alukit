@@ -41,13 +41,13 @@ describe("the viewport's words", () => {
     ]);
   });
 
-  it("labels a selected bar with its cut and its ends, square or angled", () => {
+  it("labels a selected bar with its cut, said as the cut, and its ends, square or angled", () => {
     expect(barWords(cart, "b9")).toBe(
-      `${cart.derived.bars.b9?.cut_mm.toFixed(2)} mm  square · square`,
+      `cut ${cart.derived.bars.b9?.cut_mm.toFixed(2)} mm  square · square`,
     );
     // The corner diagonals b27 to b30 are cut at 45° at both ends; b32 at one.
-    expect(barWords(cart, "b27")).toBe("153.14 mm  45.00° · 45.00°");
-    expect(barWords(cart, "b32")).toBe("291.53 mm  square · 45.00°");
+    expect(barWords(cart, "b27")).toBe("cut 153.14 mm  45.00° · 45.00°");
+    expect(barWords(cart, "b32")).toBe("cut 291.53 mm  square · 45.00°");
     expect(barWords(cart, "c1")).toBeUndefined();
   });
 

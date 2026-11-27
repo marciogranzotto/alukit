@@ -393,6 +393,13 @@ string; `<…>` is a string of that form; `?` marks an optional field.
 - **`setBar`** (structure): change a bar's fields (item, points, anchor, roll, ends, ops, …)
   - `id`: `string` — the entity to change
   - `set`: `{ <key>: any }` — fields to change, as a JSON merge patch (RFC 7396): null removes a field
+- **`moveEnd`** (structure): move one end of a bar along its own axis (to a length, a cut length, by a distance, or onto another bar); the other end stays
+  - `end`: `string` — the bar end to move, along its bar's axis; the other end stays
+  - `len_mm` (optional): `expr` — the bar's new design length, from the other end's design point; an expression over params keeps them on a bar along a world axis
+  - `cut_mm` (optional): `expr` — the bar's new cut length: the end moves so the cut is this long, its plane being its own default after the move; an expression over params is kept, the design length written as it plus the ends' allowance (`W + 20`)
+  - `by_mm` (optional): `number` — move the end outward by this much; negative shortens
+  - `to` (optional): `string` — a bar, or a bar's end: the end goes where its axis meets that bar's design line, or to that end's design point
+  - `detach` (optional): `boolean` — free an end that a node, a station, another bar's end or a butt holds: write it as coordinates and drop it from its butt (the butt goes with its last end)
 - **`reverseBar`** (structure): swap a bar's ends and rewrite anchor, offset, roll and every reference, so the body stays
   - `id`: `<a bar: b<number>> | <a run: r<number>>` — a bar, or a run: every bar of it, and its order
 - **`splitBar`** (structure): split a bar in two at a distance from end a, optionally adding a splice and the run
