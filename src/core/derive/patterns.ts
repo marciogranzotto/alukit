@@ -311,7 +311,12 @@ class Remap {
         } else if (!isPose(through.at)) {
           through = { ...through, at: this.point(through.at) };
         }
-        return { ...c, through, ends: c.ends.map((e) => this.end(e)) };
+        return {
+          ...c,
+          through,
+          ends: c.ends.map((e) => this.end(e)),
+          ...(c.held_by !== undefined ? { held_by: this.id(c.held_by) } : {}),
+        };
       }
       case "miter":
       case "splice":

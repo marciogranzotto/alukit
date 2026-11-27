@@ -1,0 +1,27 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-stud": { "hash": "sha256:37e5b1a53f0c4b3a6b03d02f45b3be497dbf929fabf23d852339df53ad10f7f0", "name": "Stud joint test catalog (synthetic)", "vendor": "test-stud-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-stud:BUSH-M16-M8": { "hash": "sha256:6727bf43c8427641d41d0b9c47726c7ff7a1bb980161e22ebd00e3c4dc9937c7", "item": { "kind": "fastener", "name": "Core bush M16 outside, M8 inside (synthetic)", "prov": { "src": "est", "note": "synthetic test data for through studs and joints in several cores, not a vendor's" }, "subtype": "insert", "thread": "M8", "mass_kg": 0.02 } },
+    "test-stud:J4": { "hash": "sha256:396a27fa6fd5e007cbec962aedd690cd2bfd1ee062a0d3a81976f9cac29a2d28", "item": { "kind": "connector", "name": "Four screws through the through bar into bushes in four cores, at the mount's holes (synthetic)", "prov": { "src": "est", "note": "synthetic test data for through studs and joints in several cores, not a vendor's" }, "subtype": "end-connector", "fits": ["test:s40-c8"], "recipe": true, "mounts": [{ "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] }, "holes": [{ "at_mm": [-20, -20, 0], "d_mm": 9 }, { "at_mm": [20, -20, 0], "d_mm": 9 }, { "at_mm": [-20, 20, 0], "d_mm": 9 }, { "at_mm": [20, 20, 0], "d_mm": 9 }], "fasteners": { "test:s40-c8": [{ "item": "BUSH-M16-M8", "qty": 1 }] } }], "requires": [{ "op": "end-tap", "on": "butting", "thread": "M16", "at_holes": 0 }, { "op": "through-hole", "on": "through", "d_mm": 9, "at_holes": 0 }] } },
+    "test-stud:SPLICE4": { "hash": "sha256:c69720dfee66150923f2bba6a6c5e73140e8d161db831c8ee3b82d8b8e503bf2", "item": { "kind": "connector", "name": "Four studs in four cores, each at the core the item gives (synthetic)", "prov": { "src": "est", "note": "synthetic test data for through studs and joints in several cores, not a vendor's" }, "subtype": "splice", "fits": ["test:s40-c8"], "recipe": true, "splice": { "parts": [{ "item": "STUD-M16x60", "qty": 4 }], "tap": "M16", "at_mm": [[-20, -20], [20, -20], [-20, 20], [20, 20]] } } },
+    "test-stud:STUD-M16x60": { "hash": "sha256:b592bfdc1d772e30ed6006b8c1374fea344ac263d77250236a8d9c8b2e1a4488", "item": { "kind": "fastener", "name": "Stud M16x60 (synthetic)", "prov": { "src": "est", "note": "synthetic test data for through studs and joints in several cores, not a vendor's" }, "subtype": "stud", "thread": "M16", "length_mm": 60, "mass_kg": 0.095 } },
+    "test-stud:TS80": { "hash": "sha256:a33ecf23c4f8fb44b0ccc3640845b52b3efae5e18d6993860c88afb9b4de1dc4", "item": { "kind": "bar", "name": "Profile 80x80, four cores tapped M16 (synthetic)", "material": "test:al-6063-t5", "prov": { "src": "est", "note": "synthetic test data for through studs and joints in several cores, not a vendor's" }, "shape": "tslot", "section": "TS80", "system": "test:s40-c8", "mass_kg_per_m": 4.5, "core": { "bore_mm": 13.7, "tap": "M16" } } }
+  },
+  "offers": {},
+  "sections": {
+    "test-stud:TS80": { "hash": "sha256:ff1b302a97d0d9bd493a56178433d3d1cc00e5ad64ca0efef36623c914f064a9", "section": { "schema": "alukit.section/1", "id": "TS80", "fidelity": "parametric", "props_ok": false, "generator": "tslot", "params": { "w_mm": 80, "h_mm": 80, "groove": "test:c8", "grooves": [{ "face": "-y", "at_mm": -20 }, { "face": "-y", "at_mm": 20 }, { "face": "+x", "at_mm": -20 }, { "face": "+x", "at_mm": 20 }, { "face": "+y", "at_mm": -20 }, { "face": "+y", "at_mm": 20 }, { "face": "-x", "at_mm": -20 }, { "face": "-x", "at_mm": 20 }], "bores": [{ "at_mm": [-20, -20], "d_mm": 13.7 }, { "at_mm": [20, -20], "d_mm": 13.7 }, { "at_mm": [-20, 20], "d_mm": 13.7 }, { "at_mm": [20, 20], "d_mm": 13.7 }] } } }
+  },
+  "materials": {
+    "test:al-6063-t5": { "hash": "sha256:e0c482b7732d94a71938e8fe5ddb0fecedb37039f991accf85a370fb368642c2", "material": { "name": "Aluminium 6063-T5", "alloy": "6063", "temper": "T5", "E_MPa": 69000, "G_MPa": 25900, "nu": 0.33, "density_kg_per_m3": 2700, "Rp02_MPa": { "v": 110, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" }, "Rm_MPa": { "v": 150, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" }, "alpha_per_K": 0.0000234 } }
+  },
+  "grooves": {
+    "test:c8": { "hash": "sha256:d0d9d5c23fc3205a5fd7202229075da350ef157baa05880012e81405f1dc5892", "groove": { "opening_mm": 8.2, "lip_mm": 2.2, "depth_mm": 12.25, "undercut_mm": 14.5, "class": "standard" } }
+  },
+  "systems": {
+    "test:s40-c8": { "hash": "sha256:e76600165e0023babbe826be9199e4ca0156a33c640bf1a058c2265e86ee253c", "system": { "type": "tslot", "series_mm": 40, "groove": "c8" } }
+  }
+}

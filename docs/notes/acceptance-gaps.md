@@ -93,9 +93,9 @@ centre); `d_mm` or `thread`; `depth_mm`, else through.
 | # | Decision | Why |
 |---|---|---|
 | 11 | No depth is through, along the axis, as a side hole with no depth goes through the bar | A screw along a short end block passes its length (the case that raised the gap). A connector that wants a blind hole gives `depth_mm` |
-| 12 | The position is the joint point, not the connector's mount hole | v1 does not place a connector, so its mount's frame is not known (§4.5); the joint point is what decision 29 drills for a side |
+| 12 | The position is the joint point, not the connector's mount hole | v1 does not place a connector, so its mount's frame is not known (§4.5); the joint point is what decision 29 drills for a side. *Extended by [acceptance-gaps-2](acceptance-gaps-2.md) A8: a requirement may give positions, read in the butting bar's section, and the hole stands where each meets the end face* |
 | 13 | A hole that falls off the end face (a spacer carrying the point past the section's box) is a `connection` error | Nothing could be drilled there |
-| 14 | An `end-tap` the connector asks of the through bar's end stays at its centre | Unchanged; a tap into a T-slot's core is centred |
+| 14 | An `end-tap` the connector asks of the through bar's end stays at its centre | Unchanged; a tap into a T-slot's core is centred. *With positions ([acceptance-gaps-2](acceptance-gaps-2.md) A8), it stands where each meets the end face* |
 | 15 | The cut list lists it from its end, `Ø9.00 hole in end a along the axis, at x -10.00, y 0.00 from the centre, through`; turning a piece end for end reverses x and keeps y; identity and orientation compare it by end, offset, size and depth; the order counts it as a service, `hole Ø9.00 into an end, along the axis, through` | One list of machining per piece, measured from a named end (§5.3) |
 
 Golden case **G31**: a 120 mm block and a brace bearing on its end 10 off its centre line (the

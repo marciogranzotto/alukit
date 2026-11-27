@@ -1,0 +1,241 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-stud",
+  "name": "Stud joint test catalog (synthetic)",
+  "vendor": "test-stud-vendor",
+  "currency": "BRL",
+  "prov": {
+    "src": "est",
+    "note": "synthetic test data for through studs and joints in several cores, not a vendor's"
+  },
+  "items": {
+    "RHS-200x100x4.75": {
+      "kind": "bar",
+      "name": "RHS 200x100x4.75 (synthetic)",
+      "shape": "rhs",
+      "section": "RHS-200x100x4.75",
+      "material": "test:s235"
+    },
+    "TUBE-16x3": {
+      "kind": "bar",
+      "name": "Tube 16x3 (synthetic)",
+      "shape": "tube",
+      "section": "TUBE-16x3",
+      "material": "test:s235"
+    },
+    "TS40C": {
+      "kind": "bar",
+      "name": "Profile 40x40, one core tapped M16 (synthetic)",
+      "shape": "tslot",
+      "section": "TS40C",
+      "system": "test:s40-c8",
+      "material": "test:al-6063-t5",
+      "mass_kg_per_m": 1.5,
+      "core": { "bore_mm": 13.7, "tap": "M16" }
+    },
+    "TS80": {
+      "kind": "bar",
+      "name": "Profile 80x80, four cores tapped M16 (synthetic)",
+      "shape": "tslot",
+      "section": "TS80",
+      "system": "test:s40-c8",
+      "material": "test:al-6063-t5",
+      "mass_kg_per_m": 4.5,
+      "core": { "bore_mm": 13.7, "tap": "M16" }
+    },
+    "STUD-M8x140": {
+      "kind": "fastener",
+      "subtype": "stud",
+      "name": "Stud M8x140 (synthetic)",
+      "thread": "M8",
+      "length_mm": 140,
+      "mass_kg": 0.055
+    },
+    "STUD-M16x60": {
+      "kind": "fastener",
+      "subtype": "stud",
+      "name": "Stud M16x60 (synthetic)",
+      "thread": "M16",
+      "length_mm": 60,
+      "mass_kg": 0.095
+    },
+    "BUSH-M16-M8": {
+      "kind": "fastener",
+      "subtype": "insert",
+      "name": "Core bush M16 outside, M8 inside (synthetic)",
+      "thread": "M8",
+      "mass_kg": 0.02
+    },
+    "STUD-END": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Stud end: a stud through the through bar in a sleeve, into a bush in the core (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "test:s40-c8": [
+              { "item": "STUD-M8x140", "qty": 1 },
+              { "item": "BUSH-M16-M8", "qty": 1 },
+              { "item": "TUBE-16x3", "inside": "through", "len_mm": "bore" }
+            ]
+          }
+        }
+      ],
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "through-hole", "on": "through", "d_mm": 9 }
+      ]
+    },
+    "BUSH-END": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Bush end: a bush in the core for another end's stud (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": { "test:s40-c8": [{ "item": "BUSH-M16-M8", "qty": 1 }] }
+        }
+      ],
+      "requires": [{ "op": "end-tap", "on": "butting", "thread": "M16" }]
+    },
+    "J4": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Four screws through the through bar into bushes in four cores, at the mount's holes (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [
+            { "at_mm": [-20, -20, 0], "d_mm": 9 },
+            { "at_mm": [20, -20, 0], "d_mm": 9 },
+            { "at_mm": [-20, 20, 0], "d_mm": 9 },
+            { "at_mm": [20, 20, 0], "d_mm": 9 }
+          ],
+          "fasteners": { "test:s40-c8": [{ "item": "BUSH-M16-M8", "qty": 1 }] }
+        }
+      ],
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M16", "at_holes": 0 },
+        { "op": "through-hole", "on": "through", "d_mm": 9, "at_holes": 0 }
+      ]
+    },
+    "J4-AT": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J4 with its positions written out (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [
+            { "at_mm": [-20, -20, 0], "d_mm": 9 },
+            { "at_mm": [20, -20, 0], "d_mm": 9 },
+            { "at_mm": [-20, 20, 0], "d_mm": 9 },
+            { "at_mm": [20, 20, 0], "d_mm": 9 }
+          ],
+          "fasteners": { "test:s40-c8": [{ "item": "BUSH-M16-M8", "qty": 1 }] }
+        }
+      ],
+      "requires": [
+        {
+          "op": "end-tap",
+          "on": "butting",
+          "thread": "M16",
+          "at_mm": [[-20, -20], [20, -20], [-20, 20], [20, 20]]
+        },
+        {
+          "op": "through-hole",
+          "on": "through",
+          "d_mm": 9,
+          "at_mm": [[-20, -20], [20, -20], [-20, 20], [20, 20]]
+        }
+      ]
+    },
+    "J4-STACKED": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J4 with each requirement written four times and no positions (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [
+            { "at_mm": [-20, -20, 0], "d_mm": 9 },
+            { "at_mm": [20, -20, 0], "d_mm": 9 },
+            { "at_mm": [-20, 20, 0], "d_mm": 9 },
+            { "at_mm": [20, 20, 0], "d_mm": 9 }
+          ],
+          "fasteners": { "test:s40-c8": [{ "item": "BUSH-M16-M8", "qty": 1 }] }
+        }
+      ],
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "through-hole", "on": "through", "d_mm": 9 },
+        { "op": "through-hole", "on": "through", "d_mm": 9 },
+        { "op": "through-hole", "on": "through", "d_mm": 9 },
+        { "op": "through-hole", "on": "through", "d_mm": 9 }
+      ]
+    },
+    "SPLICE4": {
+      "kind": "connector",
+      "subtype": "splice",
+      "name": "Four studs in four cores, each at the core the item gives (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "splice": {
+        "parts": [{ "item": "STUD-M16x60", "qty": 4 }],
+        "tap": "M16",
+        "at_mm": [[-20, -20], [20, -20], [-20, 20], [20, 20]]
+      }
+    },
+    "SPLICE4-C": {
+      "kind": "connector",
+      "subtype": "splice",
+      "name": "Four studs and no positions for their cores (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "splice": { "parts": [{ "item": "STUD-M16x60", "qty": 4 }], "tap": "M16" }
+    },
+    "SPLICE1-X": {
+      "kind": "connector",
+      "subtype": "splice",
+      "name": "One stud in a core off the centre in x and y (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "splice": { "parts": [{ "item": "STUD-M16x60", "qty": 1 }], "tap": "M16", "at_mm": [[10, 5]] }
+    },
+    "SPLICE1-Y": {
+      "kind": "connector",
+      "subtype": "splice",
+      "name": "One stud in a core off the centre in y only (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "splice": { "parts": [{ "item": "STUD-M16x60", "qty": 1 }], "tap": "M16", "at_mm": [[0, 5]] }
+    },
+    "END-2AX": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Two screws along a block's axis into a butting bar's end, and two taps in the block's end (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "requires": [
+        { "op": "through-hole", "on": "through", "d_mm": 9, "at_mm": [[-10, 0], [10, 0]] },
+        { "op": "end-tap", "on": "through", "thread": "M8", "at_mm": [[0, -10], [0, 10]] }
+      ]
+    }
+  }
+}

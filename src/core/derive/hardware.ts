@@ -4,12 +4,12 @@ import { compareIds } from "../ids.ts";
 import { fullRef } from "../items.ts";
 import type { Connection, Face } from "../project/schema.ts";
 import { TOL } from "../tolerances.ts";
-import { add, addScaled, angleDeg, dot, neg, scale, sub, type V3 } from "../vec.ts";
+import { add, addScaled, angleDeg, dot, neg, norm, scale, sub, type V3 } from "../vec.ts";
 import type { Ctx } from "./context.ts";
 import type { DerivedBar, EndHoleOp, HoleOp } from "./derive.ts";
 import { type GenOut, stockOptions } from "./fastenings.ts";
 import { boxCentre, faceLocal, facePlane, onBar, resolveStation } from "./place.ts";
-import type { Copy, StockPiece } from "./types.ts";
+import type { Copy, HardwareUse, StockPiece } from "./types.ts";
 
 /**
  * Hardware and machining from connectors (design §3.4, §5.1). Each connection counts its
@@ -22,11 +22,15 @@ import type { Copy, StockPiece } from "./types.ts";
  *   bar stock to the through bar's bore along the joint's normal;
  * - its `requires`, once per butting end: an end tap in the butting end, holes `from_end_mm`
  *   from it on its `+y` face, or holes in the through bar where the butting bar meets it: in the
- *   face it meets, or, for a butt through the through bar's end, into that end along its axis;
- * - a splice's parts, and its tap in both spliced ends.
+ *   face it meets, or, for a butt through the through bar's end, into that end along its axis.
+ *   A requirement with positions (`at_mm`, or `at_holes`: a mount's holes) makes one op at each,
+ *   read in the butting bar's section x and y from its box centre (acceptance gap A8);
+ * - a splice's parts, and its taps in both spliced ends: one per stud, at the cores its item
+ *   gives (`at_mm`), else at the centre.
  *
- * Fit is judged by role: a butting bar by its system, the through bar by its system or by the
- * sleeve a chosen fastener set puts in its bore. A bar held neither way is a `fit` error.
+ * Fit is judged by role: a butting bar by its system, the through bar by its system, by the
+ * sleeve a chosen fastener set puts in its bore, or, for a butt `held_by` another, by that
+ * butt's through-fastener (acceptance gap A9). A bar held no way is a `fit` error.
  */
 
 interface Roles {
@@ -40,6 +44,8 @@ interface Roles {
   connector?: string;
   /** A butt's spacer, for where the butting bar meets the through bar's face. */
   spacer: number;
+  /** A butt through a body: the body, counted with the connection (§4.5). */
+  body?: HardwareUse;
 }
 
 /** A mount's fastener set, chosen by system (§3.4), used once per hole of the mount. */
@@ -49,22 +55,49 @@ interface ChosenSet {
   entries: NonNullable<NonNullable<ConnectorItem["mounts"]>[number]["fasteners"]>[string];
 }
 
+/** A connection with what it joins, before its connector's hardware is generated. */
+interface Joint {
+  spec: Connection;
+  copy?: Copy;
+  roles: Roles;
+}
+
+/**
+ * A butt held by another butt's through-fastener (acceptance gap A9). `ok` is false when the
+ * relation fails (its error is reported): the through bar is then not judged again.
+ */
+interface Held {
+  by: string;
+  ok: boolean;
+}
+
+type Pos = readonly [number, number] | undefined;
+
 function endOf(ref: string): { bar: string; end: "a" | "b" } {
   const i = ref.lastIndexOf(".");
   return { bar: ref.slice(0, i), end: ref.slice(i + 1) as "a" | "b" };
 }
+
+const mm = (x: number) => (Math.abs(x) < 0.005 ? 0 : x).toFixed(2);
+const posText = (p: readonly [number, number]) => `(${mm(p[0])}, ${mm(p[1])})`;
 
 export function connectorHardware(
   ctx: Ctx,
   bars: ReadonlyMap<string, DerivedBar>,
   out: GenOut,
 ): void {
+  const joints = new Map<string, Joint>();
   for (const id of [...ctx.conns.keys()].sort(compareIds)) {
     const ent = ctx.conns.get(id);
     if (!ent) continue;
-    const roles = rolesOf(ctx, id, ent.spec, ent.copy, bars, out);
-    if (!roles?.connector) continue;
-    new ConnectorGen(ctx, id, ent.spec, roles, !ent.copy, out).run();
+    const roles = rolesOf(ctx, id, ent.spec, ent.copy, bars);
+    if (roles) joints.set(id, { spec: ent.spec, ...(ent.copy ? { copy: ent.copy } : {}), roles });
+  }
+  const held = heldBy(ctx, joints);
+  for (const [id, j] of joints) {
+    if (j.roles.body) out.hardware.push(j.roles.body);
+    if (!j.roles.connector) continue;
+    new ConnectorGen(ctx, id, j.spec, j.roles, !j.copy, out, held.get(id)).run();
   }
 }
 
@@ -74,7 +107,6 @@ function rolesOf(
   spec: Connection,
   copy: Copy | undefined,
   bars: ReadonlyMap<string, DerivedBar>,
-  out: GenOut,
 ): Roles | undefined {
   const butting = (refs: readonly string[]) =>
     refs.flatMap((r) => {
@@ -88,6 +120,7 @@ function rolesOf(
       const connector = spec.connector ?? def?.connector;
       const qty = spec.qty ?? (spec.connector === undefined ? def?.qty : undefined) ?? 1;
       let through: Roles["through"];
+      let body: HardwareUse | undefined;
       if (typeof spec.through === "string") {
         const { bar, end } = spec.through.includes(".")
           ? endOf(spec.through)
@@ -99,7 +132,7 @@ function rolesOf(
         // has no box to bear on; stage 3 reports it, and it is not counted.
         const found = ctx.items.item(spec.through.body);
         const recipe = found.ok && found.item.kind === "connector" && found.item.recipe === true;
-        if (found.ok && !recipe) out.hardware.push({ item: found.id, opt: {}, qty: 1, source: id });
+        if (found.ok && !recipe) body = { item: found.id, opt: {}, qty: 1, source: id };
       }
       let spacer = 0;
       if (spec.spacer_mm !== undefined) spacer = ctx.num(id, "spacer_mm", spec.spacer_mm) ?? 0;
@@ -114,6 +147,7 @@ function rolesOf(
         units: qty * spec.ends.length,
         ...(connector ? { connector } : {}),
         spacer,
+        ...(body ? { body } : {}),
       };
     }
     case "splice":
@@ -153,6 +187,218 @@ function rolesOf(
   }
 }
 
+/** The connector item a reference names, with its catalog (the home of its own references). */
+function connectorItem(
+  ctx: Ctx,
+  ref: string | undefined,
+): { id: string; item: ConnectorItem; home: string } | undefined {
+  if (!ref) return undefined;
+  const found = ctx.items.item(ref);
+  if (!found.ok || found.item.kind !== "connector") return undefined;
+  return { id: found.id, item: found.item, home: found.id.slice(0, found.id.indexOf(":")) };
+}
+
+/** The joined bars, through bar first. */
+function joinedBars(roles: Roles): DerivedBar[] {
+  const out: DerivedBar[] = [];
+  if (roles.through) out.push(roles.through.bar);
+  for (const b of roles.butting) if (!out.includes(b.bar)) out.push(b.bar);
+  return out;
+}
+
+/**
+ * Each mount's fastener set: the one keyed by the system of a joined bar the connector fits, the
+ * through bar's first (a butt does not place its connector in v1, so which bar a mount bears on
+ * is not known). `missing` lists the mounts with sets but none for those systems.
+ */
+function chooseSets(
+  item: ConnectorItem,
+  home: string,
+  roles: Roles,
+): { sets: ChosenSet[]; systems: string[]; missing: number[] } {
+  const fits = item.fits.map((s) => fullRef(s, home));
+  const systems = [
+    ...new Set(
+      joinedBars(roles)
+        .map((b) => b.placed.item.system)
+        .filter((s): s is string => s !== undefined && fits.includes(s)),
+    ),
+  ];
+  const sets: ChosenSet[] = [];
+  const missing: number[] = [];
+  for (const [mi, m] of (item.mounts ?? []).entries()) {
+    if (!m.fasteners || systems.length === 0) continue;
+    const keyed = Object.entries(m.fasteners).map(([k, v]) => [fullRef(k, home), v] as const);
+    const set = systems.map((s) => keyed.find(([k]) => k === s)).find((x) => x !== undefined);
+    if (!set) missing.push(mi);
+    else sets.push({ mount: mi, holes: (m.holes?.length ?? 0) || 1, entries: set[1] });
+  }
+  return { sets, systems, missing };
+}
+
+/**
+ * What a connector passes through its through bar (acceptance gap A9): a sleeve a chosen fastener
+ * set puts in its bore, or a hole it requires through it (a `through-hole` with no depth). The
+ * fastener that runs in them is a through-fastener, which can also hold an end on the far side.
+ */
+function passesThrough(
+  item: ConnectorItem,
+  sets: readonly ChosenSet[],
+  bar: string,
+): string | undefined {
+  if (sets.some((s) => s.entries.some((e) => "inside" in e))) {
+    return `sets a sleeve in ${bar}'s bore`;
+  }
+  const hole = (item.requires ?? []).some(
+    (r) => r.op === "through-hole" && r.on !== "butting" && r.depth_mm === undefined,
+  );
+  return hole ? `requires a hole through ${bar}` : undefined;
+}
+
+/** A bar's centre line: through its placed box's centre, along its axis (§4.5). */
+function centreLine(b: DerivedBar): { C: V3; t: V3 } {
+  const p = b.placed;
+  const [cx, cy] = boxCentre(p.box);
+  return { C: add(p.A, add(scale(p.frame.x, cx), scale(p.frame.y, cy))), t: p.frame.t };
+}
+
+/**
+ * Why two butting ends cannot share one through-fastener, or undefined when they can: their
+ * centre lines coincide (parallel within `tol.ang`, within `tol.len` of each other) and they bear
+ * on the through bar from opposite sides.
+ */
+function notCoaxial(
+  held: { bar: DerivedBar; end: "a" | "b" },
+  holder: { bar: DerivedBar; end: "a" | "b" },
+  through: string,
+): string | undefined {
+  const h = centreLine(held.bar);
+  const k = centreLine(holder.bar);
+  const name = `${holder.bar.placed.id}.${holder.end}`;
+  const angle = Math.min(angleDeg(h.t, k.t), angleDeg(h.t, neg(k.t)));
+  if (angle > TOL.ang) return `its centre line is at ${angle.toFixed(2)}° to ${name}'s`;
+  const d = sub(h.C, k.C);
+  const off = norm(addScaled(d, k.t, -dot(d, k.t)));
+  if (off > TOL.len) return `its centre line is ${mm(off)} off ${name}'s`;
+  if (dot(held.bar.ends[held.end].normal, holder.bar.ends[holder.end].normal) > 0) {
+    return `it bears on ${through} from the same side as ${name}`;
+  }
+  return undefined;
+}
+
+/**
+ * The butts held by another butt's through-fastener (`held_by`; acceptance gap A9): one stud
+ * through the through bar, in one sleeve, into a bush in each of two coaxial ends on opposite
+ * sides. The holder is a butt through the same bar's side, held by nothing itself, whose
+ * connector passes a through-fastener (`passesThrough`); each held end is coaxial with one of its
+ * ends, on the far side, and each of those holds one end. The held butt's own connector passes
+ * nothing through the bar: the through-fastener is the holder's. Anything else is a `connection`
+ * error on the held butt, which then holds its through bar in no way of its own.
+ */
+function heldBy(ctx: Ctx, joints: ReadonlyMap<string, Joint>): Map<string, Held> {
+  const out = new Map<string, Held>();
+  /** A holder's end → the end it holds, with that end's butt. */
+  const holding = new Map<string, { end: string; by: string }>();
+  for (const [id, j] of joints) {
+    if (j.spec.type !== "butt" || j.spec.held_by === undefined) continue;
+    const by = j.spec.held_by;
+    const report = !j.copy;
+    const fail = (message: string, code = "connection"): void => {
+      if (report) ctx.d.error(code, id, `held_by: ${message}`, { field: "held_by", refs: [by] });
+      out.set(id, { by, ok: false });
+    };
+    const h = joints.get(by);
+    if (!h) {
+      fail(`no connection ${by}`, "ref");
+      continue;
+    }
+    if (by === id) {
+      fail("a butt cannot be held by its own through-fastener");
+      continue;
+    }
+    if (h.spec.type !== "butt") {
+      fail(`${by} is a ${h.spec.type}; only a butt's through-fastener holds ends through a bar`);
+      continue;
+    }
+    if (h.spec.held_by !== undefined) {
+      fail(
+        `${by} is itself held by ${h.spec.held_by}; name the butt whose connector passes the through-fastener`,
+      );
+      continue;
+    }
+    const side = (s: Connection & { type: "butt" }) =>
+      typeof s.through === "string" && !s.through.includes(".") ? s.through : undefined;
+    const bar = side(j.spec);
+    if (bar === undefined) {
+      fail("a through-fastener passes a bar's side; this butt is through a bar's end or a body");
+      continue;
+    }
+    if (side(h.spec) !== bar) {
+      fail(`${by} does not butt through the side of ${bar}, so no fastener of it passes ${bar}`);
+      continue;
+    }
+    if (!j.roles.through || !h.roles.through) {
+      out.set(id, { by, ok: false }); // the bar did not derive: its own error stands
+      continue;
+    }
+    const holder = connectorItem(ctx, h.roles.connector);
+    if (!holder) {
+      fail(`${by} has no connector to pass a through-fastener through ${bar}`);
+      continue;
+    }
+    const passes = passesThrough(
+      holder.item,
+      chooseSets(holder.item, holder.home, h.roles).sets,
+      bar,
+    );
+    if (!passes) {
+      fail(
+        `${by}'s connector ${holder.id} passes nothing through ${bar} (no sleeve in its bore, no hole through it), so it holds no end on the far side`,
+      );
+      continue;
+    }
+    const own = connectorItem(ctx, j.roles.connector);
+    const ownPasses =
+      own && passesThrough(own.item, chooseSets(own.item, own.home, j.roles).sets, bar);
+    if (own && ownPasses) {
+      fail(
+        `held by ${by}'s through-fastener, its own connector passes none; ${own.id} ${ownPasses}`,
+      );
+      continue;
+    }
+    const problems: string[] = [];
+    const matched = new Map<string, string>();
+    for (const e of j.roles.butting) {
+      const ref = `${e.bar.placed.id}.${e.end}`;
+      const tries = h.roles.butting.map((k) => ({ k, why: notCoaxial(e, k, bar) }));
+      const hit = tries.find((x) => x.why === undefined);
+      if (!hit) {
+        const first = tries[0];
+        problems.push(
+          first ? `${ref} is not coaxial with ${by}'s end: ${first.why}` : `${by} has no end`,
+        );
+        continue;
+      }
+      const end = `${hit.k.bar.placed.id}.${hit.k.end}`;
+      const key = `${by}|${end}`;
+      const taken = holding.get(key);
+      const other = taken ? `${taken.end} (${taken.by})` : matched.get(key);
+      if (other) {
+        problems.push(`${end}'s through-fastener already holds ${other}; it holds one end`);
+        continue;
+      }
+      matched.set(key, ref);
+    }
+    if (problems.length > 0) {
+      fail(problems.join("; "));
+      continue;
+    }
+    for (const [key, end] of matched) holding.set(key, { end, by: id });
+    out.set(id, { by, ok: true });
+  }
+  return out;
+}
+
 class ConnectorGen {
   private readonly ctx: Ctx;
   private readonly id: string;
@@ -160,15 +406,25 @@ class ConnectorGen {
   private readonly roles: Roles;
   private readonly report: boolean;
   private readonly out: GenOut;
+  private readonly held: Held | undefined;
   private sleeves = 0;
 
-  constructor(ctx: Ctx, id: string, spec: Connection, roles: Roles, report: boolean, out: GenOut) {
+  constructor(
+    ctx: Ctx,
+    id: string,
+    spec: Connection,
+    roles: Roles,
+    report: boolean,
+    out: GenOut,
+    held?: Held,
+  ) {
     this.ctx = ctx;
     this.id = id;
     this.spec = spec;
     this.roles = roles;
     this.report = report;
     this.out = out;
+    this.held = held;
   }
 
   private error(code: string, message: string, extra: { field?: string; refs?: string[] } = {}) {
@@ -195,7 +451,7 @@ class ConnectorGen {
     const item = found.item;
     const home = found.id.slice(0, found.id.indexOf(":"));
     const fits = item.fits.map((s) => fullRef(s, home));
-    const sets = this.spec.type === "face" ? [] : this.chosenSets(item, home, fits);
+    const sets = this.spec.type === "face" ? [] : this.chosenSets(item, home);
     this.fit(found.id, fits, sets);
     if (this.spec.type === "face") return;
     this.mounts(sets, home);
@@ -203,51 +459,25 @@ class ConnectorGen {
     if (item.splice) this.splice(item, home);
   }
 
-  /** The joined bars, through bar first. */
-  private joined(): DerivedBar[] {
-    const out: DerivedBar[] = [];
-    if (this.roles.through) out.push(this.roles.through.bar);
-    for (const b of this.roles.butting) if (!out.includes(b.bar)) out.push(b.bar);
-    return out;
-  }
-
-  /**
-   * Each mount's fastener set: the one keyed by the system of a joined bar the connector fits,
-   * the through bar's first (a butt does not place its connector in v1, so which bar a mount
-   * bears on is not known). A mount with sets but none for those systems is a `fit` error; with
-   * no joined bar of a fitted system there is nothing to choose by, and `fit` names the bars.
-   */
-  private chosenSets(item: ConnectorItem, home: string, fits: readonly string[]): ChosenSet[] {
-    const systems = [
-      ...new Set(
-        this.joined()
-          .map((b) => b.placed.item.system)
-          .filter((s): s is string => s !== undefined && fits.includes(s)),
-      ),
-    ];
-    const out: ChosenSet[] = [];
-    for (const [mi, m] of (item.mounts ?? []).entries()) {
-      if (!m.fasteners || systems.length === 0) continue;
-      const sets = Object.entries(m.fasteners).map(([k, v]) => [fullRef(k, home), v] as const);
-      const set = systems.map((s) => sets.find(([k]) => k === s)).find((x) => x !== undefined);
-      if (!set) {
-        this.error("fit", `mounts[${mi}] has no fastener set for ${systems.join(" or ")}`, {
-          field: "connector",
-        });
-        continue;
-      }
-      out.push({ mount: mi, holes: (m.holes?.length ?? 0) || 1, entries: set[1] });
+  /** Each mount's fastener set (`chooseSets`); a mount with none for the joined systems is a `fit` error. */
+  private chosenSets(item: ConnectorItem, home: string): ChosenSet[] {
+    const { sets, systems, missing } = chooseSets(item, home, this.roles);
+    for (const mi of missing) {
+      this.error("fit", `mounts[${mi}] has no fastener set for ${systems.join(" or ")}`, {
+        field: "connector",
+      });
     }
-    return out;
+    return sets;
   }
 
   /**
-   * Fit by role (§3.4; acceptance gap A1). A butting bar is held at its end by its system, which
-   * the connector must fit. The through bar is held by its system, or by its bore: a chosen
-   * fastener set puts a sleeve in it (`inside: "through"`), and the sleeve then needs it hollow.
-   * A bar held neither way is a `fit` error naming it. The through bar is judged only when some
-   * joined bar has a system the connector fits: with none, no fastener set can apply, every
-   * butting bar has failed, and that is the error to fix.
+   * Fit by role (§3.4; acceptance gaps A1, A9). A butting bar is held at its end by its system,
+   * which the connector must fit. The through bar is held by its system, by its bore (a chosen
+   * fastener set puts a sleeve in it, `inside: "through"`, and the sleeve then needs it hollow),
+   * or by another butt's through-fastener (`held_by`). A bar held no way is a `fit` error naming
+   * it. The through bar is judged only when some joined bar has a system the connector fits: with
+   * none, no fastener set can apply, every butting bar has failed, and that is the error to fix.
+   * A `held_by` that fails has its own error, so the through bar is not judged again.
    */
   private fit(itemId: string, fits: readonly string[], sets: readonly ChosenSet[]): void {
     const through = this.roles.through?.bar;
@@ -256,12 +486,14 @@ class ConnectorGen {
       const sys = b.placed.item.system;
       return sys !== undefined && fits.includes(sys);
     };
-    const anyFitted = this.joined().some(fitted);
-    for (const b of this.joined()) {
+    const joined = joinedBars(this.roles);
+    const anyFitted = joined.some(fitted);
+    for (const b of joined) {
       if (fitted(b)) continue;
       const sys = b.placed.item.system;
       const isThrough = b === through;
       if (isThrough && sleeved) continue; // held by its bore; the sleeve checks it is hollow
+      if (isThrough && this.held) continue; // held by another butt's through-fastener
       if (isThrough && !anyFitted) continue;
       const what = sys ? `a ${sys}` : `${b.placed.item.id}, of no system`;
       const how = isThrough ? ", and no fastener set of the connector sets a sleeve in it" : "";
@@ -335,6 +567,23 @@ class ConnectorGen {
     };
   }
 
+  /**
+   * A requirement's positions (acceptance gap A8): its `at_mm`, or the x and y of the holes of the
+   * mount `at_holes` names, in the butting bar's section from its box centre. A requirement with
+   * none makes one op at the centre or at the joint point, as before: `[undefined]`.
+   */
+  private positions(
+    item: ConnectorItem,
+    req: NonNullable<ConnectorItem["requires"]>[number],
+  ): Pos[] {
+    if (req.at_mm) return req.at_mm.map((p) => [p[0], p[1]] as const);
+    if (req.at_holes !== undefined) {
+      const holes = item.mounts?.[req.at_holes]?.holes ?? [];
+      if (holes.length > 0) return holes.map((h) => [h.at_mm[0], h.at_mm[1]] as const);
+    }
+    return [undefined];
+  }
+
   private requires(item: ConnectorItem): void {
     const { roles, id } = this;
     for (const [ri, req] of (item.requires ?? []).entries()) {
@@ -353,6 +602,8 @@ class ConnectorGen {
         });
         continue;
       }
+      const at = this.positions(item, req);
+      const placed = at[0] !== undefined;
       const hole = {
         ...(d !== undefined ? { d } : {}),
         ...(req.thread && req.op !== "end-tap" ? { thread: req.thread } : {}),
@@ -362,13 +613,7 @@ class ConnectorGen {
         if (target === "butting") {
           for (const { bar, end } of roles.butting) {
             if (req.op === "end-tap") {
-              bar.ops.push({
-                op: "end-tap",
-                from: end,
-                thread: req.thread as string,
-                ...(depth !== undefined ? { depth } : {}),
-                by: id,
-              });
+              this.endTaps(bar, end, at, req.thread as string, depth, field);
             } else {
               const s = end === "a" ? bar.lengths.sa + fromEnd : bar.lengths.sb - fromEnd;
               bar.ops.push({ op: "hole", face: "+y", from: "a", at: s, ...hole, by: id });
@@ -398,16 +643,43 @@ class ConnectorGen {
             );
             continue;
           }
-          through.bar.ops.push({
-            op: "end-tap",
-            from: through.end,
-            thread: req.thread as string,
-            ...(depth !== undefined ? { depth } : {}),
-            by: id,
-          });
+          // Unplaced, it stays at the end's centre (acceptance-gaps decision 14); placed, it
+          // stands where each position on the butting bar meets the end face.
+          if (!placed) {
+            through.bar.ops.push({
+              op: "end-tap",
+              from: through.end,
+              thread: req.thread as string,
+              ...(depth !== undefined ? { depth } : {}),
+              by: id,
+            });
+            continue;
+          }
+          for (const b of roles.butting) {
+            for (const p of at) {
+              const off = this.endPlace(through.bar, through.end, b.bar, b.end, p);
+              if (!off) continue;
+              through.bar.ops.push({
+                op: "end-tap",
+                from: through.end,
+                ...(off.centre ? {} : { off: off.off }),
+                thread: req.thread as string,
+                ...(depth !== undefined ? { depth } : {}),
+                by: id,
+              });
+            }
+          }
           continue;
         }
         if (roles.base) {
+          if (placed) {
+            this.error(
+              "connection",
+              `${field}: positions are read at a butting end; a pivot's base takes none in v1`,
+              { field: "connector" },
+            );
+            continue;
+          }
           through.bar.ops.push({
             op: "hole",
             face: roles.base.face,
@@ -420,32 +692,114 @@ class ConnectorGen {
           continue;
         }
         for (const b of roles.butting) {
-          const op = through.end
-            ? this.endHole(through.bar, through.end, b.bar, b.end, hole)
-            : this.jointHole(through.bar, b.bar, b.end, hole);
-          if (op) through.bar.ops.push(op);
+          const off: string[] = [];
+          for (const p of at) {
+            const op = through.end
+              ? this.endHole(through.bar, through.end, b.bar, b.end, hole, p)
+              : this.jointHole(through.bar, b.bar, b.end, hole, p, off);
+            if (op) through.bar.ops.push(op);
+          }
+          if (off.length > 0) {
+            this.error(
+              "connection",
+              `${field}: ${off.length === 1 ? "a position" : `${off.length} positions`} at ${b.bar.placed.id}.${b.end} meet ${through.bar.placed.id} off its face: ${off.join(", ")}`,
+              { field: "connector", refs: [through.bar.placed.id] },
+            );
+          }
         }
       }
     }
   }
 
   /**
-   * Where a butting bar meets the through bar: its centre line's crossing with its end plane,
-   * moved by the spacer along the end's normal onto the through bar's face (decision 29).
+   * End taps in a bar's end, one at each position (at the centre where there is none). A position
+   * off the end's section box is a `connection` error, one for the positions of one requirement
+   * at one end.
    */
-  private jointPoint(butting: DerivedBar, end: "a" | "b"): V3 {
+  private endTaps(
+    bar: DerivedBar,
+    end: "a" | "b",
+    at: readonly Pos[],
+    thread: string,
+    depth: number | undefined,
+    field: string,
+  ): void {
+    const off: string[] = [];
+    for (const p of at) {
+      if (p && !onEnd(bar, p)) {
+        off.push(posText(p));
+        continue;
+      }
+      const centre = !p || (zero(p[0]) && zero(p[1]));
+      bar.ops.push({
+        op: "end-tap",
+        from: end,
+        ...(centre ? {} : { off: [zero(p[0]) ? 0 : p[0], zero(p[1]) ? 0 : p[1]] as const }),
+        thread,
+        ...(depth !== undefined ? { depth } : {}),
+        by: this.id,
+      });
+    }
+    if (off.length > 0) {
+      const box = bar.placed.box;
+      this.error(
+        "connection",
+        `${field}: ${off.length === 1 ? "a position falls" : `${off.length} positions fall`} off ${bar.placed.id}.${end}'s end (${mm(box.x1 - box.x0)} x ${mm(box.y1 - box.y0)}): ${off.join(", ")}`,
+        { field: "connector", refs: [bar.placed.id] },
+      );
+    }
+  }
+
+  /**
+   * Where a butting bar meets the through bar: the line along its axis at position `p` of its
+   * section (its centre line when none), crossing its end plane, moved by the spacer along the
+   * end's normal onto the through bar's face (decision 29; acceptance gap A8).
+   */
+  private jointPoint(butting: DerivedBar, end: "a" | "b", p?: Pos): V3 {
     const e = butting.ends[end];
     const bar = butting.placed;
     const [cx, cy] = boxCentre(bar.box);
-    const C = add(bar.A, add(scale(bar.frame.x, cx), scale(bar.frame.y, cy)));
+    const C = add(
+      bar.A,
+      add(scale(bar.frame.x, cx + (p?.[0] ?? 0)), scale(bar.frame.y, cy + (p?.[1] ?? 0))),
+    );
     const lambda = dot(sub(e.point, C), e.normal) / dot(bar.frame.t, e.normal);
     return addScaled(addScaled(C, bar.frame.t, lambda), e.normal, this.roles.spacer);
   }
 
   /**
+   * Where a butting bar's position meets the through bar's end face, as an offset from the
+   * section's box centre (G17; acceptance gaps A4, A8). It must fall on the end face.
+   */
+  private endPlace(
+    through: DerivedBar,
+    throughEnd: "a" | "b",
+    butting: DerivedBar,
+    end: "a" | "b",
+    p?: Pos,
+  ): { off: readonly [number, number]; centre: boolean } | undefined {
+    const T = through.placed;
+    const Q = this.jointPoint(butting, end, p);
+    const [cx, cy] = boxCentre(T.box);
+    const x = dot(sub(Q, T.A), T.frame.x) - cx;
+    const y = dot(sub(Q, T.A), T.frame.y) - cy;
+    const hx = (T.box.x1 - T.box.x0) / 2;
+    const hy = (T.box.y1 - T.box.y0) / 2;
+    if (Math.abs(x) > hx - TOL.len || Math.abs(y) > hy - TOL.len) {
+      const at = p ? ` at ${posText(p)}` : "";
+      this.error(
+        "connection",
+        `${butting.placed.id}.${end}${at} meets ${T.id}.${throughEnd} off its end face: no place for the hole`,
+        { refs: [T.id] },
+      );
+      return undefined;
+    }
+    return { off: [zero(x) ? 0 : x, zero(y) ? 0 : y], centre: zero(x) && zero(y) };
+  }
+
+  /**
    * A hole in the through bar's end face, for a butt that bears on that end (G17; acceptance gap
-   * A4): along the through bar's axis, where the butting bar meets the end face, given as its
-   * offset from the section's box centre. It must fall on the end face.
+   * A4): along the through bar's axis, where the butting bar meets the end face.
    */
   private endHole(
     through: DerivedBar,
@@ -453,41 +807,33 @@ class ConnectorGen {
     butting: DerivedBar,
     end: "a" | "b",
     fields: Pick<HoleOp, "d" | "thread" | "depth">,
+    p?: Pos,
   ): EndHoleOp | undefined {
-    const T = through.placed;
-    const Q = this.jointPoint(butting, end);
-    const [cx, cy] = boxCentre(T.box);
-    const x = dot(sub(Q, T.A), T.frame.x) - cx;
-    const y = dot(sub(Q, T.A), T.frame.y) - cy;
-    const hx = (T.box.x1 - T.box.x0) / 2;
-    const hy = (T.box.y1 - T.box.y0) / 2;
-    if (Math.abs(x) > hx - TOL.len || Math.abs(y) > hy - TOL.len) {
-      this.error(
-        "connection",
-        `${butting.placed.id}.${end} meets ${T.id}.${throughEnd} off its end face: no place for the hole`,
-        { refs: [T.id] },
-      );
-      return undefined;
-    }
-    const zero = (v: number) => Math.abs(v) <= TOL.len / 100;
+    const place = this.endPlace(through, throughEnd, butting, end, p);
+    if (!place) return undefined;
     return {
       op: "end-hole",
       from: throughEnd,
-      ...(zero(x) && zero(y) ? {} : { off: [zero(x) ? 0 : x, zero(y) ? 0 : y] as const }),
+      ...(place.centre ? {} : { off: place.off }),
       ...fields,
       by: this.id,
     };
   }
 
-  /** A hole in the through bar where a butting bar's centre line meets its face. */
+  /**
+   * A hole in the through bar where a butting bar's centre line (or the line at a position of its
+   * section) meets its face. A position whose line misses the face is collected in `off`.
+   */
   private jointHole(
     through: DerivedBar,
     butting: DerivedBar,
     end: "a" | "b",
     fields: Pick<HoleOp, "d" | "thread" | "depth">,
+    p: Pos,
+    off: string[],
   ): HoleOp | undefined {
     const e = butting.ends[end];
-    const Q = this.jointPoint(butting, end);
+    const Q = this.jointPoint(butting, end, p);
     const T = through.placed;
     const face = (["+x", "-x", "+y", "-y"] as const).find(
       (f) => angleDeg(facePlane(T, f).n, neg(e.normal)) <= TOL.ang,
@@ -503,6 +849,16 @@ class ConnectorGen {
     const fl = faceLocal(T.box, face);
     const u = face === "+x" || face === "-x" ? T.frame.y : T.frame.x;
     const across = dot(sub(Q, onBar(T, s, fl.at[0], fl.at[1])), u);
+    if (p) {
+      // A position may carry the hole off the face, across it or past the bar's cut ends.
+      const half =
+        face === "+x" || face === "-x" ? (T.box.y1 - T.box.y0) / 2 : (T.box.x1 - T.box.x0) / 2;
+      const { sa, sb } = through.lengths;
+      if (Math.abs(across) > half - TOL.len || s < sa + TOL.len || s > sb - TOL.len) {
+        off.push(posText(p));
+        return undefined;
+      }
+    }
     return {
       op: "hole",
       face,
@@ -514,7 +870,11 @@ class ConnectorGen {
     };
   }
 
-  /** A splice's parts, and its tap in both spliced ends (§3.4). */
+  /**
+   * A splice's parts, and its taps in both spliced ends (§3.4): one core per stud, at the
+   * positions its item gives (`at_mm`, acceptance gap A8), else each at the centre, where more
+   * than one coincide (a `machining` error, `duplicateOps`).
+   */
   private splice(item: ConnectorItem, home: string): void {
     const sp = item.splice as NonNullable<ConnectorItem["splice"]>;
     for (const p of sp.parts) {
@@ -527,16 +887,33 @@ class ConnectorGen {
     }
     if (!sp.tap) return;
     const depth = sp.tap_depth_mm === undefined ? undefined : num(sp.tap_depth_mm);
+    const at: Pos[] = sp.at_mm
+      ? sp.at_mm.map((p) => [p[0], p[1]] as const)
+      : Array.from({ length: spliceStuds(this.ctx, sp, home) }, () => undefined);
     for (const { bar, end } of this.roles.butting) {
-      bar.ops.push({
-        op: "end-tap",
-        from: end,
-        thread: sp.tap,
-        ...(depth !== undefined ? { depth } : {}),
-        by: this.id,
-      });
+      this.endTaps(bar, end, at, sp.tap, depth, "connector splice");
     }
   }
+}
+
+/** A splice's studs (its parts that are fasteners of subtype `stud`, by qty), at least one. */
+function spliceStuds(ctx: Ctx, sp: NonNullable<ConnectorItem["splice"]>, home: string): number {
+  let n = 0;
+  for (const p of sp.parts) {
+    const found = ctx.items.item(fullRef(p.item, home));
+    if (found.ok && found.item.kind === "fastener" && found.item.subtype === "stud") n += p.qty;
+  }
+  return Math.max(n, 1);
+}
+
+const zero = (v: number) => Math.abs(v) <= TOL.len / 100;
+
+/** Whether a position lies inside a bar's end, its section box less `tol.len`. */
+function onEnd(b: DerivedBar, p: readonly [number, number]): boolean {
+  const box = b.placed.box;
+  const hx = (box.x1 - box.x0) / 2;
+  const hy = (box.y1 - box.y0) / 2;
+  return Math.abs(p[0]) <= hx - TOL.len && Math.abs(p[1]) <= hy - TOL.len;
 }
 
 /** A hollow bar's inside depth along a direction across it, through its centre. */

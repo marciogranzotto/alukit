@@ -1,0 +1,201 @@
+{
+  "case": "G34",
+  "rule": "a connector's machining takes positions: a requirement at the mount's holes or at offsets in the joint's plane, and a splice's taps at the cores its item gives, each at its own place (§3.4, §5.3)",
+  "design": "an 80x80 b1 along +X with four cores at (±20, ±20); an 80x80 post b2 butting on its top face with J4 (an M16 tap in the post's end and a Ø9 hole through b1 at each of its mount's four holes, a bush in each), and a post b3 spliced on b2 with four M16 studs, one in each core. b1 600.00 with four Ø9 holes on face +y at 280.00 and 320.00 from end a, 20.00 either side of its centre line; b2 460.00 with four M16 taps in each end, at x and y ±20.00 from the centre; b3 500.00 with four in end a; four bushes and four studs; no error. Positions written out as offsets: the same. Each requirement written four times with no positions: the four holes and the four taps coincide, a machining error on b1 and on b2. A splice with four studs and no positions for their cores: four taps at the centre of each end, a machining error on b2 and on b3. J4 on 40x40 posts: its taps fall off the post's end, a connection error, and b1's four holes stand",
+  "expect": {
+    "lines": {
+      "test-stud:TS80": [
+        {
+          "count": 1,
+          "cut_mm": 600,
+          "machining": [
+            "Ø9.00 hole 280.00 mm from end a on face +y, -20.00 across",
+            "Ø9.00 hole 280.00 mm from end a on face +y, 20.00 across",
+            "Ø9.00 hole 320.00 mm from end a on face +y, -20.00 across",
+            "Ø9.00 hole 320.00 mm from end a on face +y, 20.00 across"
+          ]
+        },
+        {
+          "count": 1,
+          "cut_mm": 500,
+          "machining": [
+            "tap M16 in end a, at x -20.00, y -20.00 from the centre",
+            "tap M16 in end a, at x -20.00, y 20.00 from the centre",
+            "tap M16 in end a, at x 20.00, y -20.00 from the centre",
+            "tap M16 in end a, at x 20.00, y 20.00 from the centre"
+          ]
+        },
+        {
+          "count": 1,
+          "cut_mm": 460,
+          "machining": [
+            "tap M16 in end a, at x -20.00, y -20.00 from the centre",
+            "tap M16 in end a, at x -20.00, y 20.00 from the centre",
+            "tap M16 in end a, at x 20.00, y -20.00 from the centre",
+            "tap M16 in end a, at x 20.00, y 20.00 from the centre",
+            "tap M16 in end b, at x -20.00, y -20.00 from the centre",
+            "tap M16 in end b, at x -20.00, y 20.00 from the centre",
+            "tap M16 in end b, at x 20.00, y -20.00 from the centre",
+            "tap M16 in end b, at x 20.00, y 20.00 from the centre"
+          ]
+        }
+      ]
+    },
+    "ops": {
+      "b1": [
+        { "op": "hole", "face": "+y", "from": "a", "at": 280, "across": -20, "d": 9, "by": "c1" },
+        { "op": "hole", "face": "+y", "from": "a", "at": 320, "across": -20, "d": 9, "by": "c1" },
+        { "op": "hole", "face": "+y", "from": "a", "at": 280, "across": 20, "d": 9, "by": "c1" },
+        { "op": "hole", "face": "+y", "from": "a", "at": 320, "across": 20, "d": 9, "by": "c1" }
+      ],
+      "b2": [
+        { "op": "end-tap", "from": "a", "off": [-20, -20], "thread": "M16", "by": "c1" },
+        { "op": "end-tap", "from": "a", "off": [20, -20], "thread": "M16", "by": "c1" },
+        { "op": "end-tap", "from": "a", "off": [-20, 20], "thread": "M16", "by": "c1" },
+        { "op": "end-tap", "from": "a", "off": [20, 20], "thread": "M16", "by": "c1" },
+        { "op": "end-tap", "from": "b", "off": [-20, -20], "thread": "M16", "by": "c2" },
+        { "op": "end-tap", "from": "b", "off": [20, -20], "thread": "M16", "by": "c2" },
+        { "op": "end-tap", "from": "b", "off": [-20, 20], "thread": "M16", "by": "c2" },
+        { "op": "end-tap", "from": "b", "off": [20, 20], "thread": "M16", "by": "c2" }
+      ],
+      "b3": [
+        { "op": "end-tap", "from": "a", "off": [-20, -20], "thread": "M16", "by": "c2" },
+        { "op": "end-tap", "from": "a", "off": [20, -20], "thread": "M16", "by": "c2" },
+        { "op": "end-tap", "from": "a", "off": [-20, 20], "thread": "M16", "by": "c2" },
+        { "op": "end-tap", "from": "a", "off": [20, 20], "thread": "M16", "by": "c2" }
+      ]
+    },
+    "hardware": { "test-stud:BUSH-M16-M8": 4, "test-stud:STUD-M16x60": 4 },
+    "recipes": { "test-stud:J4": 1, "test-stud:SPLICE4": 1 },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "positions written out as offsets",
+      "patch": { "connections": { "c1": { "connector": "test-stud:J4-AT" } } },
+      "expect": {
+        "ops": {
+          "b1": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 280,
+              "across": -20,
+              "d": 9,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 320,
+              "across": -20,
+              "d": 9,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 280,
+              "across": 20,
+              "d": 9,
+              "by": "c1"
+            },
+            { "op": "hole", "face": "+y", "from": "a", "at": 320, "across": 20, "d": 9, "by": "c1" }
+          ]
+        },
+        "hardware": { "test-stud:BUSH-M16-M8": 4, "test-stud:STUD-M16x60": 4 },
+        "recipes": { "test-stud:J4-AT": 1, "test-stud:SPLICE4": 1 },
+        "errors": []
+      }
+    },
+    {
+      "name": "each requirement written four times with no positions",
+      "patch": { "connections": { "c1": { "connector": "test-stud:J4-STACKED" } } },
+      "expect": {
+        "ops": {
+          "b1": [
+            { "op": "hole", "face": "+y", "from": "a", "at": 300, "d": 9, "by": "c1" },
+            { "op": "hole", "face": "+y", "from": "a", "at": 300, "d": 9, "by": "c1" },
+            { "op": "hole", "face": "+y", "from": "a", "at": 300, "d": 9, "by": "c1" },
+            { "op": "hole", "face": "+y", "from": "a", "at": 300, "d": 9, "by": "c1" }
+          ]
+        },
+        "recipes": { "test-stud:J4-STACKED": 1, "test-stud:SPLICE4": 1 },
+        "errors": [
+          { "code": "machining", "entity": "b1", "refs": ["c1"] },
+          { "code": "machining", "entity": "b2", "refs": ["c1"] }
+        ]
+      }
+    },
+    {
+      "name": "a splice with four studs and no positions for their cores",
+      "patch": { "connections": { "c2": { "connector": "test-stud:SPLICE4-C" } } },
+      "expect": {
+        "ops": {
+          "b3": [
+            { "op": "end-tap", "from": "a", "thread": "M16", "by": "c2" },
+            { "op": "end-tap", "from": "a", "thread": "M16", "by": "c2" },
+            { "op": "end-tap", "from": "a", "thread": "M16", "by": "c2" },
+            { "op": "end-tap", "from": "a", "thread": "M16", "by": "c2" }
+          ]
+        },
+        "hardware": { "test-stud:BUSH-M16-M8": 4, "test-stud:STUD-M16x60": 4 },
+        "recipes": { "test-stud:J4": 1, "test-stud:SPLICE4-C": 1 },
+        "errors": [
+          { "code": "machining", "entity": "b2", "refs": ["c2"] },
+          { "code": "machining", "entity": "b3", "refs": ["c2"] }
+        ]
+      }
+    },
+    {
+      "name": "J4 on 40x40 posts",
+      "patch": {
+        "bars": { "b2": { "item": "test-stud:TS40C" }, "b3": { "item": "test-stud:TS40C" } },
+        "connections": { "c2": { "connector": null } }
+      },
+      "expect": {
+        "lines": {
+          "test-stud:TS40C": [{ "count": 1, "cut_mm": 500 }, { "count": 1, "cut_mm": 460 }]
+        },
+        "ops": {
+          "b1": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 280,
+              "across": -20,
+              "d": 9,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 320,
+              "across": -20,
+              "d": 9,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 280,
+              "across": 20,
+              "d": 9,
+              "by": "c1"
+            },
+            { "op": "hole", "face": "+y", "from": "a", "at": 320, "across": 20, "d": 9, "by": "c1" }
+          ],
+          "b2": []
+        },
+        "recipes": { "test-stud:J4": 1 },
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b2"] }]
+      }
+    }
+  ]
+}

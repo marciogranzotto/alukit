@@ -171,6 +171,9 @@ function structural(kind: Kind, id: string, v: unknown, c: Collect): void {
             if (!(isObject(at) && "pos" in at)) c.point(at, "through/at");
           }
           c.member(x.ends, ["ends"], 1, true);
+          // Held by another butt's through-fastener (acceptance gap A9): without it, its ends
+          // are not held through the bar.
+          c.whole(x.held_by, "held_by");
           break;
         case "miter":
         case "splice":

@@ -45,10 +45,14 @@ export interface HoleMachining {
   cbore?: { d_mm: number; depth_mm: number };
 }
 
-/** A tapped hole in an end, along the axis (§5.3: "tap M8 at end a"). */
+/**
+ * A tapped hole in an end, along the axis (§5.3: "tap M8 at end a"): at the end's centre, or
+ * `off_mm` from the section's box centre in its x and y (acceptance gap A8).
+ */
 export interface EndTapMachining {
   op: "end-tap";
   from: "a" | "b";
+  off_mm?: [number, number];
   thread: string;
   depth_mm?: number;
 }
@@ -203,9 +207,11 @@ function longPoints(b: DerivedBar): { a: number; b: number; corners: V3[] } {
 function machiningOf(b: DerivedBar, lp: { a: number; b: number }): Machining[] {
   return b.ops.map((op): Machining => {
     if (op.op === "end-tap") {
+      const off = op.off ? ([q(op.off[0]), q(op.off[1])] as [number, number]) : undefined;
       return {
         op: "end-tap",
         from: op.from,
+        ...(off && (off[0] !== 0 || off[1] !== 0) ? { off_mm: off } : {}),
         thread: op.thread,
         ...(op.depth !== undefined ? { depth_mm: q(op.depth) } : {}),
       };
@@ -259,7 +265,8 @@ type Oriented = Pick<Piece, "ends" | "machining" | "rail" | "span">;
 /**
  * The piece turned end for end, a rotation about local y: t and x reverse, y stays. The ends
  * swap and a mitre changes sign; a hole's named end swaps, a `±x` face becomes the other, and an
- * offset across a `±y` face (along local x) changes sign. A rail's end distances swap.
+ * offset across a `±y` face (along local x) changes sign, as does an end tap's or end hole's x.
+ * A rail's end distances swap.
  */
 function flipped(p: Oriented): Oriented {
   const flipEnd = (e: EndCut): EndCut =>
@@ -269,8 +276,7 @@ function flipped(p: Oriented): Oriented {
     span: p.span,
     ends: { a: flipEnd(p.ends.b), b: flipEnd(p.ends.a) },
     machining: p.machining.map((m): Machining => {
-      if (m.op === "end-tap") return { ...m, from: other(m.from) };
-      if (m.op === "end-hole") {
+      if (m.op === "end-tap" || m.op === "end-hole") {
         // In the end face, local x reverses and y stays.
         return {
           ...m,
@@ -310,14 +316,21 @@ function cmpVal(a: number | string | undefined, b: number | string | undefined):
 const OP_RANK: Record<Machining["op"], number> = { "end-tap": 0, "end-hole": 1, hole: 2 };
 
 /**
- * Machining as listed: from end a first; at each end its tap, then its end holes by place and
- * size, then holes by position, face, offset across and size.
+ * Machining as listed: from end a first; at each end its taps by place, then its end holes by
+ * place and size, then holes by position, face, offset across and size.
  */
 function cmpMachining(a: Machining, b: Machining): number {
   const c = cmpVal(a.from, b.from) || cmpVal(OP_RANK[a.op], OP_RANK[b.op]);
   if (c !== 0) return c;
   if (a.op === "end-tap" || b.op === "end-tap") {
-    return cmpVal(a.thread, b.thread) || cmpVal(a.depth_mm, b.depth_mm);
+    const ta = a as EndTapMachining;
+    const tb = b as EndTapMachining;
+    return (
+      cmpVal(ta.off_mm?.[0] ?? 0, tb.off_mm?.[0] ?? 0) ||
+      cmpVal(ta.off_mm?.[1] ?? 0, tb.off_mm?.[1] ?? 0) ||
+      cmpVal(a.thread, b.thread) ||
+      cmpVal(a.depth_mm, b.depth_mm)
+    );
   }
   if (a.op === "end-hole" || b.op === "end-hole") {
     const ea = a as EndHoleMachining;
@@ -354,7 +367,9 @@ type Key = (string | number)[];
  * written from a.
  */
 function physical(m: Machining, span: number): Key {
-  if (m.op === "end-tap") return [0, m.from, m.thread, m.depth_mm ?? -1];
+  if (m.op === "end-tap") {
+    return [0, m.from, m.off_mm?.[0] ?? 0, m.off_mm?.[1] ?? 0, m.thread, m.depth_mm ?? -1];
+  }
   if (m.op === "end-hole") {
     return [
       0.5,
