@@ -1,6 +1,6 @@
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { checkCatalog } from "#catalog/check.ts";
 import { openCatalog } from "#catalog/open.ts";
 import { ConnectorItem } from "#catalog/schema/items.ts";
@@ -9,8 +9,8 @@ import { referrers } from "../commands/refs.ts";
 import { rewriteEntity } from "../commands/rewrite.ts";
 import { cutList } from "../cutlist/cutlist.ts";
 import { machiningText } from "../cutlist/format.ts";
-import type { ItemSource } from "../items.ts";
-import { openProject } from "../project/open.ts";
+import { catalogItems, type ItemSource } from "../items.ts";
+import { openLiveCatalogs, openProject } from "../project/open.ts";
 import { editJson, FIXTURES, mergePatch, scratchFixtures } from "../testing.ts";
 import { derive } from "./derive.ts";
 import { derivedJson } from "./output.ts";
@@ -463,4 +463,98 @@ describe("an end tap on its section's cores (§5.5)", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+});
+
+describe("an end tap on a Forseti 80x80's cores, the corner holes among them (§3.5, §5.5)", () => {
+  // PF40-03B, the 80x80 básico (p. 20): four Ø13.7 (M16) cores at (±20, ±20), an open channel at
+  // the centre, and four Ø5 (M6) corner holes 4.5 in from both faces, at (±35.5, ±35.5). PF40-03,
+  // the reforçado (p. 21), has the same cores, read from its vector outline.
+  let items: ItemSource;
+  beforeAll(async () => {
+    const live = await openLiveCatalogs(FIXTURES, {
+      catalogs: ["forseti", "./catalogs/test", "./catalogs/ref-test", "./catalogs/test-stud"],
+    });
+    expect(live.diagnostics).toEqual([]);
+    const base = catalogItems(live.set);
+    const bush = base.item("test-stud:BUSH-END");
+    if (!bush.ok) throw new Error(bush.message);
+    items = {
+      ...base,
+      item: (ref) => {
+        const m = /^test-stud:TAP_(M\d+)_(-?[\d.]+)_(-?[\d.]+)$/.exec(ref);
+        if (!m) return base.item(ref);
+        // A connector for Forseti's base 40 that taps the butting end at one place, and does
+        // nothing else.
+        const item = ConnectorItem.parse({
+          ...bush.item,
+          fits: ["forseti:s40-c8"],
+          mounts: undefined,
+          requires: [
+            { op: "end-tap", on: "butting", thread: m[1], at_mm: [[Number(m[2]), Number(m[3])]] },
+          ],
+        });
+        return { ok: true, id: ref, item };
+      },
+    };
+  });
+
+  /** b2, an 80x80 post, butts through b1 with a tap at (x, y) in its end a. */
+  const post = (section: string, thread: string, x: number, y: number) => {
+    const bar = { item: `forseti:${section}`, opt: { finish: "anodised" } };
+    return derive(
+      {
+        schema: "alukit.project/1",
+        bars: {
+          b1: { ...bar, a: [0, 0, 0], b: [600, 0, 0] },
+          b2: { ...bar, a: [300, 0, 0], b: [300, 0, 500] },
+        },
+        connections: {
+          c1: {
+            type: "butt",
+            through: "b1",
+            ends: ["b2.a"],
+            connector: `test-stud:TAP_${thread}_${x}_${y}`,
+          },
+        },
+      },
+      items,
+    );
+  };
+  const machining = (d: ReturnType<typeof derive>) =>
+    d.diagnostics
+      .filter((x) => x.code === "machining")
+      .map((x) => [x.severity, x.entity, x.message]);
+
+  for (const section of ["PF40-03B", "PF40-03"]) {
+    it(`${section}: an M6 in a corner hole passes, and an M16 on a module core`, () => {
+      // M6's tap drill, 6 − 1 = 5.00, is the Ø5 hole; M16's, 14.00, drills the Ø13.7 core up 0.30.
+      const corner = post(section, "M6", 35.5, -35.5);
+      expect(corner.diagnostics.filter((x) => x.severity === "error")).toEqual([]);
+      expect(machining(corner)).toEqual([]);
+      expect(machining(post(section, "M16", -20, 20))).toEqual([]);
+    });
+
+    it(`${section}: an M16 in a corner hole is a machining error: on a core, and not fitting it`, () => {
+      // M16's tap drill, 14.00, is 9.00 over the Ø5 hole, more than its 2.00 pitch.
+      expect(machining(post(section, "M16", 35.5, -35.5))).toEqual([
+        [
+          "error",
+          "b2",
+          `the tap M16 in end a at x 35.50, y -35.50 from the centre (c1) does not fit the Ø5.00 core of forseti:${section} it is on: M16's tap drill, 14.00, would drill it up 9.00, more than one pitch (2.00)`,
+        ],
+      ]);
+    });
+
+    it(`${section}: any tap at the centre is a machining error: it has no core there`, () => {
+      for (const thread of ["M6", "M16"]) {
+        expect(machining(post(section, thread, 0, 0))).toEqual([
+          [
+            "error",
+            "b2",
+            `the tap ${thread} in end a at the centre (c1) is on no core of forseti:${section}; the nearest, 28.28 off: x -20.00, y -20.00; x -20.00, y 20.00; x 20.00, y -20.00; x 20.00, y 20.00 from the centre`,
+          ],
+        ]);
+      }
+    });
+  }
 });
