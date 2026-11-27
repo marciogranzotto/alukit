@@ -77,6 +77,7 @@ function opJson(o: ResolvedOp) {
     return {
       op: o.op,
       from: o.from,
+      ...(o.off ? { off_mm: [len(o.off[0]), len(o.off[1])] } : {}),
       thread: o.thread,
       ...(o.depth !== undefined ? { depth_mm: len(o.depth) } : {}),
       by: o.by,

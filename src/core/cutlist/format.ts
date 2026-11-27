@@ -20,7 +20,10 @@ export function endText(e: EndCut): string {
 
 export function machiningText(m: Machining): string {
   const depth = m.depth_mm === undefined ? "" : `, ${mm(m.depth_mm)} deep`;
-  if (m.op === "end-tap") return `tap ${m.thread} in end ${m.from}${depth}`;
+  if (m.op === "end-tap") {
+    const at = m.off_mm ? `, at x ${mm(m.off_mm[0])}, y ${mm(m.off_mm[1])} from the centre` : "";
+    return `tap ${m.thread} in end ${m.from}${at}${depth}`;
+  }
   const what = m.thread ? `tap ${m.thread}` : `Ø${m.d_mm === undefined ? "?" : mm(m.d_mm)} hole`;
   if (m.op === "end-hole") {
     const at = m.off_mm

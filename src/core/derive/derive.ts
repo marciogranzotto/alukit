@@ -53,10 +53,15 @@ export interface HoleOp {
   by?: string;
 }
 
-/** A tapped hole in a bar's end, along its axis: a splice stud's, an end connector's (§5.1). */
+/**
+ * A tapped hole in a bar's end, along its axis: a splice stud's, an end connector's (§5.1). At the
+ * end's centre, or `off` it where the connector or splice gives a position (acceptance gap A8).
+ */
 export interface EndTapOp {
   op: "end-tap";
   from: "a" | "b";
+  /** In the section's x and y, from its box centre; absent at the centre. */
+  off?: readonly [number, number];
   thread: string;
   depth?: number;
   by: string;

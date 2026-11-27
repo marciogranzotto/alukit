@@ -13,6 +13,7 @@ import {
   SourceRef,
   Thread,
   Valued,
+  Vec2,
   Vec3,
 } from "./common.ts";
 
@@ -142,6 +143,34 @@ const Hole = z.strictObject({
 const BODY_FIELDS = ["mass_kg", "bbox_mm", "datums", "body", "mesh"] as const;
 
 /**
+ * Positions in the joint's plane (acceptance gap A8): `[x, y]` in the section of the bar the
+ * connector sits on (a butting bar, a spliced bar), from its box centre, as the cut list states an
+ * end tap's or an end hole's place. One op, or one splice tap, at each.
+ */
+const Positions = z
+  .array(Vec2)
+  .min(1)
+  .describe(
+    "[x, y] in the section of the bar the connector sits on, from its box centre; one op at each",
+  );
+
+const Requirement = z.strictObject({
+  op: z.enum(["end-tap", "access-hole", "through-hole", "counterbore"]),
+  on: z.enum(["butting", "through", "each"]).describe("which joined bar is machined"),
+  thread: Thread.optional(),
+  d_mm: Valued.optional(),
+  depth_mm: Valued.optional(),
+  from_end_mm: Valued.optional(),
+  at_mm: Positions.optional(),
+  at_holes: z
+    .int()
+    .min(0)
+    .optional()
+    .describe("one op at each hole of this mount (its index), at the hole's x and y"),
+  note: z.string().optional(),
+});
+
+/**
  * Brackets, plates, end connectors, cubes, gussets, hinges and splices. A **joint recipe**
  * (`recipe: true`; acceptance gap A2) is a connector with no body of its own: studs in tapped
  * cores, a screw into a core, a bush and a sleeve. Its fastener sets, sleeves, splice parts and
@@ -187,20 +216,7 @@ export const ConnectorItem = z
         }),
       )
       .optional(),
-    requires: z
-      .array(
-        z.strictObject({
-          op: z.enum(["end-tap", "access-hole", "through-hole", "counterbore"]),
-          on: z.enum(["butting", "through", "each"]).describe("which joined bar is machined"),
-          thread: Thread.optional(),
-          d_mm: Valued.optional(),
-          depth_mm: Valued.optional(),
-          from_end_mm: Valued.optional(),
-          note: z.string().optional(),
-        }),
-      )
-      .optional()
-      .describe("machining on the joined bars"),
+    requires: z.array(Requirement).optional().describe("machining on the joined bars"),
     spacer_mm: Valued.optional(),
     body: z.strictObject({ size_mm: Vec3 }).optional().describe("a cube's box"),
     pivot: z
@@ -216,21 +232,83 @@ export const ConnectorItem = z
         parts: z.array(ItemQty).min(1).describe("the stud or plates"),
         tap: Thread.optional().describe("the tap each bar end needs"),
         tap_depth_mm: Valued.optional(),
+        at_mm: Positions.optional().describe(
+          "each stud's core, [x, y] in the spliced bars' section from its box centre: one tap at each, in both ends",
+        ),
       })
       .optional(),
   })
   .superRefine((c, ctx) => {
-    if (c.recipe !== true) return;
-    for (const f of BODY_FIELDS) {
-      if (c[f] !== undefined) {
-        ctx.addIssue({
-          code: "custom",
-          path: [f],
-          message: `a joint recipe has no body of its own, so no ${f}`,
-        });
+    if (c.recipe === true) {
+      for (const f of BODY_FIELDS) {
+        if (c[f] !== undefined) {
+          ctx.addIssue({
+            code: "custom",
+            path: [f],
+            message: `a joint recipe has no body of its own, so no ${f}`,
+          });
+        }
       }
     }
+    c.requires?.forEach((r, i) => {
+      requirementIssues(c, r, i, ctx);
+    });
+    if (c.splice?.at_mm && !c.splice.tap) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["splice", "at_mm"],
+        message: "positions place the splice's taps: give its tap",
+      });
+    }
   });
+
+/**
+ * A requirement's positions (acceptance gap A8). They lie in the joint's plane, so they place an
+ * end tap and a hole in the through bar, not a hole in the butting bar's side (that one stands
+ * `from_end_mm` in from its end). `at_holes` names a mount with holes whose plane is the joint's:
+ * square to the connector's z, so each hole's x and y are its place.
+ */
+function requirementIssues(
+  c: { mounts?: { plane: { normal: readonly number[] }; holes?: unknown[] }[] },
+  r: z.infer<typeof Requirement>,
+  i: number,
+  ctx: z.RefinementCtx,
+): void {
+  const path = ["requires", i];
+  if (r.at_mm && r.at_holes !== undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "at_holes"],
+      message: "give at_mm or at_holes, not both",
+    });
+  }
+  const placed = r.at_mm !== undefined || r.at_holes !== undefined;
+  if (placed && r.op !== "end-tap" && r.on !== "through") {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, r.at_mm ? "at_mm" : "at_holes"],
+      message: `positions lie in the joint's plane; a ${r.op} on the butting bar's side stands from_end_mm in from its end and takes none`,
+    });
+  }
+  if (r.at_holes === undefined) return;
+  const m = c.mounts?.[r.at_holes];
+  if (!m?.holes || m.holes.length === 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "at_holes"],
+      message: m ? `mounts[${r.at_holes}] has no holes` : `no mounts[${r.at_holes}]`,
+    });
+    return;
+  }
+  const [nx = 0, ny = 0, nz = 0] = m.plane.normal;
+  if (nx !== 0 || ny !== 0 || nz === 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "at_holes"],
+      message: `mounts[${r.at_holes}]'s plane is not square to the connector's z, so its holes' x and y are no place in the joint's plane`,
+    });
+  }
+}
 
 export const FastenerItem = z.strictObject({
   ...envelope("fastener"),

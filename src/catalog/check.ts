@@ -184,6 +184,28 @@ export function checkCatalog(
           });
         }
       });
+      // A splice taps one core per stud (acceptance gap A8): its positions number its studs.
+      const sp = it.splice;
+      if (sp?.tap) {
+        let studs = 0;
+        for (const p of sp.parts) {
+          const part = set.get("item", p.item, li.catalog)?.value.item;
+          if (part?.kind === "fastener" && part.subtype === "stud") studs += p.qty;
+        }
+        const taps = sp.at_mm?.length ?? 1;
+        if (studs > 0 && studs !== taps) {
+          add(
+            sp.at_mm ? "error" : "warn",
+            "splice-taps",
+            sp.at_mm
+              ? `${studs} studs and ${taps} tap positions: give one core for each stud in at_mm`
+              : `${studs} studs and no positions: their taps coincide at the centre; give each stud's core in at_mm`,
+            li.files,
+            li.id,
+            "splice/at_mm",
+          );
+        }
+      }
     }
     if (it.kind === "carriage") {
       const sys = set.get("system", it.rail_system, li.catalog);

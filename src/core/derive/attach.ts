@@ -1,6 +1,7 @@
 import { compareIds } from "../ids.ts";
 import type { Ctx } from "./context.ts";
 import type { DerivedBar } from "./derive.ts";
+import { duplicateOps } from "./duplicates.ts";
 import { type GenOut, generateFaces } from "./fastenings.ts";
 import { connectorHardware } from "./hardware.ts";
 import { placeParts } from "./parts.ts";
@@ -14,7 +15,8 @@ import type { DerivedPart, FaceResult, HardwareUse, PlacedRun, StockPiece } from
  * 2. parts and part patterns, which may measure from cut ends and stand at rail holes (§4.7);
  * 3. face contacts, stations, fasteners and sleeves cut from bar stock, grips, and the holes a
  *    `bolt` or `screw` needs (§4.5);
- * 4. connectors' hardware sets by system and their machining (§3.4).
+ * 4. connectors' hardware sets by system and their machining (§3.4);
+ * 5. coincident machining: one op made twice at one place is an error (acceptance gap A8).
  *
  * Generated machining is appended to each bar's `ops`, after the holes a person wrote, in a fixed
  * order: by connection id, then station. Nothing here moves a bar or changes a cut.
@@ -38,6 +40,7 @@ export function attach(
   const out: GenOut = { fastenings: new Map(), pieces: [], hardware: [], recipes: [] };
   generateFaces(ctx, bars, runs, parts, out);
   connectorHardware(ctx, bars, out);
+  duplicateOps(ctx, bars);
   return {
     parts,
     fastenings: out.fastenings,
