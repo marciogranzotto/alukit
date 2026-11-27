@@ -1,0 +1,8 @@
+{
+  "schema": "alukit.section/1",
+  "id": "FB-80x8",
+  "fidelity": "parametric",
+  "props_ok": true,
+  "generator": "flat",
+  "params": { "b_mm": 80, "t_mm": 8 }
+}

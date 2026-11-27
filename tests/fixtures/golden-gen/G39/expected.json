@@ -1,0 +1,112 @@
+{
+  "case": "G39",
+  "rule": "a blind fastener drills its maker's hole in every layer it passes and only the near wall of a hollow last layer, and its grip, the layers to that wall's inner face, must lie in its maker's range (§4.5, §5.5)",
+  "design": "A 12 mm plate on a 200 x 100 x 4.75 RHS's top wall, two blind M8 bolts (hole Ø14, grip 3 to 22) 150 apart: a Ø14 hole through the plate and a Ø14 hole 4.75 deep in the RHS's top wall at each, none in its bottom wall; the grip 12 + 4.75 = 16.75. A 25 mm plate grips 29.75, past 22: a fit error. On a solid 8 mm flat, through it: 20.00. A fastener that states no hole: a face error and no hole",
+  "expect": {
+    "ops": {
+      "b1": [
+        { "op": "hole", "face": "+y", "from": "a", "at": 150, "d": 14, "depth": 4.75, "by": "c1" },
+        { "op": "hole", "face": "+y", "from": "a", "at": 300, "d": 14, "depth": 4.75, "by": "c1" }
+      ],
+      "b2": [
+        { "op": "hole", "face": "+y", "from": "a", "at": 50, "d": 14, "by": "c1" },
+        { "op": "hole", "face": "+y", "from": "a", "at": 200, "d": 14, "by": "c1" }
+      ]
+    },
+    "fastenings": { "c1": { "count": 2, "grip_mm": [16.75] } },
+    "hardware": { "test-x:BLIND-M8": 2 },
+    "seats": {
+      "c1": [
+        {
+          "k": 1,
+          "side": "head",
+          "item": "test-x:BLIND-M8",
+          "on": "b2 +y",
+          "d_in_mm": 14,
+          "d_out_mm": 20,
+          "bearing_pct": 100
+        },
+        {
+          "k": 2,
+          "side": "head",
+          "item": "test-x:BLIND-M8",
+          "on": "b2 +y",
+          "d_in_mm": 14,
+          "d_out_mm": 20,
+          "bearing_pct": 100
+        }
+      ]
+    },
+    "warnings": [],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "a 25 mm plate",
+      "patch": {
+        "bars": { "b2": { "item": "test-x:FB-120x25", "a": [100, 0, 112.5], "b": [350, 0, 112.5] } }
+      },
+      "expect": {
+        "ops": {
+          "b1": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 150,
+              "d": 14,
+              "depth": 4.75,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 300,
+              "d": 14,
+              "depth": 4.75,
+              "by": "c1"
+            }
+          ],
+          "b2": [
+            { "op": "hole", "face": "+y", "from": "a", "at": 50, "d": 14, "by": "c1" },
+            { "op": "hole", "face": "+y", "from": "a", "at": 200, "d": 14, "by": "c1" }
+          ]
+        },
+        "fastenings": { "c1": { "count": 2, "grip_mm": [29.75] } },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "on a solid flat",
+      "patch": {
+        "bars": {
+          "b1": { "item": "test-x:FB-80x8" },
+          "b2": { "a": [100, 0, 10], "b": [350, 0, 10] }
+        }
+      },
+      "expect": {
+        "ops": {
+          "b1": [
+            { "op": "hole", "face": "+y", "from": "a", "at": 150, "d": 14, "by": "c1" },
+            { "op": "hole", "face": "+y", "from": "a", "at": 300, "d": 14, "by": "c1" }
+          ],
+          "b2": [
+            { "op": "hole", "face": "+y", "from": "a", "at": 50, "d": 14, "by": "c1" },
+            { "op": "hole", "face": "+y", "from": "a", "at": 200, "d": 14, "by": "c1" }
+          ]
+        },
+        "fastenings": { "c1": { "count": 2, "grip_mm": [20] } },
+        "errors": []
+      }
+    },
+    {
+      "name": "no hole stated",
+      "patch": { "connections": { "c1": { "fastener": "test-x:BLIND-M8-NH" } } },
+      "expect": {
+        "ops": { "b1": [], "b2": [] },
+        "errors": [{ "code": "face", "entity": "c1" }]
+      }
+    }
+  ]
+}

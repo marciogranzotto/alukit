@@ -508,7 +508,8 @@ function FaceFields() {
         <label
           title={
             "none: resting; bolt: through every layer; T-nut: into the last layer's groove; " +
-            "screw: tapped into the last layer"
+            "screw: tapped into the last layer; blind: set from one side, gripping in the " +
+            "last layer's bore or behind it"
           }
         >
           fastening{" "}
@@ -523,6 +524,7 @@ function FaceFields() {
             <option value="bolt">bolt</option>
             <option value="tnut">T-nut</option>
             <option value="screw">screw</option>
+            <option value="blind">blind</option>
           </select>
         </label>
       </div>

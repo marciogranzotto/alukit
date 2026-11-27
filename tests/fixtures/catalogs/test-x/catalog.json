@@ -1,0 +1,65 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-x",
+  "name": "Joint gaps test catalog (synthetic)",
+  "vendor": "test-x-vendor",
+  "currency": "BRL",
+  "prov": {
+    "src": "est",
+    "note": "synthetic test data for blind fasteners, a butt's stack, a plain bar held by a screw and head seats, not a vendor's"
+  },
+  "items": {
+    "FB-120x12": {
+      "kind": "bar",
+      "name": "Flat bar 120x12",
+      "shape": "flat",
+      "section": "FB-120x12",
+      "material": "test:s235"
+    },
+    "FB-120x25": {
+      "kind": "bar",
+      "name": "Flat bar 120x25",
+      "shape": "flat",
+      "section": "FB-120x25",
+      "material": "test:s235"
+    },
+    "FB-80x8": {
+      "kind": "bar",
+      "name": "Aluminium flat 80x8",
+      "shape": "flat",
+      "section": "FB-80x8",
+      "material": "test:al-6063-t5"
+    },
+    "BLOCK-80": {
+      "kind": "bar",
+      "name": "Aluminium square bar 80x80",
+      "shape": "flat",
+      "section": "BLOCK-80",
+      "material": "test:al-6063-t5"
+    },
+    "TUBE-60x3": {
+      "kind": "bar",
+      "name": "Tube 60x3",
+      "shape": "tube",
+      "section": "TUBE-60x3",
+      "material": "test:s235"
+    },
+    "BLIND-M8": {
+      "kind": "fastener",
+      "subtype": "bolt",
+      "name": "Blind expansion bolt M8, gripping 3 to 22 in a Ø14 hole (synthetic)",
+      "thread": "M8",
+      "hole_mm": 14,
+      "grip_min_mm": 3,
+      "grip_max_mm": 22,
+      "dims": { "dw_mm": 20 }
+    },
+    "BLIND-M8-NH": {
+      "kind": "fastener",
+      "subtype": "bolt",
+      "name": "Blind expansion bolt M8 that states no hole (synthetic)",
+      "thread": "M8",
+      "dims": { "dw_mm": 20 }
+    }
+  }
+}

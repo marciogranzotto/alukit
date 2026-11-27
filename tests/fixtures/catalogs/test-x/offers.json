@@ -1,0 +1,43 @@
+{
+  "schema": "alukit.offers/1",
+  "offers": {
+    "FB-120x12-6000": {
+      "item": "FB-120x12",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 21000, "per": "bar", "read": "2026-11-27", "src": "src" }
+    },
+    "FB-120x25-6000": {
+      "item": "FB-120x25",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 42000, "per": "bar", "read": "2026-11-27", "src": "src" }
+    },
+    "FB-80x8-3000": {
+      "item": "FB-80x8",
+      "supplier": "test-alu",
+      "sale": { "mode": "stock", "length_mm": 3000 },
+      "price": { "regular_minor": 9000, "per": "bar", "read": "2026-11-27", "src": "src" }
+    },
+    "BLOCK-80-1000": {
+      "item": "BLOCK-80",
+      "supplier": "test-alu",
+      "sale": { "mode": "stock", "length_mm": 1000 },
+      "price": { "regular_minor": 26000, "per": "bar", "read": "2026-11-27", "src": "src" }
+    },
+    "TUBE-60x3-6000": {
+      "item": "TUBE-60x3",
+      "supplier": "test-steel",
+      "sale": { "mode": "stock", "length_mm": 6000 },
+      "price": { "regular_minor": 16000, "per": "bar", "read": "2026-11-27", "src": "src" }
+    },
+    "BLIND-M8": {
+      "item": "BLIND-M8",
+      "price": { "regular_minor": 1800, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "BLIND-M8-NH": {
+      "item": "BLIND-M8-NH",
+      "price": { "regular_minor": 1800, "per": "unit", "read": "2026-11-27", "src": "src" }
+    }
+  }
+}

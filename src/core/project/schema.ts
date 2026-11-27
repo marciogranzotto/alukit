@@ -298,7 +298,11 @@ export const FaceConn = z.strictObject({
     .describe("layers, head to nut"),
   gaps_mm: z.array(Expr).optional(),
   faces: z.array(z.tuple([Face, Face])).optional(),
-  fastening: z.enum(["none", "bolt", "tnut", "screw"]),
+  fastening: z
+    .enum(["none", "bolt", "tnut", "screw", "blind"])
+    .describe(
+      "none: resting; bolt: through every layer; tnut: into the last layer's groove; screw: tapped into the last layer; blind: a blind fastener, gripping inside the last layer's bore (its near wall drilled only) or behind it",
+    ),
   fastener: z
     .union([ItemRef, z.strictObject({ bar: ItemRef, len_mm: Expr })])
     .optional()

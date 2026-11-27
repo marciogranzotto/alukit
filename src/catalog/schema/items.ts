@@ -5,6 +5,7 @@ import {
   DatumName,
   ItemQty,
   type Kind,
+  num,
   OptionName,
   OptionValue,
   Prov,
@@ -313,42 +314,59 @@ function requirementIssues(
   }
 }
 
-export const FastenerItem = z.strictObject({
-  ...envelope("fastener"),
-  subtype: z.enum([
-    "screw",
-    "bolt",
-    "nut",
-    "washer",
-    "t-nut",
-    "hammer-screw",
-    "rivet-nut",
-    "rivet",
-    "insert",
-    "pin",
-    "stud",
-    "anchor",
-    "other",
-  ]),
-  thread: Thread.optional(),
-  length_mm: Valued.optional(),
-  head: z.string().min(1).optional().describe("the DIN or ISO standard, e.g. ISO 4762"),
-  class: z.string().min(1).optional().describe("strength class, e.g. 8.8, A2-70"),
-  torque_Nm: Valued.optional(),
-  groove: Ref.optional().describe("T-nuts and hammer screws: the groove type"),
-  insertion: z.enum(["drop-in", "slide-in"]).optional(),
-  fits: z
-    .array(Ref)
-    .min(1)
-    .optional()
-    .describe("T-nuts and hammer screws: the systems whose grooves they fit"),
-  dims: Quantities.optional().describe(
-    "published dimensions under the standard's letters: d1_mm, d2_mm, h_mm, s_mm, m_mm …",
-  ),
-  mass_kg: Valued.optional(),
-  bbox_mm: Bbox3.optional(),
-  datums: Datums.optional(),
-});
+export const FastenerItem = z
+  .strictObject({
+    ...envelope("fastener"),
+    subtype: z.enum([
+      "screw",
+      "bolt",
+      "nut",
+      "washer",
+      "t-nut",
+      "hammer-screw",
+      "rivet-nut",
+      "rivet",
+      "insert",
+      "pin",
+      "stud",
+      "anchor",
+      "other",
+    ]),
+    thread: Thread.optional(),
+    length_mm: Valued.optional(),
+    head: z.string().min(1).optional().describe("the DIN or ISO standard, e.g. ISO 4762"),
+    class: z.string().min(1).optional().describe("strength class, e.g. 8.8, A2-70"),
+    torque_Nm: Valued.optional(),
+    groove: Ref.optional().describe("T-nuts and hammer screws: the groove type"),
+    insertion: z.enum(["drop-in", "slide-in"]).optional(),
+    fits: z
+      .array(Ref)
+      .min(1)
+      .optional()
+      .describe("T-nuts and hammer screws: the systems whose grooves they fit"),
+    dims: Quantities.optional().describe(
+      "published dimensions under the standard's letters: d1_mm, d2_mm, h_mm, s_mm, m_mm …",
+    ),
+    hole_mm: Valued.optional().describe(
+      "a blind fastener's hole, as its maker states it: a blind fastening drills it in every layer it passes (after the alternative frame's acceptance)",
+    ),
+    grip_min_mm: Valued.optional().describe(
+      "the least thickness of material a blind fastener grips, as its maker states it: a blind fastening's grip must not be less",
+    ),
+    grip_max_mm: Valued.optional().describe(
+      "the greatest thickness of material a blind fastener grips, as its maker states it: a blind fastening's grip must not be more",
+    ),
+    mass_kg: Valued.optional(),
+    bbox_mm: Bbox3.optional(),
+    datums: Datums.optional(),
+  })
+  .refine(
+    (f) =>
+      f.grip_min_mm === undefined ||
+      f.grip_max_mm === undefined ||
+      num(f.grip_min_mm) <= num(f.grip_max_mm),
+    { message: "a grip range needs grip_min_mm <= grip_max_mm", path: ["grip_max_mm"] },
+  );
 
 export const CarriageItem = z.strictObject({
   ...envelope("carriage"),

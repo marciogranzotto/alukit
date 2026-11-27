@@ -765,7 +765,17 @@ class FaceGen {
       this.error("face", "a fastened face connection needs stations", { field: "stations" });
       return;
     }
-    const clearance = fastener.thread ? clearanceHole(fastener.thread) : undefined;
+    // A blind fastener (after the alternative frame's acceptance) is set from one side: its hole
+    // is its maker's, in every layer, and it grips inside the last layer's bore (its near wall
+    // drilled alone) or behind a solid last layer.
+    const blind =
+      spec.fastening === "blind" ? this.blindFastener(fastener, stack, layers) : undefined;
+    if (spec.fastening === "blind" && !blind) return;
+    const clearance = blind
+      ? blind.hole
+      : fastener.thread
+        ? clearanceHole(fastener.thread)
+        : undefined;
     let clearanceReported = false;
     const noClearance = () => {
       if (clearanceReported) return;
@@ -783,6 +793,9 @@ class FaceGen {
     const bearers = this.bearers(fastener, stack.hardware);
     const seatHole = clearance ?? (fastener.thread ? threadDiameter(fastener.thread) : undefined);
     const seatsAt: Seated[] = [];
+    /** A blind fastener's grip at each station, for its maker's range. */
+    const grips: { k: number; grip: number }[] = [];
+    let lastBody = "";
 
     let k = 0;
     let sleeveNo = 0;
@@ -796,12 +809,21 @@ class FaceGen {
       const n = layers.length;
       const last = walk[n - 1] as Walk;
       const depth = (w: Walk) => w.wx - w.we;
-      const counted = spec.fastening === "bolt" ? walk : walk.slice(0, n - 1);
+      // A blind fastener in a hollow last layer passes its near wall alone and grips in its bore.
+      const lastHollow = blind ? hollowOf(last.body) : undefined;
+      const nearWall = lastHollow && this.walls(last, lastHollow, at.P, axis)[0];
+      const counted =
+        spec.fastening === "bolt" || (blind && !nearWall) ? walk : walk.slice(0, n - 1);
       let grip = counted.reduce((s, w) => s + depth(w), 0) + gaps.reduce((s, g) => s + g, 0);
+      if (nearWall) grip += nearWall.to - nearWall.from;
       if (spec.fastening === "tnut") {
         const lip = this.tnut(last, at.P, axis, k, stack.tnuts);
         if (lip === undefined) continue;
         grip += lip;
+      }
+      if (blind) {
+        grips.push({ k, grip });
+        lastBody = last.body.id;
       }
 
       // Sleeves cut from bar stock, each in a hollow layer's bore, from its nut-side wall.
@@ -894,7 +916,7 @@ class FaceGen {
           exit: BodyFace | undefined;
           wall: boolean;
         }[] = hollow
-          ? this.walls(w, hollow, at.P, axis)
+          ? this.walls(w, hollow, at.P, axis).slice(0, blind && i === n - 1 ? 1 : 2)
           : [{ from: w.we, to: w.wx, entry: w.entry, exit: w.exit, wall: false }];
         for (const sg of segs) {
           const a = sg.from - w0;
@@ -966,6 +988,84 @@ class FaceGen {
       result.stations.push(station);
     }
     this.reportSeats(seatsAt);
+    if (blind?.grip) this.reportGrips(fastener.out.item, blind.grip, grips, lastBody);
+  }
+
+  /**
+   * A blind fastening's fastener (after the alternative frame's acceptance): a catalog fastener
+   * that states its hole (`hole_mm`), the hole its maker gives for it, since no clearance standard
+   * covers a blind fastener's sleeve; its grip range when it states one. No sleeve may lie in the
+   * last layer: its bore is where the fastener grips.
+   */
+  private blindFastener(
+    fastener: NonNullable<ReturnType<FaceGen["fastener"]>>,
+    stack: { sleeves: readonly StackSleeve[] },
+    layers: readonly Layer[],
+  ): { hole: number; grip?: { min: number; max: number } } | undefined {
+    const item = fastener.item;
+    if (!item) {
+      this.error(
+        "face",
+        `a blind fastening's fastener is a catalog fastener whose maker states its hole; ${fastener.out.item} is cut from bar stock`,
+        { field: "fastener" },
+      );
+      return undefined;
+    }
+    if (item.hole_mm === undefined) {
+      this.error(
+        "face",
+        `a blind fastening drills the hole its fastener's maker states, and ${fastener.out.item} gives none (hole_mm)`,
+        { field: "fastener" },
+      );
+      return undefined;
+    }
+    const last = layers[layers.length - 1] as Layer;
+    if (stack.sleeves.some((s) => s.layer === layers.length - 1)) {
+      this.error(
+        "face",
+        `a blind fastener grips inside its last layer ${last.ref}: no sleeve can sit in its bore`,
+        { field: "stack", refs: [last.ref] },
+      );
+      return undefined;
+    }
+    const min = item.grip_min_mm === undefined ? undefined : num(item.grip_min_mm);
+    const max = item.grip_max_mm === undefined ? undefined : num(item.grip_max_mm);
+    return {
+      hole: num(item.hole_mm),
+      ...(min !== undefined || max !== undefined
+        ? { grip: { min: min ?? 0, max: max ?? Number.POSITIVE_INFINITY } }
+        : {}),
+    };
+  }
+
+  /** A blind fastener whose grip lies outside its maker's range is a `fit` error, per grip. */
+  private reportGrips(
+    item: string,
+    range: { min: number; max: number },
+    grips: readonly { k: number; grip: number }[],
+    body: string,
+  ): void {
+    if (!this.report) return;
+    const groups = new Map<string, number[]>();
+    for (const g of grips) {
+      if (g.grip >= range.min - TOL.len && g.grip <= range.max + TOL.len) continue;
+      const key = fmt(g.grip);
+      groups.set(key, [...(groups.get(key) ?? []), g.k]);
+    }
+    const states =
+      range.max === Number.POSITIVE_INFINITY
+        ? `at least ${fmt(range.min)} mm`
+        : range.min === 0
+          ? `at most ${fmt(range.max)} mm`
+          : `${fmt(range.min)} to ${fmt(range.max)} mm`;
+    for (const [grip, ks] of groups) {
+      this.ctx.d.error(
+        "fit",
+        this.id,
+        `${ks.length === 1 ? "station" : "stations"} ${ks.join(", ")}: ${item} would grip ${grip} mm of material here, and its maker states ${states}`,
+        { refs: [body] },
+      );
+    }
   }
 
   /**
@@ -1102,6 +1202,8 @@ class FaceGen {
     | {
         out: { item: string; len?: number };
         thread?: string;
+        /** A catalog fastener's item. */
+        item?: FastenerItem;
         cut?: { item: string; opt: Readonly<Record<string, string>>; len: number };
       }
     | undefined {
@@ -1118,7 +1220,11 @@ class FaceGen {
         return undefined;
       }
       const thread = (found.item as { thread?: string }).thread;
-      return { out: { item: found.id }, ...(thread ? { thread } : {}) };
+      return {
+        out: { item: found.id },
+        ...(thread ? { thread } : {}),
+        ...(found.item.kind === "fastener" ? { item: found.item } : {}),
+      };
     }
     const found = ctx.items.item(f.bar);
     if (!found.ok || !found.bar) {

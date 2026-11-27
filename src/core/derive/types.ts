@@ -354,7 +354,7 @@ export interface HeadSeat {
 
 /** A face connection's contacts and fastenings (§4.5). */
 export interface FaceResult {
-  fastening: "none" | "bolt" | "tnut" | "screw";
+  fastening: "none" | "bolt" | "tnut" | "screw" | "blind";
   layers: string[];
   /** Each adjacent pair of layers: the faces in contact and their declared gap. */
   contacts: { faces: [string, string]; gap: number }[];
