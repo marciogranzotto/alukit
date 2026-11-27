@@ -4,7 +4,10 @@
   "name": "Open-section test catalog (synthetic)",
   "vendor": "test-open-vendor",
   "currency": "BRL",
-  "prov": { "src": "est", "note": "synthetic test data for face contacts on open sections (gap A3), not a vendor's" },
+  "prov": {
+    "src": "est",
+    "note": "synthetic test data for face contacts on open sections (gap A3), not a vendor's"
+  },
   "items": {
     "L-76.2x6.35": {
       "kind": "bar",

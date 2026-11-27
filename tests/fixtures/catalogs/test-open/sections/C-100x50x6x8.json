@@ -4,6 +4,15 @@
   "fidelity": "exact",
   "props_ok": true,
   "note": "synthetic: 100 tall, flanges 50 wide and 8 thick, web 6 thick on the -x side, open toward +x, sharp corners",
-  "outline": [[-25, -50], [25, -50], [25, -42], [-19, -42], [-19, 42], [25, 42], [25, 50], [-25, 50]],
+  "outline": [
+    [-25, -50],
+    [25, -50],
+    [25, -42],
+    [-19, -42],
+    [-19, 42],
+    [25, 42],
+    [25, 50],
+    [-25, 50]
+  ],
   "bbox_mm": [[-25, -50], [25, 50]]
 }
