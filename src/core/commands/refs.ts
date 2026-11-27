@@ -41,6 +41,11 @@ export interface Ref {
   how: "whole" | "member" | "expr";
   /** For a member: the list's path within `from`, and how short the list may become. */
   list?: { path: PathKey[]; min: number };
+  /**
+   * For a member that is an entry of a map keyed by a bar end (a connection's `hole_faces`, F12):
+   * the map's path within `from` and the entry's key. The map can always lose it.
+   */
+  entry?: { path: PathKey[]; key: string };
 }
 
 const ACCESSORS_WITH_IDS = new Set(["sec", "len", "cut", "pos", "dist"]);
@@ -118,6 +123,21 @@ class Collect {
     if (isObject(st)) this.whole(st.bar, `${field}/bar`);
   }
 
+  /** A map keyed by bar ends (`hole_faces`, F12): each entry names its end's bar, and can go. */
+  endKeys(map: unknown, path: PathKey[]): void {
+    if (!isObject(map)) return;
+    for (const key of Object.keys(map)) {
+      if (!/^b\d+\.[ab]$/.test(key)) continue;
+      this.out.push({
+        from: this.from,
+        field: pathText([...path, key]),
+        to: key.split(".")[0] as string,
+        how: "member",
+        entry: { path, key },
+      });
+    }
+  }
+
   point(p: unknown, field: string): void {
     if (typeof p === "string") this.whole(p, field);
     else if (isObject(p)) {
@@ -125,6 +145,29 @@ class Collect {
       if ("pivot" in p) this.whole(p.pivot, `${field}/pivot`);
     }
   }
+}
+
+/**
+ * An entity without one entry of a map keyed by a bar end (`Ref.entry`, F12); a map left empty
+ * goes too, so no empty field is written.
+ */
+export function withoutEntry(v: unknown, entry: NonNullable<Ref["entry"]>): unknown {
+  const at = (x: unknown, path: readonly PathKey[]): unknown => {
+    if (path.length === 0) {
+      if (!isObject(x)) return x;
+      const { [entry.key]: _, ...rest } = x;
+      return rest;
+    }
+    if (!isObject(x)) return x;
+    const [k, ...more] = path as [string, ...PathKey[]];
+    const inner = at(x[k], more);
+    if (isObject(inner) && Object.keys(inner).length === 0) {
+      const { [k]: _, ...rest } = x;
+      return rest;
+    }
+    return { ...x, [k]: inner };
+  };
+  return at(v, entry.path);
 }
 
 /** The references one entity holds, by kind. */
@@ -160,6 +203,8 @@ function structural(kind: Kind, id: string, v: unknown, c: Collect): void {
       break;
     case "connections": {
       const x = v as Record<string, unknown>;
+      // The faces named for side holes, per butting end (F12): an entry goes with its end.
+      if (x.type !== "face") c.endKeys(x.hole_faces, ["hole_faces"]);
       switch (x.type) {
         case "butt":
           if (typeof x.through === "string") {

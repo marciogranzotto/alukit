@@ -29,6 +29,13 @@ import type { DerivedPart } from "./types.ts";
  *
  * The members are the other bars and the placed parts with a box; a connector's body (a cube) and
  * the fasteners are not (a v1 limit).
+ *
+ * **When a member arrives** (after the decided frame's ninth run, F11). The tool turns through the
+ * mouth when the joint is made. A member placed after the frame's joints are made (a bar or a part
+ * with `after_assembly`, a wall the frame is set against, a panel fitted last; or a part on a
+ * station of such a bar, which cannot be there before its bar) is not there then; it stops the
+ * tool only afterwards, when the joint would be re-tightened. Each cover says whether its member
+ * arrives so (`later`); which joints it does not block is the joint's to say (`hardware.ts`).
  */
 
 /**
@@ -37,10 +44,14 @@ import type { DerivedPart } from "./types.ts";
  */
 export const ACCESS_MM = 30;
 
-/** A member over a mouth, and how much of the mouth its patch covers (0 to 1). */
+/**
+ * A member over a mouth, and how much of the mouth its patch covers (0 to 1); `later` when the
+ * member is placed after the frame's joints are made (F11).
+ */
 export interface Cover {
   id: string;
   share: number;
+  later?: true;
 }
 
 /** A convex prism of a member's body: its corners, its edges, and its box in world terms. */
@@ -148,8 +159,25 @@ export class Covers {
   }
 
   /**
+   * Whether a member (a bar or a placed part) is placed after the frame's joints are made (F11):
+   * its own `after_assembly`, or, for a part on a station, its bar's. A pattern's copy reads its
+   * template's, whose fields it copies.
+   */
+  later(id: string): boolean {
+    const spec = (map: ReadonlyMap<string, { spec: object }>) =>
+      (map.get(id) ?? map.get(id.slice(0, id.includes("@") ? id.indexOf("@") : id.length)))?.spec;
+    const own = (s: object | undefined) =>
+      s !== undefined && "after_assembly" in s && s.after_assembly === true;
+    if (this.bars.has(id)) return own(spec(this.ctx.bars));
+    const p = this.parts.get(id);
+    if (!p?.placed) return false;
+    return own(spec(this.ctx.parts)) || (p.bar !== undefined && this.later(p.bar));
+  }
+
+  /**
    * The members whose patch within `depth` of `bar`'s face reaches into the mouth of a hole `d`
-   * across centred at C (a point of the face's plane), in id order, with their shares.
+   * across centred at C (a point of the face's plane), in id order, with their shares; a member
+   * placed after the frame's joints are made is marked `later` (F11).
    */
   mouth(bar: DerivedBar, face: Face, C: V3, d: number, depth: number): Cover[] {
     const P = bar.placed;
@@ -193,7 +221,8 @@ export class Covers {
         if (hull.length >= 3) area += discArea(c, r, hull);
       }
       const share = Math.min(1, area / (Math.PI * r * r));
-      if (share > 1e-9) out.push({ id, share });
+      if (share > 1e-9)
+        out.push({ id, share, ...(this.later(id) ? { later: true as const } : {}) });
     }
     return out.sort((a, b) => compareIds(a.id, b.id));
   }

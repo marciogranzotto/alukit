@@ -11,7 +11,7 @@ import {
   withField,
   withoutEntity,
 } from "../commands/doc.ts";
-import { type Ref, references } from "../commands/refs.ts";
+import { type Ref, references, withoutEntry } from "../commands/refs.ts";
 import type { RawDoc } from "../commands/types.ts";
 import { type Diagnostic, Diagnostics } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
@@ -199,6 +199,12 @@ export function applyVariant(raw: unknown, items?: ItemSource, name?: string): V
       const kind = kindOf(r.from);
       // Top-level fields (params, defaults, order) name entities only in expressions.
       if (kind === undefined || kind === "items") continue;
+      if (r.how === "member" && r.entry) {
+        // A face named for the end's side holes (F12) goes with the end, which its own list
+        // drops and reports.
+        doc = withEntity(doc, r.from, withoutEntry(getEntity(doc, r.from), r.entry));
+        continue;
+      }
       if (r.how === "member" && r.list) {
         const v = getEntity(doc, r.from);
         const members = getAt(v, r.list.path);

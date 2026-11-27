@@ -1,0 +1,357 @@
+{
+  "case": "G50",
+  "rule": "a cross hole's tool turns when its joint is made, so a member placed after assembly (after_assembly: a wall the frame is set against, a part fitted last, or a part on such a bar) does not cover its mouth then: of the faces that reach the core, the nearest no member covers wins, else the nearest only such members cover, a connection warning naming them (it cannot be re-tightened once they are in place); over a joint that itself joins a member placed after assembly every member counts. A connection may name the face per end, or per hole by its position, over the recipe's, judged as a named face is (after the decided frame's ninth run, F11, F12)",
+  "design": "An 80x80 post on an 80x80 sill, a quick connector in each of two diagonal cores (Ø18 x 28 cross hole 25 up). A 40x40 frame member stands 2 off the post's +y face over the (20, 20) core; a wall 24.5 off its +x face is set against the frame after assembly. At (-20, -20): -y, clear. At (20, 20): +y is covered by the frame member, +x only by the wall, which is not there when the joint is made: +x, a warning naming the wall. The wall placed with the frame: no face clear, +y and an error naming both. Named +x by the connection at (20, 20): the warning; with the wall placed with the frame, an error naming it. Named +y: an error naming the frame member. Named -x for the end: -x at (-20, -20), and at (20, 20) a hole 60 from its core, an error and no hole. The wall turned to stand off +y with the frame member gone: +x, clear for good, over +y. A 40x40 fitted last in the wall's place: the warning names it. The post itself fitted after assembly: its joint is made then, the wall stands, an error. Each head bears 37.22 % under the sill's lips, a fit warning",
+  "expect": {
+    "ops": {
+      "b2": [
+        {
+          "op": "hole",
+          "face": "-y",
+          "from": "a",
+          "at": 25,
+          "across": -20,
+          "d": 18,
+          "depth": 28,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "+x",
+          "from": "a",
+          "at": 25,
+          "across": 20,
+          "d": 18,
+          "depth": 28,
+          "by": "c1"
+        }
+      ]
+    },
+    "lines": {
+      "test-cover:H80": [
+        {
+          "count": 1,
+          "cut_mm": 600,
+          "machining": [
+            "Ø18.00 hole 25.00 mm from end a on face +x, 20.00 across, 28.00 deep",
+            "Ø18.00 hole 25.00 mm from end a on face -y, -20.00 across, 28.00 deep"
+          ]
+        },
+        { "count": 1, "cut_mm": 340 }
+      ],
+      "test-cover:H40-B": [{ "count": 1, "cut_mm": 260 }]
+    },
+    "hardware": { "test-cover:HC40": 2 },
+    "recipes": { "test-cover:HR-2": 1 },
+    "warnings": [
+      { "code": "connection", "entity": "c1", "refs": ["b2", "p1"] },
+      { "code": "fit", "entity": "c1", "refs": ["b1"] },
+      { "code": "fit", "entity": "c1", "refs": ["b1"] }
+    ],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "the wall placed with the frame",
+      "patch": { "parts": { "p1": { "after_assembly": null } } },
+      "expect": {
+        "recipes": { "test-cover:HR-2": 1 },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at": 25,
+              "across": -20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 25,
+              "across": 20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            }
+          ]
+        },
+        "warnings": [
+          { "code": "fit", "entity": "c1", "refs": ["b1"] },
+          { "code": "fit", "entity": "c1", "refs": ["b1"] }
+        ],
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b2", "b3", "p1"] }]
+      }
+    },
+    {
+      "name": "the connection names +x at the (20, 20) core",
+      "patch": {
+        "connections": { "c1": { "hole_faces": { "b2.a": [{ "at_mm": [20, 20], "face": "+x" }] } } }
+      },
+      "expect": {
+        "recipes": { "test-cover:HR-2": 1 },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at": 25,
+              "across": -20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 25,
+              "across": 20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            }
+          ]
+        },
+        "warnings": [
+          { "code": "connection", "entity": "c1", "refs": ["b2", "p1"] },
+          { "code": "fit", "entity": "c1", "refs": ["b1"] },
+          { "code": "fit", "entity": "c1", "refs": ["b1"] }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "name": "+x named, the wall placed with the frame",
+      "patch": {
+        "connections": {
+          "c1": { "hole_faces": { "b2.a": [{ "at_mm": [20, 20], "face": "+x" }] } }
+        },
+        "parts": { "p1": { "after_assembly": null } }
+      },
+      "expect": {
+        "recipes": { "test-cover:HR-2": 1 },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at": 25,
+              "across": -20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 25,
+              "across": 20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            }
+          ]
+        },
+        "warnings": [
+          { "code": "fit", "entity": "c1", "refs": ["b1"] },
+          { "code": "fit", "entity": "c1", "refs": ["b1"] }
+        ],
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b2", "p1"] }]
+      }
+    },
+    {
+      "name": "the connection names +y at the (20, 20) core",
+      "patch": {
+        "connections": { "c1": { "hole_faces": { "b2.a": [{ "at_mm": [20, 20], "face": "+y" }] } } }
+      },
+      "expect": {
+        "recipes": { "test-cover:HR-2": 1 },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at": 25,
+              "across": -20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 25,
+              "across": 20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            }
+          ]
+        },
+        "warnings": [
+          { "code": "fit", "entity": "c1", "refs": ["b1"] },
+          { "code": "fit", "entity": "c1", "refs": ["b1"] }
+        ],
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b2", "b3"] }]
+      }
+    },
+    {
+      "name": "the connection names -x for every hole at the end",
+      "patch": { "connections": { "c1": { "hole_faces": { "b2.a": "-x" } } } },
+      "expect": {
+        "recipes": { "test-cover:HR-2": 1 },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 25,
+              "across": -20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            }
+          ]
+        },
+        "warnings": [
+          { "code": "fit", "entity": "c1", "refs": ["b1"] },
+          { "code": "fit", "entity": "c1", "refs": ["b1"] }
+        ],
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b2"] }]
+      }
+    },
+    {
+      "name": "the wall turned to stand off +y, b3 gone",
+      "patch": {
+        "bars": { "b3": null },
+        "parts": { "p1": { "at": { "pos": [300, 64.5, 0], "rot_deg": [0, 0, 90] } } }
+      },
+      "expect": {
+        "recipes": { "test-cover:HR-2": 1 },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at": 25,
+              "across": -20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 25,
+              "across": 20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            }
+          ]
+        },
+        "warnings": [
+          { "code": "fit", "entity": "c1", "refs": ["b1"] },
+          { "code": "fit", "entity": "c1", "refs": ["b1"] }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "name": "a 40x40 fitted last 2 off +x, no wall",
+      "patch": {
+        "parts": { "p1": null },
+        "bars": {
+          "b4": {
+            "item": "test-cover:H40-B",
+            "a": [362, 20, 40],
+            "b": [362, 20, 300],
+            "after_assembly": true
+          }
+        }
+      },
+      "expect": {
+        "recipes": { "test-cover:HR-2": 1 },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at": 25,
+              "across": -20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 25,
+              "across": 20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            }
+          ]
+        },
+        "warnings": [
+          { "code": "connection", "entity": "c1", "refs": ["b2", "b4"] },
+          { "code": "fit", "entity": "c1", "refs": ["b1"] },
+          { "code": "fit", "entity": "c1", "refs": ["b1"] }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "name": "the post fitted after assembly",
+      "patch": { "bars": { "b2": { "after_assembly": true } } },
+      "expect": {
+        "recipes": { "test-cover:HR-2": 1 },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at": 25,
+              "across": -20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 25,
+              "across": 20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            }
+          ]
+        },
+        "warnings": [
+          { "code": "fit", "entity": "c1", "refs": ["b1"] },
+          { "code": "fit", "entity": "c1", "refs": ["b1"] }
+        ],
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b2", "b3", "p1"] }]
+      }
+    }
+  ]
+}

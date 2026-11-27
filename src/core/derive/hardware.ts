@@ -3,7 +3,7 @@ import type { GrooveDim } from "#catalog/schema/groove.ts";
 import type { ConnectorItem, FastenerItem } from "#catalog/schema/items.ts";
 import { compareIds } from "../ids.ts";
 import { type BarItemInfo, fullRef } from "../items.ts";
-import type { Connection, Face } from "../project/schema.ts";
+import type { Connection, Face, HoleFaces } from "../project/schema.ts";
 import { clearanceHole, threadDiameter } from "../threads.ts";
 import { TOL } from "../tolerances.ts";
 import { add, addScaled, angleDeg, dot, neg, norm, scale, sub, type V3 } from "../vec.ts";
@@ -157,7 +157,19 @@ export function connectorHardware(
   const unchecked: Unchecked = new Map();
   for (const [id, j] of joints) {
     if (j.roles.body) out.hardware.push(j.roles.body);
-    if (!j.roles.connector) continue;
+    if (!j.roles.connector) {
+      // Faces named for side holes no connector makes (F12).
+      const named = "hole_faces" in j.spec ? j.spec.hole_faces : undefined;
+      if (!j.copy && named && Object.keys(named).length > 0) {
+        ctx.d.error(
+          "connection",
+          id,
+          `hole_faces: ${id} has no connector, so no hole in a butting bar's side to name a face for`,
+          { field: "hole_faces" },
+        );
+      }
+      continue;
+    }
     new ConnectorGen(ctx, id, j.spec, j.roles, !j.copy, out, unchecked, covers, held.get(id)).run();
   }
   // A screw whose head gives no size the check reads, or a bar whose groove's own geometry is not
@@ -497,6 +509,13 @@ class ConnectorGen {
    * is seated round a hole F2 made, on its axis).
    */
   private readonly made = new Map<string, { Q: V3; u: V3 }>();
+  /**
+   * The positions of the holes made in each butting bar's side, by butting end (`b2.a`), a hole
+   * with no position at [0, 0]: what a face named on the connection may name (F12).
+   */
+  private readonly sideAt = new Map<string, (readonly [number, number])[]>();
+  /** The bar that makes the joint one made after assembly, or null; undefined until asked (F11). */
+  private lateBy: string | null | undefined;
 
   constructor(
     ctx: Ctx,
@@ -522,6 +541,89 @@ class ConnectorGen {
 
   private error(code: string, message: string, extra: { field?: string; refs?: string[] } = {}) {
     if (this.report) this.ctx.d.error(code, this.id, message, extra);
+  }
+
+  private warn(code: string, message: string, extra: { field?: string; refs?: string[] } = {}) {
+    if (this.report) this.ctx.d.warn(code, this.id, message, extra);
+  }
+
+  /**
+   * The bar that makes this joint one made after assembly (F11), if any: a bar it joins (its
+   * through bar, a butting bar, a bar of its stack) placed after the frame's joints are made, so
+   * the joint is made when that bar arrives. Every member stands then, those placed after assembly
+   * too: v1 does not order them among themselves, so it does not guess that one comes later still.
+   */
+  private madeLate(): string | undefined {
+    if (this.lateBy === undefined) {
+      const bars = [...joinedBars(this.roles), ...(this.roles.stack?.bars ?? [])];
+      this.lateBy = bars.find((b) => this.covers?.later(b.placed.id))?.placed.id ?? null;
+    }
+    return this.lateBy ?? undefined;
+  }
+
+  /** The faces the connection names for its side holes (F12), if any. */
+  private holeFaces(): HoleFaces | undefined {
+    return "hole_faces" in this.spec ? this.spec.hole_faces : undefined;
+  }
+
+  /**
+   * The face the connection names for the hole in a butting bar's side at `ref` (`b2.a`) and
+   * position `p` (none: the section's centre), over the connector's own (F12): the end's one face,
+   * or the entry at that position.
+   */
+  private holeFace(ref: string, p: Pos): Named | undefined {
+    const v = this.holeFaces()?.[ref];
+    if (v === undefined) return undefined;
+    const by = "the connection's hole_faces";
+    if (typeof v === "string") return { face: v, by };
+    const e = v.find((x) => samePlace(x.at_mm, p));
+    return e ? { face: e.face, by } : undefined;
+  }
+
+  /**
+   * What the connection's `hole_faces` names and no hole takes (F12), each a `connection` error and
+   * not used: an end that is not one of the connection's, an end where the connector drills no hole
+   * in the butting bar's side, a position where no such hole stands. A face named for a hole that
+   * is there was judged with the hole.
+   */
+  private checkHoleFaces(connector: string): void {
+    const named = this.holeFaces();
+    if (!named || !("ends" in this.spec)) return;
+    const ends: readonly string[] = this.spec.ends;
+    const derived = new Set(this.roles.butting.map((b) => `${b.bar.placed.id}.${b.end}`));
+    for (const ref of Object.keys(named).sort(compareIds)) {
+      const v = named[ref] as NonNullable<HoleFaces[string]>;
+      const bar = endOf(ref).bar;
+      const field = "hole_faces";
+      if (!ends.includes(ref)) {
+        this.error(
+          "connection",
+          `hole_faces: ${ref} is not one of ${this.id}'s ends, so the face named for it is not used`,
+          { field, refs: [bar] },
+        );
+        continue;
+      }
+      if (!derived.has(ref)) continue; // the bar did not derive, and says why
+      const at = this.sideAt.get(ref) ?? [];
+      if (at.length === 0) {
+        this.error(
+          "connection",
+          `hole_faces: ${connector} drills no hole in ${bar}'s side at ${ref}, so the face named for it is not used`,
+          { field, refs: [bar] },
+        );
+        continue;
+      }
+      if (typeof v === "string") continue;
+      const places = at.filter((p, i) => at.findIndex((q) => samePlace(q, p)) === i);
+      for (const e of v) {
+        if (at.some((q) => samePlace(e.at_mm, q))) continue;
+        this.error(
+          "connection",
+          `hole_faces: no hole in ${bar}'s side at ${ref} stands at ${posText(e.at_mm)}, so the face named for it is not used; its holes there stand at ${places.map(posText).join(", ")}`,
+          { field, refs: [bar] },
+        );
+      }
+    }
   }
 
   run(): void {
@@ -552,6 +654,7 @@ class ConnectorGen {
     this.requires(own);
     const nested = this.nested(item, home, sets);
     for (const c of nested) this.requires(c);
+    this.checkHoleFaces(found.id);
     if (item.splice) this.splice(item, home);
     // A headed connector counted by qty (X8): a butt's connector is counted, not placed, so every
     // one of them would stand at the end's centre, one head in one place; its machining is made
@@ -1162,11 +1265,17 @@ class ConnectorGen {
           for (const { bar, end } of roles.butting) {
             if (req.op === "end-tap") {
               this.endTaps(bar, end, at, req.thread as string, depth, field);
-            } else if (!positioned) {
-              this.centreHole(bar, end, named[0], fromEnd, hole, access, field);
-            } else {
-              this.sideHoles(bar, end, at, named, fromEnd, hole, access, field);
+              continue;
             }
+            // A hole in the butting bar's side: the face the connection names for it at this
+            // end comes first (F12), then the catalog's.
+            const ref = `${bar.placed.id}.${end}`;
+            const here = this.sideAt.get(ref) ?? [];
+            here.push(...at.map((p) => p ?? ([0, 0] as const)));
+            this.sideAt.set(ref, here);
+            const names = at.map((p, i) => this.holeFace(ref, p) ?? named[i]);
+            if (!positioned) this.centreHole(bar, end, names[0], fromEnd, hole, access, field);
+            else this.sideHoles(bar, end, at, names, fromEnd, hole, access, field);
           }
           continue;
         }
@@ -1323,12 +1432,18 @@ class ConnectorGen {
    * part it holds cannot meet the core: one that does not is a `connection` error, and so is a
    * position off the end's section box; neither is made.
    *
-   * The face (after the round-4 acceptance, X9): the one the mount's hole or the requirement names;
-   * else, of the faces from which the hole reaches the position, the nearest whose mouth no other
-   * member covers (`Covers`), ties within tol.len going to the first of +y, -y, +x, -x. A tool
-   * reaches the hole through its mouth once the frame is built (a quick connector's bush is turned
-   * through it), so a hole in a covered face is a `connection` error naming what covers it,
-   * whoever chose the face: a named face, or the nearest face that reaches when none is clear.
+   * The face (after the round-4 acceptance, X9): the one the connection (F12), the mount's hole or
+   * the requirement names; else, of the faces from which the hole reaches the position, the
+   * nearest whose mouth no other member covers (`Covers`), ties within tol.len going to the first
+   * of +y, -y, +x, -x. A tool reaches the hole through its mouth when the joint is made (a quick
+   * connector's bush is turned through it), so a hole in a covered face is a `connection` error
+   * naming what covers it, whoever chose the face: a named face, or the nearest face that reaches
+   * when none is clear.
+   *
+   * A member placed after assembly (F11) does not stand there when a joint made before it is
+   * tightened: of the faces no member covers at all, the nearest wins; with none, the nearest that
+   * only such members cover, a `connection` warning naming them (the joint cannot be re-tightened
+   * once they are in place); and a named face that only they cover is that warning, not the error.
    */
   private sideHoles(
     bar: DerivedBar,
@@ -1366,14 +1481,15 @@ class ConnectorGen {
           by: this.id,
         };
       };
-      const covered = (face: Face) => this.mouthCovers(bar, op(face), hole, access);
+      const covered = this.mouthsOf((face) => op(face), bar, hole, access);
       const name = named[i];
+      const id = bar.placed.id;
       const here = `the ${what} ${mm(fromEnd)} from ${ref} over its position ${posText(p)}`;
       const short = (f: { face: Face; dist: number }, how: string) =>
         this.error(
           "connection",
-          `${field}: ${here} is drilled from ${bar.placed.id}'s face ${f.face}, ${how}, ${mm(f.dist)} from it, and is ${mm(hole.depth as number)} deep: it does not reach the position, so it is not made`,
-          { field: "connector", refs: [bar.placed.id] },
+          `${field}: ${here} is drilled from ${id}'s face ${f.face}, ${how}, ${mm(f.dist)} from it, and is ${mm(hole.depth as number)} deep: it does not reach the position, so it is not made`,
+          { field: "connector", refs: [id] },
         );
       if (name) {
         const f = sides.find((x) => x.face === name.face) as { face: Face; dist: number };
@@ -1381,14 +1497,24 @@ class ConnectorGen {
           short(f, `as ${name.by} names it`);
           return;
         }
-        const cover = covered(f.face);
-        if (cover.length > 0) {
-          const clear = sides.filter((x) => x.face !== f.face && reaches(x));
-          const free = clear.filter((x) => covered(x.face).length === 0).map((x) => x.face);
+        const m = covered(f.face);
+        const told = `${here} goes in from ${id}'s face ${f.face}, as ${name.by} names it`;
+        if (m.block.length > 0) {
+          // The other faces that reach the position, clear when the joint is made.
+          const free = sides
+            .filter((x) => x.face !== f.face && reaches(x))
+            .map((x) => ({ face: x.face, ...covered(x.face) }))
+            .filter((x) => x.block.length === 0);
           this.error(
             "connection",
-            `${field}: ${here} goes in from ${bar.placed.id}'s face ${f.face}, as ${name.by} names it, where ${coverText(cover, access)}: its mouth cannot be reached; ${free.length > 0 ? `${bar.placed.id}'s ${free.length === 1 ? "face" : "faces"} ${free.join(", ")} ${free.length === 1 ? "reaches" : "reach"} the position clear` : `no face of ${bar.placed.id} that reaches the position is clear`}`,
-            { field: "connector", refs: [bar.placed.id, ...cover.map((c) => c.id)] },
+            `${field}: ${told}, where ${coverText(m.block, access)}: its mouth cannot be reached; ${freeText(id, free)}${this.lateText(m.block)}`,
+            { field: "connector", refs: [id, ...m.block.map((c) => c.id)] },
+          );
+        } else if (m.later.length > 0) {
+          this.warn(
+            "connection",
+            `${field}: ${told}, where ${coverText(m.later, access)}: its mouth is clear when the joint is made, but ${laterText(m.later)}`,
+            { field: "connector", refs: [id, ...m.later.map((c) => c.id)] },
           );
         }
         bar.ops.push(op(f.face));
@@ -1400,18 +1526,27 @@ class ConnectorGen {
         short(sides[0] as { face: Face; dist: number }, "the nearest");
         return;
       }
-      const choice = reaching
-        .map((f) => ({ ...f, cover: covered(f.face) }))
-        .find((f) => f.cover.length === 0);
-      if (!choice) {
-        const all = reaching.map((f) => `${f.face}, where ${coverText(covered(f.face), access)}`);
-        const by = [...new Set(reaching.flatMap((f) => covered(f.face).map((c) => c.id)))].sort(
-          compareIds,
+      const choice = this.choose(
+        reaching.map((f) => f.face),
+        covered,
+      );
+      if (choice?.later.length) {
+        this.warn(
+          "connection",
+          `${field}: ${here} is drilled from ${id}'s face ${choice.face}, the nearest whose mouth is clear when the joint is made, where ${coverText(choice.later, access)}: ${laterText(choice.later)}`,
+          { field: "connector", refs: [id, ...choice.later.map((c) => c.id)] },
         );
+      }
+      if (!choice) {
+        const all = reaching.map(
+          (f) => `${f.face}, where ${coverText(covered(f.face).block, access)}`,
+        );
+        const block = reaching.flatMap((f) => covered(f.face).block);
+        const by = [...new Set(block.map((c) => c.id))].sort(compareIds);
         this.error(
           "connection",
-          `${field}: no face of ${bar.placed.id} from which ${here} reaches it is clear (${all.join("; ")}): it is drilled from ${nearest.face}, the nearest, and its mouth cannot be reached`,
-          { field: "connector", refs: [bar.placed.id, ...by] },
+          `${field}: no face of ${id} from which ${here} reaches it is clear (${all.join("; ")}): it is drilled from ${nearest.face}, the nearest, and its mouth cannot be reached${this.lateText(block)}`,
+          { field: "connector", refs: [id, ...by] },
         );
       }
       bar.ops.push(op((choice ?? nearest).face));
@@ -1427,12 +1562,15 @@ class ConnectorGen {
 
   /**
    * A hole in a butting bar's side with no position (§3.4): on a face's centre line, `from_end_mm`
-   * in from the end, heading for the section's centre. On the face the requirement names (X9);
-   * else on +y, as draft 2.3 put it, while its mouth is clear. Where another member covers +y's
-   * mouth, on the nearest face whose mouth is clear among those that take it at least as far toward
-   * the centre (as near it as +y, or near enough for its depth to reach it), ties going to the
-   * first of +y, -y, +x, -x. A hole in a covered face is a `connection` error naming what covers
-   * it: a named face, or +y when no face is clear.
+   * in from the end, heading for the section's centre. On the face the connection (F12) or the
+   * requirement names (X9); else on +y, as draft 2.3 put it, while its mouth is clear. Where
+   * another member covers +y's mouth, on the nearest face whose mouth is clear among those that
+   * take it at least as far toward the centre (as near it as +y, or near enough for its depth to
+   * reach it), ties going to the first of +y, -y, +x, -x. A hole in a covered face is a
+   * `connection` error naming what covers it: a named face, or +y when no face is clear.
+   *
+   * A member placed after assembly (F11) is weighed as for a positioned hole (`sideHoles`): a face
+   * no member covers first, in the same order; then one only such members cover, a warning.
    */
   private centreHole(
     bar: DerivedBar,
@@ -1452,67 +1590,126 @@ class ConnectorGen {
       ...hole,
       by: this.id,
     });
-    const covered = (face: Face) => this.mouthCovers(bar, op(face), hole, access);
+    const covered = this.mouthsOf(op, bar, hole, access);
     const what = hole.d !== undefined ? `Ø${mm(hole.d)} hole` : `tap ${hole.thread}`;
-    const here = `the ${what} ${mm(fromEnd)} from ${bar.placed.id}.${end}`;
-    const refs = (cover: readonly Cover[]) => [bar.placed.id, ...cover.map((c) => c.id)];
+    const id = bar.placed.id;
+    const here = `the ${what} ${mm(fromEnd)} from ${id}.${end}`;
+    const refs = (cover: readonly Cover[]) => [id, ...cover.map((c) => c.id)];
     if (name) {
-      const cover = covered(name.face);
-      if (cover.length > 0) {
+      const m = covered(name.face);
+      const told = `${here} goes in from ${id}'s face ${name.face} on its centre line, as ${name.by} names it`;
+      if (m.block.length > 0) {
         this.error(
           "connection",
-          `${field}: ${here} goes in from ${bar.placed.id}'s face ${name.face} on its centre line, as ${name.by} names it, where ${coverText(cover, access)}: its mouth cannot be reached`,
-          { field: "connector", refs: refs(cover) },
+          `${field}: ${told}, where ${coverText(m.block, access)}: its mouth cannot be reached${this.lateText(m.block)}`,
+          { field: "connector", refs: refs(m.block) },
+        );
+      } else if (m.later.length > 0) {
+        this.warn(
+          "connection",
+          `${field}: ${told}, where ${coverText(m.later, access)}: its mouth is clear when the joint is made, but ${laterText(m.later)}`,
+          { field: "connector", refs: refs(m.later) },
         );
       }
       bar.ops.push(op(name.face));
       return;
     }
+    // +y first, as draft 2.3 put it; then the faces that take the hole as far toward the centre,
+    // computed only when +y is not clear.
+    const toward = (): Face[] => {
+      const sides = facesByDistance(bar.placed.box, [0, 0]);
+      const y = (sides.find((f) => f.face === "+y") as { dist: number }).dist;
+      return sides
+        .filter(
+          (f) =>
+            f.face !== "+y" &&
+            (f.dist <= y + TOL.len || (hole.depth !== undefined && hole.depth >= f.dist - TOL.len)),
+        )
+        .map((f) => f.face);
+    };
     const first = covered("+y");
-    if (first.length === 0) {
-      bar.ops.push(op("+y"));
-      return;
-    }
-    const sides = facesByDistance(bar.placed.box, [0, 0]);
-    const y = (sides.find((f) => f.face === "+y") as { dist: number }).dist;
-    const toward = (f: { face: Face; dist: number }) =>
-      f.face !== "+y" &&
-      (f.dist <= y + TOL.len || (hole.depth !== undefined && hole.depth >= f.dist - TOL.len));
-    const choice = sides.filter(toward).find((f) => covered(f.face).length === 0);
+    const order: Face[] =
+      first.block.length === 0 && first.later.length === 0 ? ["+y"] : ["+y", ...toward()];
+    const choice = this.choose(order, covered);
     if (choice) {
+      if (choice.later.length > 0) {
+        this.warn(
+          "connection",
+          `${field}: ${here} is drilled from ${id}'s face ${choice.face} on its centre line, the nearest whose mouth is clear when the joint is made, where ${coverText(choice.later, access)}: ${laterText(choice.later)}`,
+          { field: "connector", refs: refs(choice.later) },
+        );
+      }
       bar.ops.push(op(choice.face));
       return;
     }
-    const all = [
-      `+y, where ${coverText(first, access)}`,
-      ...sides.filter(toward).map((f) => `${f.face}, where ${coverText(covered(f.face), access)}`),
-    ];
-    const by = [
-      ...new Set(
-        [...first, ...sides.filter(toward).flatMap((f) => covered(f.face))].map((c) => c.id),
-      ),
-    ].sort(compareIds);
+    const all = order.map((f) => `${f}, where ${coverText(covered(f).block, access)}`);
+    const block = order.flatMap((f) => covered(f).block);
+    const by = [...new Set(block.map((c) => c.id))].sort(compareIds);
     this.error(
       "connection",
-      `${field}: no face of ${bar.placed.id} that ${here} could go in from on its centre line is clear (${all.join("; ")}): it is drilled from +y, where a hole with no position goes, and its mouth cannot be reached`,
-      { field: "connector", refs: [bar.placed.id, ...by] },
+      `${field}: no face of ${id} that ${here} could go in from on its centre line is clear (${all.join("; ")}): it is drilled from +y, where a hole with no position goes, and its mouth cannot be reached${this.lateText(block)}`,
+      { field: "connector", refs: [id, ...by] },
     );
     bar.ops.push(op("+y"));
   }
 
   /**
-   * The members in front of a side hole's mouth, within `access` of the face (X9): none when
-   * nothing is known of the other members.
+   * The members in front of a side hole's mouth from each face, within `access` of the face (X9),
+   * once per face: those that stand there when the joint is made (`block`), and those placed after
+   * assembly over a joint made before them (`later`, F11). None when nothing is known of the other
+   * members.
    */
-  private mouthCovers(
+  private mouthsOf(
+    opOf: (face: Face) => HoleOp,
     bar: DerivedBar,
-    op: HoleOp,
     hole: Pick<HoleOp, "d" | "thread" | "depth">,
     access: number,
-  ): Cover[] {
-    const d = hole.d ?? (hole.thread ? threadDiameter(hole.thread) : undefined);
-    if (!this.covers || d === undefined) return [];
-    return this.covers.mouth(bar, op.face, holeCentre(bar, op), d, access);
+  ): (face: Face) => Mouth {
+    const seen = new Map<Face, Mouth>();
+    return (face) => {
+      let m = seen.get(face);
+      if (m) return m;
+      const d = hole.d ?? (hole.thread ? threadDiameter(hole.thread) : undefined);
+      const op = opOf(face);
+      const all =
+        this.covers && d !== undefined
+          ? this.covers.mouth(bar, op.face, holeCentre(bar, op), d, access)
+          : [];
+      m = this.madeLate()
+        ? { block: all, later: [] }
+        : { block: all.filter((c) => !c.later), later: all.filter((c) => c.later) };
+      seen.set(face, m);
+      return m;
+    };
+  }
+
+  /**
+   * Of `faces` in order, the first no member covers at all; else the first only members placed
+   * after assembly cover (F11); else none.
+   */
+  private choose(
+    faces: readonly Face[],
+    covered: (face: Face) => Mouth,
+  ): (Mouth & { face: Face }) | undefined {
+    let soon: (Mouth & { face: Face }) | undefined;
+    for (const face of faces) {
+      const m = covered(face);
+      if (m.block.length > 0) continue;
+      if (m.later.length === 0) return { face, ...m };
+      soon ??= { face, ...m };
+    }
+    return soon;
+  }
+
+  /**
+   * Why members placed after assembly stand over a joint (F11): it is made after assembly too, so
+   * they are there when it is. Empty when none of `block` is such a member.
+   */
+  private lateText(block: readonly Cover[]): string {
+    const by = this.madeLate();
+    return by && block.some((c) => c.later)
+      ? `; the joint is made after assembly, since ${by} is placed after it`
+      : "";
   }
 
   /**
@@ -1979,10 +2176,60 @@ function namedFaces(
   });
 }
 
-/** Who covers a mouth, for messages: "b3 stands in front of 100.0 % of its mouth" (X9). */
+/**
+ * The members in front of a side hole's mouth from one face (X9): those that stand there when the
+ * joint is made, and those placed after assembly that stand there only afterwards (F11).
+ */
+interface Mouth {
+  block: Cover[];
+  later: Cover[];
+}
+
+/**
+ * Who covers a mouth, for messages: "b3 stands in front of 100.0 % of its mouth" (X9); a member
+ * placed after assembly says so (F11).
+ */
 function coverText(cover: readonly Cover[], access: number): string {
-  const one = (c: Cover) => `${c.id} stands in front of ${(100 * c.share).toFixed(1)} %`;
+  const one = (c: Cover) =>
+    `${c.id}${c.later ? ", placed after assembly," : ""} stands in front of ${(100 * c.share).toFixed(1)} %`;
   return `${cover.map(one).join(", ")} of its mouth, within ${mm(access)} of the face`;
+}
+
+/** Ids for a sentence: "p1", "p1 and p2", "p1, p2 and p3". */
+function idsText(ids: readonly string[]): string {
+  return ids.length <= 1
+    ? (ids[0] ?? "")
+    : `${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1] as string}`;
+}
+
+/** What members placed after assembly over a joint made before them cost it (F11). */
+function laterText(later: readonly Cover[]): string {
+  const ids = later.map((c) => c.id);
+  return `it cannot be re-tightened once ${idsText(ids)} ${ids.length === 1 ? "is" : "are"} in place`;
+}
+
+/**
+ * The other faces from which a side hole reaches its position clear when the joint is made, for
+ * the error on a covered named face (X9): those no member covers, then those only members placed
+ * after assembly cover, until they are in place (F11).
+ */
+function freeText(bar: string, free: readonly (Mouth & { face: Face })[]): string {
+  const faces = (fs: readonly { face: Face }[]) =>
+    `${bar}'s ${fs.length === 1 ? "face" : "faces"} ${fs.map((f) => f.face).join(", ")} ${fs.length === 1 ? "reaches" : "reach"} the position clear`;
+  const clear = free.filter((f) => f.later.length === 0);
+  const soon = free.filter((f) => f.later.length > 0);
+  const later = [...new Set(soon.flatMap((f) => f.later.map((c) => c.id)))].sort(compareIds);
+  const parts = [
+    ...(clear.length > 0 ? [faces(clear)] : []),
+    ...(soon.length > 0
+      ? [
+          `${faces(soon)} when the joint is made, until ${idsText(later)} ${later.length === 1 ? "is" : "are"} in place`,
+        ]
+      : []),
+  ];
+  return parts.length > 0
+    ? parts.join("; ")
+    : `no face of ${bar} that reaches the position is clear`;
 }
 
 /**
