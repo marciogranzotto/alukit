@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   connectionCommand,
+  frameCommand,
   measured,
   patternCommand,
+  pickRefusal,
   pivotBatch,
   placeCommand,
+  placeFrom,
   runOf,
 } from "./commands.ts";
 import { valueList } from "./typed.ts";
@@ -216,5 +219,98 @@ describe("pattern", () => {
 describe("measure", () => {
   it("gives the distance and its components", () => {
     expect(measured([0, 0, 0], [300, 0, 400])).toEqual({ d: 500, dx: 300, dy: 0, dz: 400 });
+  });
+});
+
+describe("connect: picks checked against the type before they are taken (U38)", () => {
+  it("refuses what the connection cannot take, and always takes a pick back", () => {
+    expect(pickRefusal("butt", [bar("b5")], bar("b6"))).toMatch(/one through bar/);
+    expect(pickRefusal("butt", [bar("b5")], end("b1.b"))).toBeUndefined();
+    expect(pickRefusal("miter", [], bar("b5"))).toMatch(/two ends/);
+    expect(pickRefusal("miter", [end("b1.b"), end("b2.a")], end("b3.a"))).toMatch(/drop one/);
+    expect(pickRefusal("pivot", [], bar("b5"))).toMatch(/carries ends/);
+    expect(pickRefusal("face", [bar("b5")], end("b1.b"))).toMatch(/layers/);
+    // A second click on a pick drops it, whatever the type.
+    expect(pickRefusal("butt", [bar("b5"), bar("b6")], bar("b6"))).toBeUndefined();
+  });
+});
+
+describe("place part on the click (D-UX-16)", () => {
+  it("counts a typed distance from the end nearer the pointer", () => {
+    const st = { bar: "b9", at_mm: 900, face: "+y", p: at };
+    expect(placeFrom(st, 1200)).toBe("b");
+    expect(placeFrom({ ...st, at_mm: 300 }, 1200)).toBe("a");
+    expect(placeCommand({ id: "test:FOOT", kind: "part", name: "" }, st, "b", 0, "W / 4")).toEqual({
+      cmd: "addPart",
+      args: { item: "test:FOOT", on: { bar: "b9", at_mm: "W / 4", from: "b", face: "+y" } },
+    });
+  });
+});
+
+describe("box frame (S5.7, BE-6)", () => {
+  const opts = { rings: { base: true, top: true }, shelf: "", connector: "", params: false };
+  const bar40 = { id: "test:TS40", kind: "bar", name: "TS40" };
+  const draft = { at: [0, 0, 0] as const, w: "1000", d: "600", h: "W - 400" };
+  it("sends addFrame with the size as numbers, defaults left out", () => {
+    expect(frameCommand({ ...draft, at: [0, 0, 0] }, opts, bar40, false, { W: 1200 })).toEqual({
+      cmd: "addFrame",
+      args: { at: [0, 0, 0], size: [1000, 600, 800], item: "test:TS40" },
+    });
+    expect(
+      frameCommand(
+        { ...draft, at: [10, 20, 0] },
+        {
+          rings: { base: false, top: true },
+          shelf: "300",
+          connector: "test:BRK",
+          params: true,
+          corner: "x",
+        },
+        { ...bar40, opt: { finish: "black" } },
+        false,
+        { W: 1200 },
+      ),
+    ).toEqual({
+      cmd: "addFrame",
+      args: {
+        at: [10, 20, 0],
+        size: [1000, 600, 800],
+        item: "test:TS40",
+        opt: { finish: "black" },
+        corner: "x",
+        rings: ["top"],
+        shelf_mm: 300,
+        connector: "test:BRK",
+        params: true,
+      },
+    });
+    // No palette bar: addFrame takes the project's default.
+    expect(frameCommand({ ...draft, at: [0, 0, 0] }, opts, undefined, true, { W: 1200 })).toEqual({
+      cmd: "addFrame",
+      args: { at: [0, 0, 0], size: [1000, 600, 800] },
+    });
+  });
+  it("says what a frame lacks", () => {
+    expect(frameCommand({ ...draft, at: [0, 0, 0] }, opts, undefined, false, {})).toHaveProperty(
+      "why",
+    );
+    expect(frameCommand({ w: "1000", d: "600", h: "800" }, opts, bar40, false, {})).toEqual({
+      why: "click the frame's corner, or type [x, y, z]",
+    });
+    expect(frameCommand({ ...draft, at: [0, 0, 0], h: "" }, opts, bar40, false, {})).toEqual({
+      why: "give the height H",
+    });
+    expect(frameCommand({ ...draft, at: [0, 0, 0], d: "-5" }, opts, bar40, false, {})).toEqual({
+      why: "the depth D is more than 0",
+    });
+    expect(
+      frameCommand(
+        { ...draft, at: [0, 0, 0] },
+        { ...opts, rings: { base: false, top: false } },
+        bar40,
+        false,
+        { W: 1200 },
+      ),
+    ).toEqual({ why: "keep the base ring, the top ring or both" });
   });
 });

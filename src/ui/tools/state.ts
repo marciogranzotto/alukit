@@ -1,36 +1,82 @@
 import { computed, signal } from "@preact/signals";
+import type { CornerRule } from "#core/project/schema.ts";
 import type { V3 } from "../../mesh/model.ts";
-import type { DrawEnd, DrawPoint } from "../../viewer/draw.ts";
+import type { Axis, DrawEnd, DrawPoint } from "../../viewer/draw.ts";
 import type { Snap } from "../../viewer/snap.ts";
 import { GROUND, type WorkPlane } from "../../viewer/workplane.ts";
 import { extendHook } from "../hook.ts";
 
 /**
- * The tools of the viewport (design §8, Tools): draw bar, connect, place part, pattern and
- * measure; select is no tool. Each turns pointer and key events into one batch of commands
- * (§7.1), sent with source `ui`; the next revision comes back on the event stream. What a tool
- * shows (its state, the hint by the pointer, its prompt) lives in signals the panels read. The
- * palette they draw and place with is palette.ts's.
+ * The tools of the viewport (design §8, Tools): draw bar, connect, place part, pattern, measure
+ * and the box frame; select is no tool. Each turns pointer and key events into one batch of
+ * commands (§7.1), sent with source `ui`; the next revision comes back on the event stream. What
+ * a tool shows (its state, the hint by the pointer, its prompt, what is typed in the command
+ * bar) lives in signals the command bar, the tool forms and the status bar read. The palette
+ * they draw and place with is palette.ts's. Owner: S5.
  */
 
-export const TOOLS = ["select", "draw", "connect", "place", "pattern", "measure"] as const;
+export const TOOLS = ["select", "draw", "connect", "place", "pattern", "measure", "frame"] as const;
 export type ToolName = (typeof TOOLS)[number];
 
+/** Each tool's key (D-UX-18): the letter on its cap. */
 export const TOOL_KEYS: Readonly<Record<string, ToolName>> = {
   v: "select",
   b: "draw",
+  g: "frame",
   c: "connect",
   p: "place",
+  x: "pattern",
   m: "measure",
 };
 
+/** Each tool's name, as the rail, the command bar and the help say it. */
+export const TOOL_NAMES: Readonly<Record<ToolName, string>> = {
+  select: "Select",
+  draw: "Draw bar",
+  frame: "Box frame",
+  connect: "Connect",
+  place: "Place part",
+  pattern: "Pattern",
+  measure: "Measure",
+};
+
+/** The key a tool's cap shows. */
+export function toolKey(t: ToolName): string {
+  return (Object.entries(TOOL_KEYS).find(([, x]) => x === t)?.[0] ?? "").toUpperCase();
+}
+
 export const activeTool = signal<ToolName>("select");
 
-export const drawOptions = signal<{ roll: number; anchor: string; autoConnect: boolean }>({
+export interface DrawOptions {
+  roll: number;
+  anchor: string;
+  autoConnect: boolean;
+  /** An axis locked with the arrow keys (D-UX-18), until pressed again or the gesture ends. */
+  lock?: Axis | undefined;
+  /**
+   * The corner rule for the joints at the bar's ends (D-UX-9), when the person chose one in the
+   * command bar or flipped the previewed joint with Tab; the project's `defaults.corner` when
+   * unset.
+   */
+  prefer?: CornerRule | undefined;
+}
+
+export const drawOptions = signal<DrawOptions>({
   roll: 0,
   anchor: "c",
   autoConnect: true,
 });
+
+/** The corner rules, in the order Tab flips through them. */
+export const CORNER_RULES: readonly CornerRule[] = ["vertical", "x", "y", "first"];
+
+/** A corner rule in words. */
+export const CORNER_WORDS: Readonly<Record<CornerRule, string>> = {
+  vertical: "the upright runs through",
+  x: "the bar along X runs through",
+  y: "the bar along Y runs through",
+  first: "the first drawn runs through",
+};
 
 /** The work plane (§8): the ground, or a face picked with W. */
 export const workPlane = signal<WorkPlane>(GROUND);
@@ -51,8 +97,47 @@ export const pickingPlane = signal(false);
 export const hint = signal<{ x: number; y: number; text: string; snap?: string } | undefined>(
   undefined,
 );
-/** A length being typed (§8: type a length and press Enter). */
+/**
+ * What is typed in the command bar (D-UX-17): a length, a list (`1000, 600`), a point
+ * (`[0, 0, H]`), each value an expression with params and units. Enter commits it.
+ */
 export const typed = signal("");
+
+/**
+ * Asks the command bar to put the keyboard in its field (each change does): a tool's gesture
+ * key that starts a value (a digit, a sign, `(`, `[`, `=`) hands the rest of the typing to the
+ * field, where letters belong to the value (units, params) and not to the shortcuts (U20).
+ */
+export const fieldWanted = signal(0);
+/** Asks the command bar to give the keyboard back (each change does): after a commit. */
+export const fieldDone = signal(0);
+
+/**
+ * The joint the drawn bar would make where an end closes on another bar (S5.6), from a dry run
+ * of the gesture: the words by the end, and the rule it was asked with.
+ */
+export interface JointPreview {
+  /** What the dry run was asked for: the gesture's commands, as JSON. */
+  key: string;
+  at: V3;
+  text: string;
+  /** The rule the preview was asked with; the project's own when undefined. */
+  prefer?: CornerRule | undefined;
+  /** What the arrangement does, to tell two rules that give the same one apart. */
+  shape: string;
+  /** The dry run's time, ms: for the decisions' note and the test hook. */
+  ms: number;
+}
+export const jointPreview = signal<JointPreview | undefined>(undefined);
+
+/**
+ * What the last thing a tool sent came to, for the result chip in the command bar (S5.6, A R10):
+ * the step it made (its words come with the step's `rev` event), or why it was refused or could
+ * not be sent, shown where it happened (U30).
+ */
+export const lastResult = signal<
+  { rev: number; created: readonly string[]; error?: string | undefined } | undefined
+>(undefined);
 
 /** The draw tool's gesture, for the panel and the test hook. */
 export const drawState = signal<{ start?: DrawPoint; end?: DrawEnd }>({});
@@ -121,11 +206,12 @@ export const faceOptions = signal<FaceOptions>({
   tapDepth: "",
 });
 
+/**
+ * The place tool (D-UX-16): a click commits at the station under the pointer. A distance typed
+ * first sets where along the bar, from the end nearer the pointer; `roll` is the command bar's.
+ */
 export type PlaceStation = FaceStation;
-export const placeState = signal<{ station?: PlaceStation; from: "a" | "b"; roll: number }>({
-  from: "a",
-  roll: 0,
-});
+export const placeState = signal<{ station?: PlaceStation; roll: number }>({ roll: 0 });
 
 export const patternState = signal<{
   template: string[];
@@ -136,17 +222,67 @@ export const patternState = signal<{
 
 export const measureState = signal<{ a?: Snap; b?: Snap }>({});
 
+/** The box frame's options (D-UX-8, BE-6), shared by the tool's command bar and its form. */
+export interface FrameOptions {
+  rings: { base: boolean; top: boolean };
+  /** A shelf ring, its top face this high above the base: typed, empty for none. */
+  shelf: string;
+  /** Which bar runs through at each corner; the project's `defaults.corner` when unset. */
+  corner?: CornerRule | undefined;
+  /** Each butt's connector: an item id, empty for the project's `defaults.butt`. */
+  connector: string;
+  /** Write W, D and H as params, and the frame's points from them. */
+  params: boolean;
+}
+export const frameOptions = signal<FrameOptions>({
+  rings: { base: true, top: true },
+  shelf: "",
+  connector: "",
+  params: false,
+});
+
 /**
- * What the active tool asks the person to do next, in words: the tool panels show it today, the
- * status bar (S2.7) will. Empty when the tool asks nothing (select, measure).
+ * The box frame being made (S5.7): its corner, then W and D, then H, each from a click or typed
+ * (`1000, 600` Enter, then `800` Enter). The form edits the same draft.
+ */
+export interface FrameDraft {
+  /** The corner with the least x, y and z. */
+  at?: V3 | undefined;
+  /** The footprint and the height, as typed (expressions allowed). */
+  w: string;
+  d: string;
+  h: string;
+}
+export const frameDraft = signal<FrameDraft>({ w: "", d: "", h: "" });
+
+/** Which value the box frame's gesture asks for next. */
+export function frameStage(d: FrameDraft): "corner" | "size" | "height" | "done" {
+  if (!d.at) return "corner";
+  if (d.w.trim() === "" || d.d.trim() === "") return "size";
+  if (d.h.trim() === "") return "height";
+  return "done";
+}
+
+/**
+ * What the active tool asks the person to do next, in words: the command bar and the status bar
+ * (S2.7) show it. Empty when the tool asks nothing (select).
  */
 export const toolPrompt = computed<string>(() => {
   switch (activeTool.value) {
     case "draw": {
       const { start, end } = drawState.value;
-      if (!start) return "click a start point";
-      return `from ${start.label}${end ? ` to ${end.label}` : ""}${typed.value ? ` · length ${typed.value}` : ""}`;
+      if (!start) return "Click a start point, or type [x, y, z] and press Enter.";
+      return `From ${start.label}${end ? ` to ${end.label}` : ""}: click the end, or type a length and press Enter.`;
     }
+    case "frame":
+      switch (frameStage(frameDraft.value)) {
+        case "corner":
+          return "Click the frame's corner, or type [x, y, z] and press Enter.";
+        case "size":
+          return "Click the far corner, or type the width and depth (W, D) and press Enter.";
+        default:
+          return "Click the height, or type it (H) and press Enter.";
+      }
     case "connect":
       return `${
         connectType.value === "pivot"
@@ -156,9 +292,13 @@ export const toolPrompt = computed<string>(() => {
             : "Click a bar near an end to pick that end, along its middle to pick the bar."
       } Click again to drop a pick.`;
     case "place":
-      return "Click a face or a groove of a bar; then set the distance from an end.";
+      return "Click a face or a groove of a bar to place the part there; type a distance first to set it from the nearer end.";
     case "pattern":
       return "Click the bar to repeat along (or type a bar or run).";
+    case "measure":
+      return measureState.value.a && !measureState.value.b
+        ? "Click the second point."
+        : "Click a point to measure from.";
     default:
       return "";
   }
@@ -168,7 +308,8 @@ declare module "../hook.ts" {
   interface AlukitHook {
     /**
      * The active tool, its draw options, the gesture's points, the text by the pointer and the
-     * machine label of what the pointer is on (`hint`'s `snap`).
+     * machine label of what the pointer is on (`hint`'s `snap`); what is typed in the command
+     * bar, the locked axis, the previewed joint's words and the box frame's next value.
      */
     tool(): {
       name: string;
@@ -178,6 +319,13 @@ declare module "../hook.ts" {
       end?: string;
       hint?: string;
       snap?: string;
+      typed?: string;
+      lock?: string;
+      prefer?: string;
+      joint?: string;
+      /** The joint preview's dry run, ms. */
+      jointMs?: number;
+      stage?: string;
     };
   }
 }
@@ -186,14 +334,21 @@ extendHook({
   tool: () => {
     const { start, end } = drawState.value;
     const h = hint.value;
+    const o = drawOptions.value;
+    const j = jointPreview.value;
     return {
       name: activeTool.value,
-      anchor: drawOptions.value.anchor,
-      roll: drawOptions.value.roll,
+      anchor: o.anchor,
+      roll: o.roll,
       ...(start ? { start: start.label } : {}),
       ...(end ? { end: end.label } : {}),
       ...(h ? { hint: h.text } : {}),
       ...(h?.snap !== undefined ? { snap: h.snap } : {}),
+      ...(typed.value ? { typed: typed.value } : {}),
+      ...(o.lock ? { lock: o.lock } : {}),
+      ...(o.prefer ? { prefer: o.prefer } : {}),
+      ...(j ? { joint: j.text, jointMs: j.ms } : {}),
+      ...(activeTool.value === "frame" ? { stage: frameStage(frameDraft.value) } : {}),
     };
   },
 });

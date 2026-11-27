@@ -1,6 +1,7 @@
 /*
- * The tools (design §8): the help line and the tip by the pointer over the viewport, and the
- * active tool's panel above the inspector. Owner: S5.
+ * The tools (design §8; docs/ux/plan.md D-UX-5): the tool rail's key caps, the command bar at the
+ * canvas foot, the tip by the pointer, and the active tool's long form above the inspector.
+ * Owner: S5.
  */
 
 .viewport-help {
@@ -16,13 +17,202 @@
   position: fixed;
   z-index: 10;
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-control);
   background: var(--bg-tip);
+  color: var(--tip-ink);
   border: 1px solid var(--line);
   font-size: var(--fs-tiny);
   white-space: nowrap;
   pointer-events: none;
 }
+
+/* The rail's key caps: the letter that picks the tool */
+
+.tool-rail .tool-key {
+  margin-left: auto;
+  color: var(--text-3);
+}
+
+.tool-rail .tb.on .tool-key {
+  color: var(--mark-active-text);
+}
+
+/* The command bar (S5.2): the tool, its prompt, the typed value and the options */
+
+.command-bar {
+  position: absolute;
+  /* Clear of the orientation gizmo at the bottom left (S3.9). */
+  left: 86px;
+  right: 6px;
+  bottom: 6px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  background: color-mix(in srgb, var(--bg-panel) 94%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-float);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+
+.cb-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-5);
+  min-width: 0;
+}
+
+.cb-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: 600;
+  color: var(--mark-active-text);
+}
+
+.cb-prompt {
+  color: var(--text-2);
+  flex: 1 1 18em;
+  min-width: 0;
+}
+
+.cb-value input {
+  width: 12em;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  background: var(--bg-well);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 2px var(--sp-3);
+}
+
+.cb-value input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.cb-eval {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+
+.cb-eval:empty {
+  display: none;
+}
+
+.cb-eval.error {
+  color: var(--blocked);
+}
+
+.cb-joint {
+  color: var(--tool);
+  font-variant-numeric: tabular-nums;
+}
+
+.cb-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text-2);
+}
+
+.cb-opt select,
+.cb-btn {
+  background: var(--bg-well);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 1px var(--sp-3);
+  font: inherit;
+  min-height: 24px;
+  max-width: 16em;
+}
+
+.cb-btn {
+  cursor: pointer;
+}
+
+.cb-lock {
+  color: var(--tool);
+  font-weight: 600;
+}
+
+.cb-armed {
+  color: var(--text-1);
+  font-weight: 500;
+}
+
+.cb-armed.cb-missing {
+  color: var(--warn);
+  font-weight: 400;
+}
+
+.cb-result {
+  font-variant-numeric: tabular-nums;
+}
+
+.cb-chip {
+  padding: 1px var(--sp-3);
+  border-radius: var(--radius-control);
+  background: var(--ready-wash);
+  color: var(--text-1);
+  border: 1px solid var(--line);
+  max-width: 28em;
+  overflow-wrap: anywhere;
+}
+
+.cb-chip.error {
+  background: var(--blocked-wash);
+  color: var(--blocked-ink);
+}
+
+/* The anchor picker: the section's box, a dot at each anchor (U40) */
+
+.cb-anchor-pad {
+  position: relative;
+  display: inline-block;
+}
+
+.cb-anchor-pad svg {
+  display: block;
+}
+
+.cb-anchor-box {
+  fill: none;
+  stroke: var(--text-3);
+  stroke-width: 1;
+}
+
+.cb-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--text-2);
+  background: var(--bg-panel);
+  cursor: pointer;
+}
+
+/* A dot's target is 24 px across (WCAG 2.5.8), its drawing 12. */
+.cb-dot::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.cb-dot.on {
+  background: var(--tool);
+  border-color: var(--tool);
+}
+
+/* The active tool's long form, above the inspector (D-UX-5) */
 
 .tool-panel {
   padding: 8px 10px;
@@ -33,8 +223,6 @@
 .tool-panel h3 {
   font-size: var(--fs-small);
   margin: 0 0 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--mark-active);
 }
 
@@ -43,13 +231,20 @@
 }
 
 .tool-panel input,
-.tool-panel select {
+.tool-panel select,
+.frame-form input,
+.frame-form select {
   background: var(--bg-well);
   color: var(--text-1);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-control);
   padding: 1px 4px;
   max-width: 9em;
+}
+
+.tool-panel input[type="checkbox"],
+.frame-form input[type="checkbox"] {
+  max-width: none;
 }
 
 .tool-panel .picks {
@@ -69,4 +264,41 @@
 
 .palette code {
   color: var(--mark-active-text);
+}
+
+/* The box frame's form (S5.7): in the tool's panel and in the start card */
+
+.frame-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.frame-form .tp-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+}
+
+.frame-form input[data-testid^="frame-"]:not([type]) {
+  width: 6em;
+}
+
+.frame-form .frame-at {
+  width: 4.5em;
+}
+
+.frame-profile.warn {
+  color: var(--warn);
+}
+
+.frame-numbers ul {
+  margin: 0;
+  padding-left: 1.2em;
+  font-variant-numeric: tabular-nums;
+}
+
+.frame-numbers p {
+  margin: 0;
 }

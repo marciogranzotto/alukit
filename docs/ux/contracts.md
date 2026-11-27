@@ -273,3 +273,44 @@ S2 ([s2-decisions.md](s2-decisions.md)) changed these contracts. Each adds, exce
 - **Requested from S1**: `/api/catalog` listing the built-in catalogs (`builtins: [{ id, name,
   vendor, profiles }]`), so the start card and settings can add one with one click (D-UX-6). Until
   then they take a built-in id typed in Project settings.
+
+## S5 changes
+
+S5 ([s5-decisions.md](s5-decisions.md)) changed these contracts. Each adds, except the moves
+marked **moved**, which §5.4 asked for.
+
+- **Moved: the tools** are `src/ui/tools/`: `state.ts` (every signal S0 named in `tools.ts`:
+  `activeTool`, `toolPrompt`, `hint` with `snap`, `drawState`, `typed`, …), `commands.ts` (the
+  batches a tool sends), `typed.ts` (a typed value), `wiring.ts` (`connectTools`), `joint.ts`,
+  `CommandBar.tsx`, `ToolRail.tsx`, `ToolForm.tsx` and `forms/FrameForm.tsx`. `Properties.tsx` is
+  `src/ui/inspector/Inspector.tsx` (`Inspector`), its root still `data-testid="properties"`. Other
+  streams' files changed only their import paths (`activeTool`, `toolPrompt`, `drawState`,
+  `TOOL_KEYS` from `tools/state.ts`; `typedValue` from `tools/typed.ts`).
+- **Tools**: `TOOLS` gains `frame`; `TOOL_KEYS` gains `x` (Pattern) and `g` (Box frame);
+  `TOOL_NAMES` and `toolKey(t)` name them. `drawOptions` gains `lock` (an axis) and `prefer` (a
+  corner rule). New signals: `fieldWanted` and `fieldDone` (the command bar takes and gives back
+  the keyboard), `jointPreview`, `lastResult` (the result chip), `frameDraft`, `frameOptions`.
+  `placeState` loses `from` (a typed distance counts from the nearer end). `CORNER_RULES`,
+  `CORNER_WORDS`.
+- **The hook's `tool()`** adds `typed`, `lock`, `prefer`, `joint` and `jointMs` (the joint
+  preview's words and its dry run's time) and `stage` (the box frame's next value).
+- **The command bar** is the viewport's `bottom` slot (`data-testid="command-bar"`), with the value
+  field `command-value`, its reading `command-result`, the joint preview `joint-preview` and the
+  result chip `tool-result`. The draw tool's `draw-autoconnect`, `draw-roll`, `draw-plane`,
+  `palette-bar` and `palette-part` moved into it from the right column; `draw-anchor` is now the
+  anchor picker, a group of dots (`data-anchor` on each), not a `<select>`; `measure-result` is in it
+  too. The right column's form (`ToolForm`) holds Connect, Pattern and the box frame only.
+  `place-apply` is gone: Place commits on the click (D-UX-16).
+- **`frameWay`** (S2's `shell/start.ts`) is set to `FrameForm` when `forms/FrameForm.tsx` loads.
+- **The dry-run client** (`src/ui/client/dryrun.ts`, S1's): the ok answer gains `results`
+  (`DryRunResult`: each command's `created`, `removed`, `changed` and `info`, which the server already
+  sent), and the refused answer `failed: { index, cmd? }`. The box frame's numbers read `addFrame`'s
+  `info`; Delete reads what a cascade removes and changes, and which command refused.
+- **`viewer/draw.ts`**: `EndOptions.lock`; `typedEnd(start, toward, length, written?)` writes an
+  expression into the coordinate along an axis; `offset(c, sign, d)`; `BarGesture.prefer` goes into
+  each `autoConnect`; `parseLength` is gone (`tools/typed.ts`'s `parseTyped` reads what is typed).
+- **`Feedback.tsx`**: `stepDiagnostics(outcome, ids)`, every diagnostic a step added, those naming
+  `ids` first (U6).
+- **Help**: the tools describe their own `tools` (10) and `drawing` (20) key sections; S2's
+  `Help.tsx` no longer does.
+- **Icons** (S4's file, cross-edited): adds `frame`.

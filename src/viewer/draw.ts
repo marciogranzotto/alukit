@@ -1,5 +1,6 @@
 import { plus } from "#core/commands/numbers.ts";
 import { anchorPoint, barFrame } from "#core/derive/frame.ts";
+import { parseExpr } from "#core/expr.ts";
 import type { V3, ViewSection } from "../mesh/model.ts";
 import {
   GRID_MM,
@@ -93,20 +94,47 @@ export function writtenPoint(snap: Snap, doc: WrittenDoc): PointJson {
   }
 }
 
+/** `e` as a term of a sum: parenthesised unless it is a leaf (a number, a name, a call). */
+function term(e: string): string {
+  try {
+    const t = parseExpr(e).t;
+    if (t === "num" || t === "name" || t === "call" || t === "member") return e;
+  } catch {
+    // Not an expression the grammar reads: the command that writes it says so.
+  }
+  return `(${e})`;
+}
+
+/**
+ * `c + sign·d`: a number when both are numbers (quantised, as a command writes it), else an
+ * expression, so a coordinate offset by a typed param keeps following it.
+ */
+export function offset(c: number | string, sign: 1 | -1, d: number | string): number | string {
+  if (typeof d === "number") return plus(c, sign * d);
+  if (c === 0) return sign > 0 ? d : `-${term(d)}`;
+  const left = typeof c === "number" ? String(q(c)) : term(c);
+  return `${left} ${sign > 0 ? "+" : "-"} ${term(d)}`;
+}
+
 /**
  * An end at `d` along `dir` from the start: written from the start's own written coordinates
  * when the start is an inline point and `dir` a world axis, so an end drawn from a point written
- * with params (`[0, 0, "H"]`) keeps them; coordinates otherwise.
+ * with params (`[0, 0, "H"]`) keeps them; coordinates otherwise. `written` is `d` as typed: an
+ * expression (`W / 2`) is written into the coordinate along an axis, so the param keeps driving
+ * the bar; along any other direction the end is written as the coordinates it comes to.
  */
-function endFrom(start: DrawPoint, dir: V3, d: number): PointJson {
+function endFrom(start: DrawPoint, dir: V3, d: number, written: number | string = d): PointJson {
   const p = addScaled(start.p, dir, d);
   const w = start.written;
   const k = dir.findIndex((c) => Math.abs(c) === 1);
   const axial = k >= 0 && dir.every((c, i) => i === k || c === 0);
-  if (Array.isArray(w) && w.length === 3 && axial) {
-    return w.map((c, i) =>
-      i === k ? plus(c as number | string, (dir[k] as number) * d) : c,
-    ) as PointJson;
+  const sign = (dir[k] ?? 1) > 0 ? 1 : -1;
+  const by = typeof written === "number" ? d : written;
+  if (axial && Array.isArray(w) && w.length === 3) {
+    return w.map((c, i) => (i === k ? offset(c as number | string, sign, by) : c)) as PointJson;
+  }
+  if (axial && typeof written === "string") {
+    return start.p.map((c, i) => (i === k ? offset(q(c), sign, written) : q(c))) as PointJson;
   }
   return coords(p);
 }
@@ -123,6 +151,8 @@ export interface EndOptions {
   plane: WorkPlane;
   doc: WrittenDoc;
   step?: number;
+  /** An axis locked with the arrow keys (D-UX-18): the line keeps to it, whatever is near. */
+  lock?: Axis | undefined;
 }
 
 /** The axis through `S` whose screen image passes nearest the pointer, and the station on it. */
@@ -143,14 +173,40 @@ export function inferAxis(
 }
 
 /**
- * The end under the pointer: a snap point closes on it; a snap line is met by an axis through
- * the start when one crosses it there, else closes where the pointer is on it; otherwise the
- * inferred axis, or the work plane with Shift, at a length on the grid.
+ * The end along a locked axis (SketchUp's arrow-key locks): where the pointer's ray passes the
+ * axis, on the grid; a snap point under the pointer gives its own station on the axis instead,
+ * so a locked line can stop level with a point it does not touch.
+ */
+function lockedEnd(start: DrawPoint, axis: Axis, o: EndOptions, step: number): DrawEnd | undefined {
+  const e = AXES[axis];
+  const S = start.p;
+  // A snap level with the start (the bar it starts from, say) gives no length: the ray decides.
+  const level = o.snap
+    ? q((o.snap.p[0] - S[0]) * e[0] + (o.snap.p[1] - S[1]) * e[1] + (o.snap.p[2] - S[2]) * e[2])
+    : 0;
+  const snap = Math.abs(level) > 1e-6 ? o.snap : undefined;
+  const s = snap ? level : Math.round(rayLineParams(o.ray, S, e).s / step) * step;
+  if (Math.abs(s) < 1e-6) return undefined;
+  return {
+    p: addScaled(S, e, s),
+    written: endFrom(start, e, s),
+    label: `${s > 0 ? "+" : "-"}${axis} ${Math.abs(s)}${snap ? ` level with ${snap.label}` : ""}`,
+    how: "axis",
+    axis,
+  };
+}
+
+/**
+ * The end under the pointer: along a locked axis, see `lockedEnd`; a snap point closes on it; a
+ * snap line is met by an axis through the start when one crosses it there, else closes where the
+ * pointer is on it; otherwise the inferred axis, or the work plane with Shift, at a length on the
+ * grid.
  */
 export function endUnder(start: DrawPoint, o: EndOptions): DrawEnd | undefined {
   const step = o.step ?? GRID_MM;
   const S = start.p;
   const snap = o.snap;
+  if (o.lock) return lockedEnd(start, o.lock, o, step);
   if (snap && (snap.kind === "point" || snap.kind === "line")) {
     if (snap.kind === "line" && snap.line && !o.free && snap.ref.kind === "station") {
       // An axis through the start that meets the line: the exact crossing, not a grid step.
@@ -198,11 +254,20 @@ export function endUnder(start: DrawPoint, o: EndOptions): DrawEnd | undefined {
   };
 }
 
-/** The end a typed length gives, along the current direction from the start. */
-export function typedEnd(start: DrawPoint, toward: V3, length: number): DrawEnd | undefined {
+/**
+ * The end a typed length gives, along the current direction from the start; `written` is the
+ * length as typed (an expression keeps its params, see `endFrom`). A negative length goes the
+ * other way.
+ */
+export function typedEnd(
+  start: DrawPoint,
+  toward: V3,
+  length: number,
+  written: number | string = length,
+): DrawEnd | undefined {
   const d = sub(toward, start.p);
   const n = len3(d);
-  if (!(n > 1e-9) || !(length > 0)) return undefined;
+  if (!(n > 1e-9) || !(Math.abs(length) > 1e-9)) return undefined;
   // Snap a direction within 1e-9 of a world axis onto it, so the written end stays axial.
   const dir = d.map((c) => {
     const x = c / n;
@@ -211,19 +276,11 @@ export function typedEnd(start: DrawPoint, toward: V3, length: number): DrawEnd 
   const axis = (["x", "y", "z"] as const).find((_, i) => Math.abs(dir[i] as number) === 1);
   return {
     p: addScaled(start.p, dir, length),
-    written: endFrom(start, dir, length),
-    label: `typed ${length}`,
+    written: endFrom(start, dir, length, written),
+    label: `typed ${typeof written === "string" ? written : length}`,
     how: "typed",
     ...(axis ? { axis } : {}),
   };
-}
-
-/** Parses a typed length: a positive number of millimetres. */
-export function parseLength(text: string): number | undefined {
-  const t = text.trim();
-  if (!/^\d+(\.\d+)?$|^\.\d+$/.test(t)) return undefined;
-  const v = Number(t);
-  return v > 0 ? v : undefined;
 }
 
 /** The bar's frame and section shift for a preview: the rule derive uses (§4.4). */
@@ -266,6 +323,8 @@ export interface BarGesture {
   anchor: string;
   roll: number;
   autoConnect: boolean;
+  /** The corner rule the joints at its ends follow (D-UX-9), when not the project's own. */
+  prefer?: string | undefined;
 }
 
 /**
@@ -290,7 +349,10 @@ export function barCommands(g: BarGesture): { cmd: string; args: Record<string, 
   const out: { cmd: string; args: Record<string, unknown> }[] = [{ cmd: "addBar", args: bar }];
   if (g.autoConnect) {
     for (const p of [g.a, g.b])
-      out.push({ cmd: "autoConnect", args: { at: connectAt(p), optional: true } });
+      out.push({
+        cmd: "autoConnect",
+        args: { at: connectAt(p), optional: true, ...(g.prefer ? { prefer: g.prefer } : {}) },
+      });
   }
   return out;
 }

@@ -1,131 +1,55 @@
 import { signal } from "@preact/signals";
-import { GROUND } from "../../viewer/workplane.ts";
-import { Diagnostics, Errors, newDiagnostics } from "../Feedback.tsx";
+import { usedItems } from "../catalog/PartsBin.tsx";
+import { pins, recent } from "../catalog/state.ts";
+import { Diagnostics, Errors, stepDiagnostics } from "../Feedback.tsx";
 import { selection } from "../focus.ts";
 import { palette } from "../palette.ts";
-import { applyCommands, busy, type CommandOutcome, model, sendCommands } from "../store.ts";
-import {
-  connectionCommand,
-  measured,
-  patternCommand,
-  pivotBatch,
-  placeCommand,
-  runOf,
-} from "./commands.ts";
+import { busy, type CommandOutcome, model, sendCommands } from "../store.ts";
+import { connectionCommand, patternCommand, pivotBatch, runOf } from "./commands.ts";
+import { FrameForm } from "./forms/FrameForm.tsx";
 import {
   activeTool,
   type ConnectPick,
   type ConnectType,
   connectPicks,
   connectType,
-  drawOptions,
   type FaceOptions,
   faceOptions,
-  measureState,
   type PivotOptions,
   patternState,
-  pickingPlane,
   pivotOptions,
-  placeState,
   toolPrompt,
-  workPlane,
 } from "./state.ts";
 
-/** The active tool's long form, above the inspector (D-UX-5). Owner: S5. */
+/**
+ * The active tool's long form, above the inspector (D-UX-5): Connect's picks, face and pivot
+ * fields; Pattern's; the box frame's. The other tools' options are in the command bar. A
+ * refusal shows under the form that sent it (U30). Owner: S5.
+ */
 
-function PaletteLine({ which }: { which: "bar" | "part" }) {
-  const p = palette.value[which];
-  if (!p)
-    return (
-      <p class="hint-text" data-testid={`palette-${which}-empty`}>
-        No {which === "bar" ? "bar" : "part"} in the palette: pick one in the catalog and set it as
-        the palette.
-      </p>
-    );
-  const opt =
-    p.opt && Object.keys(p.opt).length > 0
-      ? ` (${Object.entries(p.opt)
-          .map(([k, v]) => `${k} ${v}`)
-          .join(", ")})`
-      : "";
+/**
+ * The items a fastener, a stack or a hinge may be picked from (S5.9): the parts bin's, what the
+ * project uses (bars aside), then what was armed and pinned, each once.
+ */
+function BinList({ id }: { id: string }) {
+  const m = model.value;
+  const seen = new Set<string>();
+  const items: { id: string; name: string }[] = [];
+  const add = (x: { id: string; name?: string | undefined }) => {
+    if (seen.has(x.id)) return;
+    seen.add(x.id);
+    items.push({ id: x.id, name: x.name ?? "" });
+  };
+  if (m) for (const u of usedItems(m)) if (u.kind !== "bar") add({ id: u.item.id, name: u.name });
+  for (const b of [...recent.value, ...pins.value]) add(b);
   return (
-    <p class="palette" data-testid={`palette-${which}`} data-id={p.id}>
-      <code>{p.id}</code>
-      {opt} <span class="sub">{p.name}</span>
-    </p>
-  );
-}
-
-function DrawPanel() {
-  const o = drawOptions.value;
-  const bar = palette.value.bar;
-  const anchors = bar?.anchors ?? ["c"];
-  return (
-    <div class="tool-panel" data-testid="panel-draw">
-      <h3>Draw bar</h3>
-      <PaletteLine which="bar" />
-      <div class="tp-row">
-        <label>
-          anchor (A){" "}
-          <select
-            data-testid="draw-anchor"
-            value={o.anchor}
-            onChange={(e) => {
-              drawOptions.value = { ...o, anchor: (e.target as HTMLSelectElement).value };
-            }}
-          >
-            {anchors.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          roll (R){" "}
-          <button
-            type="button"
-            class="tp-btn"
-            data-testid="draw-roll"
-            data-roll={o.roll}
-            onClick={() => {
-              drawOptions.value = { ...o, roll: (o.roll + 90) % 360 };
-            }}
-          >
-            {o.roll}°
-          </button>
-        </label>
-      </div>
-      <label class="tp-row">
-        <input
-          type="checkbox"
-          data-testid="draw-autoconnect"
-          checked={o.autoConnect}
-          onChange={() => {
-            drawOptions.value = { ...o, autoConnect: !o.autoConnect };
-          }}
-        />{" "}
-        connect ends (a butt where the bar closes on others)
-      </label>
-      <p class="tp-row">
-        work plane (W):{" "}
-        <span data-testid="draw-plane">
-          {pickingPlane.value ? "click a face…" : workPlane.value.label}
-        </span>{" "}
-        {workPlane.value !== GROUND && (
-          <button type="button" class="tp-btn" onClick={() => (workPlane.value = GROUND)}>
-            ground
-          </button>
-        )}
-      </p>
-      <p class="tool-status" data-testid="draw-status">
-        {toolPrompt.value}
-      </p>
-      <p class="hint-text">
-        The line follows X, Y or Z; Shift frees it in the work plane. Type a length and press Enter,
-        or click a point. Esc cancels.
-      </p>
-    </div>
+    <datalist id={id} data-testid={id}>
+      {items.map((x) => (
+        <option key={x.id} value={x.id}>
+          {x.name}
+        </option>
+      ))}
+    </datalist>
   );
 }
 
@@ -260,6 +184,7 @@ function PivotFields() {
           hinge{" "}
           <input
             data-testid="pivot-connector"
+            list="connect-bin"
             placeholder="a connector id"
             value={o.connector}
             onInput={(e) => set({ connector: (e.target as HTMLInputElement).value })}
@@ -275,13 +200,15 @@ function FaceFields() {
   const set = (next: Partial<FaceOptions>) => {
     faceOptions.value = { ...f, ...next };
   };
-  const text = (k: keyof FaceOptions, label: string, placeholder: string) => (
+  const text = (k: keyof FaceOptions, label: string, placeholder: string, list?: string) => (
     <label>
       {label}{" "}
       <input
         data-testid={`face-${k}`}
         placeholder={placeholder}
         value={f[k] as string}
+        type="text"
+        list={list}
         onInput={(e) => set({ [k]: (e.target as HTMLInputElement).value })}
       />
     </label>
@@ -315,7 +242,7 @@ function FaceFields() {
       {f.fastening !== "none" && (
         <>
           <div class="tp-row">
-            {text("fastener", f.rod ? "rod stock" : "fastener", "an item id")}
+            {text("fastener", f.rod ? "rod stock" : "fastener", "an item id", "connect-bin")}
             <label>
               <input
                 type="checkbox"
@@ -327,7 +254,7 @@ function FaceFields() {
             </label>
             {f.rod && text("rodLen", "length", "mm")}
           </div>
-          <div class="tp-row">{text("stack", "stack", "items, head to nut")}</div>
+          <div class="tp-row">{text("stack", "stack", "items, head to nut", "connect-bin")}</div>
           <div class="tp-row">
             {text("at", "at", "mm along the first layer, e.g. 100, 300")}
             {text("across", "across", "mm, e.g. -15, 15")}
@@ -364,6 +291,7 @@ function ConnectPanel() {
     const p = type === "pivot" ? pivotBatch(c, m.doc) : undefined;
     const outcome = await sendCommands(p ? p.commands : [c], "connect", {
       strict: p !== undefined,
+      inline: true,
     });
     const id = outcome.ok ? outcome.created.find((x) => /^c\d+$/.test(x)) : p?.id;
     connectOutcome.value = { outcome, ...(id ? { id } : {}) };
@@ -414,6 +342,7 @@ function ConnectPanel() {
           ))}
         </ul>
       )}
+      <BinList id="connect-bin" />
       {type === "pivot" && <PivotFields />}
       {type === "face" && <FaceFields />}
       <div class="tp-row">
@@ -437,92 +366,19 @@ function ConnectPanel() {
           {last.outcome.ok && last.id && (
             <p class="tool-status">
               made <code>{last.id}</code>
-              {newDiagnostics(last.outcome, [last.id]).length === 0 ? "" : "; derive says:"}
+              {stepDiagnostics(last.outcome, [last.id]).length === 0 ? "" : "; derive says:"}
             </p>
           )}
           <Errors outcome={last.outcome} />
-          <Diagnostics list={last.id ? newDiagnostics(last.outcome, [last.id]) : []} />
+          <Diagnostics list={last.id ? stepDiagnostics(last.outcome, [last.id]) : []} />
         </div>
       )}
     </div>
   );
 }
 
-function PlacePanel() {
-  const s = placeState.value;
-  const part = palette.value.part;
-  const st = s.station;
-  return (
-    <div class="tool-panel" data-testid="panel-place">
-      <h3>Place part</h3>
-      <PaletteLine which="part" />
-      <p class="hint-text">{toolPrompt.value}</p>
-      {st && (
-        <>
-          <p>
-            on <code>{st.bar}</code> {st.groove ? `groove ${st.groove}` : `face ${st.face}`}
-          </p>
-          <div class="tp-row">
-            <label>
-              at{" "}
-              <input
-                type="number"
-                data-testid="place-at"
-                value={st.at_mm}
-                onInput={(e) => {
-                  placeState.value = {
-                    ...s,
-                    station: { ...st, at_mm: Number((e.target as HTMLInputElement).value) },
-                  };
-                }}
-              />{" "}
-              mm from
-            </label>
-            <select
-              data-testid="place-from"
-              value={s.from}
-              onChange={(e) => {
-                placeState.value = {
-                  ...s,
-                  from: (e.target as HTMLSelectElement).value as "a" | "b",
-                };
-              }}
-            >
-              <option value="a">end a</option>
-              <option value="b">end b</option>
-            </select>
-            <select
-              data-testid="place-roll"
-              value={s.roll}
-              onChange={(e) => {
-                placeState.value = { ...s, roll: Number((e.target as HTMLSelectElement).value) };
-              }}
-            >
-              {[0, 90, 180, 270].map((r) => (
-                <option key={r} value={r}>
-                  {r}°
-                </option>
-              ))}
-            </select>
-          </div>
-        </>
-      )}
-      <button
-        type="button"
-        class="tp-btn"
-        data-testid="place-apply"
-        disabled={!st || !part || busy.value}
-        onClick={async () => {
-          if (!st || !part) return;
-          if (await applyCommands([placeCommand(part, st, s.from, s.roll)], "place part"))
-            placeState.value = { from: "a", roll: 0 };
-        }}
-      >
-        Place
-      </button>
-    </div>
-  );
-}
+/** The last pattern refused, shown under its form (U30). */
+const patternOutcome = signal<CommandOutcome | undefined>(undefined);
 
 function PatternPanel() {
   const s = patternState.value;
@@ -568,30 +424,13 @@ function PatternPanel() {
         disabled={"why" in c || busy.value}
         onClick={async () => {
           if ("why" in c) return;
-          await applyCommands([c], "pattern");
+          patternOutcome.value = await sendCommands([c], "pattern", { inline: true });
         }}
       >
         Create
       </button>
       {"why" in c && <p class="hint-text">{c.why}</p>}
-    </div>
-  );
-}
-
-function MeasurePanel() {
-  const { a, b } = measureState.value;
-  const m = a && b ? measured(a.p, b.p) : undefined;
-  const f = (x: number) => (Math.round(x * 100) / 100).toFixed(2);
-  return (
-    <div class="tool-panel" data-testid="panel-measure">
-      <h3>Measure</h3>
-      <p>from {a ? a.label : "—"}</p>
-      <p>to {b ? b.label : "—"}</p>
-      {m && (
-        <p data-testid="measure-result">
-          <strong>{f(m.d)} mm</strong> (dx {f(m.dx)}, dy {f(m.dy)}, dz {f(m.dz)})
-        </p>
-      )}
+      <Errors outcome={patternOutcome.value} />
     </div>
   );
 }
@@ -599,16 +438,17 @@ function MeasurePanel() {
 export function ToolForm() {
   if (!model.value) return null;
   switch (activeTool.value) {
-    case "draw":
-      return <DrawPanel />;
     case "connect":
       return <ConnectPanel />;
-    case "place":
-      return <PlacePanel />;
     case "pattern":
       return <PatternPanel />;
-    case "measure":
-      return <MeasurePanel />;
+    case "frame":
+      return (
+        <div class="tool-panel" data-testid="panel-frame">
+          <h3>Box frame</h3>
+          <FrameForm />
+        </div>
+      );
     default:
       return null;
   }

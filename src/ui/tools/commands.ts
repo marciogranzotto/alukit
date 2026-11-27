@@ -1,3 +1,4 @@
+import { len } from "#core/commands/numbers.ts";
 import { nextIdNumber } from "#core/ids.ts";
 import type { V3 } from "../../mesh/model.ts";
 import type { PaletteItem } from "../palette.ts";
@@ -5,11 +6,13 @@ import {
   type ConnectPick,
   type ConnectType,
   type FaceOptions,
+  type FrameDraft,
+  type FrameOptions,
   faceOptions,
   type PivotOptions,
   type PlaceStation,
 } from "./state.ts";
-import { typedValue, valueList } from "./typed.ts";
+import { typedNumber, typedValue, valueList } from "./typed.ts";
 
 /**
  * What the connect, place and pattern tools send (design §8): each a batch of commands, or why
@@ -165,12 +168,16 @@ export function runOf(doc: Readonly<Record<string, unknown>>, bar: string): stri
   return undefined;
 }
 
-/** The batch the place tool's station makes. */
+/**
+ * The batch the place tool's station makes: at the station's own distance from end a, or at
+ * `at` (a typed distance, a number or an expression) from end `from`.
+ */
 export function placeCommand(
   item: PaletteItem,
   st: PlaceStation,
   from: "a" | "b",
   roll: number,
+  at: number | string = st.at_mm,
 ): { cmd: string; args: Record<string, unknown> } {
   return {
     cmd: "addPart",
@@ -179,7 +186,7 @@ export function placeCommand(
       ...(item.opt && Object.keys(item.opt).length > 0 ? { opt: item.opt } : {}),
       on: {
         bar: st.bar,
-        at_mm: st.at_mm,
+        at_mm: at,
         ...(from === "b" ? { from: "b" } : {}),
         ...(st.groove ? { groove: st.groove } : st.face ? { face: st.face } : {}),
       },
@@ -215,4 +222,98 @@ const len3 = (a: V3) => Math.hypot(a[0], a[1], a[2]);
 export function measured(a: V3, b: V3): { d: number; dx: number; dy: number; dz: number } {
   const v = sub(b, a);
   return { d: len3(v), dx: v[0], dy: v[1], dz: v[2] };
+}
+
+/**
+ * Whether a connection of `type` takes `pick` beside the picks it has, and why not (S5.9, U38):
+ * the tool says so by the pointer and leaves the pick out, instead of accepting it and
+ * explaining after Apply. A pick already made is always taken: a second click drops it.
+ */
+export function pickRefusal(
+  type: ConnectType,
+  picks: readonly ConnectPick[],
+  pick: ConnectPick,
+): string | undefined {
+  if (picks.some((p) => p.ref === pick.ref)) return undefined;
+  const bars = picks.filter((p) => p.kind === "bar").length;
+  const ends = picks.filter((p) => p.kind === "end").length;
+  switch (type) {
+    case "butt":
+      if (pick.kind === "bar" && bars >= 1)
+        return "a butt has one through bar: drop the other first";
+      if (pick.kind === "part" || pick.kind === "run") return "a butt joins bars and their ends";
+      return undefined;
+    case "miter":
+    case "splice":
+      if (pick.kind !== "end") return `a ${type} joins two ends: click near an end`;
+      if (ends >= 2) return `a ${type} joins two ends: drop one first`;
+      return undefined;
+    case "pivot":
+      if (pick.kind !== "end") return "a pivot carries ends: click near each end it carries";
+      return undefined;
+    case "face":
+      if (pick.kind === "end")
+        return "a face connection takes layers: click along a bar's middle, or a plate";
+      return undefined;
+  }
+}
+
+/**
+ * Where a typed distance puts a part on a station's bar (D-UX-16): from the end nearer the
+ * station under the pointer, so the number reads as "this far from the end I am near".
+ */
+export function placeFrom(st: PlaceStation, barLen: number): "a" | "b" {
+  return st.at_mm > barLen / 2 ? "b" : "a";
+}
+
+/**
+ * The box frame's `addFrame` (BE-6) from the draft and the options, or why it makes none. The
+ * size takes expressions with params, as typed, and is sent as the numbers they come to
+ * (`addFrame` takes numbers; with `params` it writes W, D and H itself). The bars are the
+ * palette's bar, else the project's `defaults.bar` (left out, so `addFrame` reads it).
+ */
+export function frameCommand(
+  d: FrameDraft,
+  o: FrameOptions,
+  bar: PaletteItem | undefined,
+  hasDefaultBar: boolean,
+  params: Readonly<Record<string, number>>,
+): { cmd: "addFrame"; args: Record<string, unknown> } | { why: string } {
+  if (!bar && !hasDefaultBar)
+    return { why: "choose the frame's profile first: arm a bar from the parts bin or the catalog" };
+  if (!d.at) return { why: "click the frame's corner, or type [x, y, z]" };
+  const size: number[] = [];
+  for (const [name, text] of [
+    ["the width W", d.w],
+    ["the depth D", d.d],
+    ["the height H", d.h],
+  ] as const) {
+    if (text.trim() === "") return { why: `give ${name}` };
+    const n = typedNumber(text, params);
+    if ("why" in n) return { why: `${name}: ${n.why}` };
+    if (!(n.value > 0)) return { why: `${name} is more than 0` };
+    size.push(n.value);
+  }
+  if (!o.rings.base && !o.rings.top) return { why: "keep the base ring, the top ring or both" };
+  let shelf: number | undefined;
+  if (o.shelf.trim() !== "") {
+    const n = typedNumber(o.shelf, params);
+    if ("why" in n) return { why: `the shelf: ${n.why}` };
+    shelf = n.value;
+  }
+  const rings = [...(o.rings.base ? ["base"] : []), ...(o.rings.top ? ["top"] : [])];
+  return {
+    cmd: "addFrame",
+    args: {
+      at: d.at.map((c) => len(c)),
+      size,
+      ...(bar ? { item: bar.id } : {}),
+      ...(bar?.opt && Object.keys(bar.opt).length > 0 ? { opt: bar.opt } : {}),
+      ...(o.corner ? { corner: o.corner } : {}),
+      ...(rings.length < 2 ? { rings } : {}),
+      ...(shelf !== undefined ? { shelf_mm: shelf } : {}),
+      ...(o.connector.trim() !== "" ? { connector: o.connector.trim() } : {}),
+      ...(o.params ? { params: true } : {}),
+    },
+  };
 }
