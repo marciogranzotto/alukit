@@ -46,6 +46,7 @@ in the gitignored `internal/session-notes.md`.*
 | M4c: close the design-vs-built feature gaps | **done**, merged (20:53), pushed | variant switcher, export button, clipping plane, Open items / Params / Decisions tabs, pivot and face in the connect tool, `catalog search` / `import` |
 | Full acceptance (§13), internal | **ran** (20:40): the four numeric tests pass; overall **fail** on two model gaps | Cut list: 214 pieces, largest difference 0.05 mm. Mass: within 0.09 % once the record's own errors are set aside. Cost: every vendor line to the cent on a frozen lock. Counts: pass. Every exception is an error in the record. Fails on A1 and A3, below. |
 | Gap A3: face contact on real section faces | **done**, merged (21:40), pushed | Golden G29. Note: `docs/notes/a3-face-contact.md`. |
+| Design draft 2.3: the design describes v1 as built | **done**, merged (22:07), pushed | 31 changelog bullets; all gap rules plus G28–G32; 15 design-vs-built entries changed to match the build, the rest stated as v1 limits; open calls left open. |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -334,3 +335,12 @@ in the gitignored `internal/session-notes.md`.*
 - **21:40**: Merged. Three conflicts, all keep-both: the notes index, the golden list (G29 + G30–G32)
   and `fastenings.ts` imports. The gate passed with 674 tests; every golden holds on the merged
   code.
+- **22:05**: Design draft 2.3 (Opus, worktree; 3 commits).
+  - It folds the milestone notes, `acceptance-gaps.md`, `a3-face-contact.md` and the design-vs-built
+    list (now 21 entries) into `docs/design.md`.
+  - Contradictions it settled: m6's "a placeholder holds its own group" over m3b-order's older
+    wording (the build follows m6); A1/A7 over the decisions they replace. §11's stem count is now
+    27, and §5.2 now says CI runs on Ubuntu only, with macOS in the local merge gate.
+  - §12 records honestly that M5's "recorded manual agent run" isn't in the repo; the skill's
+    worked example runs as a test instead.
+- **22:07**: Merged without conflicts; gate PASS (674 tests).
