@@ -1,0 +1,16 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G36",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-seat"],
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [600, 0, 0], "label": "40x40 along +X" },
+    "b2": { "a": [300, 0, 0], "b": [300, 0, 500], "label": "40x40 post on b1's top face" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"] }
+  }
+}

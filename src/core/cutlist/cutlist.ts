@@ -69,14 +69,18 @@ export interface EndTapMachining {
 }
 
 /**
- * A hole into an end face, along the axis (acceptance gap A4): `off_mm` from the section's box
- * centre in its x and y (absent at the centre), drilled `d_mm` or tapped, `depth_mm` deep or
- * through the piece.
+ * A hole into an end face (acceptance gap A4): `off_mm` from the section's box centre in its x
+ * and y (absent at the centre), drilled `d_mm` or tapped, `depth_mm` deep or through the piece.
+ * Along the axis, or, following a screw at an angle (after acceptance run 4), `angle_deg` off
+ * square to the end face, coming out at `exit_mm` at the other end (or ending there, `depth_mm`
+ * in).
  */
 export interface EndHoleMachining {
   op: "end-hole";
   from: "a" | "b";
   off_mm?: [number, number];
+  exit_mm?: [number, number];
+  angle_deg?: number;
   d_mm?: number;
   thread?: string;
   depth_mm?: number;
@@ -233,6 +237,8 @@ function machiningOf(b: DerivedBar): Machining[] {
         op: "end-hole",
         from: op.from,
         ...(off && (off[0] !== 0 || off[1] !== 0) ? { off_mm: off } : {}),
+        ...(op.exit ? { exit_mm: [q(op.exit[0]), q(op.exit[1])] as [number, number] } : {}),
+        ...(op.angle !== undefined ? { angle_deg: qa(op.angle) } : {}),
         ...(op.d !== undefined ? { d_mm: q(op.d) } : {}),
         ...(op.thread ? { thread: op.thread } : {}),
         ...(op.depth !== undefined ? { depth_mm: q(op.depth) } : {}),
@@ -288,11 +294,14 @@ function flipped(p: Oriented): Oriented {
     ends: { a: flipEnd(p.ends.b), b: flipEnd(p.ends.a) },
     machining: p.machining.map((m): Machining => {
       if (m.op === "end-tap" || m.op === "end-hole") {
-        // In the end face, local x reverses and y stays.
+        // In the end face, local x reverses and y stays; so does an end hole's exit.
         return {
           ...m,
           from: other(m.from),
           ...(m.off_mm ? { off_mm: [0 - m.off_mm[0], m.off_mm[1]] as [number, number] } : {}),
+          ...(m.op === "end-hole" && m.exit_mm
+            ? { exit_mm: [0 - m.exit_mm[0], m.exit_mm[1]] as [number, number] }
+            : {}),
         };
       }
       const out: HoleMachining = { ...m, face: FLIP_FACE[m.face], from: other(m.from) };
@@ -349,6 +358,9 @@ function cmpMachining(a: Machining, b: Machining): number {
     return (
       cmpVal(ea.off_mm?.[0] ?? 0, eb.off_mm?.[0] ?? 0) ||
       cmpVal(ea.off_mm?.[1] ?? 0, eb.off_mm?.[1] ?? 0) ||
+      cmpVal(ea.angle_deg, eb.angle_deg) ||
+      cmpVal(ea.exit_mm?.[0], eb.exit_mm?.[0]) ||
+      cmpVal(ea.exit_mm?.[1], eb.exit_mm?.[1]) ||
       cmpVal(ea.d_mm, eb.d_mm) ||
       cmpVal(ea.thread, eb.thread) ||
       cmpVal(ea.depth_mm, eb.depth_mm)
@@ -382,11 +394,15 @@ function physical(m: Machining, span: number): Key {
     return [0, m.from, m.off_mm?.[0] ?? 0, m.off_mm?.[1] ?? 0, m.thread, m.depth_mm ?? -1];
   }
   if (m.op === "end-hole") {
+    // A hole along the axis has no exit apart from its entry, and no angle.
     return [
       0.5,
       m.from,
       m.off_mm?.[0] ?? 0,
       m.off_mm?.[1] ?? 0,
+      m.angle_deg ?? 0,
+      m.exit_mm?.[0] ?? m.off_mm?.[0] ?? 0,
+      m.exit_mm?.[1] ?? m.off_mm?.[1] ?? 0,
       m.d_mm ?? -1,
       m.thread ?? "",
       m.depth_mm ?? -1,

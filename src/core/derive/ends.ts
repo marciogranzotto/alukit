@@ -1,5 +1,12 @@
 import { compareIds } from "../ids.ts";
-import type { ButtConn, Connection, EndSpec, MiterConn, SpliceConn } from "../project/schema.ts";
+import type {
+  ButtConn,
+  Connection,
+  EndSpec,
+  Face,
+  MiterConn,
+  SpliceConn,
+} from "../project/schema.ts";
 import { TOL } from "../tolerances.ts";
 import { atan2Deg } from "../trig.ts";
 import {
@@ -28,6 +35,7 @@ import {
 } from "./place.ts";
 import {
   type BarLengths,
+  type ButtFace,
   type Claim,
   END_PROVIDERS,
   type EndFace,
@@ -146,6 +154,8 @@ export interface Stage3 {
   faces: Map<string, EndFace>;
   /** The derived per-bar lengths and end reports, for bars whose ends resolved. */
   lengths: Map<string, { lengths: BarLengths; ends: { a: EndReport; b: EndReport } }>;
+  /** Per butt connection, the face each of its butting ends bears on, by end. */
+  seats: Map<string, Map<string, ButtFace>>;
 }
 
 export function resolveEnds(ctx: Ctx, placed: ReadonlyMap<string, PlacedBar>): Stage3 {
@@ -158,6 +168,7 @@ class Ends {
   private readonly placed: ReadonlyMap<string, PlacedBar>;
   private readonly claims = new Map<string, Claim[]>();
   private readonly faces = new Map<string, EndFace>();
+  private readonly seats = new Map<string, Map<string, ButtFace>>();
   /** Connections already reported invalid, so each is reported once. */
   private readonly connPlanes = new Map<string, Map<string, PlaneN> | undefined>();
 
@@ -207,7 +218,7 @@ class Ends {
       if (!fa || !fb) continue;
       lengths.set(bar.id, this.lengths(bar, fa, fb));
     }
-    return { faces: this.faces, lengths };
+    return { faces: this.faces, lengths, seats: this.seats };
   }
 
   // -------------------------------------------------------------------------------------------
@@ -462,8 +473,32 @@ class Ends {
         );
       }
       out.set(ref, { p, n: neg(face.n) });
+      this.seat(
+        id,
+        ref,
+        throughBar !== undefined
+          ? { kind: "side", bar: throughBar, face: faceName(prism, cr) as Face }
+          : {
+              kind: "body",
+              item: (spec.through as { body: string }).body,
+              prism,
+              slab: cr.slab,
+              side: cr.side,
+              face: faceName(prism, cr),
+            },
+      );
     }
     return out;
+  }
+
+  /** The face a connection's butting end bears on, for its seat. */
+  private seat(conn: string, ref: string, f: ButtFace): void {
+    let m = this.seats.get(conn);
+    if (!m) {
+      m = new Map();
+      this.seats.set(conn, m);
+    }
+    m.set(ref, f);
   }
 
   /** The through bar's own end: cover (the farthest face of the butting prisms) or node. */
@@ -751,6 +786,7 @@ class Ends {
     }
     const spacer = this.spacer(c.conn as string, spec);
     if (spacer === undefined) return undefined;
+    this.seat(c.conn as string, k, { kind: "end", bar: T.id, end: splitEnd(target).end });
     return { p: addScaled(f.face.p, f.face.n, spacer), n: neg(f.face.n) };
   }
 

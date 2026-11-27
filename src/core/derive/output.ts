@@ -92,6 +92,8 @@ function opJson(o: ResolvedOp) {
       op: o.op,
       from: o.from,
       ...(o.off ? { off_mm: [len(o.off[0]), len(o.off[1])] } : {}),
+      ...(o.exit ? { exit_mm: [len(o.exit[0]), len(o.exit[1])] } : {}),
+      ...(o.angle !== undefined ? { angle_deg: ang(o.angle) } : {}),
       ...(o.d !== undefined ? { d_mm: len(o.d) } : {}),
       ...(o.thread ? { thread: o.thread } : {}),
       ...(o.depth !== undefined ? { depth_mm: len(o.depth) } : {}),
@@ -160,6 +162,18 @@ function fasteningJson(f: FaceResult) {
       ...(s.sleeves.length > 0
         ? { sleeves: s.sleeves.map((x) => ({ piece: x.piece, len_mm: len(x.len) })) }
         : {}),
+      ...(s.seats.length > 0
+        ? {
+            seats: s.seats.map((x) => ({
+              side: x.side,
+              item: x.item,
+              on: x.on,
+              d_in_mm: len(x.d_in),
+              d_out_mm: len(x.d_out),
+              bearing_pct: len(100 * x.bearing),
+            })),
+          }
+        : {}),
     })),
   };
 }
@@ -207,6 +221,21 @@ export function derivedJson(d: Derived, stamp: { lock?: string } = {}): Record<s
     ),
     pivots: sortedObject(
       [...d.pivots].map(([id, p]) => [id, { point: pt(p.P), normal: dir(p.n) }]),
+    ),
+    butts: sortedObject(
+      [...d.butts].map(([id, b]) => [
+        id,
+        {
+          ends: b.ends.map((e) => ({
+            end: e.end,
+            on: e.on,
+            area_mm2: len(e.area),
+            overhang_mm: len(e.overhang),
+            overhang_mm2: len(e.overhang_area),
+            overlap_mm: len(e.overlap),
+          })),
+        },
+      ]),
     ),
     parts: sortedObject([...d.parts].map(([id, p]) => [id, partJson(p)] as [string, unknown])),
     fastenings: sortedObject(

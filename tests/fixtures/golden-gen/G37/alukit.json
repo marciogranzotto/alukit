@@ -1,0 +1,16 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G37",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo", "../../catalogs/test-seat"],
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [400, 0, 0], "label": "40x40 along +X, its top groove under the head" },
+    "b2": { "item": "test-geo:FB-50x10", "a": [0, 0, -25], "b": [400, 0, -25], "label": "flat bar under it, tapped" }
+  },
+  "connections": {
+    "c1": { "type": "face", "bars": ["b1", "b2"], "fastening": "screw", "fastener": "test-seat:SHCS-M8x50", "stations": { "at_mm": [200] } }
+  }
+}

@@ -206,7 +206,12 @@ describe("warnings (§4.5)", () => {
         },
       },
     });
-    expect(codes(d, "warn")).toEqual([["cover-none", "b1.b"]]);
+    // And b2's end face, 25 off b1's centre line, reaches 5 past b1's 80-wide top (§4.5).
+    expect(codes(d, "warn")).toEqual([
+      ["cover-none", "b1.b"],
+      ["connection", "c1"],
+    ]);
+    expect(d.butts.get("c1")?.ends[0]?.overhang).toBeCloseTo(5, 9);
     expect([cut(d, "b1"), cut(d, "b2")]).toEqual([1000, 580]);
   });
 

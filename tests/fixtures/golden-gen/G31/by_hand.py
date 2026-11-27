@@ -14,7 +14,10 @@ butting bar's centre line, moved by the spacer along the face's normal, meets th
 section's x and y, its diameter or thread, and its depth (none: through the piece). A tapped one
 is a tap into the end, which is cut in a core: off every core of the section (the 40 x 40's one,
 at its centre) by more than 0.01, it is a machining error on the bar (design 2.3, §5.5). A
-drilled one is not checked.
+drilled one is not checked. A hole, drilled or tapped, must stay inside the block's section box over
+its length (design 2.3, after acceptance run 4): along the axis its wall stands its radius (half its
+diameter, or half its thread's) from its centre all the way, so one whose centre plus that radius
+passes a side by more than 0.01 breaks out of it, a connection error on the connection.
 
 The geometry: the 40 x 40 block b1 runs from (0, 0, 0) to (120, 0, 0), centred; its end b is
 square at x = 120, outward normal +X. A horizontal bar's section has local y = +Z and local
@@ -116,7 +119,12 @@ for name, (r, op, words) in results.items():
     # A tapped end hole off every core is a machining error on the block, by c1.
     x, y = r["off"]
     on_core = min(math.dist((x, y), c) for c in CORES) <= TOL
-    errors = [] if "thread" not in op or on_core else [{"code": "machining", "entity": "b1", "refs": ["c1"]}]
+    # The hole's wall against the block's sides, at 20 from its centre: radius 4.5 (Ø9) or 4 (M8).
+    radius = 4.0 if "thread" in op else 4.5
+    breaks = max(abs(x), abs(y)) + radius > HALF + TOL
+    errors = [{"code": "connection", "entity": "c1", "refs": ["b1"]}] if breaks else []
+    if "thread" in op and not on_core:
+        errors.append({"code": "machining", "entity": "b1", "refs": ["c1"]})
     if want["errors"] != errors:
         mismatches.append(f"{name} errors: hand {errors}, expected.json {want['errors']}")
     if want["ops"]["b1"] != [op]:

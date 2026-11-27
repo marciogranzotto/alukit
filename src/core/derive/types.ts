@@ -158,6 +158,32 @@ export interface EndFace {
   cut?: "angle" | "square";
 }
 
+/**
+ * The face a butting end bears on, as stage 3 found it (§4.5): a side of the through bar's box,
+ * the through bar's end face, or a face of a through body's box (its prism's slab and side). Its
+ * seat is measured on it (after acceptance run 4).
+ */
+export type ButtFace =
+  | { kind: "side"; bar: string; face: "+x" | "-x" | "+y" | "-y" }
+  | { kind: "end"; bar: string; end: "a" | "b" }
+  | { kind: "body"; item: string; prism: Prism; slab: number; side: 0 | 1; face: string };
+
+/**
+ * A butting end's seat on the face it bears on (§4.5, after acceptance run 4), both seen along
+ * the face's normal: the end face's area, how far past the face's outline it reaches and how much
+ * of it lies past it, and how far the butting bar goes into the receiving body beyond the face.
+ */
+export interface ButtSeat {
+  /** The butting end, `b2.a`. */
+  end: string;
+  /** The face: `b1 +y`, `b1.b`, or a body's `<item> +x`. */
+  on: string;
+  area: number;
+  overhang: number;
+  overhang_area: number;
+  overlap: number;
+}
+
 export interface BarLengths {
   /** Design length |B − A|. */
   len: number;
@@ -306,6 +332,24 @@ export interface FaceStation {
   piece?: string;
   /** Sleeves cut from bar stock: their pieces and lengths. */
   sleeves: { piece: string; len: number }[];
+  /** What the fastener's head and its nut bear on (after acceptance run 4), where checked. */
+  seats: HeadSeat[];
+}
+
+/**
+ * A head's or a nut's seat on the face it bears on (§4.5, after acceptance run 4): its bearing
+ * annulus, from the hole (or a washer's bore) out to its bearing diameter (a washer's outside
+ * diameter where one is under it), and the fraction of that annulus on the face's material.
+ */
+export interface HeadSeat {
+  side: "head" | "nut";
+  /** The part that bears: the fastener, a nut, or a washer under either. */
+  item: string;
+  d_in: number;
+  d_out: number;
+  /** The face: `b1 +y`, an inner face's name, or a part's `p1 +z`. */
+  on: string;
+  bearing: number;
 }
 
 /** A face connection's contacts and fastenings (§4.5). */
