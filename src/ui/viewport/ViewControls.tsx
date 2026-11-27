@@ -4,12 +4,12 @@ import { STANDARD_VIEWS } from "../../viewer/views.ts";
 import { selection } from "../focus.ts";
 import { chord, onKey } from "../keys.ts";
 import { model } from "../store.ts";
-import { projection, sectionPlane, viewer } from "./viewer.ts";
+import { colourBy, projection, sectionPlane, showJoints, showProblems, viewer } from "./viewer.ts";
 
 /**
  * The view controls over the viewport (design §8): standard views, perspective or orthographic,
- * fit to the selection, and the section plane, with their keys (F fits, O switches the
- * projection). They change the view only, never the document. Owner: S3.
+ * fit to the selection, the section plane, with their keys (F fits, O switches the projection),
+ * and the display toggles. They change the view only, never the document. Owner: S3.
  */
 
 /** The plane as last set, so turning the section on again puts it back. */
@@ -135,43 +135,111 @@ const VIEW_TEXT: Readonly<Record<string, string>> = {
   bottom: "Bottom",
 };
 
+/** A display toggle: pressed while what it shows is drawn. */
+function Toggle({
+  on,
+  testid,
+  title,
+  onClick,
+  children,
+}: {
+  on: boolean;
+  testid: string;
+  title: string;
+  onClick: () => void;
+  children: string;
+}) {
+  return (
+    <button
+      type="button"
+      class={on ? "tb on" : "tb"}
+      data-testid={testid}
+      aria-pressed={on}
+      title={title}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Three groups (S3.11): the views (standard views, orthographic, fit), the section plane, and
+ * what the view shows (joint markers, problem badges, colour by item). Toggles say what they
+ * turn on and show their state with `aria-pressed`, so the projection button names the action
+ * (U58). S4.10's icons take the words' place below 1440 px when they land.
+ */
 export function ViewControls() {
   const v = viewer.value;
   useEffect(() => onKey("app", viewKey), []);
   return (
     <>
-      {STANDARD_VIEWS.filter((n) => ["iso", "top", "front", "right"].includes(n)).map((n) => (
+      <fieldset class="tb-group" aria-label="View">
+        {STANDARD_VIEWS.filter((n) => ["iso", "top", "front", "right"].includes(n)).map((n) => (
+          <button
+            type="button"
+            class="tb"
+            key={n}
+            data-testid={`view-${n}`}
+            title={`${VIEW_TEXT[n]} view`}
+            onClick={() => v?.setView(n, undefined, true)}
+          >
+            {VIEW_TEXT[n]}
+          </button>
+        ))}
+        <Toggle
+          on={projection.value === "orthographic"}
+          testid="projection"
+          title="Orthographic projection: no perspective (O)"
+          onClick={() => toggleProjection(v)}
+        >
+          Orthographic
+        </Toggle>
         <button
           type="button"
           class="tb"
-          key={n}
-          data-testid={`view-${n}`}
-          title={`${VIEW_TEXT[n]} view`}
-          onClick={() => v?.setView(n, undefined, true)}
+          data-testid="fit"
+          title="Fit to the selection, or to everything (F)"
+          onClick={() => v?.fitSelection(selection.value)}
         >
-          {VIEW_TEXT[n]}
+          Fit
         </button>
-      ))}
-      <button
-        type="button"
-        class="tb"
-        data-testid="projection"
-        title="Perspective or orthographic (O)"
-        onClick={() => toggleProjection(v)}
-      >
-        {projection.value === "perspective" ? "Persp" : "Ortho"}
-      </button>
-      <button
-        type="button"
-        class="tb"
-        data-testid="fit"
-        title="Fit to the selection, or to everything (F)"
-        onClick={() => v?.fitSelection(selection.value)}
-      >
-        Fit
-      </button>
-      <span class="sep" />
-      <SectionTools />
+      </fieldset>
+      <fieldset class="tb-group" aria-label="Section">
+        <SectionTools />
+      </fieldset>
+      <fieldset class="tb-group" aria-label="Show">
+        <Toggle
+          on={showJoints.value}
+          testid="toggle-joints"
+          title="Joint markers at every corner: filled joined, ring open, cross failed"
+          onClick={() => {
+            showJoints.value = !showJoints.value;
+          }}
+        >
+          Joints
+        </Toggle>
+        <Toggle
+          on={showProblems.value}
+          testid="toggle-problems"
+          title="Problems drawn on their parts: octagon blocks or errs, triangle warns"
+          onClick={() => {
+            showProblems.value = !showProblems.value;
+          }}
+        >
+          Problems
+        </Toggle>
+        <Toggle
+          on={colourBy.value === "item"}
+          testid="colour-by"
+          title="Colour by item, with a legend; off: by finish"
+          onClick={() => {
+            colourBy.value = colourBy.value === "item" ? "finish" : "item";
+          }}
+        >
+          Colour by item
+        </Toggle>
+      </fieldset>
     </>
   );
 }
