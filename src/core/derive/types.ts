@@ -169,6 +169,19 @@ export type ButtFace =
   | { kind: "body"; item: string; prism: Prism; slab: number; side: 0 | 1; face: string };
 
 /**
+ * One bar of a butt's stack (§4.5, after the alternative frame's acceptance, X2), at one butting
+ * end: where it lies along the face's outward normal, from the face the butt bears on, and its
+ * faces toward the face (`inner`) and toward the butting end (`outer`).
+ */
+export interface StackLayer {
+  bar: string;
+  from: number;
+  to: number;
+  inner: string;
+  outer: string;
+}
+
+/**
  * A butting end's seat on the face it bears on (§4.5, after acceptance run 4), both seen along
  * the face's normal: the end face's area, how far past the face's outline it reaches and how much
  * of it lies past it, and how far the butting bar goes into the receiving body beyond the face.
@@ -352,9 +365,19 @@ export interface HeadSeat {
   bearing: number;
 }
 
+/**
+ * A butt connector's screw head, seated (after the alternative frame's acceptance, F2b): the
+ * butting end whose tap the screw goes into, the tap's position where the connector gives one,
+ * and its seat: on the through bar's far face, or under the lips of its near face's groove.
+ */
+export interface ButtHead extends HeadSeat {
+  end: string;
+  at?: readonly [number, number];
+}
+
 /** A face connection's contacts and fastenings (§4.5). */
 export interface FaceResult {
-  fastening: "none" | "bolt" | "tnut" | "screw";
+  fastening: "none" | "bolt" | "tnut" | "screw" | "blind";
   layers: string[];
   /** Each adjacent pair of layers: the faces in contact and their declared gap. */
   contacts: { faces: [string, string]; gap: number }[];

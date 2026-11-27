@@ -234,6 +234,20 @@ export function derivedJson(d: Derived, stamp: { lock?: string } = {}): Record<s
             overhang_mm2: len(e.overhang_area),
             overlap_mm: len(e.overlap),
           })),
+          ...(b.heads && b.heads.length > 0
+            ? {
+                heads: b.heads.map((h) => ({
+                  end: h.end,
+                  ...(h.at ? { at_mm: [len(h.at[0]), len(h.at[1])] } : {}),
+                  side: h.side,
+                  item: h.item,
+                  on: h.on,
+                  d_in_mm: len(h.d_in),
+                  d_out_mm: len(h.d_out),
+                  bearing_pct: len(100 * h.bearing),
+                })),
+              }
+            : {}),
         },
       ]),
     ),

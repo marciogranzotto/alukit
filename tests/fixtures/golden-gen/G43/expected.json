@@ -1,0 +1,221 @@
+{
+  "case": "G43",
+  "rule": "a butt connector's screw into the butting end seats its head: on the through bar's far face where the connector drills a through-hole for it there, else under the lips of the near face's groove, on them or on a T-nut seat; the shank passes the opening, the head fits the chamber, and the lip, the seat and the head fit the groove's depth; each seat checked as a face fastener's is (§3.4, §4.5)",
+  "design": "A 40x40 post, its core tapped M16, on a 40x40 rail's top groove (c8: opening 8.2, lip 2.2, depth 12.25, chamber 14.5). Its M8 screw's head (dk 13, k 8) under the lips: 45.87 %, a fit warning; it reaches 10.20 of 12.25. On a T-nut seat 5.5 high: 15.70, 3.45 past the floor, a fit error; on one 2 high, 12.20, no error and no seat of its own. A Ø16 head in the 14.5 chamber: a fit error. The post 3 off the groove's centre: the shank misses the opening, a fit error; 10 off, no groove under the joint, a fit error. J1 through the rail: the head on its bottom face over the groove, 45.87 %, a warning; on a washer d2 16, 53.74 %",
+  "expect": {
+    "heads": {
+      "c1": [
+        {
+          "end": "b2.a",
+          "side": "head",
+          "item": "test-x:SCR-M8x20",
+          "on": "b1 +y (under its lips)",
+          "d_in_mm": 9,
+          "d_out_mm": 13,
+          "bearing_pct": 45.87
+        }
+      ]
+    },
+    "recipes": {
+      "test-x:J1-SLOT": 1
+    },
+    "warnings": [
+      {
+        "code": "fit",
+        "entity": "c1",
+        "refs": ["b1"]
+      }
+    ],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "on a T-nut seat",
+      "patch": {
+        "connections": {
+          "c1": {
+            "connector": "test-x:J1-SEAT"
+          }
+        }
+      },
+      "expect": {
+        "heads": {
+          "c1": []
+        },
+        "recipes": {
+          "test-x:J1-SEAT": 1
+        },
+        "errors": [
+          {
+            "code": "fit",
+            "entity": "c1",
+            "refs": ["b1"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "on a thin T-nut seat",
+      "patch": {
+        "connections": {
+          "c1": {
+            "connector": "test-x:J1-SEAT-THIN"
+          }
+        }
+      },
+      "expect": {
+        "heads": {
+          "c1": []
+        },
+        "recipes": {
+          "test-x:J1-SEAT-THIN": 1
+        },
+        "warnings": [],
+        "errors": []
+      }
+    },
+    {
+      "name": "a head too wide for the chamber",
+      "patch": {
+        "connections": {
+          "c1": {
+            "connector": "test-x:J1-SLOT-WIDE"
+          }
+        }
+      },
+      "expect": {
+        "heads": {
+          "c1": []
+        },
+        "recipes": {
+          "test-x:J1-SLOT-WIDE": 1
+        },
+        "errors": [
+          {
+            "code": "fit",
+            "entity": "c1",
+            "refs": ["b1"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "3 off the groove's centre",
+      "patch": {
+        "bars": {
+          "b2": {
+            "a": [300, 3, 20],
+            "b": [300, 3, 520]
+          }
+        }
+      },
+      "expect": {
+        "heads": {
+          "c1": []
+        },
+        "recipes": {
+          "test-x:J1-SLOT": 1
+        },
+        "errors": [
+          {
+            "code": "fit",
+            "entity": "c1",
+            "refs": ["b1"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "off the groove",
+      "patch": {
+        "bars": {
+          "b2": {
+            "a": [300, 10, 20],
+            "b": [300, 10, 520]
+          }
+        }
+      },
+      "expect": {
+        "heads": {
+          "c1": []
+        },
+        "recipes": {
+          "test-x:J1-SLOT": 1
+        },
+        "errors": [
+          {
+            "code": "fit",
+            "entity": "c1",
+            "refs": ["b1"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "through the rail",
+      "patch": {
+        "connections": {
+          "c1": {
+            "connector": "test-x:J1"
+          }
+        }
+      },
+      "expect": {
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "side": "head",
+              "item": "test-x:SCR-M8x100",
+              "on": "b1 -y",
+              "d_in_mm": 9,
+              "d_out_mm": 13,
+              "bearing_pct": 45.87
+            }
+          ]
+        },
+        "recipes": {
+          "test-x:J1": 1
+        },
+        "warnings": [
+          {
+            "code": "fit",
+            "entity": "c1",
+            "refs": ["b1"]
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "name": "through the rail, on a washer",
+      "patch": {
+        "connections": {
+          "c1": {
+            "connector": "test-x:J1-W"
+          }
+        }
+      },
+      "expect": {
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "side": "head",
+              "item": "test-x:W8",
+              "on": "b1 -y",
+              "d_in_mm": 9,
+              "d_out_mm": 16,
+              "bearing_pct": 53.74
+            }
+          ]
+        },
+        "recipes": {
+          "test-x:J1-W": 1
+        },
+        "warnings": [],
+        "errors": []
+      }
+    }
+  ]
+}

@@ -345,6 +345,25 @@ DIMS = {
     "hex-nut": {"B": "s_mm", "C": "m_mm", "PASSO (mm)": "pitch_mm"},
 }
 
+#: The standard a screw or bolt family is made to, so that linking fills its head's dimensions
+#: from the `std` catalog's table (after the alternative frame's acceptance, F2a): (pattern on the
+#: product's name, matched from the start, case-insensitively; the standard; what the type names).
+#: The shop names no standard for any of them: each is read from the product's type, so the item
+#: cites it as `est`. Left out: countersunk heads ("cabeça cônica", whose seat is a cone, not a
+#: face), the Phillips pan head (ISO 7045's and DIN 7985's heads differ), and nuts and washers (the
+#: shop's own tables show its hex nuts are DIN 934's, s 17 at M10, not ISO 4032's 16, and its plain
+#: washers not all ISO 7089's, Ø17 at M8, not 16).
+STANDARDS: list[tuple[str, str, str]] = [
+    (r"parafuso (allen (inox )?cabe[cç]a cil[ií]ndrica|cab\.? cil[ií]ndrica allen)", "std:ISO4762",
+     "a hexagon socket cylindrical head (\"Allen cabeça cilíndrica\"), ISO 4762's (DIN 912's)"),
+    (r"parafuso allen cabe[cç]a abaulada", "std:ISO7380-1",
+     "a hexagon socket button head (\"Allen cabeça abaulada\"), ISO 7380-1's"),
+    (r"parafuso allen de perfil baixo", "std:DIN7984",
+     "a hexagon socket low head (\"Allen de perfil baixo\"), DIN 7984's"),
+    (r"parafuso (em inox )?cabe[cç]a sextavada", "std:ISO4017",
+     "a hexagon head (\"cabeça sextavada\"), ISO 4017's (DIN 933's is as wide across flats at M8)"),
+]
+
 #: Catalogue pages of the hardware families, for `docs`: the page whose "COD:" heading names the
 #: family (CT100-XXX "base simples" on p. 34 and "base dupla" on p. 35; PRTXX-XX "bloco corrediço
 #: - porca T" on p. 56; PAMXXX-XX "parafuso martelo - canal 8" on p. 58; PCIX-XX on p. 62).

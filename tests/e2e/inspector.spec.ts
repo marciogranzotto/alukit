@@ -60,6 +60,6 @@ test("selection: the tree and a box pick entities; properties show derived value
   await expect(page.getByTestId("cutlist")).toContainText("test:TS40");
   await page.getByRole("tab", { name: "BOM" }).click();
   await expect(page.getByTestId("bom")).toContainText("Total mass");
-  await page.getByRole("tab", { name: "Checks" }).click();
-  await expect(page.getByTestId("checks")).toContainText("0 errors");
+  await page.getByRole("tab", { name: "Problems" }).click();
+  await expect(page.getByTestId("problems")).toContainText("0 errors");
 });

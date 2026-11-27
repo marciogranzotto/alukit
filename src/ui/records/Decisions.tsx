@@ -1,13 +1,15 @@
 import { useState } from "preact/hooks";
+import { EmptyState } from "../common/EmptyState.tsx";
 import { Errors } from "../Feedback.tsx";
+import { date } from "../format.ts";
 import type { Model } from "../model.ts";
-import { registerSheet } from "../sheets/registry.ts";
 import { busy, type CommandOutcome, sendCommands, summary } from "../store.ts";
+import { Clip, type Col, Row, SheetTable } from "../tables/common.tsx";
 
 /**
  * The decisions (design §8, §4.12): the document's record, dated, with why and what each
  * resolves, and a form to add one through `addDecision`, one step the top bar's undo takes back
- * (§7.1). Owner: S4, whose Records sheet takes it in (S4.9).
+ * (§7.1). A section of the Records sheet. Owner: S4.
  */
 
 const isObject = (x: unknown): x is Record<string, unknown> =>
@@ -23,67 +25,81 @@ interface Decision {
   resolves?: string;
 }
 
-export function DecisionsSheet({ m }: { m: Model }) {
+const COLS: readonly Col[] = [
+  { id: "id", head: "Decision", w: "80px" },
+  { id: "date", head: "Date", w: "112px" },
+  { id: "text", head: "What was decided" },
+  { id: "why", head: "Why" },
+  { id: "resolves", head: "Resolves", w: "88px" },
+];
+
+export function DecisionsSection({ m }: { m: Model }) {
   const list = Array.isArray(m.doc.decisions)
     ? (m.doc.decisions.filter(isObject) as Decision[])
     : [];
   const [text, setText] = useState("");
   const [why, setWhy] = useState("");
-  const [date, setDate] = useState("");
+  const [on, setOn] = useState("");
   const [outcome, setOutcome] = useState<CommandOutcome>();
   const add = async (e: Event) => {
     e.preventDefault();
     const args = {
       text: text.trim(),
       ...(why.trim() ? { why: why.trim() } : {}),
-      ...(date ? { date } : {}),
+      ...(on ? { date: on } : {}),
     };
     const r = await sendCommands([{ cmd: "addDecision", args }], "add decision");
     setOutcome(r);
     if (r.ok) {
       setText("");
       setWhy("");
-      setDate("");
+      setOn("");
     }
   };
   return (
-    <div data-testid="decisions">
+    <section class="block" data-testid="decisions">
+      <h4 class="block-head">
+        <span class="figure">Decisions</span>
+        <span class="sub">What was decided, when and why</span>
+      </h4>
       {list.length === 0 ? (
-        <p class="sub">No decisions recorded.</p>
+        <EmptyState title="No decisions recorded">
+          A decision is a line in the project's record: what was settled and why. Resolving an open
+          item writes one.
+        </EmptyState>
       ) : (
-        <table class="grid">
-          <thead>
-            <tr>
-              <th>id</th>
-              <th>date</th>
-              <th>decision</th>
-              <th>why</th>
-              <th>resolves</th>
-            </tr>
-          </thead>
+        <SheetTable cols={COLS}>
           <tbody>
             {list.map((d, i) => (
-              <tr key={d.id ?? i} data-decision={d.id ?? ""}>
-                <td>{d.id ?? ""}</td>
-                <td>{d.date ?? ""}</td>
-                <td>{d.text ?? ""}</td>
-                <td>{d.why ?? ""}</td>
+              <Row key={d.id ?? i} data-decision={d.id ?? ""}>
+                <td>
+                  <b>{d.id ?? ""}</b>
+                </td>
+                <td title={d.date}>{d.date ? date(d.date) : ""}</td>
+                <td>
+                  <Clip text={d.text ?? ""} />
+                </td>
+                <td>
+                  <Clip text={d.why ?? ""} />
+                </td>
                 <td>{d.resolves ?? ""}</td>
-              </tr>
+              </Row>
             ))}
           </tbody>
-        </table>
+        </SheetTable>
       )}
       <form class="record-form" data-testid="decision-add" onSubmit={(e) => void add(e)}>
         <input
           class="wide"
           data-testid="decision-text"
+          aria-label="A decision"
           placeholder="a decision, e.g. use M6 throughout"
           value={text}
           onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
         />
         <input
           data-testid="decision-why"
+          aria-label="Why"
           placeholder="why (optional)"
           value={why}
           onInput={(e) => setWhy((e.currentTarget as HTMLInputElement).value)}
@@ -91,13 +107,14 @@ export function DecisionsSheet({ m }: { m: Model }) {
         <input
           type="date"
           data-testid="decision-date"
+          aria-label="Date"
           title="Today when left empty"
-          value={date}
-          onInput={(e) => setDate((e.currentTarget as HTMLInputElement).value)}
+          value={on}
+          onInput={(e) => setOn((e.currentTarget as HTMLInputElement).value)}
         />
         <button
           type="submit"
-          class="tp-btn"
+          class="btn primary"
           data-testid="decision-apply"
           disabled={busy.value || readOnly() || text.trim() === ""}
         >
@@ -105,8 +122,6 @@ export function DecisionsSheet({ m }: { m: Model }) {
         </button>
         <Errors outcome={outcome} />
       </form>
-    </div>
+    </section>
   );
 }
-
-registerSheet({ id: "decisions", title: "Decisions", order: 90, Body: DecisionsSheet });

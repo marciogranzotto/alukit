@@ -10,6 +10,7 @@ import {
   type ViewerStats,
 } from "../../viewer/scene.ts";
 import { docViews } from "../../viewer/views.ts";
+import { swatches } from "../common/ItemSwatch.tsx";
 import { type Corner, cornersOf } from "../corners.ts";
 import { clearShow, hover, select, selection, shown } from "../focus.ts";
 import { extendHook } from "../hook.ts";
@@ -18,7 +19,7 @@ import { meshInput } from "../model.ts";
 import { model, problems } from "../store.ts";
 import { resolveTargets } from "../targets.ts";
 import { theme } from "../theme/theme.ts";
-import { itemSwatches, viewTheme } from "../theme/tokens.ts";
+import { viewTheme } from "../theme/tokens.ts";
 import { Callout, Gizmo, HoverLabel, Legend, SelectionLabel, usePointer } from "./Overlays.tsx";
 import { ViewControls } from "./ViewControls.tsx";
 import { colourBy, drawnCorners, showJoints, showProblems, viewer } from "./viewer.ts";
@@ -69,8 +70,6 @@ declare module "../hook.ts" {
     section(): SectionPlane | undefined;
     /** Whether the section plane hides a world point. */
     clipped(p: V3): boolean;
-    /** What the pointer, a row or a chip is over (`focus.hover`'s ids); empty for nothing. */
-    hovered(): string[];
     /** The corners the joint markers show (src/ui/corners.ts), whether drawn or toggled off. */
     corners(): readonly Corner[];
     /** The camera, in world coordinates. */
@@ -87,7 +86,6 @@ extendHook({
   snapshot: () => snapshotState.value,
   section: () => viewer.value?.section(),
   clipped: (p) => viewer.value?.clipped(p) === true,
-  hovered: () => [...(hover.value?.ids ?? [])],
   corners: () => drawnCorners.value,
   camera: () => viewer.value?.camera(),
   frames: () => viewer.value?.renderStats(),
@@ -171,7 +169,7 @@ export function Viewport({
         effect(() => {
           const m = model.value;
           const mode = colourBy.value;
-          v.setColourBy(mode, mode === "item" && m ? itemSwatches(m) : new Map());
+          v.setColourBy(mode, mode === "item" && m ? swatches.value : new Map());
         }),
         // Show: frame the targets keeping the direction, pulse them, dim the rest if asked.
         shown.subscribe((s) => {

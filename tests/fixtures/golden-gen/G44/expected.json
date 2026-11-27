@@ -1,0 +1,77 @@
+{
+  "case": "G44",
+  "rule": "a tap into a bar's face cuts its thread in the face's wall: a tapped hole whose tap drill's circle lies mostly (more than half) in a groove's opening is a machining error naming the face, the groove and the offset; a T-nut off a groove is a fit error (§4.5, §5.5)",
+  "design": "A 50 x 10 flat on a 40x40 along +X, a screw M8 through the flat tapped 10 deep into the 40x40's top face (c8: opening 8.2 on the centre line). The tap drill, Ø6.75 (8 - 1.25), 12 across: wholly on the wall, no error. On the centre line: 100 % in the opening, a machining error. 3 across: 70.38 % in it, an error. 6 across: 16.16 %, no error. 12 the other way: none. A T-nut 10 across, off the groove: a fit error, as before",
+  "expect": {
+    "ops": {
+      "b1": [
+        {
+          "op": "hole",
+          "face": "+y",
+          "from": "a",
+          "at": 200,
+          "across": 12,
+          "thread": "M8",
+          "depth": 10,
+          "by": "c1"
+        }
+      ]
+    },
+    "warnings": [],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "on the groove's centre line",
+      "patch": { "connections": { "c1": { "stations": { "at_mm": [100], "across_mm": [0] } } } },
+      "expect": {
+        "ops": {
+          "b1": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 200,
+              "thread": "M8",
+              "depth": 10,
+              "by": "c1"
+            }
+          ]
+        },
+        "errors": [{ "code": "machining", "entity": "b1", "refs": ["c1"] }]
+      }
+    },
+    {
+      "name": "3 across",
+      "patch": { "connections": { "c1": { "stations": { "at_mm": [100], "across_mm": [3] } } } },
+      "expect": { "errors": [{ "code": "machining", "entity": "b1", "refs": ["c1"] }] }
+    },
+    {
+      "name": "6 across",
+      "patch": { "connections": { "c1": { "stations": { "at_mm": [100], "across_mm": [6] } } } },
+      "expect": { "errors": [] }
+    },
+    {
+      "name": "12 the other way",
+      "patch": { "connections": { "c1": { "stations": { "at_mm": [100], "across_mm": [-12] } } } },
+      "expect": { "errors": [] }
+    },
+    {
+      "name": "a T-nut off the groove",
+      "patch": {
+        "connections": {
+          "c1": {
+            "fastening": "tnut",
+            "stack": ["test:TNUT-M8"],
+            "tap_depth_mm": null,
+            "stations": { "at_mm": [100], "across_mm": [10] }
+          }
+        }
+      },
+      "expect": {
+        "ops": { "b1": [] },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    }
+  ]
+}

@@ -119,9 +119,10 @@ anything, and each has a default in place.
 | X4: stock length of parallel-cut bars | **done**, merged (02:42), pushed | Golden G38. Note: `docs/notes/x4-stock-length.md`. |
 | UX redesign, phase 1: three designer reviews | **done** (02:52–02:59), merged | `docs/ux/flows-and-ia.md`, `heuristics-and-first-run.md`, `visual-design.md` |
 | UX redesign, phase 2: one plan | **done** (03:27); decisions taken (03:31) | `docs/ux/plan.md`: 68 problems (14 plain bugs), 26 decisions, six streams |
-| UX redesign, phase 3, S0: shared contracts | running (Opus, worktree), launched 03:33 | then S1, S3 and S4 in parallel; S2 and S5 after the tokens and corners land | task flows and IA; heuristics and first run; visual design and 3D readability |
+| UX redesign, phase 3, S0: shared contracts | **done**, merged (04:33), pushed | `docs/ux/contracts.md`; no visible change (32 app states pixel-compared) |
+| UX S1 core, server, CLI / S3 3D view / S4 visual system and sheets | running (Opus / Opus / Sonnet, worktrees), launched 04:35 | S2 shell and S5 tools follow once S4's tokens and S3's corners merge | task flows and IA; heuristics and first run; visual design and 3D readability |
 | F2: end-hole axis, butt end-face coverage, head seats | **done**, merged (03:30), pushed | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
-| X1–X3 plus F2a/F2b: blind fasteners, a butt screw through two bodies, plain bars held by a drilled-hole screw, head sizes from the cited standard, butt screws seat-checked | running (Opus, worktree on top of F2), launched 03:08 | goldens G39+ |
+| X1–X3, X5, X6 plus F2a/F2b: blind fasteners, a butt's stack of bodies, plain bars held by a drilled-hole screw, taps over groove openings, sleeves through both walls, head sizes from standards, butt screws seat-checked | **done**, merged (05:00), pushed | Goldens G39–G45; calls 45–51. Note: `docs/notes/x1-x3-f2ab.md`. |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -204,6 +205,15 @@ anything, and each has a default in place.
   - the theme follows the OS, with tests pinned dark;
   - IBM Plex bundled locally;
   - GLB colours unchanged.
+- **X-batch calls 45–51 (`docs/notes/x1-x3-f2ab.md`).**
+  - A blind fastener's hole is its maker's `hole_mm`, never a clearance table's.
+  - A drilled-hole screw holds a plain bar when any headed fastener in the chosen sets is thinner
+    than the hole.
+  - A butt's stack holds bars only.
+  - Vendor screws take head sizes from the standard they cite, as estimates.
+  - Head placement in butts is read from the connector's `requires`.
+  - A face tap errors only when over half its drill circle is in a groove opening.
+  - "Both walls" must be stated for a sleeve.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
@@ -653,3 +663,33 @@ anything, and each has a default in place.
     Conflicts are now checked before gating.
   - Gate PASS, 785 tests: G35–G38 hold together.
 - **03:31**: Every D-UX recommendation accepted and recorded in the plan's §9 and the review list.
+- **04:30**: S0 done (9 commits).
+  - Styles split into token, base, shell, viewport, tools, inspector and table sheets; theme
+    modules; focus, targets, corners, palette, keys and format seams.
+  - Client stubs for problems, dry run and answers; the problem model's types.
+  - The drawer became a sheet registry; `draw.spec` reads a machine-readable `snap` field.
+  - 32 app states match today's build to the pixel.
+  - One `live.spec` timing flake at load 35–46, passing on re-run. It's a wall-clock latency
+    requirement, so the streams are staggered to limit load rather than loosening it.
+- **04:33**: S0 merged, gate PASS (810 tests).
+- **04:35**: The first wave of streams launched in worktrees: S1 (core, server, CLI: the plain bugs,
+  `addFrame`, the corner rule, dry run, the problem model, settings), S3 (the 3D view per review C,
+  joint markers, show-in-3D) and S4 (tokens, bundled IBM Plex, sheets, the order's verdict strip,
+  problems). Each runs the full gate once, at the end.
+- **04:57**: The X batch finished (7 commits, failing tests first, G39–G45).
+  - **X1:** `fastening: "blind"` with the maker's hole and grip range.
+  - **X3:** a plain solid bar held by a screw through a drilled hole at a tap.
+  - **X2:** a butt's `stack` (end plates, packers) lifts the end and drills each on the screw's axis.
+  - **F2a:** `standards` tables (ISO 4762, ISO 7380-1, DIN 7984, ISO 4017) fill head sizes; Forseti's
+    89 screws cite them, so their seats are now checked.
+  - **F2b:** butt connector screws seat-checked: on the far face, or under groove lips on the lip or
+    a T-nut, checked for depth and chamber.
+  - **X5:** a face tap over a groove opening is an error.
+  - **X6:** `walls: "both"` sleeves.
+  - No earlier diagnostics moved.
+- **05:00**: Merged. Three conflicted files, every hunk the branch's side being a superset or a
+  re-wrap; no duplicate sections or call numbers. Gate PASS (891 tests).
+- **05:03**: The reference project's round-3 heads arrived. Acceptance run 6 (decided frame) and run 3
+  (alternative frame) launched, using the new constructs. They run the CLI from a frozen detached
+  worktree at `eb14da6`, so `main` can take the UX streams' merges meanwhile without changing the
+  code under them.

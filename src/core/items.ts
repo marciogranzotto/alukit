@@ -28,6 +28,15 @@ export interface BarGroove {
   lip_mm?: number;
   /** The opening's width at the face: a head seated over it bears only on the lips. */
   opening_mm?: number;
+  /**
+   * The groove's depth from the face, and its chamber's width under the lips: the room a screw
+   * head (and a T-nut seat) under the lips needs (after the alternative frame's acceptance, F2b).
+   */
+  depth_mm?: number;
+  undercut_mm?: number;
+  /** Where the chamber starts to narrow, and its width at `depth_mm`, when it does (§3.3). */
+  taper_from_mm?: number;
+  bottom_mm?: number;
 }
 
 /** A mass with the provenance of the value it came from (§3.5's authority rule). */
@@ -354,7 +363,17 @@ function barGrooves(
       face: g.face,
       at_mm: g.at_mm,
       ...(type ? { type } : {}),
-      ...(gt ? { lip_mm: num(gt.lip_mm), opening_mm: num(gt.opening_mm) } : {}),
+      ...(gt
+        ? {
+            lip_mm: num(gt.lip_mm),
+            opening_mm: num(gt.opening_mm),
+            depth_mm: num(gt.depth_mm),
+            undercut_mm: num(gt.undercut_mm),
+            ...(gt.taper_from_mm !== undefined && gt.bottom_mm !== undefined
+              ? { taper_from_mm: num(gt.taper_from_mm), bottom_mm: num(gt.bottom_mm) }
+              : {}),
+          }
+        : {}),
     };
   });
 }

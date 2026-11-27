@@ -3,11 +3,20 @@ import type { Ctx } from "./context.ts";
 import { coreTaps } from "./cores.ts";
 import type { DerivedBar } from "./derive.ts";
 import { duplicateOps } from "./duplicates.ts";
+import { faceTaps } from "./face-taps.ts";
 import { type GenOut, generateFaces } from "./fastenings.ts";
 import { connectorHardware } from "./hardware.ts";
 import { placeParts } from "./parts.ts";
 import { layoutRails } from "./rails.ts";
-import type { DerivedPart, FaceResult, HardwareUse, PlacedRun, StockPiece } from "./types.ts";
+import type {
+  ButtHead,
+  DerivedPart,
+  FaceResult,
+  HardwareUse,
+  PlacedRun,
+  StackLayer,
+  StockPiece,
+} from "./types.ts";
 
 /**
  * Stage 4, attach (design §5.1): on the trimmed bars of stage 3,
@@ -29,25 +38,36 @@ export interface Attached {
   pieces: StockPiece[];
   hardware: HardwareUse[];
   recipes: HardwareUse[];
+  /** Per butt, its connector's screw heads, seated (F2b). */
+  heads: ReadonlyMap<string, ButtHead[]>;
 }
 
 export function attach(
   ctx: Ctx,
   bars: ReadonlyMap<string, DerivedBar>,
   runs: ReadonlyMap<string, PlacedRun>,
+  stacks: ReadonlyMap<string, ReadonlyMap<string, readonly StackLayer[]>> = new Map(),
 ): Attached {
   layoutRails(ctx, bars);
   const parts = placeParts(ctx, bars, runs);
-  const out: GenOut = { fastenings: new Map(), pieces: [], hardware: [], recipes: [] };
+  const out: GenOut = {
+    fastenings: new Map(),
+    pieces: [],
+    hardware: [],
+    recipes: [],
+    heads: new Map(),
+  };
   generateFaces(ctx, bars, runs, parts, out);
-  connectorHardware(ctx, bars, out);
+  connectorHardware(ctx, bars, out, stacks);
   duplicateOps(ctx, bars);
   coreTaps(ctx, bars);
+  faceTaps(ctx, bars);
   return {
     parts,
     fastenings: out.fastenings,
     pieces: [...out.pieces].sort((a, b) => compareIds(a.source, b.source)),
     hardware: out.hardware,
     recipes: out.recipes,
+    heads: out.heads,
   };
 }

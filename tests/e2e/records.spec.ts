@@ -4,8 +4,8 @@ import { expect, test } from "@playwright/test";
 import { cli, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
 
 /**
- * The drawer's record tabs (design §8, §4.12): open items, params and decisions, edited through
- * their commands. Each edit is one step, which the top bar's undo takes back; what a command
+ * The drawer's record sheets (design §8, §4.12): open items (in Problems), params and decisions
+ * (in Records), edited through their commands. Each edit is one step, which the top bar's undo takes back; what a command
  * refuses is shown in the tab.
  */
 
@@ -31,7 +31,7 @@ test("adds an open item and resolves it, each one step that undo takes back", as
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await openTab(page, served, 0);
-  await page.getByRole("tab", { name: "Open items" }).click();
+  await page.getByRole("tab", { name: "Problems" }).click();
   const tab = page.getByTestId("open-items");
   await expect(tab.locator("tr[data-open]")).toHaveCount(2);
 
@@ -63,7 +63,7 @@ test("adds an open item and resolves it, each one step that undo takes back", as
   await tab.getByTestId("resolve-apply").click();
   await waitDrawn(page, 2);
   await expect(tab.locator('tr[data-open="O3"]')).toHaveCount(0);
-  await page.getByRole("tab", { name: "Decisions" }).click();
+  await page.getByRole("tab", { name: "Records" }).click();
   const decisions = page.getByTestId("decisions");
   await expect(decisions.locator('tr[data-decision="D1"]')).toContainText(
     "resolved: check the casters' load rating",
@@ -78,7 +78,7 @@ test("adds an open item and resolves it, each one step that undo takes back", as
   await page.getByTestId("undo").click();
   await waitDrawn(page, 3);
   await expect(decisions.locator("tr[data-decision]")).toHaveCount(0);
-  await page.getByRole("tab", { name: "Open items" }).click();
+  await page.getByRole("tab", { name: "Problems" }).click();
   await expect(tab.locator('tr[data-open="O3"]')).toHaveCount(1);
   expect((await doc()).open?.map((o) => o.id)).toEqual(["O1", "O2", "O3"]);
   await page.getByTestId("undo").click();
@@ -123,14 +123,14 @@ test("sets a param and records a decision; a refusal is shown in the tab", async
   await expect(tab.getByTestId("form-errors")).toContainText("H is read by");
   expect(await page.evaluate(() => window.__alukit?.rev())).toBe(2);
 
-  await page.getByRole("tab", { name: "Decisions" }).click();
+  await page.getByRole("tab", { name: "Records" }).click();
   const decisions = page.getByTestId("decisions");
   await decisions.getByTestId("decision-text").fill("widen the cart to 1300");
   await decisions.getByTestId("decision-why").fill("the new bench is wider");
   await decisions.getByTestId("decision-date").fill("2026-11-20");
   await decisions.getByTestId("decision-apply").click();
   await waitDrawn(page, 3);
-  await expect(decisions.locator('tr[data-decision="D1"]')).toContainText("2026-11-20");
+  await expect(decisions.locator('tr[data-decision="D1"]')).toContainText("20 Nov 2026");
   expect((await doc()).decisions).toEqual([
     { id: "D1", date: "2026-11-20", text: "widen the cart to 1300", why: "the new bench is wider" },
   ]);

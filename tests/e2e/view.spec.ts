@@ -341,7 +341,7 @@ test("hover tints what a click would select and names it; moving off clears it",
   await expect(page.getByTestId("properties")).toHaveCount(0);
 
   await page.mouse.move(0, 0);
-  await expect.poll(() => page.evaluate(() => window.__alukit?.hovered())).toEqual([]);
+  await expect.poll(() => page.evaluate(() => window.__alukit?.hovered())).toBeUndefined();
   await expect(page.getByTestId("hover-label")).toHaveCount(0);
   expect(await canvasPixels(page, around(at, 2))).toEqual(rest);
 });

@@ -174,6 +174,13 @@ function structural(kind: Kind, id: string, v: unknown, c: Collect): void {
           // Held by another butt's through-fastener (acceptance gap A9): without it, its ends
           // are not held through the bar.
           c.whole(x.held_by, "held_by");
+          // A stack's bars set where the ends bear (after the alternative frame's acceptance,
+          // X2): without one, the joint is another.
+          if (Array.isArray(x.stack)) {
+            x.stack.forEach((s, i) => {
+              c.whole(s, `stack/${i}`);
+            });
+          }
           break;
         case "miter":
         case "splice":

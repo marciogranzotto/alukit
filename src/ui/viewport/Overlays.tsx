@@ -1,12 +1,13 @@
 import { signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 import type { V3 } from "../../mesh/model.ts";
+import { ItemSwatch } from "../common/ItemSwatch.tsx";
 import { clearShow, hover, selection, show, shown } from "../focus.ts";
 import { ProblemRow } from "../problems/ProblemRow.tsx";
 import { model, problems } from "../store.ts";
 import { resolveTargets, type Targets } from "../targets.ts";
 import { theme } from "../theme/theme.ts";
-import { itemSwatches, viewTheme } from "../theme/tokens.ts";
+import { viewTheme } from "../theme/tokens.ts";
 import { colourBy, drawnCorners, viewer } from "./viewer.ts";
 import { barWords, hoverWords, itemCode, legendItems } from "./words.ts";
 
@@ -162,7 +163,7 @@ export function Callout() {
       </div>
       {problem ? (
         <ul class="diagnostics callout-problem">
-          <ProblemRow p={problem} />
+          <ProblemRow p={problem} compact />
         </ul>
       ) : (
         <p class="callout-refs">{s.refs.join(", ")}</p>
@@ -182,8 +183,6 @@ function centre(t: Targets | undefined): V3 | undefined {
 export function Legend() {
   const m = model.value;
   if (colourBy.value !== "item" || !m) return null;
-  const sw = itemSwatches(m);
-  const neutral = viewTheme(theme.value).body.neutral;
   return (
     <div class="legend" data-testid="legend">
       {legendItems(m).map(({ item, name }) => (
@@ -195,7 +194,7 @@ export function Legend() {
           title={`${item}: show what uses it, the rest dimmed`}
           onClick={() => show({ refs: [item], isolate: true })}
         >
-          <span class="swatch" style={{ background: css(sw.get(item) ?? neutral) }} />
+          <ItemSwatch item={item} />
           <span class="code">{itemCode(m, item)}</span> <span class="name">{name}</span>
         </button>
       ))}

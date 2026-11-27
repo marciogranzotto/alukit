@@ -33,6 +33,7 @@ import { boxCentre, faceLocal, facePlane, localOf, onBar } from "./place.ts";
 import { area2, ccw, clip, discArea, type P2 } from "./polygon.ts";
 import { holePoint, selectHoles } from "./rails.ts";
 import type {
+  ButtHead,
   DerivedPart,
   FaceResult,
   FaceStation,
@@ -98,6 +99,8 @@ export interface GenOut {
   hardware: HardwareUse[];
   /** Joint recipes the connections use (§3.4): not bought, so not hardware. */
   recipes: HardwareUse[];
+  /** Per butt, its connector's screw heads, seated (F2b). */
+  heads: Map<string, ButtHead[]>;
 }
 
 interface BodyFace {
@@ -455,6 +458,45 @@ function seatMaterial(body: Body, f: BodyFace): P2[][] {
     .filter((p) => p.length >= 3);
 }
 
+/**
+ * The fraction of an annulus about X (from radius r to R) on a face's material (`seatMaterial`):
+ * what a head, nut or washer bears on (after acceptance run 4). 0 for an empty annulus.
+ */
+function annulusBearing(body: Body, f: BodyFace, X: V3, R: number, r: number): number {
+  const ring = Math.PI * (R * R - r * r);
+  if (ring <= 0) return 0;
+  const c = to2(f, X);
+  let bears = 0;
+  for (const piece of seatMaterial(body, f)) {
+    bears += discArea(c, R, piece) - (r > 0 ? discArea(c, r, piece) : 0);
+  }
+  return Math.min(1, Math.max(0, bears / ring));
+}
+
+/**
+ * The fraction of the annulus from `dIn` to `dOut` about X that lies on the material of a bar's
+ * bounding face: a butt connector's screw head on it (F2b), a tap drill's disc (`dIn` 0; X5).
+ */
+export function barFaceBearing(bar: DerivedBar, face: Face, X: V3, dOut: number, dIn = 0): number {
+  const body = barBody(bar);
+  const f = body.faces.find((x) => x.name === face) as BodyFace;
+  return annulusBearing(body, f, X, dOut / 2, dIn / 2);
+}
+
+/**
+ * Where a hole in a bar's bounding face is centred: `at` from its design point, `across` along
+ * the face's u from its centre line (the inverse of `FaceGen`'s placing of a hole).
+ */
+export function holeCentre(bar: DerivedBar, o: HoleOp): V3 {
+  const P = bar.placed;
+  const s = o.from === "a" ? o.at : bar.lengths.len - o.at;
+  const fl = faceLocal(P.box, o.face);
+  const C = onBar(P, s, fl.at[0], fl.at[1]);
+  if (!o.across) return C;
+  const f = barBody(bar).faces.find((x) => x.name === o.face) as BodyFace;
+  return addScaled(C, f.u, o.across);
+}
+
 /** A point of the face's plane is on the face, within tol.len of its edges. */
 function onFace(f: BodyFace, P: V3): boolean {
   const poly = ownPoly(f);
@@ -525,6 +567,10 @@ interface StackSleeve {
   item: string;
   opt: Readonly<Record<string, string>>;
   layer: number;
+  /**
+   * Through both walls (X6): its nut-side end at the nut-side wall's outer face, not its inner.
+   */
+  bothWalls: boolean;
   len_mm: number | string;
   /** The diameter of a hole the sleeve passes: its outside diameter and a clearance. */
   hole: number;
@@ -765,7 +811,17 @@ class FaceGen {
       this.error("face", "a fastened face connection needs stations", { field: "stations" });
       return;
     }
-    const clearance = fastener.thread ? clearanceHole(fastener.thread) : undefined;
+    // A blind fastener (after the alternative frame's acceptance) is set from one side: its hole
+    // is its maker's, in every layer, and it grips inside the last layer's bore (its near wall
+    // drilled alone) or behind a solid last layer.
+    const blind =
+      spec.fastening === "blind" ? this.blindFastener(fastener, stack, layers) : undefined;
+    if (spec.fastening === "blind" && !blind) return;
+    const clearance = blind
+      ? blind.hole
+      : fastener.thread
+        ? clearanceHole(fastener.thread)
+        : undefined;
     let clearanceReported = false;
     const noClearance = () => {
       if (clearanceReported) return;
@@ -783,6 +839,9 @@ class FaceGen {
     const bearers = this.bearers(fastener, stack.hardware);
     const seatHole = clearance ?? (fastener.thread ? threadDiameter(fastener.thread) : undefined);
     const seatsAt: Seated[] = [];
+    /** A blind fastener's grip at each station, for its maker's range. */
+    const grips: { k: number; grip: number }[] = [];
+    let lastBody = "";
 
     let k = 0;
     let sleeveNo = 0;
@@ -796,15 +855,25 @@ class FaceGen {
       const n = layers.length;
       const last = walk[n - 1] as Walk;
       const depth = (w: Walk) => w.wx - w.we;
-      const counted = spec.fastening === "bolt" ? walk : walk.slice(0, n - 1);
+      // A blind fastener in a hollow last layer passes its near wall alone and grips in its bore.
+      const lastHollow = blind ? hollowOf(last.body) : undefined;
+      const nearWall = lastHollow && this.walls(last, lastHollow, at.P, axis)[0];
+      const counted =
+        spec.fastening === "bolt" || (blind && !nearWall) ? walk : walk.slice(0, n - 1);
       let grip = counted.reduce((s, w) => s + depth(w), 0) + gaps.reduce((s, g) => s + g, 0);
+      if (nearWall) grip += nearWall.to - nearWall.from;
       if (spec.fastening === "tnut") {
         const lip = this.tnut(last, at.P, axis, k, stack.tnuts);
         if (lip === undefined) continue;
         grip += lip;
       }
+      if (blind) {
+        grips.push({ k, grip });
+        lastBody = last.body.id;
+      }
 
-      // Sleeves cut from bar stock, each in a hollow layer's bore, from its nut-side wall.
+      // Sleeves cut from bar stock, each in a hollow layer's bore, from its nut-side wall: its
+      // inner face, or its outer face for a sleeve through both walls (X6).
       const sleeves: { piece: string; len: number; from: number; to: number; hole: number }[] = [];
       let sleevesOk = true;
       for (const sl of stack.sleeves) {
@@ -827,7 +896,7 @@ class FaceGen {
         }
         sleeveNo++;
         const piece = `${id}.s${sleeveNo}`;
-        const to = bore.innerExit - w0;
+        const to = (sl.bothWalls ? w.wx : bore.innerExit) - w0;
         sleeves.push({ piece, len, from: to - len, to, hole: sl.hole });
         this.out.pieces.push({ source: piece, item: sl.item, opt: sl.opt, len });
       }
@@ -894,7 +963,7 @@ class FaceGen {
           exit: BodyFace | undefined;
           wall: boolean;
         }[] = hollow
-          ? this.walls(w, hollow, at.P, axis)
+          ? this.walls(w, hollow, at.P, axis).slice(0, blind && i === n - 1 ? 1 : 2)
           : [{ from: w.we, to: w.wx, entry: w.entry, exit: w.exit, wall: false }];
         for (const sg of segs) {
           const a = sg.from - w0;
@@ -966,6 +1035,84 @@ class FaceGen {
       result.stations.push(station);
     }
     this.reportSeats(seatsAt);
+    if (blind?.grip) this.reportGrips(fastener.out.item, blind.grip, grips, lastBody);
+  }
+
+  /**
+   * A blind fastening's fastener (after the alternative frame's acceptance): a catalog fastener
+   * that states its hole (`hole_mm`), the hole its maker gives for it, since no clearance standard
+   * covers a blind fastener's sleeve; its grip range when it states one. No sleeve may lie in the
+   * last layer: its bore is where the fastener grips.
+   */
+  private blindFastener(
+    fastener: NonNullable<ReturnType<FaceGen["fastener"]>>,
+    stack: { sleeves: readonly StackSleeve[] },
+    layers: readonly Layer[],
+  ): { hole: number; grip?: { min: number; max: number } } | undefined {
+    const item = fastener.item;
+    if (!item) {
+      this.error(
+        "face",
+        `a blind fastening's fastener is a catalog fastener whose maker states its hole; ${fastener.out.item} is cut from bar stock`,
+        { field: "fastener" },
+      );
+      return undefined;
+    }
+    if (item.hole_mm === undefined) {
+      this.error(
+        "face",
+        `a blind fastening drills the hole its fastener's maker states, and ${fastener.out.item} gives none (hole_mm)`,
+        { field: "fastener" },
+      );
+      return undefined;
+    }
+    const last = layers[layers.length - 1] as Layer;
+    if (stack.sleeves.some((s) => s.layer === layers.length - 1)) {
+      this.error(
+        "face",
+        `a blind fastener grips inside its last layer ${last.ref}: no sleeve can sit in its bore`,
+        { field: "stack", refs: [last.ref] },
+      );
+      return undefined;
+    }
+    const min = item.grip_min_mm === undefined ? undefined : num(item.grip_min_mm);
+    const max = item.grip_max_mm === undefined ? undefined : num(item.grip_max_mm);
+    return {
+      hole: num(item.hole_mm),
+      ...(min !== undefined || max !== undefined
+        ? { grip: { min: min ?? 0, max: max ?? Number.POSITIVE_INFINITY } }
+        : {}),
+    };
+  }
+
+  /** A blind fastener whose grip lies outside its maker's range is a `fit` error, per grip. */
+  private reportGrips(
+    item: string,
+    range: { min: number; max: number },
+    grips: readonly { k: number; grip: number }[],
+    body: string,
+  ): void {
+    if (!this.report) return;
+    const groups = new Map<string, number[]>();
+    for (const g of grips) {
+      if (g.grip >= range.min - TOL.len && g.grip <= range.max + TOL.len) continue;
+      const key = fmt(g.grip);
+      groups.set(key, [...(groups.get(key) ?? []), g.k]);
+    }
+    const states =
+      range.max === Number.POSITIVE_INFINITY
+        ? `at least ${fmt(range.min)} mm`
+        : range.min === 0
+          ? `at most ${fmt(range.max)} mm`
+          : `${fmt(range.min)} to ${fmt(range.max)} mm`;
+    for (const [grip, ks] of groups) {
+      this.ctx.d.error(
+        "fit",
+        this.id,
+        `${ks.length === 1 ? "station" : "stations"} ${ks.join(", ")}: ${item} would grip ${grip} mm of material here, and its maker states ${states}`,
+        { refs: [body] },
+      );
+    }
   }
 
   /**
@@ -1043,20 +1190,12 @@ class FaceGen {
   ): Omit<HeadSeat, "side"> {
     const R = (b.out as number) / 2;
     const r = Math.max((hole ?? 0) / 2, (b.in ?? 0) / 2);
-    const c = to2(f, X);
-    const ring = Math.PI * (R * R - r * r);
-    let bears = 0;
-    if (ring > 0) {
-      for (const piece of seatMaterial(body, f)) {
-        bears += discArea(c, R, piece) - (r > 0 ? discArea(c, r, piece) : 0);
-      }
-    }
     return {
       item: b.item,
       d_in: 2 * r,
       d_out: 2 * R,
       on: `${body.id} ${f.name}`,
-      bearing: ring > 0 ? Math.min(1, Math.max(0, bears / ring)) : 0,
+      bearing: annulusBearing(body, f, X, R, r),
     };
   }
 
@@ -1102,6 +1241,8 @@ class FaceGen {
     | {
         out: { item: string; len?: number };
         thread?: string;
+        /** A catalog fastener's item. */
+        item?: FastenerItem;
         cut?: { item: string; opt: Readonly<Record<string, string>>; len: number };
       }
     | undefined {
@@ -1118,7 +1259,11 @@ class FaceGen {
         return undefined;
       }
       const thread = (found.item as { thread?: string }).thread;
-      return { out: { item: found.id }, ...(thread ? { thread } : {}) };
+      return {
+        out: { item: found.id },
+        ...(thread ? { thread } : {}),
+        ...(found.item.kind === "fastener" ? { item: found.item } : {}),
+      };
     }
     const found = ctx.items.item(f.bar);
     if (!found.ok || !found.bar) {
@@ -1222,6 +1367,7 @@ class FaceGen {
           item: found.id,
           opt: stockOptions(ctx, found.bar),
           layer,
+          bothWalls: e.walls === "both",
           len_mm: e.len_mm,
           hole,
         });
@@ -1726,7 +1872,7 @@ function hollowOf(body: Body): Hollow | undefined {
 }
 
 /** A T-nut fits a bar when it names the bar's system, or the groove type it enters (§5.5). */
-function fitsGroove(
+export function fitsGroove(
   itemId: string,
   item: Item,
   bar: BarItemInfo,

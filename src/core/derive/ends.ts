@@ -43,6 +43,7 @@ import {
   type PlacedBar,
   type PlaneN,
   type Prism,
+  type StackLayer,
 } from "./types.ts";
 
 /**
@@ -156,6 +157,8 @@ export interface Stage3 {
   lengths: Map<string, { lengths: BarLengths; ends: { a: EndReport; b: EndReport } }>;
   /** Per butt connection, the face each of its butting ends bears on, by end. */
   seats: Map<string, Map<string, ButtFace>>;
+  /** Per butt connection with a stack, its bars at each butting end, from the face out (X2). */
+  stacks: Map<string, Map<string, StackLayer[]>>;
 }
 
 export function resolveEnds(ctx: Ctx, placed: ReadonlyMap<string, PlacedBar>): Stage3 {
@@ -169,6 +172,9 @@ class Ends {
   private readonly claims = new Map<string, Claim[]>();
   private readonly faces = new Map<string, EndFace>();
   private readonly seats = new Map<string, Map<string, ButtFace>>();
+  private readonly stacks = new Map<string, Map<string, StackLayer[]>>();
+  /** Per butt with a stack: whether it gives no other spacer (reported once). */
+  private readonly stackSpacer = new Map<string, boolean>();
   /** Connections already reported invalid, so each is reported once. */
   private readonly connPlanes = new Map<string, Map<string, PlaneN> | undefined>();
 
@@ -218,7 +224,7 @@ class Ends {
       if (!fa || !fb) continue;
       lengths.set(bar.id, this.lengths(bar, fa, fb));
     }
-    return { faces: this.faces, lengths, seats: this.seats };
+    return { faces: this.faces, lengths, seats: this.seats, stacks: this.stacks };
   }
 
   // -------------------------------------------------------------------------------------------
@@ -460,11 +466,21 @@ class Ends {
         );
         continue;
       }
-      const p = addScaled(face.p, face.n, spacer);
+      const stack = this.stackOn(
+        id,
+        spec,
+        ref,
+        K,
+        face,
+        `${throughBar ?? "the body"}'s face ${faceName(prism, cr)}`,
+      );
+      if (!stack) continue;
+      const lift = spacer + stack.depth;
+      const p = addScaled(face.p, face.n, lift);
       const sl = prism.slabs[cr.slab] as Prism["slabs"][number];
       const depth = sl.hi - sl.lo;
       const dp = designPoint(K, end);
-      if (dp && Math.abs(dot(sub(dp, p), face.n)) > depth + spacer + TOL.len) {
+      if (dp && Math.abs(dot(sub(dp, p), face.n)) > depth + lift + TOL.len) {
         ctx.d.warn(
           "end-far",
           ref,
@@ -473,22 +489,119 @@ class Ends {
         );
       }
       out.set(ref, { p, n: neg(face.n) });
+      const top = stack.layers[stack.layers.length - 1];
       this.seat(
         id,
         ref,
-        throughBar !== undefined
-          ? { kind: "side", bar: throughBar, face: faceName(prism, cr) as Face }
-          : {
-              kind: "body",
-              item: (spec.through as { body: string }).body,
-              prism,
-              slab: cr.slab,
-              side: cr.side,
-              face: faceName(prism, cr),
-            },
+        top
+          ? { kind: "side", bar: top.bar, face: top.outer as Face }
+          : throughBar !== undefined
+            ? { kind: "side", bar: throughBar, face: faceName(prism, cr) as Face }
+            : {
+                kind: "body",
+                item: (spec.through as { body: string }).body,
+                prism,
+                slab: cr.slab,
+                side: cr.side,
+                face: faceName(prism, cr),
+              },
       );
     }
     return out;
+  }
+
+  /**
+   * A butt's stack at one butting end (after the alternative frame's acceptance, X2): the bars
+   * between the face it bears on and the end, from the face out. The butting bar's centre line
+   * must cross each bar's two faces square to the face's normal (within tol.ang), the first lying
+   * on the face and each on the one before (within tol.len); the end then bears on the last, so
+   * the stack's depth along the normal lifts the end plane as a spacer would. Any other layout is
+   * a `connection` error, and that end falls back to its default. With no stack: depth 0.
+   */
+  private stackOn(
+    id: string,
+    spec: ButtConn,
+    ref: string,
+    K: PlacedBar,
+    face: PlaneN,
+    on: string,
+  ): { depth: number; layers: StackLayer[] } | undefined {
+    const { ctx } = this;
+    if (!spec.stack) return { depth: 0, layers: [] };
+    const fail = (message: string, refs: string[]) => {
+      ctx.d.error("connection", id, `stack: ${message}`, { field: "stack", refs });
+      return undefined;
+    };
+    if (!this.stackSpacer.has(id)) {
+      // Said once per connection: a stack is the spacer, so no other may be given.
+      let why: string | undefined;
+      if (spec.spacer_mm !== undefined) {
+        why = "give spacer_mm or a stack, not both: the stack's bars are the spacer";
+      } else if (spec.connector !== undefined) {
+        const found = ctx.items.item(spec.connector);
+        if (found.ok && found.item.kind === "connector" && found.item.spacer_mm !== undefined) {
+          why = `the connector ${found.id} has a spacer_mm of its own, and v1 places no connector, so it cannot say whether its spacer or the stack lies nearer the face`;
+        }
+      }
+      if (why) fail(why, []);
+      this.stackSpacer.set(id, why === undefined);
+    }
+    if (!this.stackSpacer.get(id)) return undefined;
+    const { C, t } = centreLine(K);
+    const butting = new Set(spec.ends.map((e) => splitEnd(e).bar));
+    let z = 0;
+    let below = on;
+    const layers: StackLayer[] = [];
+    for (const [i, sid] of spec.stack.entries()) {
+      const what = `stack[${i}] ${sid}`;
+      if (sid === spec.through || butting.has(sid) || layers.some((l) => l.bar === sid)) {
+        return fail(`${what} is the through bar, a butting bar or already in the stack`, [sid]);
+      }
+      const S = placeBar(ctx, sid);
+      if (!S) {
+        if (!ctx.bars.has(sid)) ctx.d.error("ref", id, `stack: no bar ${sid}`, { refs: [sid] });
+        else ctx.depFailed(id, "stack", sid);
+        return undefined;
+      }
+      const prism = barPrism(S);
+      const hit = lineThrough(C, t, prism);
+      if (!hit) return fail(`${ref}: the centre line of ${K.id} misses ${what}`, [sid]);
+      const zAt = (c: Crossing) => dot(sub(addScaled(C, t, c.s), face.p), face.n);
+      const [near, far] =
+        zAt(hit.enter) <= zAt(hit.exit) ? [hit.enter, hit.exit] : [hit.exit, hit.enter];
+      const sl = prism.slabs[near.slab] as Prism["slabs"][number];
+      const tilt = Math.min(angleDeg(sl.n, face.n), angleDeg(sl.n, neg(face.n)));
+      if (near.slab !== far.slab || tilt > TOL.ang) {
+        return fail(
+          `${what} does not lie flat on ${below}: its faces are not square to the face's normal where ${K.id}'s centre line crosses it`,
+          [sid],
+        );
+      }
+      const z0 = zAt(near);
+      const z1 = zAt(far);
+      if (Math.abs(z0 - z) > TOL.len) {
+        return fail(
+          `${what} does not lie on ${below}: its face ${faceName(prism, near)} is ${fmt(z0 - z)} mm off it along its normal`,
+          [sid],
+        );
+      }
+      layers.push({
+        bar: sid,
+        from: z0,
+        to: z1,
+        inner: faceName(prism, near),
+        outer: faceName(prism, far),
+      });
+      z = z1;
+      below = `${sid}'s face ${faceName(prism, far)}`;
+    }
+    let m = this.stacks.get(id);
+    if (!m) {
+      m = new Map();
+      this.stacks.set(id, m);
+    }
+    m.set(ref, layers);
+    return { depth: z, layers };
   }
 
   /** The face a connection's butting end bears on, for its seat. */
@@ -786,8 +899,24 @@ class Ends {
     }
     const spacer = this.spacer(c.conn as string, spec);
     if (spacer === undefined) return undefined;
-    this.seat(c.conn as string, k, { kind: "end", bar: T.id, end: splitEnd(target).end });
-    return { p: addScaled(f.face.p, f.face.n, spacer), n: neg(f.face.n) };
+    const stack = this.stackOn(
+      c.conn as string,
+      spec,
+      k,
+      bar,
+      { p: X, n: f.face.n },
+      `${target}'s end face`,
+    );
+    if (!stack) return undefined;
+    const top = stack.layers[stack.layers.length - 1];
+    this.seat(
+      c.conn as string,
+      k,
+      top
+        ? { kind: "side", bar: top.bar, face: top.outer as Face }
+        : { kind: "end", bar: T.id, end: splitEnd(target).end },
+    );
+    return { p: addScaled(f.face.p, f.face.n, spacer + stack.depth), n: neg(f.face.n) };
   }
 
   /** A butt's spacer (§4.5): given, else its connector's, else none. */

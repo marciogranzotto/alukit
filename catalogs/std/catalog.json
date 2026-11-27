@@ -150,6 +150,84 @@
       "prov": { "src": "est", "note": "typical compound range, not from a standard" }
     }
   },
+  "standards": {
+    "DIN7984": {
+      "name": "DIN 7984",
+      "title": "Hexagon socket head cap screws with low head",
+      "sizes": {
+        "M3": { "dk_mm": 5.5, "k_mm": 2, "s_mm": 2 },
+        "M4": { "dk_mm": 7, "k_mm": 2.8, "s_mm": 2.5 },
+        "M5": { "dk_mm": 8.5, "k_mm": 3.5, "s_mm": 3 },
+        "M6": { "dk_mm": 10, "k_mm": 4, "s_mm": 4 },
+        "M8": { "dk_mm": 13, "k_mm": 5, "s_mm": 5 },
+        "M10": { "dk_mm": 16, "k_mm": 6, "s_mm": 7 }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "DIN 7984:2022-03, dimensions for M3 to M10",
+        "read": "2026-11-27",
+        "note": "dk the head diameter (nominal = maximum), k the head height (maximum), s the socket's width across flats (nominal); as fasten.it's DIN 7984 table (edition 03/2022) and Westfield Fasteners' DIN 7984 table both give them"
+      }
+    },
+    "ISO4017": {
+      "name": "ISO 4017",
+      "title": "Hexagon head screws, product grades A and B",
+      "sizes": {
+        "M5": { "s_mm": 8, "k_mm": 3.5 },
+        "M6": { "s_mm": 10, "k_mm": 4 },
+        "M8": { "s_mm": 13, "k_mm": 5.3 },
+        "M10": { "s_mm": 16, "k_mm": 6.4 },
+        "M12": { "s_mm": 18, "k_mm": 7.5 }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "ISO 4017:2011, Table 1 (preferred threads)",
+        "read": "2026-11-27",
+        "note": "s the width across flats (nominal = maximum), k the head height (nominal); as fasten.it's and Westfield Fasteners' ISO 4017 tables both give them. The bearing face's dw is left out: only one of them gives it"
+      }
+    },
+    "ISO4762": {
+      "name": "ISO 4762",
+      "title": "Hexagon socket head cap screws",
+      "sizes": {
+        "M3": { "dk_mm": 5.5, "k_mm": 3, "s_mm": 2.5 },
+        "M4": { "dk_mm": 7, "k_mm": 4, "s_mm": 3 },
+        "M5": { "dk_mm": 8.5, "k_mm": 5, "s_mm": 4 },
+        "M6": { "dk_mm": 10, "k_mm": 6, "s_mm": 5 },
+        "M8": { "dk_mm": 13, "k_mm": 8, "s_mm": 6 },
+        "M10": { "dk_mm": 16, "k_mm": 10, "s_mm": 8 },
+        "M12": { "dk_mm": 18, "k_mm": 12, "s_mm": 10 },
+        "M16": { "dk_mm": 24, "k_mm": 16, "s_mm": 14 },
+        "M20": { "dk_mm": 30, "k_mm": 20, "s_mm": 17 },
+        "M24": { "dk_mm": 36, "k_mm": 24, "s_mm": 19 }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "ISO 4762:2004, Table 1",
+        "read": "2026-11-27",
+        "note": "dk the maximum diameter of a plain head, k the head height (maximum), s the socket's width across flats (nominal); as fasten.it's DIN EN ISO 4762 table gives them, and Westfield Fasteners' ISO 4762 table for k and s (its dk is a knurled head's maximum); DIN 912 heads have the same dimensions"
+      }
+    },
+    "ISO7380-1": {
+      "name": "ISO 7380-1",
+      "title": "Button head screws, hexagon socket",
+      "sizes": {
+        "M3": { "dk_mm": 5.7, "k_mm": 1.65, "s_mm": 2 },
+        "M4": { "dk_mm": 7.6, "k_mm": 2.2, "s_mm": 2.5 },
+        "M5": { "dk_mm": 9.5, "k_mm": 2.75, "s_mm": 3 },
+        "M6": { "dk_mm": 10.5, "k_mm": 3.3, "s_mm": 4 },
+        "M8": { "dk_mm": 14, "k_mm": 4.4, "s_mm": 5 },
+        "M10": { "dk_mm": 17.5, "k_mm": 5.5, "s_mm": 6 },
+        "M12": { "dk_mm": 21, "k_mm": 6.6, "s_mm": 8 }
+      },
+      "prov": {
+        "src": "src",
+        "ref": "ISO 7380-1:2011, Table 1",
+        "read": "2026-11-27",
+        "note": "dk the head diameter (maximum), k the head height (maximum), s the socket's width across flats (nominal); as fasten.it's DIN EN ISO 7380-1 (11/2011) table and Westfield Fasteners' ISO 7380-1 table both give them; the 2022 edition was not compared"
+      }
+    }
+  },
   "items": {
     "RHS-200x100x6.3": {
       "kind": "bar",

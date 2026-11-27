@@ -468,6 +468,9 @@ class Build:
                 it["thread"] = thread
             if "Comprimento do Parafuso" in a:
                 it["length_mm"] = int(re.fullmatch(r"(\d+)mm", a["Comprimento do Parafuso"]).group(1))
+            standard = store.standard_of(parent) if subtype in ("screw", "bolt") else None
+            if standard:
+                it["standard"] = standard
             for phrase, how in tables.INSERTION.items():
                 if phrase in desc:
                     it["insertion"] = how

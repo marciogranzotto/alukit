@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { cli, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
+import { cli, numberText, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
 
 /**
  * The top bar (design §8): the variant every view derives, the GLB export, and the revision
@@ -57,7 +57,7 @@ test("the variant switch derives every view in that variant, as --variant does",
     drawer.locator("tr", { has: page.getByRole("button", { name: id, exact: true }) });
 
   const base = JSON.parse((await cli(["cutlist", served.dir, "--format", "json"])).out) as CutList;
-  await expect(row("b1")).toContainText(cutOf(base, "b1"));
+  await expect(row("b1")).toContainText(numberText(cutOf(base, "b1")));
   await expect(row("b13")).toHaveCount(1);
 
   await sw.selectOption("tall");
@@ -66,7 +66,7 @@ test("the variant switch derives every view in that variant, as --variant does",
     (await cli(["cutlist", served.dir, "--variant", "tall", "--format", "json"])).out,
   ) as CutList;
   expect(cutOf(tall, "b1")).not.toBe(cutOf(base, "b1"));
-  await expect(row("b1")).toContainText(cutOf(tall, "b1"));
+  await expect(row("b1")).toContainText(numberText(cutOf(tall, "b1")));
   // The hanger is not in the tall variant: not on its cut list, not in its scene.
   await expect(row("b13")).toHaveCount(0);
   const bars = await page.evaluate(() => window.__alukit?.stats()?.bars);
@@ -78,7 +78,7 @@ test("the variant switch derives every view in that variant, as --variant does",
   // Back to the default.
   await sw.selectOption("");
   await expect(sw).toHaveAttribute("data-drawn", "base");
-  await expect(row("b1")).toContainText(cutOf(base, "b1"));
+  await expect(row("b1")).toContainText(numberText(cutOf(base, "b1")));
   expect(errors).toEqual([]);
 });
 

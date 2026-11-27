@@ -89,6 +89,28 @@ ISO 273 clearance holes appear in the design (`docs/design.md`) but in no catalo
 the medium series gives 9 mm for M8 and 13.5 mm for M12; the standard's table was not read (not
 verified).
 
+## `std` standards (2026-11-27)
+
+Added after the alternative frame's acceptance (F2a, [`x1-x3-f2ab.md`](x1-x3-f2ab.md)): tables a
+fastener that cites the standard fills its unstated dimensions from. Each value was read on
+2026-11-27 from two distributors' tables that reproduce the standard; the standards themselves
+were not read. Sources:
+
+- **FASTEN.IT**: <https://fasten.it/norms/norm/din_en_iso_4762>,
+  <https://fasten.it/norms/norm/din_en_iso_4017>, <https://fasten.it/en/norms/norm/din_en_iso_7380-1>
+  (edition 11/2011), <https://fasten.it/norms/norm/din_7984> (edition 03/2022)
+- **WESTFIELD**: <https://westfieldfasteners.co.uk/Standards/ScrewBolt-SHCap-M.html> (ISO 4762),
+  <https://westfieldfasteners.co.uk/Standards/ScrewBolt-HexHd4017-M-THRfull.html> (ISO 4017),
+  <https://westfieldfasteners.co.uk/Standards/ScrewBolt-SHBtn-M.html> (ISO 7380-1),
+  <https://westfieldfasteners.co.uk/Standards/ScrewBolt-SHCapLow-M.html> (DIN 7984)
+
+| Standard | Sizes | Fields | Source | Status |
+|---|---|---|---|---|
+| ISO4762 | M3–M24 | dk (plain head, max), k (max), s (nominal) | FASTEN.IT all three; WESTFIELD k and s | verified. WESTFIELD's dk is a knurled head's maximum (13.27 at M8); the plain head's 13 is taken, as `std:ISO4762-M8x25-12.9` has it |
+| ISO7380-1 | M3–M12 | dk (max), k (max), s (nominal) | FASTEN.IT (11/2011), WESTFIELD | verified. WESTFIELD also gives dw min; left out, as for the other round heads. The 2022 edition, which changed minimums, was not compared |
+| DIN7984 | M3–M10 | dk (nominal = max), k (max), s (nominal) | FASTEN.IT (03/2022), WESTFIELD | verified. The table numbers of the standard are not known; the citation names the edition and the size range |
+| ISO4017 | M5–M12 | s (nominal = max), k (nominal) | FASTEN.IT, WESTFIELD | verified. dw min (grade A) is in WESTFIELD only, so it is left out |
+
 ## Counts
 
 By table row (40 data rows; a row can cover several fields or items): 33 start with "verified", 5 carry a

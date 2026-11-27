@@ -316,6 +316,7 @@ class Remap {
           through,
           ends: c.ends.map((e) => this.end(e)),
           ...(c.held_by !== undefined ? { held_by: this.id(c.held_by) } : {}),
+          ...(c.stack !== undefined ? { stack: c.stack.map((b) => this.id(b)) } : {}),
         };
       }
       case "miter":

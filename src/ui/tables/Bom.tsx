@@ -1,64 +1,102 @@
 import { EntityChips } from "../common/EntityChip.tsx";
-import { kg, mm } from "../format.ts";
+import { ItemSwatch } from "../common/ItemSwatch.tsx";
+import { Num } from "../common/Num.tsx";
+import { StatusGlyph } from "../common/StatusGlyph.tsx";
+import { kg, mm, plural, qty, withUnit } from "../format.ts";
 import type { Model } from "../model.ts";
-import { registerSheet } from "../sheets/registry.ts";
-import { optText, Stamp } from "./common.tsx";
+import { registerSheet, selectionOnly } from "../sheets/registry.ts";
+import { model } from "../store.ts";
+import { anySelected, type Col, optText, Row, Sheet, SheetBar, SheetTable } from "./common.tsx";
 
 /**
- * The bill of materials (design §8; `alukit bom`): by kind, each line's item, options, quantity,
- * length and mass, and what uses it; the total mass, and what has none. It comes with the
- * revision's model. Owner: S4.
+ * The bill of materials (design §8; `alukit bom`; docs/ux/visual-design.md §6.2): by kind, with
+ * each kind's mass at the figure size; each line's item (with its swatch), options, quantity,
+ * length and mass, an `estimate` triangle where the mass is estimated, and what uses it. The
+ * total mass, and what has none, sit in the strip above. It comes with the revision's model.
+ * Owner: S4.
  */
+
+const COLS: readonly Col[] = [
+  { id: "item", head: "Item", w: "300px" },
+  { id: "options", head: "Options" },
+  { id: "qty", head: "Qty", w: "64px", align: "right" },
+  { id: "length", head: "Length", unit: "mm", w: "120px", align: "right" },
+  { id: "mass", head: "Mass", unit: "kg", w: "112px", align: "right" },
+  { id: "used", head: "Used by", w: "230px" },
+];
+
 export function BomSheet({ m }: { m: Model }) {
   const b = m.bom;
   return (
-    <div data-testid="bom">
-      <p class="sub">
-        Total mass {kg(b.mass_kg)} kg
-        {b.mass_unknown.length > 0 && `, without ${b.mass_unknown.join(", ")} (no mass given)`}.{" "}
-        <Stamp lock={b.lock} />
-      </p>
-      {b.groups.map((g) => (
-        <section key={g.kind}>
-          <h4>
-            {g.kind} <span class="sub">· {kg(g.mass_kg)} kg</span>
-          </h4>
-          <table class="grid">
-            <thead>
-              <tr>
-                <th>item</th>
-                <th>name</th>
-                <th>options</th>
-                <th>qty</th>
-                <th>length mm</th>
-                <th>mass kg</th>
-                <th>used by</th>
+    <Sheet testid="bom">
+      <SheetBar lock={b.lock}>
+        <span>
+          Total mass <b class="figure">{withUnit(kg(b.mass_kg), "kg")}</b>
+        </span>
+        {b.mass_unknown.length > 0 && (
+          <span class="sub"> without {b.mass_unknown.join(", ")} (no mass given)</span>
+        )}
+      </SheetBar>
+      <SheetTable cols={COLS}>
+        {b.groups.map((g) =>
+          selectionOnly.value && !g.lines.some((l) => anySelected(l.sources)) ? null : (
+            <tbody key={g.kind} data-kind={g.kind}>
+              <tr class="group-head">
+                <td colSpan={COLS.length}>
+                  <div class="group-title">
+                    <span class="figure kind">{g.kind}</span>
+                    <span class="stats">
+                      <span class="stat">
+                        <span class="stat-k">Mass</span>{" "}
+                        <span class="stat-v">{withUnit(kg(g.mass_kg), "kg")}</span>
+                      </span>
+                    </span>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
               {g.lines.map((l) => (
-                <tr key={`${l.item}${optText(l.opt)}`}>
-                  <td>{l.item}</td>
-                  <td>{l.name}</td>
+                <Row key={`${l.item}${optText(l.opt)}`} ids={l.sources}>
+                  <td>
+                    <span class="item-cell">
+                      <ItemSwatch item={l.item} />
+                      <b>{l.item}</b> <span class="sub">{l.name}</span>
+                    </span>
+                  </td>
                   <td>{optText(l.opt)}</td>
-                  <td class="n">{l.qty}</td>
+                  <td class="n">{qty(l.qty, { table: true })}</td>
                   <td class="n">
-                    {l.length_mm === undefined ? "" : mm(l.length_mm, { table: true })}
+                    {l.length_mm === undefined ? (
+                      ""
+                    ) : (
+                      <Num text={mm(l.length_mm, { table: true })} />
+                    )}
                   </td>
                   <td class="n" title={l.mass_src ? `mass: ${l.mass_src}` : "no mass"}>
-                    {l.mass_kg === undefined ? "" : kg(l.mass_kg, { table: true })}
+                    {l.mass_src === "est" && (
+                      <span class="est" title="The mass is an estimate">
+                        <StatusGlyph status="warn" size={12} />
+                        <span class="sr-only">estimate </span>
+                      </span>
+                    )}
+                    {l.mass_kg === undefined ? "" : <Num text={kg(l.mass_kg, { table: true })} />}
                   </td>
                   <td>
                     <EntityChips ids={l.sources} />
                   </td>
-                </tr>
+                </Row>
               ))}
             </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
+          ),
+        )}
+      </SheetTable>
+    </Sheet>
   );
 }
 
-registerSheet({ id: "bom", title: "BOM", order: 30, Body: BomSheet });
+/** The tab's badge: how many lines the bill has. */
+function LinesBadge() {
+  const n = model.value?.bom.groups.reduce((sum, g) => sum + g.lines.length, 0) ?? 0;
+  return n > 0 ? <span class="badge plain">{plural(n, "line")}</span> : null;
+}
+
+registerSheet({ id: "bom", title: "BOM", order: 20, badge: () => <LinesBadge />, Body: BomSheet });

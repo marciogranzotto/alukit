@@ -101,13 +101,15 @@ export class Look {
   private readonly key = new DirectionalLight();
   private readonly sky = new HemisphereLight();
   private background: Texture | undefined;
-  private readonly fog = new Fog(0x000000, 1, 2);
+  /** Placed by `follow`, coloured again by `setTheme`. */
+  private readonly fog: Fog;
   private readonly scene: Scene;
   private theme: ViewTheme;
 
   constructor(scene: Scene, theme: ViewTheme) {
     this.scene = scene;
     this.theme = theme;
+    this.fog = new Fog(fogColour(theme), 1, 2);
     scene.add(this.ambient, this.key, this.key.target, this.sky);
     this.setTheme(theme);
   }
@@ -188,6 +190,8 @@ export function glyphTexture(g: Glyph, ring: Hex): Texture {
   const s = GLYPH_PX;
   const c = s / 2;
   const dark = `#${ring.toString(16).padStart(6, "0")}`;
+  // The mask: full intensity, which the point's colour multiplies. Not a colour of the theme.
+  const mask = "white";
   ctx.lineJoin = "round";
   const path = (pts: [number, number][]) => {
     ctx.beginPath();
@@ -198,7 +202,7 @@ export function glyphTexture(g: Glyph, ring: Hex): Texture {
     ctx.closePath();
   };
   const filled = (outline: number) => {
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = mask;
     ctx.fill();
     ctx.lineWidth = outline;
     ctx.strokeStyle = dark;
@@ -211,7 +215,7 @@ export function glyphTexture(g: Glyph, ring: Hex): Texture {
     ctx.strokeStyle = dark;
     ctx.stroke();
     ctx.lineWidth = width;
-    ctx.strokeStyle = "#ffffff";
+    ctx.strokeStyle = mask;
     ctx.stroke();
   };
   const circle = (r: number) => {
