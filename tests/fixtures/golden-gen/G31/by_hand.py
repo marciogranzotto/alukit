@@ -11,7 +11,10 @@ butt through a bar's end (`through: "b1.b"`, as G17) whose connector requires a 
 "through"` drills it **into that end face, along the through bar's axis**, at the point where the
 butting bar's centre line, moved by the spacer along the face's normal, meets the face. It is an
 `end-hole` op on the through bar: its end, its offset from the section's box centre in the
-section's x and y, its diameter or thread, and its depth (none: through the piece).
+section's x and y, its diameter or thread, and its depth (none: through the piece). A tapped one
+is a tap into the end, which is cut in a core: off every core of the section (the 40 x 40's one,
+at its centre) by more than 0.01, it is a machining error on the bar (design 2.3, §5.5). A
+drilled one is not checked.
 
 The geometry: the 40 x 40 block b1 runs from (0, 0, 0) to (120, 0, 0), centred; its end b is
 square at x = 120, outward normal +X. A horizontal bar's section has local y = +Z and local
@@ -28,6 +31,8 @@ B1 = (120.0, 0.0, 0.0)
 A2 = (1720.0, 1210.0, 0.0)
 B2 = (120.0, 10.0, 0.0)
 HALF = 20.0  # half the 40 x 40 section
+CORES = [(0.0, 0.0)]  # the 40 x 40's core, from its bores, from the box centre
+TOL = 0.01
 T1 = (1.0, 0.0, 0.0)
 X1, Y1 = (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)  # b1's section axes
 
@@ -108,8 +113,12 @@ for name, (r, op, words) in results.items():
     if want is None:
         mismatches.append(f"{name}: no such case in expected.json")
         continue
-    if want["errors"] != []:
-        mismatches.append(f"{name}: hand expects no errors, expected.json {want['errors']}")
+    # A tapped end hole off every core is a machining error on the block, by c1.
+    x, y = r["off"]
+    on_core = min(math.dist((x, y), c) for c in CORES) <= TOL
+    errors = [] if "thread" not in op or on_core else [{"code": "machining", "entity": "b1", "refs": ["c1"]}]
+    if want["errors"] != errors:
+        mismatches.append(f"{name} errors: hand {errors}, expected.json {want['errors']}")
     if want["ops"]["b1"] != [op]:
         mismatches.append(f"{name} b1 ops: hand {[op]}, expected.json {want['ops']['b1']}")
     b = r["brace"]

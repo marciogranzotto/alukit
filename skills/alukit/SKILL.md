@@ -39,7 +39,11 @@ then read the output.
   systems and mounts, which a catalog holds. `items` is for plates, bent angles, generic items
   and placeholders (`project:<id>`). A joint with no body of its own (studs in tapped cores, a
   bush and a sleeve) is a connector with `"recipe": true` and no mass or box: its fasteners and
-  machining are billed, the recipe is not, and no offer sells it.
+  machining are billed, the recipe is not, and no offer sells it. A tap into a bar's end, a
+  connector's, a splice's or a tapped end hole, must stand on a core of its bar's section (`at_mm`
+  or `at_holes` place a connector's; with none it is at the centre): one on no core is a
+  `machining` error naming the nearest. A section that gives no core positions (only a `tslot`
+  section's `bores` do) is not checked, an info.
 - **The lock pins catalog data.** Derive reads the lock, never the live catalogs. A command
   that names a new item pins it; `alukit lock update <dir>` refreshes entries and prints what
   moved (prices, sections, cut lengths). `--frozen` on any output makes a missing entry an error.

@@ -5,10 +5,12 @@ draft 2.3 named are closed in the build, each with failing tests written first. 
 follows (marked *2.3*, listed in its changelog under "After acceptance run 3"). Labels:
 **verified** (run, with how), **read** (from the code or a document), **inferred**.*
 
-**Golden values.** Every golden file is unchanged: G1–G34, the cart's cut list, BOM, order and
-machining sheet, the base frame's cut list and BOM (**verified**: the unit suite and the gate).
-Where a test compares an output with a golden byte for byte, it compares the golden plus the
-stamp's lines, as the order's test did since M3b (m3b-doc 40).
+**Golden values.** No golden value moved: the lengths, ops, hardware and lines of G1–G34, the
+cart's cut list, BOM, order and machining sheet, the base frame's cut list and BOM
+(**verified**: the unit suite and the gate). Where a test compares an output with a golden byte
+for byte, it compares the golden plus the stamp's lines, as the order's test did since M3b
+(m3b-doc 40). Three golden *verdicts* gained an error from the third limit's check, each a case
+written to show a fault, with its hand script extended by the rule (decision 20).
 
 ## 1. Every output states the stamp (§5.4, §9, §4.13)
 
@@ -51,3 +53,32 @@ leg b, 900 + 30). The push handle sets the high x, as it did with bars alone. Th
 motor p8 reaches y 625 and z 238, inside the plate and the carriages, so on the cart as written it
 sets no side; the test's variation gives it a box reaching y 640 and z 978, and the box follows it
 there. With no parts the box is the bars' (1564.14, 600, 917.5), so the parts set three sides.
+
+## 3. A tap into a bar's end is checked against its section's cores (§5.5, §13)
+
+**Before.** The third acceptance run found it: an end tap was never compared with the section's
+cores, so a tap given no position on an 80x80 with four cores stood at the centre and passed.
+
+| # | Decision | Why |
+|---|---|---|
+| 16 | Every tap into a bar's end is checked: an end tap, a connector's in a butting end or in a through bar's end or a splice's, and a tapped end hole (an `end-hole` with a thread, §4.5). Its centre must lie within `tol.len` (0.01 mm) of a core's; a drilled end hole is not a tap and is not checked | A thread is cut in material, and on a T-slot profile the cores are where it is. The cut list already words a tapped end hole as a tap ("tap M8 in end a along the axis"); leaving it out would leave the same fault unchecked. The tolerance is the positions' own: they are written as the cores' |
+| 17 | The cores are a section's: a `tslot` generator's `bores` become `cores` on the built section (`src/catalog/link.ts`), in section coordinates, compared from the section's box centre, the frame an end tap's place is given in. `bores: []` says it has none, and every end tap on it errors; the bar item's `core` (bore and tap size) gives no position, so it places none | One source for the drawn bores and the checked cores |
+| 18 | One error per place on a bar (its end, its position to the output quantum, its thread), on the bar, naming the end, the place, the connections that made it (also its `refs`), the section and every core at the least distance, with that distance: "the tap M16 in end a at the centre (c1) is on no core of test-stud:TS80; the nearest, 28.28 off: x -20.00, y -20.00; …" | The shop and the author need the place and the nearest fix; the `refs` let the order rules block that bar's suppliers (§5.5) |
+| 19 | A section that gives no core positions is not checked: one `machining` **info** on the bar names its tapped ends and the connections. Not an error, and not nothing | A drawn or traced section's holes do not say which is a core, and a box has none drawn. In the Forseti catalog 8 drawn sections (PF20-14, PF30-02, PF30-04, PF40-00, PF40-01, PF40-03, PF45-02, PF45-12) and one generated without bores (PF50-01) give none (**read**); an error would block every tapped joint on them for a check AluKit cannot make, and silence would hide that the check did not run |
+| 20 | Coincident taps at a place off every core get both errors: the coincidence and the missing core. G34's "each requirement written four times with no positions" and "a splice with four studs and no positions" cases gain the second on each bar with taps at the centre, and G31's "a tapped hole, 20 deep" gains one (its M8 10.00 off the 40x40's centre core). Their values do not move; `by_hand.py` beside each states the rule and computes the verdicts without AluKit | Two faults: making the taps once still leaves one at a centre with no core. Each case was written to show a fault, and the new check sees one more; no fixture is wrong, so none was changed |
+| 21 | Every base golden and the cart pass: their taps are on cores (the cart's and G12's at a TS40's centre core, G33's at a TS40C's, G34's at TS80's four), and no fixture taps a section without core data (**verified**: a scan of every fixture project's derived ops, and the suite) | The check catches the fault the run found and nothing else in the record |
+
+**On the third run's own record** (**verified**, `alukit check` on its decided variant): the
+check finds what the run's finding described, 18 M16 end taps given no position at the centre of
+80x80 ends with four cores and of 40x80 ends with two, each a `machining` error naming the nearest
+cores, and 4 infos for taps on a drawn section. The record is not changed here. Its `bbox().z`
+check reads 2251.4 before and after the second limit: every placed part there has a box, and none
+widens the model's height.
+
+**Tests, written first** (`src/core/derive/joints.test.ts`, "an end tap on its section's cores"):
+the brief's two reproductions, an 80x80 post's end tap with no position (BUSH-END on G34's post,
+28.28 from each of four cores) and a tap placed at (10, 10) on a 40x80 (14.14 from its core at
+(0, 20)), then the same tap on a core passing; a splice's taps in both ends and a through bar's end
+taps; G31's tapped end hole; and the info for TS80 with its bores removed. Three earlier tests of
+that file now expect the new errors beside what they test (positions mapped into a through bar's
+end at (0, ±10), a splice tap at (10, 5) turned with the piece, the coincident taps).

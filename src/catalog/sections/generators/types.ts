@@ -28,6 +28,13 @@ export interface GeneratedGroove {
   type?: string;
 }
 
+/** A core of a section: a bore an end tap is cut in (design §3.5, §5.5). */
+export interface SectionCore {
+  /** Its centre, in section coordinates. */
+  at_mm: Vec2;
+  d_mm: number;
+}
+
 /** A parametric section, in mm, about its nominal centre (design §3.5). */
 export interface GeneratedSection {
   /** For drawing. */
@@ -38,6 +45,8 @@ export interface GeneratedSection {
   bbox_mm: readonly [Vec2, Vec2];
   grooves: GeneratedGroove[];
   datums: Record<string, Vec2>;
+  /** Its cores, where the params give them (a `tslot`'s `bores`); absent when not known. */
+  cores?: SectionCore[];
 }
 
 /**

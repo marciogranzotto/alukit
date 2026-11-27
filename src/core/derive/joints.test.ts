@@ -1,3 +1,4 @@
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkCatalog } from "#catalog/check.ts";
@@ -8,8 +9,9 @@ import { referrers } from "../commands/refs.ts";
 import { rewriteEntity } from "../commands/rewrite.ts";
 import { cutList } from "../cutlist/cutlist.ts";
 import { machiningText } from "../cutlist/format.ts";
+import type { ItemSource } from "../items.ts";
 import { openProject } from "../project/open.ts";
-import { FIXTURES, mergePatch } from "../testing.ts";
+import { editJson, FIXTURES, mergePatch, scratchFixtures } from "../testing.ts";
 import { derive } from "./derive.ts";
 import { derivedJson } from "./output.ts";
 
@@ -19,7 +21,7 @@ import { derivedJson } from "./output.ts";
  * where positions place end holes and end taps, how they turn with a piece, and what refuses them.
  */
 
-async function project(name: "G33" | "G34", patch: unknown = {}) {
+async function project(name: "G31" | "G33" | "G34", patch: unknown = {}) {
   const p = await openProject(join(FIXTURES, "golden-gen", name));
   const raw = mergePatch(p.raw, patch);
   return { raw, items: p.items, d: derive(raw, p.items) };
@@ -174,7 +176,11 @@ describe("a connector's machining at positions (§3.4, §5.3, acceptance gap A8)
         c2: null,
       },
     });
-    expect(errors(d)).toEqual([]);
+    // The taps at (0, ±10) are on none of b1's cores (±20, ±20): a machining error each, below.
+    expect(errors(d)).toEqual([
+      ["machining", "b1"],
+      ["machining", "b1"],
+    ]);
     expect(d.bars.get("b1")?.ops).toEqual([
       { op: "end-hole", from: "b", off: [10, 0], d: 9, by: "c1" },
       { op: "end-hole", from: "b", off: [-10, 0], d: 9, by: "c1" },
@@ -191,7 +197,11 @@ describe("a connector's machining at positions (§3.4, §5.3, acceptance gap A8)
         bars: { b1: null },
         connections: { c1: null, c2: { connector } },
       });
-      expect(errors(d)).toEqual([]);
+      // (10, 5) and (0, 5) are on none of TS80's cores: a machining error in each bar, below.
+      expect(errors(d)).toEqual([
+        ["machining", "b2"],
+        ["machining", "b3"],
+      ]);
       const g = cutList({ derived: d, items }).groups.find((x) => x.item === "test-stud:TS80");
       return g?.lines.map((l) => [l.count, l.sources, l.machining.map(machiningText)]);
     };
@@ -224,11 +234,14 @@ describe("a connector's machining at positions (§3.4, §5.3, acceptance gap A8)
     });
     const out = checkModel({ raw, derived: d, items });
     const hit = out.diagnostics.filter((x) => x.code === "machining");
+    // b2's four taps coincide, and at the centre, which is none of TS80's cores: two faults.
     expect(hit.map((x) => [x.severity, x.entity, x.refs])).toEqual([
       ["error", "b1", ["c1"]],
       ["error", "b2", ["c1"]],
+      ["error", "b2", ["c1"]],
     ]);
-    expect(hit[1]?.message).toBe(
+    expect(hit[1]?.message).toMatch(/^the tap M16 in end a at the centre \(c1\) is on no core/);
+    expect(hit[2]?.message).toBe(
       "the tap M16 in end a at the centre is made 4 times at one place (c1): give each its own position, or make it once",
     );
 
@@ -246,5 +259,161 @@ describe("a connector's machining at positions (§3.4, §5.3, acceptance gap A8)
         "4 studs and no positions: their taps coincide at the centre; give each stud's core in at_mm",
       ],
     ]);
+  });
+});
+
+describe("an end tap on its section's cores (§5.5)", () => {
+  type D = ReturnType<typeof derive>;
+  const machining = (d: D) =>
+    d.diagnostics
+      .filter((x) => x.code === "machining")
+      .map((x) => [x.severity, x.entity, x.refs, x.message]);
+
+  /** The project's items, with one more connector: BUSH-END's, its requirements replaced. */
+  function withTapAt(items: ItemSource, id: string, requires: unknown[]): ItemSource {
+    const bush = items.item("test-stud:BUSH-END");
+    if (!bush.ok) throw new Error(bush.message);
+    const item = ConnectorItem.parse({ ...bush.item, requires });
+    return { ...items, item: (ref) => (ref === id ? { ok: true, id, item } : items.item(ref)) };
+  }
+
+  it("passes G34's taps, each on one of the 80x80's four cores", async () => {
+    expect(machining((await project("G34")).d)).toEqual([]);
+  });
+
+  it("is a machining error where an 80x80 post's end tap has no position: the centre is no core", async () => {
+    // BUSH-END taps M16 in the butting end with no position: at the centre of b2's end a. TS80's
+    // cores are at (±20, ±20), each 20√2 = 28.28 from it.
+    const { d } = await project("G34", {
+      bars: { b3: null },
+      connections: { c1: { connector: "test-stud:BUSH-END" }, c2: null },
+    });
+    expect(errors(d)).toEqual([["machining", "b2"]]);
+    expect(machining(d)).toEqual([
+      [
+        "error",
+        "b2",
+        ["c1"],
+        "the tap M16 in end a at the centre (c1) is on no core of test-stud:TS80; the nearest, 28.28 off: x -20.00, y -20.00; x -20.00, y 20.00; x 20.00, y -20.00; x 20.00, y 20.00 from the centre",
+      ],
+    ]);
+  });
+
+  it("is a machining error where a placed tap misses a 40x80's cores, naming the nearest", async () => {
+    // An M8 tap at (10, 10) in a 40x80 post's end: its cores are at (0, ±20); (0, 20) is the
+    // nearer, √(10² + 10²) = 14.14 off, and (0, −20) √(10² + 30²) = 31.62.
+    const p = await project("G34");
+    const items = withTapAt(p.items, "test-stud:TAP-AT", [
+      { op: "end-tap", on: "butting", thread: "M8", at_mm: [[10, 10]] },
+    ]);
+    const raw = mergePatch(p.raw, {
+      bars: { b2: { item: "test:TS4080" }, b3: null },
+      connections: { c1: { connector: "test-stud:TAP-AT" }, c2: null },
+    });
+    const d = derive(raw, items);
+    expect(errors(d)).toEqual([["machining", "b2"]]);
+    expect(machining(d)).toEqual([
+      [
+        "error",
+        "b2",
+        ["c1"],
+        "the tap M8 in end a at x 10.00, y 10.00 from the centre (c1) is on no core of test:TS4080; the nearest, 14.14 off: x 0.00, y 20.00 from the centre",
+      ],
+    ]);
+    // On a core, the same tap passes.
+    const on = withTapAt(p.items, "test-stud:TAP-AT", [
+      { op: "end-tap", on: "butting", thread: "M8", at_mm: [[0, -20]] },
+    ]);
+    expect(machining(derive(raw, on))).toEqual([]);
+  });
+
+  it("checks a splice's taps in both spliced ends, and a through bar's end taps", async () => {
+    // One stud at (10, 5): in b2's end b and b3's end a, each in its own section. TS80's nearest
+    // core is (20, 20), √(10² + 15²) = 18.03 off.
+    const splice = await project("G34", {
+      bars: { b1: null },
+      connections: { c1: null, c2: { connector: "test-stud:SPLICE1-X" } },
+    });
+    expect(machining(splice.d).map((x) => [x[1], x[2], x[3]])).toEqual([
+      [
+        "b2",
+        ["c2"],
+        "the tap M16 in end b at x 10.00, y 5.00 from the centre (c2) is on no core of test-stud:TS80; the nearest, 18.03 off: x 20.00, y 20.00 from the centre",
+      ],
+      [
+        "b3",
+        ["c2"],
+        "the tap M16 in end a at x 10.00, y 5.00 from the centre (c2) is on no core of test-stud:TS80; the nearest, 18.03 off: x 20.00, y 20.00 from the centre",
+      ],
+    ]);
+    // END-2AX taps M8 at (0, ±10) in the through bar's end b, each √(20² + 10²) = 22.36 from the
+    // two cores on its side.
+    const through = await project("G34", {
+      bars: {
+        b2: null,
+        b3: null,
+        b4: { item: "test-stud:TS40C", a: [1600, 0, 0], b: [600, 0, 0] },
+      },
+      connections: {
+        c1: { through: "b1.b", ends: ["b4.b"], connector: "test-stud:END-2AX" },
+        c2: null,
+      },
+    });
+    expect(machining(through.d).map((x) => [x[1], x[3]])).toEqual([
+      [
+        "b1",
+        "the tap M8 in end b at x 0.00, y -10.00 from the centre (c1) is on no core of test-stud:TS80; the nearest, 22.36 off: x -20.00, y -20.00; x 20.00, y -20.00 from the centre",
+      ],
+      [
+        "b1",
+        "the tap M8 in end b at x 0.00, y 10.00 from the centre (c1) is on no core of test-stud:TS80; the nearest, 22.36 off: x -20.00, y 20.00; x 20.00, y 20.00 from the centre",
+      ],
+    ]);
+  });
+
+  it("checks a tapped end hole as a tap, and leaves a drilled one alone", async () => {
+    // G31's block b1 is a 40x40 with its core at the centre; the brace's centre line meets its end
+    // face 10 off it. A Ø9 hole there passes; an M8 tapped there is 10.00 off the core.
+    expect(machining((await project("G31")).d)).toEqual([]);
+    const tapped = await project("G31", {
+      connections: { c1: { connector: "test-joint:END-AX-T" } },
+    });
+    expect(machining(tapped.d)).toEqual([
+      [
+        "error",
+        "b1",
+        ["c1"],
+        "the tap M8 in end b along the axis, at x 10.00, y 0.00 from the centre (c1) is on no core of test:TS40; the nearest, 10.00 off: x 0.00, y 0.00 from the centre",
+      ],
+    ]);
+  });
+
+  it("says, as an info, that a section giving no core positions leaves its taps unchecked", async () => {
+    // TS80 without its bores: the section is built, its cores are not known.
+    const root = await scratchFixtures();
+    try {
+      await editJson(join(root, "catalogs", "test-stud", "sections", "TS80.json"), (s) => {
+        delete s.params.bores;
+      });
+      const p = await openProject(join(root, "golden-gen", "G34"));
+      const d = derive(p.raw, p.items);
+      expect(errors(d)).toEqual([]);
+      expect(machining(d)).toEqual([
+        [
+          "info",
+          "b2",
+          ["c1", "c2"],
+          "test-stud:TS80 gives no core positions: the taps in end a and end b (c1, c2) are not checked against its cores",
+        ],
+        [
+          "info",
+          "b3",
+          ["c2"],
+          "test-stud:TS80 gives no core positions: the taps in end a (c2) are not checked against its cores",
+        ],
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

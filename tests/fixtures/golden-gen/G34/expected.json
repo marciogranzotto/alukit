@@ -1,7 +1,7 @@
 {
   "case": "G34",
   "rule": "a connector's machining takes positions: a requirement at the mount's holes or at offsets in the joint's plane, and a splice's taps at the cores its item gives, each at its own place (§3.4, §5.3)",
-  "design": "an 80x80 b1 along +X with four cores at (±20, ±20); an 80x80 post b2 butting on its top face with J4 (an M16 tap in the post's end and a Ø9 hole through b1 at each of its mount's four holes, a bush in each), and a post b3 spliced on b2 with four M16 studs, one in each core. b1 600.00 with four Ø9 holes on face +y at 280.00 and 320.00 from end a, 20.00 either side of its centre line; b2 460.00 with four M16 taps in each end, at x and y ±20.00 from the centre; b3 500.00 with four in end a; four bushes and four studs; no error. Positions written out as offsets: the same. Each requirement written four times with no positions: the four holes and the four taps coincide, a machining error on b1 and on b2. A splice with four studs and no positions for their cores: four taps at the centre of each end, a machining error on b2 and on b3. J4 on 40x40 posts: its taps fall off the post's end, a connection error, and b1's four holes stand",
+  "design": "an 80x80 b1 along +X with four cores at (±20, ±20); an 80x80 post b2 butting on its top face with J4 (an M16 tap in the post's end and a Ø9 hole through b1 at each of its mount's four holes, a bush in each), and a post b3 spliced on b2 with four M16 studs, one in each core. b1 600.00 with four Ø9 holes on face +y at 280.00 and 320.00 from end a, 20.00 either side of its centre line; b2 460.00 with four M16 taps in each end, at x and y ±20.00 from the centre; b3 500.00 with four in end a; four bushes and four studs; no error. Positions written out as offsets: the same. Each requirement written four times with no positions: the four holes and the four taps coincide, a machining error on b1 and on b2, and the taps stand at the centre, which is no core, a second on b2 (design 2.3, §5.5). A splice with four studs and no positions for their cores: four taps at the centre of each end, a machining error on b2 and on b3, and a second on each, as the centre is no core. J4 on 40x40 posts: its taps fall off the post's end, a connection error, and b1's four holes stand",
   "expect": {
     "lines": {
       "test-stud:TS80": [
@@ -126,6 +126,7 @@
         "recipes": { "test-stud:J4-STACKED": 1, "test-stud:SPLICE4": 1 },
         "errors": [
           { "code": "machining", "entity": "b1", "refs": ["c1"] },
+          { "code": "machining", "entity": "b2", "refs": ["c1"] },
           { "code": "machining", "entity": "b2", "refs": ["c1"] }
         ]
       }
@@ -146,6 +147,8 @@
         "recipes": { "test-stud:J4": 1, "test-stud:SPLICE4-C": 1 },
         "errors": [
           { "code": "machining", "entity": "b2", "refs": ["c2"] },
+          { "code": "machining", "entity": "b2", "refs": ["c2"] },
+          { "code": "machining", "entity": "b3", "refs": ["c2"] },
           { "code": "machining", "entity": "b3", "refs": ["c2"] }
         ]
       }
