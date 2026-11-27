@@ -6,7 +6,6 @@ import { amount, type Basis, barPrice, basisPrice } from "../order/price.ts";
 import type { Face } from "../project/schema.ts";
 import { QUANTUM, quantize, roundHalfAway, snapCeil } from "../quantum.ts";
 import { oldestRead } from "../stamp.ts";
-import { add, dot, scale, sub, type V3 } from "../vec.ts";
 import { type NestStock, nest } from "./nesting.ts";
 
 /**
@@ -14,13 +13,20 @@ import { type NestStock, nest } from "./nesting.ts";
  * sleeves its face connections cut from bar stock. They are listed per bar item and option, in the
  * mode of the chosen offer's sale, overridable per project in `order`:
  *
- * - `cut`: the supplier cuts each piece, ordered at its cut length rounded to `res_mm` and
- *   billed in `step_mm` steps, rounded up, with `min_bill_mm` where set;
- * - `stock`: whole bars, nested with a kerf per cut and a trim at each bar end.
+ * - `cut`: the supplier cuts each piece, ordered at its span rounded to `res_mm` and billed in
+ *   `step_mm` steps, rounded up, with `min_bill_mm` where set;
+ * - `stock`: whole bars, each piece taking its span, nested with a kerf per cut and a trim at
+ *   each bar end.
  *
- * Identical pieces group into one line with a count: same item and option, same cut length to
- * the quantum, same end cuts and the same machining. A piece and its end-for-end flip are the
- * same piece; the canonical orientation is the one whose sorted machining list, then end cuts,
+ * A piece's **span** (*2.3*) is its extent along the bar's axis, from end a's long point to end
+ * b's: the length of straight stock it is cut from. Its long-point length (`cut_mm`, the longest
+ * edge) is the span when the two cuts lean opposite ways, as a trapezoid's do; when they lean the
+ * same way, as parallel cuts do, the long points are on opposite edges and the span is longer
+ * (w · tan θ for parallel cuts at θ, across a section w deep).
+ *
+ * Identical pieces group into one line with a count: same item and option, same cut length and
+ * span to the quantum, same end cuts and the same machining. A piece and its end-for-end flip are
+ * the same piece; the canonical orientation is the one whose sorted machining list, then end cuts,
  * compare first.
  *
  * It prices on the project's basis (the stock bars it nests, and the cheapest of several cut
@@ -98,7 +104,10 @@ export interface Piece {
   cut: number;
   centre: number;
   short: number;
-  /** From end a's long point to end b's, along the axis: machining from b converts by it. */
+  /**
+   * From end a's long point to end b's, along the axis: the length of stock the piece takes,
+   * what it is ordered, billed and nested at; machining from b converts by it.
+   */
   span: number;
   ends: { a: EndCut; b: EndCut };
   machining: Machining[];
@@ -108,24 +117,36 @@ export interface Piece {
 export interface CutLine {
   count: number;
   cut_mm: number;
-  /** For a piece with an angled end: its centre-line and short-point lengths. */
+  /**
+   * For a piece with an angled end: its centre-line and short-point lengths, and its span (the
+   * length of stock it takes). A square-cut piece spans its cut length.
+   */
   centre_mm?: number;
   short_mm?: number;
+  span_mm?: number;
   ends: { a: EndCut; b: EndCut };
   machining: Machining[];
   rail?: PieceRail;
-  /** cut mode: each piece's ordered length (rounded to res_mm) and billed length. */
+  /** cut mode: each piece's ordered length (its span rounded to res_mm) and billed length. */
   ordered_mm?: number;
   billed_mm?: number;
   sources: string[];
+}
+
+/** The length of stock a line's pieces each take: the span, which a square cut leaves at `cut_mm`. */
+export function lineSpan(l: Pick<CutLine, "cut_mm" | "span_mm">): number {
+  return l.span_mm ?? l.cut_mm;
 }
 
 export interface StockBar {
   sku: string;
   length_mm: number;
   price_minor: number;
-  /** In order along the bar; a factory-drilled rail piece names the stock end it keeps. */
-  pieces: { source: string; cut_mm: number; factory_end?: "start" | "end" }[];
+  /**
+   * In order along the bar, each with its cut length and, angled, the span it takes from the bar;
+   * a factory-drilled rail piece names the stock end it keeps.
+   */
+  pieces: { source: string; cut_mm: number; span_mm?: number; factory_end?: "start" | "end" }[];
   /** Kerfs and trims included. */
   used_mm: number;
   offcut_mm: number;
@@ -188,32 +209,13 @@ function endCut(r: DerivedBar["ends"]["a"]): EndCut {
   return { angle_deg: qa(r.angle), mitre_deg: qa(r.mitre), bevel_deg: qa(r.bevel) };
 }
 
-/** A bar's long point at an end, as a distance along the axis from A. */
-function longPoints(b: DerivedBar): { a: number; b: number; corners: V3[] } {
-  const { placed: bar } = b;
-  const { x, y, t } = bar.frame;
-  const bx = bar.box;
-  const corners: V3[] = [
-    [bx.x0, bx.y0],
-    [bx.x1, bx.y0],
-    [bx.x1, bx.y1],
-    [bx.x0, bx.y1],
-  ].map(([lx, ly]) => add(scale(x, lx as number), scale(y, ly as number)));
-  const sOn = (o: V3, p: V3, n: V3) => dot(sub(p, add(bar.A, o)), n) / dot(t, n);
-  const fa = b.ends.a;
-  const fb = b.ends.b;
-  return {
-    a: Math.min(...corners.map((o) => sOn(o, fa.point, fa.normal))),
-    b: Math.max(...corners.map((o) => sOn(o, fb.point, fb.normal))),
-    corners,
-  };
-}
-
 /**
- * The bar's machining, each measured along the axis from its named end's long point (§5.3): the
- * holes a person wrote and those stage 4 generated (§5.1), and taps in its ends.
+ * The bar's machining, each measured along the axis from its named end's long point (§5.3,
+ * derive's `la` and `lb`): the holes a person wrote and those stage 4 generated (§5.1), and taps
+ * in its ends.
  */
-function machiningOf(b: DerivedBar, lp: { a: number; b: number }): Machining[] {
+function machiningOf(b: DerivedBar): Machining[] {
+  const lp = { a: b.lengths.la, b: b.lengths.lb };
   return b.ops.map((op): Machining => {
     if (op.op === "end-tap") {
       const off = op.off ? ([q(op.off[0]), q(op.off[1])] as [number, number]) : undefined;
@@ -463,13 +465,13 @@ export function canonical(p: Piece): Piece {
 }
 
 /**
- * Identical pieces share this key: cut length to the quantum, end cuts, machining as it is
- * physically, and a rail's holes. The factory end is not part of it: a rail piece and its flip
+ * Identical pieces share this key: cut length and span to the quantum, end cuts, machining as it
+ * is physically, and a rail's holes. The factory end is not part of it: a rail piece and its flip
  * are the same piece.
  */
 function identity(p: Oriented & { cut_mm: number }): string {
   const rail = p.rail && { ...p.rail, factory: undefined };
-  return JSON.stringify([p.cut_mm, p.ends, physicalList(p), railKey(rail)]);
+  return JSON.stringify([p.cut_mm, q(p.span), p.ends, physicalList(p), railKey(rail)]);
 }
 
 /** The pieces of the document's bars, with their machining and rail holes. */
@@ -477,7 +479,6 @@ export function barPieces(derived: Derived): Piece[] {
   const out: Piece[] = [];
   for (const [id, b] of derived.bars) {
     if (b.lengths.cut <= 0) continue; // reported by derive
-    const lp = longPoints(b);
     const rail = railOf(b);
     out.push({
       source: id,
@@ -486,9 +487,9 @@ export function barPieces(derived: Derived): Piece[] {
       cut: b.lengths.cut,
       centre: b.lengths.centre,
       short: b.lengths.short,
-      span: lp.b - lp.a,
+      span: b.lengths.span,
       ends: { a: endCut(b.ends.a), b: endCut(b.ends.b) },
-      machining: machiningOf(b, lp),
+      machining: machiningOf(b),
       ...(rail ? { rail } : {}),
     });
   }
@@ -529,14 +530,14 @@ export function namesOffer(offer: OfferInfo, choice: string): boolean {
 }
 
 /**
- * A supplier-cut piece's ordered and billed lengths (§5.3): the cut length rounded to `res_mm`,
- * then billed in `step_mm` steps, rounded up, with `min_bill_mm` per piece where set. A line-level
- * minimum (`bill: "line"`) is the order list's.
+ * A supplier-cut piece's ordered and billed lengths (§5.3): its span, the length of stock it
+ * takes, rounded to `res_mm`, then billed in `step_mm` steps, rounded up, with `min_bill_mm` per
+ * piece where set. A line-level minimum (`bill: "line"`) is the order list's.
  */
-export function cutBilling(cut_mm: number, sale: SaleInfo): { ordered: number; billed: number } {
+export function cutBilling(span_mm: number, sale: SaleInfo): { ordered: number; billed: number } {
   const res = sale.res_mm ?? 1;
   const step = sale.step_mm ?? res;
-  const ordered = q(roundHalfAway(cut_mm / res) * res);
+  const ordered = q(roundHalfAway(span_mm / res) * res);
   let billed = q(snapCeil(ordered / step) * step);
   if (sale.min_bill_mm !== undefined && sale.bill !== "line") {
     billed = Math.max(billed, sale.min_bill_mm);
@@ -554,7 +555,7 @@ function cheapestCut(offers: readonly OfferInfo[], lines: readonly CutLine[], ba
     const p = basisPrice(o.price, basis).v;
     const sale = o.sale as SaleInfo;
     const cost = lines.reduce(
-      (s, l) => s + l.count * amount(p, o.price.per, cutBilling(l.cut_mm, sale).billed),
+      (s, l) => s + l.count * amount(p, o.price.per, cutBilling(lineSpan(l), sale).billed),
       0,
     );
     if (!best || cost < best.cost) best = { offer: o, cost };
@@ -635,7 +636,8 @@ export function cutList(input: CutListInput): CutList {
       mode,
       lines,
       pieces: ps.length,
-      total_mm: q(ps.reduce((s, p) => s + q(p.cut), 0)),
+      // The length of bar the pieces take: each its span.
+      total_mm: q(ps.reduce((s, p) => s + q(p.span), 0)),
     };
 
     if (mode === "cut") {
@@ -648,24 +650,27 @@ export function cutList(input: CutListInput): CutList {
       group.supplier = offer.supplier;
       if (offer.currency) group.currency = offer.currency;
       for (const line of lines) {
-        const { ordered, billed } = cutBilling(line.cut_mm, sale);
+        const span = lineSpan(line);
+        const { ordered, billed } = cutBilling(span, sale);
         line.ordered_mm = ordered;
         line.billed_mm = billed;
-        if (sale.min_mm !== undefined && line.cut_mm < sale.min_mm) {
+        // The offer's range bounds the length it cuts: the span.
+        const is = `is ${span} mm${span !== line.cut_mm ? ` of stock (${line.cut_mm} at its long point)` : ""}`;
+        if (sale.min_mm !== undefined && span < sale.min_mm) {
           for (const s of line.sources) {
             d.error(
               "length",
               s,
-              `${s} is ${line.cut_mm} mm, shorter than ${offer.sku}'s minimum ${sale.min_mm} mm`,
+              `${s} ${is}, shorter than ${offer.sku}'s minimum ${sale.min_mm} mm`,
             );
           }
         }
-        if (sale.max_mm !== undefined && line.cut_mm > sale.max_mm) {
+        if (sale.max_mm !== undefined && span > sale.max_mm) {
           for (const s of line.sources) {
             d.error(
               "length",
               s,
-              `${s} is ${line.cut_mm} mm, longer than ${offer.sku}'s maximum ${sale.max_mm} mm: split it with a splice`,
+              `${s} ${is}, longer than ${offer.sku}'s maximum ${sale.max_mm} mm: split it with a splice`,
             );
           }
         }
@@ -685,10 +690,12 @@ export function cutList(input: CutListInput): CutList {
         price: barPrice(o, o.sale?.length_mm as number, basis),
       }));
       const supplierOf = new Map(stockOffers.map((o) => [o.sku, o]));
+      // Each piece takes its span of the bar (v1: no two pieces share a cut; x4-stock-length).
+      const lineOf = new Map(lines.flatMap((l) => l.sources.map((s) => [s, l] as const)));
       const res = nest(
         ps.map((p) => ({
           id: p.source,
-          len: h(p.cut),
+          len: h(p.span),
           ...(p.rail?.factory ? { factory: true } : {}),
           ...(p.rail?.stock_mm !== undefined ? { stock: h(p.rail.stock_mm) } : {}),
         })),
@@ -696,13 +703,18 @@ export function cutList(input: CutListInput): CutList {
         h(kerf),
         h(trim),
       );
+      const takes = (id: string, len: number) => {
+        const l = lineOf.get(id) as CutLine;
+        const long = l.span_mm !== undefined && l.span_mm !== l.cut_mm;
+        return `${id} is ${len / 100} mm${long ? ` of stock (${l.cut_mm} at its long point)` : ""}`;
+      };
       for (const u of res.unplaced) {
         d.error(
           "length",
           u.id,
           u.stock !== undefined
-            ? `${u.id} is ${u.len / 100} mm and must come from ${first.item}'s ${u.stock / 100} mm stock length, which does not hold it`
-            : `${u.id} is ${u.len / 100} mm, longer than any stock length of ${first.item} less its trims: split it with a splice`,
+            ? `${takes(u.id, u.len)} and must come from ${first.item}'s ${u.stock / 100} mm stock length, which does not hold it`
+            : `${takes(u.id, u.len)}, longer than any stock length of ${first.item} less its trims: split it with a splice`,
         );
       }
       group.stock = res.bars.map((b) => {
@@ -712,11 +724,15 @@ export function cutList(input: CutListInput): CutList {
           sku: b.stock.sku,
           length_mm: b.stock.len / 100,
           price_minor: b.stock.price,
-          pieces: b.pieces.map((p) => ({
-            source: p.id,
-            cut_mm: p.len / 100,
-            ...(p.end ? { factory_end: p.end } : {}),
-          })),
+          pieces: b.pieces.map((p) => {
+            const l = lineOf.get(p.id) as CutLine;
+            return {
+              source: p.id,
+              cut_mm: l.cut_mm,
+              ...(l.span_mm !== undefined ? { span_mm: l.span_mm } : {}),
+              ...(p.end ? { factory_end: p.end } : {}),
+            };
+          }),
           used_mm: b.used / 100,
           offcut_mm: (b.stock.len - b.used) / 100,
           waste_mm: (b.stock.len - sum) / 100,
@@ -756,7 +772,7 @@ function groupLines(ps: readonly Piece[]): CutLine[] {
     return {
       count: group.length,
       cut_mm: q(p.cut),
-      ...(angled ? { centre_mm: q(p.centre), short_mm: q(p.short) } : {}),
+      ...(angled ? { centre_mm: q(p.centre), short_mm: q(p.short), span_mm: q(p.span) } : {}),
       ends: p.ends,
       machining: [...p.machining].sort(cmpMachining),
       ...(p.rail ? { rail: p.rail } : {}),
@@ -767,6 +783,7 @@ function groupLines(ps: readonly Piece[]): CutLine[] {
     (a, b) =>
       b.cut_mm - a.cut_mm ||
       cmpListed(a, b) ||
+      lineSpan(b) - lineSpan(a) ||
       compareIds(a.sources[0] as string, b.sources[0] as string),
   );
 }

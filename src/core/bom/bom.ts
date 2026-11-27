@@ -11,7 +11,8 @@ import { QUANTUM, quantize } from "../quantum.ts";
 
 /**
  * The bill of materials (design §5.4): every item and option with its quantity, grouped by kind,
- * with mass by §3.5's authority rule. Bars give their piece count and total cut length; their
+ * with mass by §3.5's authority rule. Bars give their piece count and total length, each piece
+ * counting its span, the length of stock it takes (§5.3, *2.3*); their
  * mass is each piece's centre-line length times the bar's mass per metre (exact for an angled end
  * on a section symmetric about its box centre). Unplaced lines (§4.7) count with the item's other
  * uses and show their `why`. Prices, offers and covering cost lines are the order list's (§5.4,
@@ -42,7 +43,7 @@ export interface BomLine {
   opt: Readonly<Record<string, string>>;
   /** Units; for bars, pieces. */
   qty: number;
-  /** Bars: the pieces' cut lengths added. */
+  /** Bars: the pieces' spans added, the length of bar they take. */
   length_mm?: number;
   /** Per unit, or per metre for bars; absent when nothing gives a mass. */
   unit_mass_kg?: number;
@@ -107,8 +108,8 @@ interface Acc {
   item: string;
   opt: Readonly<Record<string, string>>;
   qty: number;
-  /** Bars: Σ cut and Σ centre. */
-  cut: number;
+  /** Bars: Σ span and Σ centre. */
+  span: number;
   centre: number;
   sources: Set<string>;
   unplaced: { part: string; qty: number; why: string }[];
@@ -130,7 +131,7 @@ export function bom(input: BomInput): Bom {
     const k = `${item}\u0000${optKey(opt)}`;
     let a = acc.get(k);
     if (!a) {
-      a = { item, opt, qty: 0, cut: 0, centre: 0, sources: new Set(), unplaced: [] };
+      a = { item, opt, qty: 0, span: 0, centre: 0, sources: new Set(), unplaced: [] };
       acc.set(k, a);
     }
     return a;
@@ -139,7 +140,7 @@ export function bom(input: BomInput): Bom {
   for (const p of derivedPieces(derived)) {
     const a = add(p.item, p.opt);
     a.qty += 1;
-    a.cut += len(p.cut);
+    a.span += len(p.span);
     a.centre += p.centre;
     a.sources.add(p.source.replace(/\.[fs]\d+$/, ""));
   }
@@ -186,7 +187,7 @@ export function bom(input: BomInput): Bom {
       name: found.item.name,
       opt: Object.fromEntries(Object.entries(a.opt).sort(([x], [y]) => cmp(x, y))),
       qty: a.qty,
-      ...(kind === "bar" ? { length_mm: len(a.cut) } : {}),
+      ...(kind === "bar" ? { length_mm: len(a.span) } : {}),
       ...(m ? { unit_mass_kg: mass(m.unit), mass_kg: mass(m.total), mass_src: m.src } : {}),
       sources: [...a.sources].sort(compareIds),
       ...(a.unplaced.length > 0

@@ -250,6 +250,14 @@ function BarDerived({ m, id }: { m: Model; id: string }) {
               </td>
             </tr>
           )}
+          {b.span_mm !== undefined && b.span_mm !== b.cut_mm && (
+            <tr>
+              <th>span</th>
+              <td>
+                <Num value={b.span_mm} unit="mm" />
+              </td>
+            </tr>
+          )}
           <tr>
             <th>design length</th>
             <td>

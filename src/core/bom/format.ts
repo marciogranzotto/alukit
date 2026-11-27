@@ -33,7 +33,7 @@ function unplacedText(l: BomLine): string {
 export function bomMarkdown(b: Bom): string {
   const out: string[] = ["# Bill of materials", ""];
   out.push(
-    "Masses as the catalog publishes them, else computed from the section's area and the material's density (calc). Bars: pieces and their cut lengths added.",
+    "Masses as the catalog publishes them, else computed from the section's area and the material's density (calc). Bars: pieces and the length of bar they take, each its span (its cut length, unless its two cuts lean the same way).",
     "",
     ...lockLines(b.lock),
   );

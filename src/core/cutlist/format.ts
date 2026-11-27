@@ -1,5 +1,13 @@
 import { lockLines, oldestText, stampRow } from "../stamp.ts";
-import type { CutGroup, CutLine, CutList, EndCut, Machining, PieceRail } from "./cutlist.ts";
+import {
+  type CutGroup,
+  type CutLine,
+  type CutList,
+  type EndCut,
+  lineSpan,
+  type Machining,
+  type PieceRail,
+} from "./cutlist.ts";
 
 /** The cut list as Markdown, CSV or JSON (design §5.4: "Output as Markdown, CSV or JSON"). */
 
@@ -61,6 +69,7 @@ function lineRow(g: CutGroup, l: CutLine): string {
     String(l.count),
     mm(l.cut_mm),
     l.centre_mm === undefined ? "" : mm(l.centre_mm),
+    l.span_mm === undefined ? "" : mm(l.span_mm),
     `${endText(l.ends.a)} / ${endText(l.ends.b)}`,
     [...(l.rail ? [railText(l.rail)] : []), ...l.machining.map(machiningText)].join("; "),
   ];
@@ -72,15 +81,15 @@ function lineRow(g: CutGroup, l: CutLine): string {
 export function cutListMarkdown(cl: CutList): string {
   const out: string[] = ["# Cut list", ""];
   out.push(
-    "Lengths in mm at the long point; a piece with an angled end also gives its centre-line length.",
+    "Lengths in mm at the long point; a piece with an angled end also gives its centre-line length and its span, the length of bar it takes from one end's long point to the other's. A piece is ordered, billed and nested at its span, which is its cut length unless its two cuts lean the same way.",
     `Prices on the ${cl.price_basis} basis, in minor units; ${oldestText(cl.oldest_read)}.`,
     "",
     ...lockLines(cl.lock),
   );
   for (const g of cl.groups) {
     out.push(`## ${groupTitle(g)}`, "");
-    const head = ["Qty", "Cut", "Centre", "Ends (a / b)", "Machining"];
-    const align = ["---:", "---:", "---:", "---", "---"];
+    const head = ["Qty", "Cut", "Centre", "Span", "Ends (a / b)", "Machining"];
+    const align = ["---:", "---:", "---:", "---:", "---", "---"];
     if (g.mode === "cut") {
       head.push("Ordered", "Billed");
       align.push("---:", "---:");
@@ -97,10 +106,11 @@ export function cutListMarkdown(cl: CutList): string {
         "|---|---:|---:|---|---:|---:|",
       );
       g.stock.forEach((b, i) => {
+        // Each piece with the length it takes from the bar, its span.
         const pieces = b.pieces
           .map(
             (p) =>
-              `${p.source} ${mm(p.cut_mm)}${p.factory_end ? ` (factory end at the ${p.factory_end})` : ""}`,
+              `${p.source} ${mm(lineSpan(p))}${p.factory_end ? ` (factory end at the ${p.factory_end})` : ""}`,
           )
           .join(", ");
         out.push(
@@ -145,6 +155,7 @@ export function cutListCsv(cl: CutList): string {
     "cut_mm",
     "centre_mm",
     "short_mm",
+    "span_mm",
     "end_a",
     "end_b",
     "machining",
@@ -172,6 +183,7 @@ export function cutListCsv(cl: CutList): string {
           mm(l.cut_mm),
           l.centre_mm === undefined ? undefined : mm(l.centre_mm),
           l.short_mm === undefined ? undefined : mm(l.short_mm),
+          l.span_mm === undefined ? undefined : mm(l.span_mm),
           endText(l.ends.a),
           endText(l.ends.b),
           [...(l.rail ? [railText(l.rail)] : []), ...l.machining.map(machiningText)].join("; "),
@@ -195,6 +207,7 @@ export function cutListCsv(cl: CutList): string {
           optText(g.opt),
           g.mode,
           b.pieces.length,
+          undefined,
           undefined,
           undefined,
           undefined,

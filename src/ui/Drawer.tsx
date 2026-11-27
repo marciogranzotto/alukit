@@ -97,6 +97,7 @@ function CutListTab({ m }: { m: Model }) {
                 <th>count</th>
                 <th>cut mm</th>
                 <th>centre mm</th>
+                <th>span mm</th>
                 <th>ends a / b</th>
                 <th>machining</th>
                 <th>pieces</th>
@@ -108,6 +109,7 @@ function CutListTab({ m }: { m: Model }) {
                   <td class="n">{l.count}</td>
                   <td class="n">{mm(l.cut_mm)}</td>
                   <td class="n">{l.centre_mm === undefined ? "" : mm(l.centre_mm)}</td>
+                  <td class="n">{l.span_mm === undefined ? "" : mm(l.span_mm)}</td>
                   <td>
                     {endText(l.ends.a)} / {endText(l.ends.b)}
                   </td>
