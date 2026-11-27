@@ -36,6 +36,8 @@ export interface BarJson {
   cut_mm: number;
   centre_mm: number;
   short_mm: number;
+  /** With an angled end: the length of stock it takes (§5.3); a square-cut bar spans `cut_mm`. */
+  span_mm?: number;
   frame: { x: V3; y: V3; z: V3 };
   box_mm: [P2, P2];
   ends: { a: EndJson; b: EndJson };

@@ -161,10 +161,22 @@ export interface EndFace {
 export interface BarLengths {
   /** Design length |B − A|. */
   len: number;
-  /** Long point, centre line and short point (§4.5). */
+  /**
+   * Long point, centre line and short point (§4.5): the longest, the box-centre and the shortest
+   * of the lengths between the end faces along the box's edges.
+   */
   cut: number;
   centre: number;
   short: number;
+  /**
+   * The span (§5.3, *2.3*): along the axis from end a's long point to end b's, the length of
+   * straight stock the piece is cut from. It is `cut` when the two cuts lean opposite ways (a
+   * trapezoid), and longer when they lean the same way, as parallel cuts do.
+   */
+  span: number;
+  /** Along the axis from A, each end's long point: the farthest its end face reaches outward. */
+  la: number;
+  lb: number;
   /** Along the axis from A, where each end face crosses the design line. */
   sa: number;
   sb: number;

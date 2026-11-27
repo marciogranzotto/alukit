@@ -845,7 +845,14 @@ class Ends {
     fb: EndFace,
   ): { lengths: BarLengths; ends: { a: EndReport; b: EndReport } } {
     const len = dist(bar.A, bar.B as V3);
-    const lens = corners(bar).map((o) => sOn(bar, o, fb.face) - sOn(bar, o, fa.face));
+    // Where each end face meets the box's four edges, along the axis from A.
+    const cs = corners(bar);
+    const atA = cs.map((o) => sOn(bar, o, fa.face));
+    const atB = cs.map((o) => sOn(bar, o, fb.face));
+    const lens = atB.map((s, i) => s - (atA[i] as number));
+    // The long points: the farthest each end face reaches outward, on whichever edge it is.
+    const la = Math.min(...atA);
+    const lb = Math.max(...atB);
     const [cx, cy] = boxCentre(bar.box);
     const oc = add(scale(bar.frame.x, cx), scale(bar.frame.y, cy));
     const centre = sOn(bar, oc, fb.face) - sOn(bar, oc, fa.face);
@@ -856,7 +863,7 @@ class Ends {
       this.ctx.d.error("length", bar.id, `the cut length is ${fmt(cut)} mm`);
     }
     return {
-      lengths: { len, cut, centre, short: Math.min(...lens), sa, sb },
+      lengths: { len, cut, centre, short: Math.min(...lens), span: lb - la, la, lb, sa, sb },
       ends: {
         a: this.report(bar, "a", fa, sa, -sa),
         b: this.report(bar, "b", fb, sb, sb - len),
