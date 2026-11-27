@@ -1,4 +1,4 @@
-import { cp, rm } from "node:fs/promises";
+import { cp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { scratchFixtures } from "#core/testing.ts";
@@ -86,13 +86,48 @@ describe("words (U12, U18)", () => {
   });
 
   it("says what claims a bar's end", () => {
-    // The cart's top rail b7 butts into the front rail b5 through c1 at its end a.
-    expect(endWords(cart, "b7", "a").text).toMatch(/^butts into b5 \(c1\)/);
+    // The cart's top rail b7 butts on the front rail b5 through c1 at its end a, as the end
+    // handles say it ("butts on b5 (c1)").
+    expect(endWords(cart, "b7", "a").text).toMatch(/^butts on b5 \(c1\), square/);
     expect(endWords(cart, "b7", "a").refs).toEqual(["c1", "b5"]);
     // The splice c9 joins b11.b and b12.a.
     expect(endWords(cart, "b11", "b").text).toMatch(/^spliced to b12\.a \(c9\)/);
     // A post's foot: nothing joins it.
     expect(endWords(cart, "b1", "a")).toMatchObject({ open: true });
+  });
+
+  it("names the joint that claims an end even when the joint fails (D2)", async () => {
+    // The audit's brace, its butts made by autoConnect, then its cuts undeclared: each butt
+    // makes a 36.87° end that declares no cut, so the claim fails and the end falls back to
+    // its default plane (`by: "default"`). It is claimed, not open, and no Join is offered.
+    const dir = join(root, "brace");
+    const brace = JSON.parse(await readFile(join(dir, "brace.json"), "utf8")) as {
+      commands: unknown[];
+    };
+    const m = await viewOf(dir, brace.commands, [
+      { cmd: "setBar", args: { id: "b13", set: { ends: null } } },
+    ]);
+    expect(m.derived.bars.b13?.ends.a.by).toBe("default");
+    const a = endWords(m, "b13", "a");
+    expect(a.text).toBe("butts on b3 (c9); the joint fails, so it is square");
+    expect(a).toMatchObject({ open: false, refs: ["c9", "b3"] });
+    expect(endWords(m, "b13", "b")).toMatchObject({
+      text: "butts on b4 (c10); the joint fails, so it is square",
+      open: false,
+    });
+    // G11: two butts claim b2.a, so neither holds it.
+    const g11 = await viewOf(join(root, "golden-ends", "G11"));
+    expect(endWords(g11, "b2", "a")).toMatchObject({
+      text: "butts on b1 (c1) and butts on b1 (c2); two joints claim it, so it is square",
+      open: false,
+      refs: ["c1", "b1", "c2"],
+    });
+    // G10: a miter of two sections cannot be cut; its ends are still the miter's.
+    const g10 = await viewOf(join(root, "golden-ends", "G10"));
+    expect(endWords(g10, "b1", "b")).toMatchObject({
+      text: "mitred with b2.a (c1); the joint fails, so it is square",
+      open: false,
+    });
   });
 });
 

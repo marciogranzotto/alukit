@@ -191,10 +191,86 @@ export interface Words {
   refs: string[];
 }
 
+/** A bar end or a bar as a sentence names it: `b7.b` is "b7's end b", `b7` is "b7". */
+function placeWords(x: string): string {
+  const [bar, e] = x.split(".") as [string, string | undefined];
+  return e ? `${bar}'s end ${e}` : bar;
+}
+
+/** A ref with its pattern copy's number dropped, as a template writes it: `b26@2.a` → `b26.a`. */
+const bare = (ref: string) => ref.replace(/@\d+/, "");
+
 /**
- * What claims a bar's end, in words: the connection and what it joins it to, or that it is open;
- * then its cut and how far the connection moved it. `b1.a`: "butts into b5 (c1), square, moved
- * 20.00 mm".
+ * A plane an end is written with (`ends.<e>.plane`, §4.5), in words: stopped at a face, flush with
+ * another end, or a plane of its own.
+ */
+export function planeWords(plane: unknown): Words {
+  if (isObject(plane) && isObject(plane.face) && typeof plane.face.bar === "string") {
+    const bar = plane.face.bar;
+    return { text: `stops at ${bar}'s face ${String(plane.face.face)}`, refs: [bar] };
+  }
+  if (isObject(plane) && typeof plane.of === "string") {
+    return { text: `flush with ${placeWords(plane.of)}`, refs: [plane.of.split(".")[0] as string] };
+  }
+  return { text: "cut on a plane of its own", refs: [] };
+}
+
+/**
+ * What one claim on an end says (derive's claims, `Model.claims`): a connection and what it joins
+ * the end to, the end's own plane, or a free end counted from end a's cut. A butt names the bar it
+ * bears on, the words the end handles use ("butts on b5 (c1)"); the through bar's own end at a
+ * corner names the ends that bear on it.
+ */
+function claimWords(m: Model, ref: string, name: string): Words {
+  const [bar, e] = ref.split(".") as [string, "a" | "b"];
+  if (name.endsWith(".plane")) {
+    const w = written(m, copyOf(bar)?.template ?? bar);
+    const ends = isObject(w) && isObject(w.ends) ? w.ends : {};
+    return planeWords(isObject(ends[e]) ? ends[e].plane : undefined);
+  }
+  if (name.includes("free end")) return { text: "free, counted from end a's cut", refs: [] };
+  const w = written(m, copyOf(name)?.template ?? name);
+  const type = isObject(w) && typeof w.type === "string" ? w.type : undefined;
+  const ends =
+    isObject(w) && Array.isArray(w.ends)
+      ? (w.ends as unknown[]).filter((x): x is string => typeof x === "string")
+      : [];
+  if (type === "butt" && isObject(w)) {
+    if (ends.includes(bare(ref))) {
+      // Where the end bears, as derive seats it (a copy's own through bar), else as written.
+      const seat = buttsOf(m)[name]?.ends.find((x) => x.end === ref);
+      const on = seat ? (seat.on.split(" ")[0] as string) : w.through;
+      if (typeof on !== "string") return { text: `butts on a body (${name})`, refs: [name] };
+      return { text: `butts on ${placeWords(on)} (${name})`, refs: [name, on.split(".")[0] as string] };
+    }
+    // The through bar's own end at a corner: the butting ends bear on it.
+    return {
+      text: `${listWords(ends)} ${ends.length === 1 ? "butts" : "butt"} on it (${name})`,
+      refs: [name, ...ends.map((x) => x.split(".")[0] as string)],
+    };
+  }
+  const others = ends.filter((x) => x !== bare(ref));
+  const verb =
+    type === "miter"
+      ? "mitred with"
+      : type === "splice"
+        ? "spliced to"
+        : type === "pivot"
+          ? "hinged"
+          : "joined";
+  return {
+    text: `${verb}${others.length > 0 ? ` ${others.join(", ")}` : ""} (${name})`,
+    refs: [name, ...others.map((x) => x.split(".")[0] as string)],
+  };
+}
+
+/**
+ * What claims a bar's end, in words, then its cut and how far the claim moved it: `b7.a` "butts on
+ * b5 (c1), square, shorter by 20.00 mm". The claims are derive's (`Model.claims`), the rule
+ * `autoConnect` applies, so an end a joint claims is never called open: when the joint fails (an
+ * angled end that declares no cut, two joints on one end, a miter of two sections), its plane falls
+ * back to the default, and the words still name the joint, then say it fails (D2). An end no
+ * provider claims is open, unless a butt bears on it as on a bar's end.
  */
 export function endWords(m: Model, bar: string, e: "a" | "b"): Words & { open: boolean } {
   const d = m.derived.bars[bar];
@@ -207,53 +283,39 @@ export function endWords(m: Model, bar: string, e: "a" | "b"): Words & { open: b
       ? [`${end.move_mm > 0 ? "longer" : "shorter"} by ${mm(Math.abs(end.move_mm))} mm`]
       : []),
   ].join(", ");
+  const claims = m.claims?.[ref] ?? [];
   const by = end.by;
   if (by === "free") return { text: `free, ${how}`, refs: [], open: false };
-  if (by === "plane") return { text: `cut to a plane, ${how}`, refs: [], open: false };
-  if (by === "default") {
-    // The through member of a butt an end here bears on: it runs on, and it is joined.
-    for (const [cid, butt] of Object.entries(buttsOf(m))) {
-      if (butt.ends.some((x) => x.on.split(" ")[0] === ref)) {
-        return {
-          text: `${butt.ends.map((x) => x.end).join(", ")} bear on it (${cid}), ${how}`,
-          refs: [cid],
-          open: false,
-        };
-      }
-    }
-    return { text: `open: nothing joins it, ${how}`, refs: [], open: true };
+  if (by !== "default") {
+    // The claim that resolved: a connection, or the end's own plane.
+    const name = by === "plane" ? claims.find((c) => c.endsWith(".plane")) : by;
+    const w = name ? claimWords(m, ref, name) : planeWords(undefined);
+    return { text: `${w.text}, ${how}`, refs: w.refs, open: false };
   }
-  const type = connectionType(m, by);
-  const butt = buttsOf(m)[by];
-  const seat = butt?.ends.find((x) => x.end === ref);
-  if (seat) {
-    const on = seat.on.split(" ")[0] as string;
+  if (claims.length > 0) {
+    const ws = claims.map((c) => claimWords(m, ref, c));
+    const fails =
+      claims.length === 1
+        ? "the joint fails"
+        : `${claims.length === 2 ? "two" : claims.length} joints claim it`;
     return {
-      text: `butts into ${on.includes(".") ? `${on.split(".")[0]}'s end ${on.split(".")[1]}` : on} (${by}), ${how}`,
-      refs: [by, on.split(".")[0] as string],
+      text: `${listWords(ws.map((w) => w.text))}; ${fails}, so it is ${how}`,
+      refs: [...new Set(ws.flatMap((w) => w.refs))],
       open: false,
     };
   }
-  const w = written(m, copyOf(by)?.template ?? by);
-  const others =
-    isObject(w) && Array.isArray(w.ends)
-      ? (w.ends as unknown[]).filter((x): x is string => typeof x === "string" && x !== ref)
-      : [];
-  const verb =
-    type === "miter"
-      ? "mitred with"
-      : type === "splice"
-        ? "spliced to"
-        : type === "pivot"
-          ? "hinged"
-          : type === "butt"
-            ? "butts"
-            : "joined";
-  return {
-    text: `${verb}${others.length > 0 ? ` ${others.join(", ")}` : ""} (${by}), ${how}`,
-    refs: [by, ...others.map((x) => x.split(".")[0] as string)],
-    open: false,
-  };
+  // The end a butt bears on as on a bar's end (`through: "b7.b"`): it runs on, and it is joined.
+  for (const [cid, butt] of Object.entries(buttsOf(m))) {
+    const on = butt.ends.filter((x) => x.on.split(" ")[0] === ref).map((x) => x.end);
+    if (on.length > 0) {
+      return {
+        text: `${listWords(on)} ${on.length === 1 ? "bears" : "bear"} on it (${cid}), ${how}`,
+        refs: [cid],
+        open: false,
+      };
+    }
+  }
+  return { text: `open: nothing joins it, ${how}`, refs: [], open: true };
 }
 
 /** A list in words: `a`, `a and b`, `a, b and c`. */
