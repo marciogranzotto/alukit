@@ -3,12 +3,32 @@ import { type ExprScope, evalNumber } from "../expr.ts";
 import { compareIds } from "../ids.ts";
 import { type AnyItem, type BarItemInfo, fullRef } from "../items.ts";
 import type { Face, FaceConnT, StackEntry } from "../project/schema.ts";
+import type { Vec2 } from "../section-properties.ts";
 import { clearanceHole, sleeveHole } from "../threads.ts";
 import { TOL } from "../tolerances.ts";
-import { add, addScaled, angleDeg, cross, dot, neg, scale, sub, unit, type V3 } from "../vec.ts";
+import {
+  add,
+  addScaled,
+  angleDeg,
+  cross,
+  dot,
+  neg,
+  norm,
+  scale,
+  sub,
+  unit,
+  type V3,
+} from "../vec.ts";
 import type { Ctx } from "./context.ts";
 import type { DerivedBar, HoleOp } from "./derive.ts";
-import { faceLocal, facePlane, onBar } from "./place.ts";
+import {
+  innerFacing,
+  materialAlong,
+  type OutlineFace,
+  type OutlineFaces,
+  outlineFaces,
+} from "./outline.ts";
+import { boxCentre, faceLocal, facePlane, localOf, onBar } from "./place.ts";
 import { holePoint, selectHoles } from "./rails.ts";
 import type {
   DerivedPart,
@@ -24,8 +44,11 @@ import type {
 /**
  * Face connections (design §4.5): two or more layers, head to nut, each adjacent pair in contact
  * (faces antiparallel and coplanar, or apart by the pair's declared gap, and overlapping). A
- * fastened connection puts one fastener at each station of its first layer, along the first
- * layer's face normal toward the second; it passes every layer. Then:
+ * layer's faces are its bounding faces and, for a bar, the inner faces of its section's outline
+ * (gap A3, outline.ts): an angle's inside leg faces, a channel's inner flanges. A fastened
+ * connection puts one fastener at each station of its first layer, along the first layer's face
+ * normal toward the second; it passes every layer, entering and leaving each by real faces: its
+ * contact faces, and at the head and the nut the nearest face across the layer's material. Then:
  *
  * - `bolt`: an ISO 273 medium clearance hole in every layer, both walls of a hollow one; where a
  *   sleeve passes a wall, that wall's hole clears the sleeve: ISO 273 medium for a shank of its
@@ -48,18 +71,77 @@ export interface GenOut {
 }
 
 interface BodyFace {
+  /** `+x` … for a bounding face (§4.3); an inner face's name from outline.ts, `+x@-31.75`. */
   name: string;
+  /** Which face of the body: the same on every piece of a run, which share one section. */
+  key: string;
+  /** A face of the bounding box (a bar's four, a part's six), which §4.3 names. */
+  bounding: boolean;
   /** A point on the face's plane, its outward normal, §4.3's u, and the trimmed face. */
   p: V3;
   n: V3;
   u: V3;
   poly: V3[];
+  /**
+   * A bar's face: where its centre line lies, in the bar's local x, y. A bounding face's is
+   * §4.3's (the box's centre across it); an inner face's is the foot of the perpendicular from the
+   * box's centre line, so the same u measures across a leg's inner and outer faces.
+   */
+  centre?: readonly [number, number];
 }
 
 interface Body {
-  id: string;
-  bar?: DerivedBar;
-  faces: BodyFace[];
+  readonly id: string;
+  readonly bar?: DerivedBar;
+  /** The bounding faces. */
+  readonly faces: BodyFace[];
+  /**
+   * A bar's inner faces whose outward normal lies near `n` (or `-n` too, with `both`), in face
+   * order; none for a part. A loose superset of the parallel ones, looked up by direction: a
+   * section with radii has hundreds of inner faces, nearly all arc chords, and each is placed in
+   * world terms only when it is asked for.
+   */
+  innerNear(n: V3, both?: boolean): BodyFace[];
+  /** All of a bar's inner faces, in face order. */
+  innerAll(): BodyFace[];
+  /** An inner face by its key. */
+  innerByKey(key: string): BodyFace | undefined;
+}
+
+/** A body's faces whose outward normal may be parallel to `n` (or `-n`, with `both`). */
+function facesNear(body: Body, n: V3, both = false): BodyFace[] {
+  const keep = (f: BodyFace) => (both ? Math.abs(dot(f.n, n)) : dot(f.n, n)) >= 0.99;
+  return [...body.faces.filter(keep), ...body.innerNear(n, both)];
+}
+
+/**
+ * The faces of `body` that could meet one of `other`'s, in face order: a bar's faces all hold its
+ * axis, so when two bars cross, only a face square to both axes can; when they are parallel (or
+ * `other` is a part) any face might.
+ */
+function facing(body: Body, other: Body): BodyFace[] {
+  const t = body.bar?.placed.frame.t;
+  const u = other.bar?.placed.frame.t;
+  const m = t && u ? cross(t, u) : undefined;
+  if (m && norm(m) > 1e-3) return facesNear(body, unit(m) as V3, true);
+  return [...body.faces, ...body.innerAll()];
+}
+
+function faceByKey(body: Body, key: string): BodyFace {
+  return (body.faces.find((f) => f.key === key) ?? body.innerByKey(key)) as BodyFace;
+}
+
+/**
+ * Antiparallel within tol.ang. A loose dot-product test rejects most pairs before the angle
+ * test, which decides: it keeps the result exactly the angle test's, and the inner faces of a
+ * section with radii are many.
+ */
+function antiparallel(a: V3, b: V3): boolean {
+  return dot(a, b) <= -0.99 && angleDeg(a, neg(b)) <= TOL.ang;
+}
+
+function parallel(a: V3, b: V3): boolean {
+  return dot(a, b) >= 0.99 && angleDeg(a, b) <= TOL.ang;
 }
 
 interface Layer {
@@ -78,44 +160,140 @@ function sOnEnd(b: DerivedBar, o: V3, e: { point: V3; normal: V3 }): number {
   return dot(sub(e.point, add(bar.A, o)), e.normal) / dot(bar.frame.t, e.normal);
 }
 
-/** A bar's four side faces, each trimmed by the end faces (§5.1: contacts on the trimmed bars). */
-function barBody(b: DerivedBar): Body {
-  const bar = b.placed;
-  const { x, y, t } = bar.frame;
-  const bx = bar.box;
-  const edges: Record<Face, [readonly [number, number], readonly [number, number]]> = {
-    "+x": [
-      [bx.x1, bx.y0],
-      [bx.x1, bx.y1],
-    ],
-    "-x": [
-      [bx.x0, bx.y0],
-      [bx.x0, bx.y1],
-    ],
-    "+y": [
-      [bx.x0, bx.y1],
-      [bx.x1, bx.y1],
-    ],
-    "-y": [
-      [bx.x0, bx.y0],
-      [bx.x1, bx.y0],
-    ],
-  };
-  const faces = FACES.map((name): BodyFace => {
-    const pl = facePlane(bar, name);
-    const corners = edges[name].map(([lx, ly]) => add(scale(x, lx), scale(y, ly)));
-    const at = (o: V3, e: { point: V3; normal: V3 }) =>
-      addScaled(add(bar.A, o), t, sOnEnd(b, o, e));
-    const [o0, o1] = corners as [V3, V3];
-    return {
-      name,
-      p: pl.p,
-      n: pl.n,
-      u: name === "+x" || name === "-x" ? y : x,
-      poly: [at(o0, b.ends.a), at(o1, b.ends.a), at(o1, b.ends.b), at(o0, b.ends.b)],
+const bodies = new WeakMap<DerivedBar, BarBody>();
+
+/** A bar's body, built once per bar: its placement and ends are final by stage 4. */
+function barBody(b: DerivedBar): BarBody {
+  let body = bodies.get(b);
+  if (!body) {
+    body = new BarBody(b);
+    bodies.set(b, body);
+  }
+  return body;
+}
+
+/**
+ * A bar's faces, each trimmed by the end faces (§5.1: contacts on the trimmed bars): its four
+ * bounding faces, and its section's inner faces, each placed when it is first asked for.
+ */
+class BarBody implements Body {
+  readonly id: string;
+  readonly bar: DerivedBar;
+  readonly faces: BodyFace[];
+  private readonly outline: OutlineFaces;
+  private readonly placed: (BodyFace | undefined)[] = [];
+
+  constructor(bar: DerivedBar) {
+    this.bar = bar;
+    const placed = bar.placed;
+    const bx = placed.box;
+    this.id = placed.id;
+    this.outline = outlineFaces(placed.item.section);
+    const edges: Record<Face, [readonly [number, number], readonly [number, number]]> = {
+      "+x": [
+        [bx.x1, bx.y0],
+        [bx.x1, bx.y1],
+      ],
+      "-x": [
+        [bx.x0, bx.y0],
+        [bx.x0, bx.y1],
+      ],
+      "+y": [
+        [bx.x0, bx.y1],
+        [bx.x1, bx.y1],
+      ],
+      "-y": [
+        [bx.x0, bx.y0],
+        [bx.x1, bx.y0],
+      ],
     };
-  });
-  return { id: bar.id, bar: b, faces };
+    const { x, y } = placed.frame;
+    this.faces = FACES.map((name): BodyFace => {
+      const pl = facePlane(placed, name);
+      const [o0, o1] = edges[name].map((l) => this.toWorld(l)) as [V3, V3];
+      return {
+        name,
+        key: name,
+        bounding: true,
+        p: pl.p,
+        n: pl.n,
+        u: name === "+x" || name === "-x" ? y : x,
+        poly: this.strip(o0, o1),
+        centre: faceLocal(bx, name).at,
+      };
+    });
+  }
+
+  /** A local (x, y) offset in world terms. */
+  private toWorld(l: readonly [number, number]): V3 {
+    const { x, y } = this.bar.placed.frame;
+    return add(scale(x, l[0]), scale(y, l[1]));
+  }
+
+  /** The face between the bar's lines at local offsets o0 and o1, trimmed by its end faces. */
+  private strip(o0: V3, o1: V3): V3[] {
+    const { A, frame } = this.bar.placed;
+    const { a, b } = this.bar.ends;
+    const at = (o: V3, e: { point: V3; normal: V3 }) =>
+      addScaled(add(A, o), frame.t, sOnEnd(this.bar, o, e));
+    return [at(o0, a), at(o1, a), at(o1, b), at(o0, b)];
+  }
+
+  private place(k: number): BodyFace {
+    const hit = this.placed[k];
+    if (hit) return hit;
+    const bar = this.bar.placed;
+    const f = this.outline.inner[k] as OutlineFace;
+    const [cx, cy] = boxCentre(bar.box);
+    const la = localOf(bar, f.a[0], f.a[1]);
+    const lb = localOf(bar, f.b[0], f.b[1]);
+    const [nx, ny] = f.n;
+    // The foot of the perpendicular from the box's centre (cx, cy) onto the face's line.
+    const off = (la[0] - cx) * nx + (la[1] - cy) * ny;
+    // §4.3's u: local +y across a face that faces ±x, local +x across one that faces ±y; an
+    // oblique face's u is the perpendicular nearer to that.
+    const along: [number, number] = Math.abs(nx) >= Math.abs(ny) ? [-ny, nx] : [ny, -nx];
+    if ((Math.abs(nx) >= Math.abs(ny) ? along[1] : along[0]) < 0) {
+      along[0] = -along[0];
+      along[1] = -along[1];
+    }
+    const oa = this.toWorld(la);
+    const face: BodyFace = {
+      name: f.name,
+      key: `i${k}`,
+      bounding: false,
+      p: add(bar.A, oa),
+      n: this.toWorld(f.n),
+      u: this.toWorld(along),
+      poly: this.strip(oa, this.toWorld(lb)),
+      centre: [cx + off * nx, cy + off * ny],
+    };
+    this.placed[k] = face;
+    return face;
+  }
+
+  innerNear(n: V3, both = false): BodyFace[] {
+    if (this.outline.inner.length === 0) return [];
+    // n in the section's terms; a direction off the section's plane meets no face of the bar.
+    const { x, y } = this.bar.placed.frame;
+    const n2: Vec2 = [dot(n, x), dot(n, y)];
+    const len = Math.sqrt(n2[0] * n2[0] + n2[1] * n2[1]);
+    if (len < 0.99) return [];
+    const d: Vec2 = [n2[0] / len, n2[1] / len];
+    const ks = innerFacing(this.outline, d);
+    // The two windows are π apart, so no face is in both.
+    if (both) ks.push(...innerFacing(this.outline, [-d[0], -d[1]]));
+    return (both ? ks.sort((a, b) => a - b) : ks).map((k) => this.place(k));
+  }
+
+  innerAll(): BodyFace[] {
+    return this.outline.inner.map((_, k) => this.place(k));
+  }
+
+  innerByKey(key: string): BodyFace | undefined {
+    const k = key.startsWith("i") ? Number(key.slice(1)) : -1;
+    return k >= 0 && k < this.outline.inner.length ? this.place(k) : undefined;
+  }
 }
 
 /** A placed part's bounding box, as six faces in world terms. */
@@ -140,8 +318,11 @@ function partBody(p: PlacedPart, item: AnyItem): Body | undefined {
         c[k] = at(b, k);
         return point(c);
       };
+      const name = `${side === 1 ? "+" : "-"}${names[i]}`;
       faces.push({
-        name: `${side === 1 ? "+" : "-"}${names[i]}`,
+        name,
+        key: name,
+        bounding: true,
         p: corner(0, 0),
         n: side === 1 ? ax : neg(ax),
         u: axes[j] as V3,
@@ -149,7 +330,13 @@ function partBody(p: PlacedPart, item: AnyItem): Body | undefined {
       });
     }
   }
-  return { id: p.id, faces };
+  return {
+    id: p.id,
+    faces,
+    innerNear: () => [],
+    innerAll: () => [],
+    innerByKey: () => undefined,
+  };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -201,8 +388,20 @@ function clip(subject: readonly P2[], clipper: readonly P2[]): P2[] {
 }
 
 /** The area two faces share, the second projected onto the first's plane. */
+const own = new WeakMap<BodyFace, P2[]>();
+
+/** The face in its own plane's terms, counter-clockwise: the same on every call, so kept. */
+function ownPoly(f: BodyFace): P2[] {
+  let poly = own.get(f);
+  if (!poly) {
+    poly = ccw(f.poly.map((P) => to2(f, P)));
+    own.set(f, poly);
+  }
+  return poly;
+}
+
 function overlap(f: BodyFace, g: BodyFace): number {
-  const a = ccw(f.poly.map((P) => to2(f, P)));
+  const a = ownPoly(f);
   const b = ccw(g.poly.map((P) => to2(f, P)));
   const c = clip(b, a);
   return c.length < 3 ? 0 : Math.abs(area2(c));
@@ -210,7 +409,7 @@ function overlap(f: BodyFace, g: BodyFace): number {
 
 /** A point of the face's plane is on the face, within tol.len of its edges. */
 function onFace(f: BodyFace, P: V3): boolean {
-  const poly = ccw(f.poly.map((Q) => to2(f, Q)));
+  const poly = ownPoly(f);
   const [px, py] = to2(f, P);
   for (let i = 0; i < poly.length; i++) {
     const [ax, ay] = poly[i] as P2;
@@ -237,6 +436,15 @@ export function generateFaces(
     const r = new FaceGen(ctx, id, ent.spec, !ent.copy, bars, runs, parts, out).run();
     if (r) out.fastenings.set(id, r);
   }
+}
+
+/** Two adjacent layers' faces in contact. */
+interface Contact {
+  /** Their names, as reported, and their keys on the layers' bodies. */
+  faces: [string, string];
+  keys: [string, string];
+  /** The first one's outward normal, toward the second layer. */
+  n: V3;
 }
 
 interface Walk {
@@ -324,7 +532,7 @@ class FaceGen {
       );
     }
 
-    const contacts: { faces: [string, string]; gap: number; n: V3 }[] = [];
+    const contacts: (Contact & { gap: number })[] = [];
     for (let i = 0; i + 1 < layers.length; i++) {
       const c = this.contact(
         layers[i] as Layer,
@@ -420,13 +628,25 @@ class FaceGen {
     return { ref, bodies: [barBody(b)], line: { A: b.placed.A, t: b.placed.frame.t } };
   }
 
-  /** The faces of two adjacent layers in contact: antiparallel, at the gap, overlapping. */
+  /**
+   * The faces of two adjacent layers in contact: antiparallel, at the gap, overlapping. The
+   * bounding faces are tried first, so a pair that meets on them is found as it was before gap A3
+   * (and `faces`, which names bounding faces, picks among them); then every pair with an inner
+   * face in it, in face order.
+   */
   private contact(
     A: Layer,
     B: Layer,
     gap: number,
     names: readonly [Face, Face] | undefined,
-  ): { faces: [string, string]; n: V3 } | undefined {
+  ): Contact | undefined {
+    const touch = (f: BodyFace, g: BodyFace) =>
+      Math.abs(dot(sub(g.p, f.p), f.n) - gap) <= TOL.len && overlap(f, g) > TOL.len * TOL.len;
+    const found = (f: BodyFace, g: BodyFace): Contact => ({
+      faces: [f.name, g.name],
+      keys: [f.key, g.key],
+      n: f.n,
+    });
     for (const ba of A.bodies) {
       for (const bb of B.bodies) {
         for (const f of ba.faces) {
@@ -434,9 +654,18 @@ class FaceGen {
           for (const g of bb.faces) {
             if (names && g.name !== names[1]) continue;
             if (angleDeg(f.n, neg(g.n)) > TOL.ang) continue;
-            if (Math.abs(dot(sub(g.p, f.p), f.n) - gap) > TOL.len) continue;
-            if (overlap(f, g) <= TOL.len * TOL.len) continue;
-            return { faces: [f.name, g.name], n: f.n };
+            if (touch(f, g)) return found(f, g);
+          }
+        }
+      }
+    }
+    if (names) return undefined;
+    for (const ba of A.bodies) {
+      for (const bb of B.bodies) {
+        for (const f of facing(ba, bb)) {
+          for (const g of facesNear(bb, neg(f.n))) {
+            if (f.bounding && g.bounding) continue;
+            if (antiparallel(f.n, g.n) && touch(f, g)) return found(f, g);
           }
         }
       }
@@ -450,7 +679,7 @@ class FaceGen {
   private fasten(
     layers: Layer[],
     gaps: number[],
-    contacts: { faces: [string, string]; n: V3 }[],
+    contacts: Contact[],
     axis: V3,
     result: FaceResult,
   ): void {
@@ -488,9 +717,9 @@ class FaceGen {
     let sleeveNo = 0;
     for (const sp of points) {
       k++;
-      const at = this.stationAt(layers[0] as Layer, contacts[0]?.faces[0] as Face, sp, k);
+      const at = this.stationAt(layers[0] as Layer, (contacts[0] as Contact).keys[0], sp, k);
       if (!at) continue;
-      const walk = this.walk(layers, at.P, axis, at.body, k);
+      const walk = this.walk(layers, contacts, at.P, axis, at.body, k);
       if (!walk) continue;
       const w0 = (walk[0] as Walk).we;
       const n = layers.length;
@@ -545,10 +774,12 @@ class FaceGen {
             noClearance();
             continue;
           }
-          const depthTap = tapDepth ?? (hollow ? hollow.t : undefined);
-          this.addHole(b, w.entry, at.P, axis, w.we, {
+          const l = this.listing(b, w, at.P, axis, "entry", k);
+          if (!l) continue;
+          const depthTap = tapDepth ?? (hollow ? hollow.t : l.through ? undefined : w.wx - w.we);
+          this.addHole(b, l.face, at.P, axis, l.w, {
             thread: fastener.thread,
-            ...(depthTap !== undefined ? { depth: depthTap } : {}),
+            ...(depthTap !== undefined ? { depth: l.lead + depthTap } : {}),
           });
           continue;
         }
@@ -579,19 +810,26 @@ class FaceGen {
             if (full || sg.wall) dd = Math.max(dd, sl.hole);
             else cbore = { d: sl.hole, depth: hi - lo, atExit: sl.to >= z - TOL.len };
           }
-          const wallDepth = hollow ? z - a : undefined;
-          if (cbore?.atExit && sg.exit) {
-            this.addHole(b, sg.exit, at.P, axis, sg.to, {
+          const cb = cbore ? { cbore: { d: cbore.d, depth: cbore.depth } } : {};
+          if (!hollow) {
+            // A solid layer's hole, listed from a bounding face (its op names one of the four):
+            // a counterbore needs the face it opens in.
+            const end = cbore ? (cbore.atExit ? "exit" : "entry") : "any";
+            const l = this.listing(b, w, at.P, axis, end, k, cbore !== undefined);
+            if (!l) continue;
+            this.addHole(b, l.face, at.P, axis, l.w, {
               d: dd,
-              cbore: { d: cbore.d, depth: cbore.depth },
-              ...(wallDepth !== undefined ? { depth: wallDepth } : {}),
+              ...cb,
+              ...(l.through ? {} : { depth: l.lead + (w.wx - w.we) }),
             });
+          } else if (cbore?.atExit && sg.exit) {
+            this.addHole(b, sg.exit, at.P, axis, sg.to, { d: dd, ...cb, depth: z - a });
           } else {
             const face = sg.entry ?? (sg.exit as BodyFace);
             this.addHole(b, face, at.P, axis, sg.entry ? sg.from : sg.to, {
               d: dd,
-              ...(cbore ? { cbore: { d: cbore.d, depth: cbore.depth } } : {}),
-              ...(wallDepth !== undefined ? { depth: wallDepth } : {}),
+              ...cb,
+              depth: z - a,
             });
           }
         }
@@ -873,10 +1111,13 @@ class FaceGen {
     return [0, ...plan.steps.map(([, step]) => sign * step)];
   }
 
-  /** A station on the first layer's face toward the second: its piece, distance and point. */
+  /**
+   * A station on the first layer's face toward the second, on that face's centre line (§4.3; an
+   * inner face's is level with the box's centre) and `u` across it: its piece, distance and point.
+   */
   private stationAt(
     L1: Layer,
-    faceName: Face,
+    key: string,
     sp: { s1: number; u: number },
     k: number,
   ): { body: Body; bar: DerivedBar; s: number; P: V3 } | undefined {
@@ -900,13 +1141,13 @@ class FaceGen {
       s = sp.s1 - (run.starts[i] as number);
     }
     const b = body.bar as DerivedBar;
-    const fl = faceLocal(b.placed.box, faceName);
-    const face = body.faces.find((f) => f.name === faceName) as BodyFace;
-    const P = addScaled(onBar(b.placed, s, fl.at[0], fl.at[1]), face.u, sp.u);
+    const face = faceByKey(body, key);
+    const [cx, cy] = face.centre as readonly [number, number];
+    const P = addScaled(onBar(b.placed, s, cx, cy), face.u, sp.u);
     if (!onFace(face, P)) {
       this.error(
         "face",
-        `station ${k} (${fmt(sp.s1)} along ${L1.ref}, ${fmt(sp.u)} across) is off ${b.placed.id}'s face ${faceName}`,
+        `station ${k} (${fmt(sp.s1)} along ${L1.ref}, ${fmt(sp.u)} across) is off ${b.placed.id}'s face ${face.name}`,
         {
           field: "stations",
           refs: [b.placed.id],
@@ -917,19 +1158,54 @@ class FaceGen {
     return { body, bar: b, s, P };
   }
 
-  /** Each layer the fastener's axis passes, from the head side. */
-  private walk(layers: Layer[], P: V3, d: V3, first: Body, k: number): Walk[] | undefined {
+  /**
+   * Each layer the fastener's axis passes, from the head side. It enters a layer by its contact
+   * face with the one before and leaves by its contact face with the one after; the first layer's
+   * head side and the last one's nut side are the nearest face across the layer's material, facing
+   * out along the axis: the far side of an angle's leg, not of its box. Every face it passes must
+   * hold the axis. For a run, the piece the axis passes.
+   */
+  private walk(
+    layers: Layer[],
+    contacts: Contact[],
+    P: V3,
+    d: V3,
+    first: Body,
+    k: number,
+  ): Walk[] | undefined {
     const out: Walk[] = [];
+    /** A face by key and where the axis meets it; `held` when it is known to hold the axis. */
+    const at = (body: Body, key: string, held = false) => {
+      const f = faceByKey(body, key);
+      const w = dot(sub(f.p, P), d);
+      return held || onFace(f, addScaled(P, d, w)) ? { f, w } : undefined;
+    };
+    /** The nearest face facing `side` along the axis, past `from` that way, holding the axis. */
+    const nearest = (body: Body, side: -1 | 1, from: number) => {
+      const n = side < 0 ? neg(d) : d;
+      let best: { f: BodyFace; w: number } | undefined;
+      for (const f of facesNear(body, n)) {
+        if (!parallel(f.n, n)) continue;
+        const w = dot(sub(f.p, P), d);
+        if (side * (w - from) <= TOL.len) continue;
+        if (best && side * (w - best.w) >= 0) continue;
+        if (onFace(f, addScaled(P, d, w))) best = { f, w };
+      }
+      return best;
+    };
     for (const [i, l] of layers.entries()) {
+      const inKey = i > 0 ? (contacts[i - 1] as Contact).keys[1] : undefined;
+      const outKey = i + 1 < layers.length ? (contacts[i] as Contact).keys[0] : undefined;
       let hit: Walk | undefined;
       for (const body of i === 0 ? [first] : l.bodies) {
-        const entry = body.faces.find((f) => angleDeg(f.n, neg(d)) <= TOL.ang);
-        const exit = body.faces.find((f) => angleDeg(f.n, d) <= TOL.ang);
+        const into = inKey === undefined ? undefined : at(body, inKey);
+        // The station lies on the first layer's face toward the second (stationAt).
+        const outOf = outKey === undefined ? undefined : at(body, outKey, i === 0);
+        if ((inKey !== undefined && !into) || (outKey !== undefined && !outOf)) continue;
+        const entry = into ?? (outOf && nearest(body, -1, outOf.w));
+        const exit = outOf ?? (entry && nearest(body, 1, entry.w));
         if (!entry || !exit) continue;
-        const we = dot(sub(entry.p, P), d);
-        const wx = dot(sub(exit.p, P), d);
-        if (!onFace(entry, addScaled(P, d, we))) continue;
-        hit = { body, entry, exit, we, wx };
+        hit = { body, entry: entry.f, exit: exit.f, we: entry.w, wx: exit.w };
         break;
       }
       if (!hit) {
@@ -964,6 +1240,15 @@ class FaceGen {
     const b = last.body.bar;
     if (!b) {
       this.error("face", `station ${k}: a tnut fastening's last layer must be a grooved bar`);
+      return undefined;
+    }
+    if (!last.entry.bounding) {
+      // Grooves are declared on the four bounding faces (§3.5).
+      this.error(
+        "fit",
+        `station ${k}: the T-nut's layer ${b.placed.id} meets the stack at its inner face ${last.entry.name}, which has no groove`,
+        { field: "stations", refs: [b.placed.id] },
+      );
       return undefined;
     }
     const face = last.entry.name as Face;
@@ -1105,6 +1390,67 @@ class FaceGen {
       this.error("expr", `stack: the sleeve's len_mm: ${(e as Error).message}`, { field: "stack" });
       return undefined;
     }
+  }
+
+  /**
+   * Where the axis lies in a bar's section (its outline's outer ring, grooved sides closed), as
+   * intervals along the axis from the station point.
+   */
+  private material(b: DerivedBar, P: V3, d: V3): [number, number][] {
+    const bar = b.placed;
+    const { x, y } = bar.frame;
+    const r = sub(P, bar.A);
+    return materialAlong(
+      outlineFaces(bar.item.section).ring,
+      [dot(r, x) + bar.anchor[0] - bar.off[0], dot(r, y) + bar.anchor[1] - bar.off[1]],
+      [dot(d, x), dot(d, y)],
+    );
+  }
+
+  /**
+   * The bounding face a solid layer's hole is listed from, since an op names one of the four
+   * (§4.4), and how: `lead`, the distance from that face's plane to where the layer's material
+   * starts, and `through`, whether nothing more of the section stands on the axis the way it is
+   * drilled (else the op takes a depth). In order: the face the fastener enters by, as before gap
+   * A3; the face it leaves by; then the bounding face parallel to either across open air, which an
+   * I-beam's web needs. `end` asks for a hole that opens at that end (a counterbore, a tap), and
+   * `flush` for one listed from the layer's own face. None fits: an error.
+   */
+  private listing(
+    b: DerivedBar,
+    w: Walk,
+    P: V3,
+    d: V3,
+    end: "entry" | "exit" | "any",
+    k: number,
+    flush = false,
+  ): { face: BodyFace; w: number; lead: number; through: boolean } | undefined {
+    // Between two bounding faces the hole passes the whole section: nothing of it lies outside.
+    const M = w.entry.bounding && w.exit.bounding ? [] : this.material(b, P, d);
+    const some = (lo: number, hi: number) =>
+      M.some(([a, z]) => Math.min(z, hi) - Math.max(a, lo) > TOL.len);
+    const beyond = some(w.wx, Number.POSITIVE_INFINITY);
+    const before = some(Number.NEGATIVE_INFINITY, w.we);
+    const inSide = w.body.faces.find((f) => parallel(f.n, neg(d)));
+    const outSide = w.body.faces.find((f) => parallel(f.n, d));
+    if (end !== "exit" && w.entry.bounding)
+      return { face: w.entry, w: w.we, lead: 0, through: !beyond };
+    if (end !== "entry" && w.exit.bounding)
+      return { face: w.exit, w: w.wx, lead: 0, through: !before };
+    if (!flush && end !== "exit" && inSide) {
+      const wB = dot(sub(inSide.p, P), d);
+      if (!some(wB, w.we)) return { face: inSide, w: wB, lead: w.we - wB, through: !beyond };
+    }
+    if (!flush && end !== "entry" && outSide) {
+      const wB = dot(sub(outSide.p, P), d);
+      if (!some(w.wx, wB)) return { face: outSide, w: wB, lead: wB - w.wx, through: !before };
+    }
+    this.error(
+      "face",
+      `station ${k}: the hole in ${b.placed.id} cannot be listed from one of its four faces: more of its section stands on the fastener's axis`,
+      { field: "stations", refs: [b.placed.id] },
+    );
+    return undefined;
   }
 
   /** A generated hole on a bar, where the axis meets the given face's plane. */

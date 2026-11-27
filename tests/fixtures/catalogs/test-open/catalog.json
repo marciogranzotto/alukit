@@ -1,0 +1,35 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-open",
+  "name": "Open-section test catalog (synthetic)",
+  "vendor": "test-open-vendor",
+  "currency": "BRL",
+  "prov": {
+    "src": "est",
+    "note": "synthetic test data for face contacts on open sections (gap A3), not a vendor's"
+  },
+  "items": {
+    "L-76.2x6.35": {
+      "kind": "bar",
+      "name": "Equal angle 76.2x6.35 (synthetic, the generator's L3x3x1/4)",
+      "shape": "angle",
+      "section": "L-76.2x6.35",
+      "material": "test:s235"
+    },
+    "C-100x50x6x8": {
+      "kind": "bar",
+      "name": "Channel 100x50, web 6, flanges 8, sharp corners (synthetic)",
+      "shape": "channel",
+      "section": "C-100x50x6x8",
+      "material": "test:s235"
+    },
+    "BLT-M12x140": {
+      "kind": "fastener",
+      "subtype": "bolt",
+      "name": "Hex bolt M12x140 (synthetic)",
+      "thread": "M12",
+      "length_mm": 140,
+      "mass_kg": 0.14
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G29",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-open"],
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } }
+  },
+  "bars": {
+    "b1": { "item": "test-open:L-76.2x6.35", "a": [0, 0, 0], "b": [300, 0, 0], "anchor": "heel", "label": "angle, heel on the design line: its upright leg at y 0..6.35, z 0..76.2" },
+    "b2": { "a": [0, 26.35, 50], "b": [300, 26.35, 50], "label": "40x40 on the leg's inner face: y 6.35..46.35, z 30..70" }
+  },
+  "connections": {
+    "c1": { "type": "face", "bars": ["b1", "b2"], "fastening": "bolt", "fastener": "test-open:BLT-M12x140", "stations": { "at_mm": [100] } }
+  }
+}

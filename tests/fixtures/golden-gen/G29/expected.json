@@ -1,0 +1,145 @@
+{
+  "case": "G29",
+  "rule": "a layer on an angle's inner leg face, which is none of its four bounding faces (gap A3, §4.5)",
+  "design": "in contact on the leg's inner face; station (100, 6.35, 38.10); grip 46.35 and the bolt's length through the layers 46.35 (the leg 6.35, the block 40); one Ø13.5 hole in each, the leg's from its outer face. On the leg's outer face: the same grip, where the angle's box gave 116.20. 0.1 mm off the face: an error; with that gap declared, 46.45. On a channel's inner flange: grip 48.00, the flange's hole 8 deep",
+  "expect": {
+    "fastenings": {
+      "c1": {
+        "count": 1,
+        "grip_mm": [46.35],
+        "length_mm": [46.35],
+        "point_mm": [[100, 6.35, 38.1]],
+        "contacts": [["+x@-31.75", "-x"]]
+      }
+    },
+    "hardware": { "test-open:BLT-M12x140": 1 },
+    "holes": {
+      "total": 2,
+      "d_mm": [13.5],
+      "per_bar": { "b1": 1, "b2": 1 },
+      "ops": {
+        "b1": [{ "face": "-x", "at_mm": 100, "d_mm": 13.5 }],
+        "b2": [{ "face": "-x", "at_mm": 100, "across_mm": -11.9, "d_mm": 13.5 }]
+      }
+    },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "the outer face",
+      "patch": { "bars": { "b2": { "a": [0, -20, 50], "b": [300, -20, 50] } } },
+      "expect": {
+        "fastenings": {
+          "c1": {
+            "count": 1,
+            "grip_mm": [46.35],
+            "length_mm": [46.35],
+            "point_mm": [[100, 0, 38.1]],
+            "contacts": [["-x", "+x"]]
+          }
+        },
+        "holes": {
+          "total": 2,
+          "d_mm": [13.5],
+          "per_bar": { "b1": 1, "b2": 1 },
+          "ops": {
+            "b1": [{ "face": "-x", "at_mm": 100, "d_mm": 13.5 }],
+            "b2": [{ "face": "+x", "at_mm": 100, "across_mm": -11.9, "d_mm": 13.5 }]
+          }
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "0.1 mm off the inner face",
+      "patch": { "bars": { "b2": { "a": [0, 26.45, 50], "b": [300, 26.45, 50] } } },
+      "expect": {
+        "holes": { "total": 0, "d_mm": [], "per_bar": {} },
+        "errors": [{ "code": "face", "entity": "c1", "refs": ["b1", "b2"] }]
+      }
+    },
+    {
+      "name": "0.1 mm off, declared as a gap",
+      "patch": {
+        "bars": { "b2": { "a": [0, 26.45, 50], "b": [300, 26.45, 50] } },
+        "connections": { "c1": { "gaps_mm": [0.1] } }
+      },
+      "expect": {
+        "fastenings": {
+          "c1": {
+            "count": 1,
+            "grip_mm": [46.45],
+            "length_mm": [46.45],
+            "point_mm": [[100, 6.35, 38.1]],
+            "contacts": [["+x@-31.75", "-x"]]
+          }
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "across 11.9: through the block's centre",
+      "patch": { "connections": { "c1": { "stations": { "across_mm": [11.9] } } } },
+      "expect": {
+        "fastenings": {
+          "c1": {
+            "count": 1,
+            "grip_mm": [46.35],
+            "length_mm": [46.35],
+            "point_mm": [[100, 6.35, 50]],
+            "contacts": [["+x@-31.75", "-x"]]
+          }
+        },
+        "holes": {
+          "total": 2,
+          "d_mm": [13.5],
+          "per_bar": { "b1": 1, "b2": 1 },
+          "ops": {
+            "b1": [{ "face": "-x", "at_mm": 100, "across_mm": 11.9, "d_mm": 13.5 }],
+            "b2": [{ "face": "-x", "at_mm": 100, "d_mm": 13.5 }]
+          }
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "a channel's inner flange",
+      "patch": {
+        "bars": {
+          "b1": {
+            "item": "test-open:C-100x50x6x8",
+            "anchor": null,
+            "label": "channel, centred: web y -25..-19, flanges z -50..-42 and 42..50"
+          },
+          "b2": {
+            "a": [0, 3, -22],
+            "b": [300, 3, -22],
+            "label": "40x40 on the bottom flange's inner face: y -17..23, z -42..-2"
+          }
+        },
+        "connections": { "c1": { "stations": { "across_mm": [3] } } }
+      },
+      "expect": {
+        "fastenings": {
+          "c1": {
+            "count": 1,
+            "grip_mm": [48],
+            "length_mm": [48],
+            "point_mm": [[100, 3, -42]],
+            "contacts": [["+y@-42.00", "-y"]]
+          }
+        },
+        "holes": {
+          "total": 2,
+          "d_mm": [13.5],
+          "per_bar": { "b1": 1, "b2": 1 },
+          "ops": {
+            "b1": [{ "face": "-y", "at_mm": 100, "across_mm": 3, "d_mm": 13.5, "depth_mm": 8 }],
+            "b2": [{ "face": "-y", "at_mm": 100, "d_mm": 13.5 }]
+          }
+        },
+        "errors": []
+      }
+    }
+  ]
+}

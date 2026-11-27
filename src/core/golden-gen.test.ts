@@ -13,8 +13,9 @@ import { FIXTURES, mergePatch, readJson, shown, subdirs } from "./testing.ts";
  * The generation and cost cases of design §4.6 (G22–G26), M3b's oracle: each folder holds a small
  * document and the values the design's table gives for it, to 0.01 mm, and for G26 to the minor
  * unit. A row's variations ("factory: b", "at at_mm 470") are merge patches of the same document.
- * G30 on close the gaps the v1 acceptance found (`docs/notes/acceptance-gaps.md`); each has a
- * hand calculation beside it, `by_hand.py`, that imports nothing from AluKit.
+ * G29 (gap A3: a layer on an angle's inner leg face, `docs/notes/a3-face-contact.md`) and G30 on
+ * (the other gaps the v1 acceptance found, `docs/notes/acceptance-gaps.md`) each have a hand
+ * calculation beside them, `by_hand.py`, that imports nothing from AluKit.
  */
 
 interface Expect {
@@ -24,8 +25,21 @@ interface Expect {
   stock?: Record<string, { pieces: number[]; used_mm?: number[] }>;
   /** Per face connection: its stations' world x. */
   stations?: Record<string, { x_mm: number[] }>;
-  /** Per face connection: its fastener count and every station's grip. */
-  fastenings?: Record<string, { count: number; grip_mm: number[] }>;
+  /**
+   * Per face connection: its fastener count and every station's grip; optionally the fastener's
+   * length through the layers (from the face its head bears on to the last layer's far face, as
+   * the viewer draws it), each station's point, and the faces of each pair in contact.
+   */
+  fastenings?: Record<
+    string,
+    {
+      count: number;
+      grip_mm: number[];
+      length_mm?: number[];
+      point_mm?: number[][];
+      contacts?: [string, string][];
+    }
+  >;
   /** Per part on a station: the bar it landed on and the distance from that bar's a. */
   parts?: Record<string, { bar: string; s_mm: number }>;
   /** Per item: its cut-list lines, and where given, each line's machining as the cut list words it. */
@@ -36,14 +50,28 @@ interface Expect {
   hardware?: Record<string, number>;
   /** Per joint recipe (a connector with no body, §3.4): its count; none when absent. */
   recipes?: Record<string, number>;
-  /** Generated holes: how many, their diameters, and how many per bar. */
-  holes?: { total: number; d_mm: number[]; per_bar: Record<string, number> };
+  /** Generated holes: how many, their diameters, how many per bar, and optionally a bar's ops. */
+  holes?: {
+    total: number;
+    d_mm: number[];
+    per_bar: Record<string, number>;
+    ops?: Record<string, HoleOut[]>;
+  };
   /** The order list: per item, its one line's low, likely and high; and the total. */
   order?: {
     lines: Record<string, MoneyOut & { range?: "quote" | "band" }>;
     total: MoneyOut;
   };
   errors: { code: string; entity: string; refs?: string[] }[];
+}
+
+/** A generated hole as the golden writes it. */
+interface HoleOut {
+  face: string;
+  at_mm: number;
+  across_mm?: number;
+  d_mm?: number;
+  depth_mm?: number;
 }
 
 interface Golden {
@@ -129,6 +157,24 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
     expect([...new Set(got?.stations.map((x) => r2(x.grip)))], `${label}: ${id}'s grip`).toEqual(
       f.grip_mm,
     );
+    if (f.length_mm) {
+      expect(
+        [...new Set(got?.stations.map((x) => r2(x.layers[x.layers.length - 1]?.to ?? Number.NaN)))],
+        `${label}: ${id}'s length through the layers`,
+      ).toEqual(f.length_mm);
+    }
+    if (f.point_mm) {
+      expect(
+        got?.stations.map((x) => x.point.map(r2)),
+        `${label}: ${id}'s station points`,
+      ).toEqual(f.point_mm);
+    }
+    if (f.contacts) {
+      expect(
+        got?.contacts.map((c) => c.faces),
+        `${label}: ${id}'s faces in contact`,
+      ).toEqual(f.contacts);
+    }
   }
   for (const [id, p] of Object.entries(want.parts ?? {})) {
     const got = d.parts.get(id);
@@ -155,6 +201,22 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
     const per: Record<string, number> = {};
     for (const h of holes) per[h.bar] = (per[h.bar] ?? 0) + 1;
     expect(per, `${label}: holes per bar`).toEqual(want.holes.per_bar);
+    for (const [bar, ops] of Object.entries(want.holes.ops ?? {})) {
+      const got = (d.bars.get(bar)?.ops ?? []).flatMap((o): HoleOut[] =>
+        o.op === "hole" && o.by
+          ? [
+              {
+                face: o.face,
+                at_mm: r2(o.at),
+                ...(o.across !== undefined ? { across_mm: r2(o.across) } : {}),
+                ...(o.d !== undefined ? { d_mm: o.d } : {}),
+                ...(o.depth !== undefined ? { depth_mm: r2(o.depth) } : {}),
+              },
+            ]
+          : [],
+      );
+      expect(got, `${label}: ${bar}'s generated holes`).toEqual(ops);
+    }
   }
   if (want.order) {
     const b = bom({ derived: d, items });
@@ -187,13 +249,14 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
 const dirs = subdirs(join(FIXTURES, "golden-gen"));
 
 describe("golden generation cases (design §4.6)", () => {
-  it("has one fixture per case G22–G26, and G30 on", () => {
+  it("has one fixture per case G22–G26, and G29 on", () => {
     expect(dirs.map((d) => basename(d))).toEqual([
       "G22",
       "G23",
       "G24",
       "G25",
       "G26",
+      "G29",
       "G30",
       "G31",
       "G32",
