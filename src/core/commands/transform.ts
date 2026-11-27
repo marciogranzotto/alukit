@@ -386,7 +386,7 @@ function apply(ctx: CommandContext, a: Args): Outcome {
     if (norm(sub(d, scale(u, dot(d, u)))) > TOL.len) turned.add(b);
   }
   /** Whether a bar's design line moves: the bar does, or an end of it goes off its axis. */
-  const lineMoves = (b: string): boolean => movedBar(b) || turned.has(b);
+  const lineMoves = (b: string): boolean => M.bars.has(b) || turned.has(b);
   /** A bar's design line after the move, from its derived design points. */
   const movedLine = (b: string): [V3, V3] => {
     const A = placed(b, "a");

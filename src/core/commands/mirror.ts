@@ -26,10 +26,12 @@ import { idList } from "./words.ts";
 
 /**
  * `mirror` (design §4.7, §6, call 21): copies entities as their mirror image in a plane square to
- * a world axis, as ordinary entities. References inside the set go to the copies; those outside
- * are kept, which is right only for what the plane maps onto itself: a node on the plane, or a
- * bar that lies in it or crosses it symmetrically (the bar a mirrored brace attaches to).
- * Anything else outside the set is refused, naming what to include.
+ * a world axis, as ordinary entities. References inside the set go to the copies. A node outside
+ * it is kept only when it lies on the plane. A bar outside it is taken as the bar at its image
+ * (design §6, call 112; docs/ux/polish-editing-decisions.md 8–11): itself when it lies in the
+ * plane or crosses it symmetrically (the bar a mirrored brace attaches to), else an existing bar
+ * of the same section standing exactly where its image would (the opposite leg a bracket lands
+ * on). Anything else outside the set is refused, naming what to include.
  *
  * A mirrored bar keeps its item when its section has a mirror symmetry (§4.4's four lines, the
  * same a reversed bar uses); otherwise it takes the item's other `hand`, read as the section
