@@ -289,6 +289,12 @@ export const StackEntry = z.union([
   z.strictObject({
     item: ItemRef,
     inside: z.union([BarId, RunId]),
+    walls: z
+      .literal("both")
+      .optional()
+      .describe(
+        "both: the sleeve runs from the nut-side wall's outer face, so bore + 2t passes both walls; absent: from its inner face, in the bore",
+      ),
     len_mm: Expr,
     clearance_mm: Expr.optional().describe(
       "the holes the sleeve passes: its outside diameter plus this; absent: ISO 273 medium for a shank of that diameter",

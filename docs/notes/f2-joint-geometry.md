@@ -201,3 +201,7 @@ and the disc–polygon area.
 Angled side holes, a clash check between members that are not joined, the seats of a butt
 connector's screws, a settable seat threshold, and head diameters from the ISO tables for items
 that name their standard but give no dimensions: each would follow its own request.
+
+*Since closed (2026-11-27):* the seats of a butt connector's screws (F2b) and head diameters from
+the cited standard's table (F2a), in [`x1-x3-f2ab.md`](x1-x3-f2ab.md). A butt through a bar's
+end is still not seat-checked.

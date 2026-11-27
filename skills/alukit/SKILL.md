@@ -109,7 +109,9 @@ or `"square"`; `extend_mm` lengthens an end.
 
 A face connection never moves or cuts a bar; it checks contact and generates holes and hardware.
 A sleeve in its `stack` (`{ "item", "inside": "<hollow layer>", "len_mm": "bore" }`) clears the
-holes it passes by ISO 273 medium for its outside diameter, or by `clearance_mm` over it.
+holes it passes by ISO 273 medium for its outside diameter, or by `clearance_mm` over it. It
+stands on the nut-side wall's inner face; with `"walls": "both"` it starts at that wall's outer
+face, so `"bore + 2 * sec(<layer>).t_mm"` passes both walls, flush (a crush sleeve).
 
 A connector fits a butting bar by its system, and the through bar by its system or by the
 sleeve one of its mounts sets in the through bar's bore (an RHS or a tube). A hole a connector
@@ -397,7 +399,7 @@ string; `<…>` is a string of that form; `?` marks an optional field.
   - `{ type: "miter", ends: [<a bar end: "b7.a" or "b7.b">, <a bar end: "b7.a" or "b7.b">], connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
   - `{ type: "splice", ends: [<a bar end: "b7.a" or "b7.b">, <a bar end: "b7.a" or "b7.b">], gap_mm?: expr, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
   - `{ type: "pivot", base: { bar: <a bar: b<number>> | <a run: r<number>>, at_mm: expr, from?: "a" | "b" | "a.cut" | "b.cut", face?: "+x" | "-x" | "+y" | "-y", groove?: <a groove: "+y.1", numbered by increasing section coordinate>, off_mm?: [expr, expr] }, axis: "along" | "across", ends: [<a bar end: "b7.a" or "b7.b">, …], connector: <a connector with pivot geometry>, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
-  - `{ type: "face", bars: [<a bar: b<number>> | <a run: r<number>> | <a part: p<number>>, …], gaps_mm?: [expr, …], faces?: [["+x" | "-x" | "+y" | "-y", "+x" | "-x" | "+y" | "-y"], …], fastening: "none" | "bolt" | "tnut" | "screw" | "blind", fastener?: <a catalog item: "<catalog>:<code>"> | { bar: <a catalog item: "<catalog>:<code>">, len_mm: expr }, stack?: [<a catalog item: "<catalog>:<code>"> | {item, qty?} | {item, inside, len_mm, clearance_mm?}, …], stations?: { at_mm?: [expr, …], across_mm?: [expr, …], rail_holes?: true | {along, every?, plus?}, pattern?: <a pattern: pt<number>> }, tap_depth_mm?: expr, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
+  - `{ type: "face", bars: [<a bar: b<number>> | <a run: r<number>> | <a part: p<number>>, …], gaps_mm?: [expr, …], faces?: [["+x" | "-x" | "+y" | "-y", "+x" | "-x" | "+y" | "-y"], …], fastening: "none" | "bolt" | "tnut" | "screw" | "blind", fastener?: <a catalog item: "<catalog>:<code>"> | { bar: <a catalog item: "<catalog>:<code>">, len_mm: expr }, stack?: [<a catalog item: "<catalog>:<code>"> | {item, qty?} | {item, inside, walls?, len_mm, clearance_mm?}, …], stations?: { at_mm?: [expr, …], across_mm?: [expr, …], rail_holes?: true | {along, every?, plus?}, pattern?: <a pattern: pt<number>> }, tap_depth_mm?: expr, connector?: <a catalog item: "<catalog>:<code>">, qty?: integer, label?: string, tags?: [string, …], only_in?: [string, …], not_in?: [string, …] }`
 - **`setConnection`** (connections): change a connection's fields; its type may change when the result is valid
   - `id`: `string` — the entity to change
   - `set`: `{ <key>: any }` — fields to change, as a JSON merge patch (RFC 7396): null removes a field

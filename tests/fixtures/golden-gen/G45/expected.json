@@ -1,0 +1,648 @@
+{
+  "case": "G45",
+  "rule": "a stack sleeve stated through both walls (walls: both) runs from the nut-side wall's outer face, so bore + 2t passes both walls flush with their outer faces, and both walls' holes clear it (A7); absent, it stands on the nut-side wall's inner face, in the bore, as before (§4.5)",
+  "design": "G32's joint with the sleeve through both walls of the RHS: bore 42 + 2 x 4 = 50, from z 80 to 30. Both walls' eight holes are Ø20 (ISO 273 medium for 18), the other sixteen Ø11 (M10), no counterbore. With clearance_mm 0.5: Ø18.5. A sleeve 4 longer: 54, so it enters the flat below 4 and counterbores its holes Ø20 x 4. In the bore at bore + 2t (the draft's only mode): from z 76 to 26, the nut-side wall Ø11 and the flat below counterbored Ø20 x 4",
+  "expect": {
+    "lines": {
+      "test-geo:TUBE-18x2": [
+        {
+          "count": 4,
+          "cut_mm": 50
+        }
+      ]
+    },
+    "holes": {
+      "total": 24,
+      "d_mm": [11, 20],
+      "per_bar": {
+        "b1": 4,
+        "b2": 4,
+        "b3": 8,
+        "b4": 4,
+        "b5": 4
+      }
+    },
+    "ops": {
+      "b2": [
+        {
+          "op": "hole",
+          "face": "-y",
+          "from": "a",
+          "at": 100,
+          "across": -15,
+          "d": 11,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "-y",
+          "from": "a",
+          "at": 100,
+          "across": 15,
+          "d": 11,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "-y",
+          "from": "a",
+          "at": 300,
+          "across": -15,
+          "d": 11,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "-y",
+          "from": "a",
+          "at": 300,
+          "across": 15,
+          "d": 11,
+          "by": "c1"
+        }
+      ],
+      "b3": [
+        {
+          "op": "hole",
+          "face": "-x",
+          "from": "a",
+          "at": 100,
+          "across": 15,
+          "d": 20,
+          "depth": 4,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "+x",
+          "from": "a",
+          "at": 100,
+          "across": 15,
+          "d": 20,
+          "depth": 4,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "-x",
+          "from": "a",
+          "at": 100,
+          "across": -15,
+          "d": 20,
+          "depth": 4,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "+x",
+          "from": "a",
+          "at": 100,
+          "across": -15,
+          "d": 20,
+          "depth": 4,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "-x",
+          "from": "a",
+          "at": 300,
+          "across": 15,
+          "d": 20,
+          "depth": 4,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "+x",
+          "from": "a",
+          "at": 300,
+          "across": 15,
+          "d": 20,
+          "depth": 4,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "-x",
+          "from": "a",
+          "at": 300,
+          "across": -15,
+          "d": 20,
+          "depth": 4,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "+x",
+          "from": "a",
+          "at": 300,
+          "across": -15,
+          "d": 20,
+          "depth": 4,
+          "by": "c1"
+        }
+      ],
+      "b4": [
+        {
+          "op": "hole",
+          "face": "-y",
+          "from": "a",
+          "at": 100,
+          "across": -15,
+          "d": 11,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "-y",
+          "from": "a",
+          "at": 100,
+          "across": 15,
+          "d": 11,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "-y",
+          "from": "a",
+          "at": 300,
+          "across": -15,
+          "d": 11,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "-y",
+          "from": "a",
+          "at": 300,
+          "across": 15,
+          "d": 11,
+          "by": "c1"
+        }
+      ]
+    },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "clearance_mm 0.5",
+      "patch": {
+        "connections": {
+          "c1": {
+            "stack": [
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10",
+              {
+                "item": "test-geo:TUBE-18x2",
+                "inside": "b3",
+                "walls": "both",
+                "len_mm": "bore + 2 * sec(b3).t_mm",
+                "clearance_mm": 0.5
+              },
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "holes": {
+          "total": 24,
+          "d_mm": [11, 18.5],
+          "per_bar": {
+            "b1": 4,
+            "b2": 4,
+            "b3": 8,
+            "b4": 4,
+            "b5": 4
+          }
+        },
+        "ops": {
+          "b3": [
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 100,
+              "across": 15,
+              "d": 18.5,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 100,
+              "across": 15,
+              "d": 18.5,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 100,
+              "across": -15,
+              "d": 18.5,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 100,
+              "across": -15,
+              "d": 18.5,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 300,
+              "across": 15,
+              "d": 18.5,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 300,
+              "across": 15,
+              "d": 18.5,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 300,
+              "across": -15,
+              "d": 18.5,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 300,
+              "across": -15,
+              "d": 18.5,
+              "depth": 4,
+              "by": "c1"
+            }
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "a sleeve 4 longer",
+      "patch": {
+        "connections": {
+          "c1": {
+            "stack": [
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10",
+              {
+                "item": "test-geo:TUBE-18x2",
+                "inside": "b3",
+                "walls": "both",
+                "len_mm": "bore + 2 * sec(b3).t_mm + 4"
+              },
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "lines": {
+          "test-geo:TUBE-18x2": [
+            {
+              "count": 4,
+              "cut_mm": 54
+            }
+          ]
+        },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 100,
+              "across": -15,
+              "d": 11,
+              "cbore": {
+                "d": 20,
+                "depth": 4
+              },
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 100,
+              "across": 15,
+              "d": 11,
+              "cbore": {
+                "d": 20,
+                "depth": 4
+              },
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 300,
+              "across": -15,
+              "d": 11,
+              "cbore": {
+                "d": 20,
+                "depth": 4
+              },
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 300,
+              "across": 15,
+              "d": 11,
+              "cbore": {
+                "d": 20,
+                "depth": 4
+              },
+              "by": "c1"
+            }
+          ],
+          "b3": [
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 100,
+              "across": 15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 100,
+              "across": 15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 100,
+              "across": -15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 100,
+              "across": -15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 300,
+              "across": 15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 300,
+              "across": 15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 300,
+              "across": -15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 300,
+              "across": -15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            }
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "in the bore, as before",
+      "patch": {
+        "connections": {
+          "c1": {
+            "stack": [
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10",
+              {
+                "item": "test-geo:TUBE-18x2",
+                "inside": "b3",
+                "len_mm": "bore + 2 * sec(b3).t_mm"
+              },
+              "test-geo:WSH-M10",
+              "test-geo:NUT-M10"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "lines": {
+          "test-geo:TUBE-18x2": [
+            {
+              "count": 4,
+              "cut_mm": 50
+            }
+          ]
+        },
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 100,
+              "across": -15,
+              "d": 11,
+              "cbore": {
+                "d": 20,
+                "depth": 4
+              },
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 100,
+              "across": 15,
+              "d": 11,
+              "cbore": {
+                "d": 20,
+                "depth": 4
+              },
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 300,
+              "across": -15,
+              "d": 11,
+              "cbore": {
+                "d": 20,
+                "depth": 4
+              },
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 300,
+              "across": 15,
+              "d": 11,
+              "cbore": {
+                "d": 20,
+                "depth": 4
+              },
+              "by": "c1"
+            }
+          ],
+          "b3": [
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 100,
+              "across": 15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 100,
+              "across": 15,
+              "d": 11,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 100,
+              "across": -15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 100,
+              "across": -15,
+              "d": 11,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 300,
+              "across": 15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 300,
+              "across": 15,
+              "d": 11,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "-x",
+              "from": "a",
+              "at": 300,
+              "across": -15,
+              "d": 20,
+              "depth": 4,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+x",
+              "from": "a",
+              "at": 300,
+              "across": -15,
+              "d": 11,
+              "depth": 4,
+              "by": "c1"
+            }
+          ]
+        },
+        "errors": []
+      }
+    }
+  ]
+}

@@ -143,6 +143,53 @@ describe("a butt's stack (X2)", () => {
   });
 });
 
+describe("a sleeve through both walls (X6)", () => {
+  const sleeve = (more: object) => ({
+    connections: {
+      c1: {
+        stack: [
+          "test-geo:WSH-M10",
+          "test-geo:NUT-M10",
+          { item: "test-geo:TUBE-18x2", inside: "b3", ...more },
+          "test-geo:WSH-M10",
+          "test-geo:NUT-M10",
+        ],
+      },
+    },
+  });
+  const holes = (d: ReturnType<typeof derive>, bar: string) =>
+    [
+      ...new Set(
+        (d.bars.get(bar)?.ops ?? []).map((o) =>
+          o.op === "hole"
+            ? `${o.face} Ø${o.d}${o.cbore ? ` cb Ø${o.cbore.d}×${o.cbore.depth}` : ""}`
+            : o.op,
+        ),
+      ),
+    ].sort();
+
+  it("runs from the nut-side wall's outer face and clears both walls", async () => {
+    const { d } = await project("G45");
+    expect(d.pieces.filter((p) => p.item === "test-geo:TUBE-18x2").map((p) => p.len)).toEqual([
+      50, 50, 50, 50,
+    ]);
+    expect(holes(d, "b3")).toEqual(["+x Ø20", "-x Ø20"]);
+    expect(holes(d, "b2")).toEqual(["-y Ø11"]);
+    expect(holes(d, "b4")).toEqual(["-y Ø11"]);
+  });
+
+  it("leaves the in-bore sleeve as it was (A1, A7, G32)", async () => {
+    const { d } = await project("G45", sleeve({ len_mm: "bore + 2 * sec(b3).t_mm" }));
+    expect(holes(d, "b3")).toEqual(["+x Ø11", "-x Ø20"]);
+    expect(holes(d, "b2")).toEqual(["+y Ø11 cb Ø20×4"]);
+  });
+
+  it("refuses a mode it does not know", async () => {
+    const { d } = await project("G45", sleeve({ walls: "one", len_mm: "bore" }));
+    expect(said(d, "schema", "error").length).toBe(1);
+  });
+});
+
 describe("a tap over a groove's opening (X5)", () => {
   const at = (across: number, more: object = {}) => ({
     connections: { c1: { stations: { at_mm: [100], across_mm: [across] }, ...more } },

@@ -297,6 +297,12 @@ golden case worked by an independent hand script
   the groove and the offset. Draft 2.3 checked that a T-nut lands on a groove, not that a tap
   lands off one, so a screw tapped on a profile's groove centre line passed (x1 32–35). The room
   for a head and its T-nut seat in a groove's depth is F2b's. Call 50.
+- §4.5: **a sleeve through both walls** (X6; G45). A stack sleeve may say `walls: "both"`: it then
+  runs from the nut-side wall's outer face, so `bore + 2t` passes both walls flush, and both
+  walls' holes clear it by A7's rule. Draft 2.3's sleeve stood on the nut-side wall's inner face
+  only, so that length overran the head-side wall into the next layer, counterbored it, and left
+  the nut-side wall at the bolt's clearance (x1 36–38). The in-bore sleeve (A1, G32) is unchanged.
+  Call 51.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1132,7 +1138,11 @@ nut (washers, nuts); for a rod, the head side is the first layer's. A stack entr
 
 It sits on the fastener's axis, from the inner face of the hollow layer's wall on the nut side.
 In `len_mm`, `bore` is that layer's inside depth along the fastener's axis, after swaps, so this
-sleeve crosses the bore and the head-side wall and stands 2.5 mm proud of it. The sleeve goes on
+sleeve crosses the bore and the head-side wall and stands 2.5 mm proud of it. A crush sleeve
+**through both walls** says so (*2.3*, after the alternative frame's acceptance; gap X6, G45):
+`"walls": "both"` puts its nut-side end at that wall's outer face instead, so
+`"len_mm": "bore + 2 * sec(b4).t_mm"` passes both walls flush with their outer faces, and both
+walls' holes clear it, by the rule below. The sleeve goes on
 the cut list. `inside` must name one of the connection's hollow layers (`tube` or `rhs`). A
 stack sleeve may add `clearance_mm` (*2.3*), an expression, for the holes it passes (below). A
 connector's `mounts` may list sleeves the same way (§3.4). The stack's items count once per
@@ -1297,9 +1307,9 @@ centred layout); kerf 3, no end trim. G29–G34 (*2.3*) use their own synthetic 
 and 80x80 bars with M16 cores, a stud end, a bush end, four-core joints and splices), so they do
 not move with the built-in catalogs; so does G38 (*2.3*, `test-span`: a 40 x 40 square bar cut to
 length at R$ 126.50/m in 10 mm steps, 40–3000 mm, and in stock bars of 3000 and 6000), and
-G39–G44 (*2.3*, after the alternative frame's acceptance: `test-x`: flat bars, a plain block, a
+G39–G45 (*2.3*, after the alternative frame's acceptance: `test-x`: flat bars, a plain block, a
 thin tube, blind fasteners, J1's screw-and-bush butt connectors and their variants, screws and
-seats for a groove's lips, and two standards' rows; G44 taps the test catalog's 40x40).
+seats for a groove's lips, and two standards' rows; G44 taps the test catalog's 40x40, and G45 is G32's joint).
 
 | # | Setup | Rule exercised | Expected |
 |---|---|---|---|
@@ -1324,6 +1334,7 @@ seats for a groove's lips, and two standards' rows; G44 taps the test catalog's 
 | G42 | G37's 40x40 b1 (0,0,0)→(400,0,0) on a 50 x 10 flat b2; `face` [b1, b2], `screw`, an M8x50 socket screw giving no dimensions, citing a standard whose M8 row has dk 13, `at_mm: [200]` | a fastener made to a standard (*2.3*, gap F2a) | the head (Ø13 from the table) over the c8 groove bears 45.87 %, a `fit` warning; the same with the standard read from its type. Its own dk 10: 33.54 %. No standard: no seat, an info. Its own dk 10 on a flat face: 100 % |
 | G43 | 40x40 rail b1 (0,0,0)→(600,0,0); 40x40 post b2 (300,0,20)→(300,0,520), its core for M16; `butt` through b1 with J1-SLOT: an M16 `end-tap` in the post, no hole at the tap in b1, a bush and an M8x20 screw (dk 13, k 8) | a butt connector's screw heads (*2.3*, gap F2b) | the head under the lips of b1's top groove (c8: opening 8.2, lip 2.2, depth 12.25, chamber 14.5) bears 45.87 %, a `fit` warning, and reaches 10.20. On a T-nut seat 5.5 high: 15.70, 3.45 past the depth, a `fit` error; on one 2 high: 12.20, no error. A Ø16 head: wider than the chamber, a `fit` error. The post 3 off the groove's centre: the shank misses the opening; 10 off: no groove, no way through; each a `fit` error. J1 through b1: the head on its bottom face, 45.87 %, a warning; on a washer d2 16: 53.74 % |
 | G44 | G42's 40x40 b1 (0,0,0)→(400,0,0) under a 50 x 10 flat b2 (100,0,25)→(300,0,25); `face` [b2, b1], `screw` M8x20, `tap_depth_mm` 10, `at_mm: [100]`, `across_mm: [12]` | a tap over a groove's opening (*2.3*, gap X5) | the M8 tap at 200, 12 across: its Ø6.75 tap drill wholly on the wall, no error. On the centre line: 100 % in the c8's 8.2 opening, a `machining` error; 3 across: 70.38 %, an error; 6 across: 16.16 %, none; -12: none. A T-nut 10 across: no groove, a `fit` error (X5b, as before) |
+| G45 | G32's joint with the sleeve `{inside: b3, walls: "both", len_mm: "bore + 2 * sec(b3).t_mm"}` | a sleeve through both walls (*2.3*, gap X6) | 4 × 50.00 sleeve, from the RHS's nut-side outer face to its head-side one; both walls' 8 holes Ø20 (ISO 273 medium for 18), the other 16 Ø11, no counterbore. With `clearance_mm: 0.5`: Ø18.5. 4 longer: 54, the flat below counterbored Ø20 × 4. In the bore at the same length (draft 2.3's mode): the nut-side wall Ø11 and the flat below counterbored Ø20 × 4 |
 
 ### 4.7 Parts, rails and patterns (D14)
 
@@ -2286,7 +2297,7 @@ needs:
   `test-order/` and `test-order-eu/` (the order rules), `test-joint/` and `test-open/` (the
   acceptance gaps), `test-stud/` (the second run's), `test-span/` (gap X4).
 - `golden-ends/`: the end cases of §4.6 (G1–G21; G27 and G28 since 2.2 and 2.3).
-- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26; G29–G34, G38 and G39–G44 since 2.3).
+- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26; G29–G34, G38 and G39–G45 since 2.3).
 - `order/` (*2.3*): two suppliers, both READY as written, for the order rules: each test patches
   one condition in, so each rule has a case that blocks and one that does not.
 - `base-frame/` (*2.3*): the cart's base frame built by the CLI from an empty project, the oracle
@@ -2509,6 +2520,10 @@ compared number moves: the check is right, and the question is the record's.
     a tap that breaks into an opening by less is not flagged. The circle is the tap drill's (d − P,
     as `coreTaps` reads it), not the thread's major diameter, since the drill is what leaves wall
     or not.
+51. *New in 2.3, after the alternative frame's acceptance, open.* A sleeve through both walls is a
+    stated mode (`walls: "both"`), not inferred from its length: a sleeve of `bore + 2t` written
+    without it keeps its draft 2.3 meaning, so no project moves. Its length stays the author's
+    expression; a mode that set it would hide a sleeve cut short or long.
 
 ## 15. Review 1 resolution
 

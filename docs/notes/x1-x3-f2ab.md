@@ -1,9 +1,9 @@
-# X1–X3, F2a, F2b: joints the alternative frame's acceptance could not write
+# X1–X3, X5, X6, F2a, F2b: joints the alternative frame's acceptance could not write
 
-*2026-11-27. Closes gaps X1–X3 of the alternative frame's acceptance (frame X) and two v1 limits
-F2 left ([`f2-joint-geometry.md`](f2-joint-geometry.md), its "Open" section): a butt connector's
-screw heads were not seat-checked (F2b), and a head was checked only when its item gave its
-diameter (F2a). Each is fixed at its root with failing tests written first and a golden case worked
+*2026-11-27. Closes gaps X1–X3, X5 and X6 of the alternative frame's acceptance (frame X) and two
+v1 limits F2 left ([`f2-joint-geometry.md`](f2-joint-geometry.md), its "Open" section): a butt
+connector's screw heads were not seat-checked (F2b), and a head was checked only when its item gave
+its diameter (F2a). Each is fixed at its root with failing tests written first and a golden case worked
 by an independent hand script (G39 and up). The design text follows (marked *2.3*, listed in its
 changelog under "After the alternative frame's acceptance, part 2"; open calls from 45). Labels:
 **verified** (run, with how), **read** (from the code or a document), **inferred**.*
@@ -234,8 +234,8 @@ No other fixture moved: no earlier butt seats a screw on a grooved far face.
 
 ## X5: a tap over a groove's opening
 
-**The case.** A short profile shoe screwed to a profile chord: the `screw` fastening taps the
-chord's face at the station, which stands on the face's centre line, where its groove opens.
+**The case.** A short length of profile screwed to a longer one: the `screw` fastening taps the
+longer one's face at the station, which stands on the face's centre line, where its groove opens.
 `check` passed it. **The cause** (**read**, `fastenings.ts` and `cores.ts`): a T-nut station is
 checked to land on a groove, and an end tap on a core (`coreTaps`), but nothing checked a face tap
 against the grooves the bar's item already carries.
@@ -262,3 +262,34 @@ the centre line 100 %; 3 across 70.38 %; 6 across 16.16 %; −12, none; the T-nu
 
 **Diagnostics on earlier fixtures**: none moved (**verified**: every golden and cart case's
 diagnostics compared before and after). No earlier fixture taps a face on a groove.
+
+## X6: a sleeve through both walls
+
+**The case.** A bolt through flat, RHS and flat, with a crush sleeve through both of the RHS's
+walls, flush with both outer faces, in holes that clear it in both walls. Written as a stack
+sleeve of `bore + 2t`, it came out the right length, but stood on the nut-side wall's inner face:
+it overran the head-side wall by t into the flat beyond (a counterbore the shop does not make) and
+left the nut-side wall at the bolt's clearance. **The cause** (**read**, `fastenings.ts`, the
+station loop): a stack sleeve's nut-side end is `bore.innerExit` always, the draft's one way
+(§4.5, "from the inner face of the hollow layer's wall on the nut side").
+
+36. **A stated mode, `walls: "both"`** on a stack sleeve: its nut-side end is the wall's outer
+    face (the walk's exit from the layer) instead of its inner face. The length stays the
+    author's expression, so `bore + 2 * sec(b).t_mm` is written, not implied (call 51). The value
+    is a literal; a mode it does not know is a `schema` error.
+37. **The holes follow from A7's rule unchanged**: each wall the sleeve passes takes its clearance
+    (ISO 273 medium for its outside diameter, or `clearance_mm` over it), and a solid layer it
+    enters part way a counterbore. Nothing else in the hole logic changed, so a sleeve through both
+    walls and longer still counterbores the next layer, as G45's third case shows.
+38. **A1's in-bore sleeve is kept**: without `walls` a sleeve stands on the nut-side wall's inner
+    face as before, and G45's last case pins draft 2.3's result for the same length (G32 is
+    unchanged). A connector's mount sleeve (§3.4) has no position along the axis and is not
+    affected.
+
+**Golden G45** (`by_hand.py`, spans along the axis): 4 × 50 sleeves, both walls Ø20, no
+counterbore; `clearance_mm: 0.5`, Ø18.5; 54 long, b2 counterbored Ø20 × 4; in the bore, the
+nut-side wall Ø11 and b2 counterbored Ø20 × 4.
+
+**Diagnostics on earlier fixtures**: none moved (**verified**: every golden and cart case's
+diagnostics compared before and after); no earlier fixture's ops moved (the unit suite and the
+gate). The project schema gained the field, so `pnpm skill` was re-run.

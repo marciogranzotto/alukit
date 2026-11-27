@@ -567,6 +567,10 @@ interface StackSleeve {
   item: string;
   opt: Readonly<Record<string, string>>;
   layer: number;
+  /**
+   * Through both walls (X6): its nut-side end at the nut-side wall's outer face, not its inner.
+   */
+  bothWalls: boolean;
   len_mm: number | string;
   /** The diameter of a hole the sleeve passes: its outside diameter and a clearance. */
   hole: number;
@@ -868,7 +872,8 @@ class FaceGen {
         lastBody = last.body.id;
       }
 
-      // Sleeves cut from bar stock, each in a hollow layer's bore, from its nut-side wall.
+      // Sleeves cut from bar stock, each in a hollow layer's bore, from its nut-side wall: its
+      // inner face, or its outer face for a sleeve through both walls (X6).
       const sleeves: { piece: string; len: number; from: number; to: number; hole: number }[] = [];
       let sleevesOk = true;
       for (const sl of stack.sleeves) {
@@ -891,7 +896,7 @@ class FaceGen {
         }
         sleeveNo++;
         const piece = `${id}.s${sleeveNo}`;
-        const to = bore.innerExit - w0;
+        const to = (sl.bothWalls ? w.wx : bore.innerExit) - w0;
         sleeves.push({ piece, len, from: to - len, to, hole: sl.hole });
         this.out.pieces.push({ source: piece, item: sl.item, opt: sl.opt, len });
       }
@@ -1362,6 +1367,7 @@ class FaceGen {
           item: found.id,
           opt: stockOptions(ctx, found.bar),
           layer,
+          bothWalls: e.walls === "both",
           len_mm: e.len_mm,
           hole,
         });
