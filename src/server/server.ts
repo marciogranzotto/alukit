@@ -19,13 +19,13 @@ import type { Lock } from "#core/lock/schema.ts";
 import { machiningJson } from "#core/machining/format.ts";
 import { costsJson, costsOf, orderJson } from "#core/order/format.ts";
 import { problemsAt, problemsText } from "#core/problems/problems.ts";
-import { select } from "#core/query.ts";
 import { gitStamp } from "#core/project/git.ts";
 import { DOCUMENT } from "#core/project/open.ts";
 import type { Doc } from "#core/project/parse.ts";
 import { acquireEditLock, SERVE } from "#core/project/store.ts";
 import type { ResolvedProjectItem } from "#core/project-items/resolve.ts";
 import { projectItems } from "#core/project-items/source.ts";
+import { select } from "#core/query.ts";
 import {
   outputSummary,
   readRevisionFile,
