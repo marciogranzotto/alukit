@@ -809,7 +809,8 @@ diagnostics moved (measured on all 58 fixture projects).
 - §6, §8: **`mirror` lands on the bar at the image** (gap 2, A6): a reference to a bar outside
   the set goes to the bar standing at its image, itself or another of the same section whose
   line, frame and box are the image's, so a bracket on one leg mirrors onto the opposite leg; the
-  refusal where none stands there says so; the answer names `onto`, the words "on b2" (pe 8–11).
+  refusal where none stands there says so; the answer names `onto`, the words "on b2". A part
+  mirrored with its bar, refused before ("b13 does not derive"), lands on the bar's copy (pe 8–11).
 - §6, §7.1: **the log keeps each step's commands** in canonical form (defect 6, A15), so
   `alukit log --json` gives what `alukit do` replays; in memory only, not in the event stream nor
   in a command's `between` (pe 12, 13).

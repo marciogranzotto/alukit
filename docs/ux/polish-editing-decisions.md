@@ -13,7 +13,7 @@ and calls 109–114. Labels as in the stream notes: **measured** (a test or a ru
 | Item | What | Where | Test | Failed first |
 |---|---|---|---|---|
 | Gap 1 | A crossing box records, of each bar it takes without holding it whole, the ends inside it; Move then sends one `transform` whose `ids` hold the bars held whole and those ends (`b5.b`), and `transform` moves an end alone, its bar stretching | `core/commands/transform.ts`; `viewer/scene.ts` (`boxed`); `ui/focus.ts` (`crossedEnds`); `ui/tools/moves.ts` (`moveSet`); `ui/edit/batches.ts`, `ui/edit/geometry.ts` (`stretchedGhosts`); `ui/tools/wire/move.ts` | `transform.test.ts` (9 tests), `edit.test.ts` (`alukit move` with ends), `moves.test.ts`, `focus.test.ts`; `editing.spec` A2 (ii), un-`fixme`d, ending in `alukit move`'s project | yes (all) |
-| Gap 2 | `mirror` refers a bar outside the set to the bar standing at its image: itself, as before, or another bar of the same section whose line, frame and box are the image's; otherwise refused, saying no bar stands there | `core/commands/mirror.ts` | `commands.test.ts` (3 tests), `edit.test.ts` (`alukit do mirror`); `editing.spec` A6 and A14 (A6), un-`fixme`d, ending in `alukit do mirror`'s project | yes (all) |
+| Gap 2 | `mirror` refers a bar outside the set to the bar standing at its image: itself, as before, or another bar of the same section whose line, frame and box are the image's; otherwise refused, saying no bar stands there. A part mirrored with its bar, refused before, lands on the bar's copy | `core/commands/mirror.ts` | `commands.test.ts` (4 tests), `edit.test.ts` (`alukit do mirror`); `editing.spec` A6 and A14 (A6), un-`fixme`d, ending in `alukit do mirror`'s project | yes (all) |
 | Defect 6 | Each step's log entry keeps its commands in canonical form, so `alukit log --json` gives what `alukit do` replays | `core/commands/history.ts` (`canonicalCommands`); `server/host.ts` | `commands.test.ts` (a session replayed from its log), `server.test.ts` (`alukit log --json`, replayed with `alukit do`); `editing.spec` A15 replays the log itself | yes (all) |
 | Defect 4 | In Move, `→ ← ↑` start the move with that axis locked while a selection waits, wherever the focus is; Rotate's arrows the same | `ui/tools/drag.ts` (`Gestures.starting`); `ui/tools/wire/move.ts`, `wire/rotate.ts` | `editing.spec` A3 by D, ↑, 150, Enter, the focus on the outline's head | yes |
 
@@ -53,7 +53,7 @@ b9, b10, b13 and b14, and `alukit move` of those ids makes the same project (`ed
 | 8 | **A reference to a bar outside the set lands on the bar at its image**: the bar itself when the plane maps it onto itself (as before), else an existing bar that stands exactly where its image would: the same section, its design points the image's (either way round, `tol.len`), its frame the image's under one of the section's maps, its box the image's box. One rule for every reference: a part's station (A6's bracket), a bar end on a station, a butt's through bar, a bar end named as a point, an end plane's face, a plane square to a bar | A bracket on one leg mirrored alone should land on the opposite leg, and a brace on that leg mirrored alone should land on it too, butted on it: re-homing station parts only would leave the brace refused beside a bracket that is not. A bar whose body is not the image (another anchor, another section) would put the copy's face elsewhere than the image, so it is no home |
 | 9 | **Refused where no bar stands there, in words that say so**: "p1/on: b1 is not mirrored, and no bar stands at its image across x = 400; include b1"; a bar on the image's line that is not its mirror image is named ("b2 stands on its image's line but is not its mirror image (another section or placement)"); two bars at the image are named and refused, the choice being the person's. A station measured from a cut (`a.cut`) lands only where the bar it lands on is cut there as the image is | The old words ("the plane does not map it onto itself") were true but did not say what would have worked. A station from a cut follows the cut, not the design point, so the home must be cut alike |
 | 10 | **The answer** gives `info.onto`, each bar outside the set the images landed on another bar for (`{ b1: "b2" }`), and the words end "on b2": "mirror p1, making p2 on b2" | The person sees where the copy went without opening it |
-| 11 | **The entity hooks read the images' ids**: a part's roll, a butt's `through_end` and a face joint's layers find the map that made the id they see (a copy's or a home's), since the rewriter hands them the entity already rewritten | They looked an image's id up as if it were an original's, which a re-homed bar would have answered with that bar's own image (**read**) |
+| 11 | **The entity hooks read the images' ids**: a part's roll, a butt's `through_end` and a face joint's layers find the map that made the id they see (a copy's or a home's), since the rewriter hands them the entity already rewritten | They looked an image's id up as if it were an original's: a part mirrored with its bar was refused ("b13 does not derive", the copy's id asked of the derived model; **measured**, `commands.test.ts` on the code before), and a re-homed bar would have answered with that bar's own image (**read**) |
 
 **Measured.** On the brace fixture, a bracket (`test:BRK-40`) on b1's face +x at 300 mirrored
 across x = 500 lands on b2's face −x at 300, its landing point and origin the originals'
@@ -98,7 +98,8 @@ A14 (A6) (the outline row's menu, 500 typed, a click in the view) each make p2 o
   stretched along and across its axis; an end at a node; a free length along and across; an end
   with its bar, both ends; refusals.
 - `src/core/commands/commands.test.ts`, "onto the bar standing at the image": the bracket on b2, its
-  point and origin the image's; a brace's station and its butt re-homed; the refusals' words. "keeps
+  point and origin the image's; a part mirrored with its bar on the bar's copy (decision 11); a
+  brace's station and its butt re-homed; the refusals' words. "keeps
   each step's commands": a session with undo, redo and a file edit replayed from its log.
 - `src/server/server.test.ts`: `alukit log --json`'s commands, replayed with `alukit do` on a copy.
 - `src/cli/edit.test.ts`: `alukit move` with ends (dry run, step, `fmt --check`, a turn refused);
@@ -107,4 +108,14 @@ A14 (A6) (the outline row's menu, 500 typed, a click in the view) each make p2 o
   words; `src/ui/focus.test.ts`: the crossing's record, merged, kept and left behind.
 - `tests/e2e/editing.spec.ts`: A2 (ii), A6 and A14 (A6) un-`fixme`d, each ending in its CLI
   comparison; A3 by D, ↑, 150, Enter with the focus on the outline; A15 replayed from
-  `alukit log --json`.
+  `alukit log --json`. A6 and A14 (A6) leave the Place tool first (Esc, or Select on the rail):
+  the menu's Mirror… works in Select or Move and says so, which the integration's script, never
+  run past the core's refusal, had not met; and the derived part names its bar and distance, the
+  document its face, so the check reads each from where it is.
+- **Failed first** (**measured**): the new tests on the code before. The unit tests above, each
+  for the reason it names (no `stretched`, the old refusal's words, no `commands`, "b13 does not
+  derive"). The five scenarios, against the base's product sources built with the new spec: A2
+  (ii) and A3 stopped at the arrow lock ("lock an axis (→ ← ↑) or move the pointer the way to
+  go"), A6 and A14 (A6) at the core's refusal ("b1 is not mirrored and the plane does not map it
+  onto itself"), A15 at the log's missing commands. The stretch itself failed first in the core
+  tests, and in the app as the integration measured it (the crossed rails moved whole).
