@@ -1,5 +1,7 @@
+import type { SectionCore } from "#catalog/sections/generators/index.ts";
 import { compareIds } from "../ids.ts";
 import { QUANTUM, quantize } from "../quantum.ts";
+import { tapDrill, tapFit, threadPitch } from "../threads.ts";
 import { TOL } from "../tolerances.ts";
 import type { Ctx } from "./context.ts";
 import type { DerivedBar, EndHoleOp, EndTapOp } from "./derive.ts";
@@ -16,12 +18,14 @@ type EndTap = EndTapOp | (EndHoleOp & { thread: string });
  * or a splice's) or a tapped end hole (§4.5, G31), must stand on one of its section's cores, its
  * centre within `TOL.len` of the core's; else it is a `machining` error on the bar naming the
  * end, the place and the nearest cores (each of those at the least distance), one for each place,
- * with the connections that made the taps there. A drilled end hole is not a tap and is not
- * checked.
+ * with the connections that made the taps there. On a core, the tap must fit it (`fit`, below):
+ * an M16 on an 80x80's Ø5 corner hole is on a core and still an error. A drilled end hole is not a
+ * tap and is not checked.
  *
- * Only a generator's cores are known (a `tslot`'s `bores`). A section that gives none, drawn,
- * traced, a box or a generator given no bores, cannot be checked: an info on the bar names its
- * tapped ends. A pattern copy's bar is its template's, which reports.
+ * A section's cores are a `tslot` generator's `bores` or a drawn section's `cores` (§3.5). A
+ * section that gives none, a box, a generator given no bores or a drawn section that names none,
+ * cannot be checked: an info on the bar names its tapped ends. A pattern copy's bar is its
+ * template's, which reports.
  */
 export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void {
   for (const id of [...bars.keys()].sort(compareIds)) {
@@ -58,8 +62,12 @@ export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void 
       const [x, y] = t.off ?? [0, 0];
       const far = cores.map(([cx, cy]) => Math.hypot(x - cx, y - cy));
       const least = Math.min(...far);
-      if (least <= TOL.len) continue;
       const by = [...new Set(group.map((o) => o.by))].sort(compareIds);
+      if (least <= TOL.len) {
+        const core = section.cores[far.indexOf(least)] as SectionCore;
+        fit(ctx, id, sectionId, opText(b, t), by, t.thread, core.d_mm);
+        continue;
+      }
       const nearest = cores
         .filter((_, i) => (far[i] as number) - least <= TOL.len)
         .sort((a, c) => a[0] - c[0] || a[1] - c[1])
@@ -76,6 +84,42 @@ export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void 
       );
     }
   }
+}
+
+/**
+ * A tap on a core must fit it (`tapFit`): a core wider than the thread's largest minor diameter
+ * (6H) leaves a shallow thread, and a tap drill more than one pitch over the core drills away wall
+ * the section does not state. Either is a `machining` error; a thread with no tap drill or 6H
+ * tolerance here is an info, its place checked and its fit not.
+ */
+function fit(
+  ctx: Ctx,
+  bar: string,
+  sectionId: string,
+  what: string,
+  by: string[],
+  thread: string,
+  d: number,
+): void {
+  const f = tapFit(thread, d);
+  const core = `the Ø${mm(d)} core of ${sectionId}`;
+  if (f === undefined) {
+    ctx.d.info(
+      "machining",
+      bar,
+      `${what} (${by.join(", ")}) is on ${core}; its fit is not checked: AluKit has no tap drill and 6H tolerance for ${thread}`,
+      { refs: by },
+    );
+    return;
+  }
+  if (f.fits) return;
+  const why =
+    f.why === "core-wide"
+      ? `the core is wider than ${thread}'s largest minor diameter, ${f.limit_mm.toFixed(3)} (6H), so the thread would be shallow`
+      : `${thread}'s tap drill, ${mm(tapDrill(thread) as number)}, would drill it up ${mm((tapDrill(thread) as number) - d)}, more than one pitch (${mm(threadPitch(thread) as number)})`;
+  ctx.d.error("machining", bar, `${what} (${by.join(", ")}) does not fit ${core} it is on: ${why}`, {
+    refs: by,
+  });
 }
 
 const q = (x: number) => quantize(x, QUANTUM.len_mm);

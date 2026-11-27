@@ -327,6 +327,53 @@ describe("an end tap on its section's cores (§5.5)", () => {
     expect(machining(derive(raw, on))).toEqual([]);
   });
 
+  it("is a machining error where a tap on a core does not fit it, and an info where it cannot tell", async () => {
+    // An M8 on one of TS80's Ø13.7 cores: 13.7 is wider than M8's largest minor diameter, 6.647 +
+    // 0.265 = 6.912 (6H), so the thread would be shallow.
+    const p = await project("G34");
+    const raw = mergePatch(p.raw, {
+      bars: { b3: null },
+      connections: { c1: { connector: "test-stud:TAP-AT" }, c2: null },
+    });
+    const at = (thread: string) =>
+      derive(
+        raw,
+        withTapAt(p.items, "test-stud:TAP-AT", [
+          { op: "end-tap", on: "butting", thread, at_mm: [[20, 20]] },
+        ]),
+      );
+    expect(errors(at("M8"))).toEqual([["machining", "b2"]]);
+    expect(machining(at("M8"))).toEqual([
+      [
+        "error",
+        "b2",
+        ["c1"],
+        "the tap M8 in end a at x 20.00, y 20.00 from the centre (c1) does not fit the Ø13.70 core of test-stud:TS80 it is on: the core is wider than M8's largest minor diameter, 6.912 (6H), so the thread would be shallow",
+      ],
+    ]);
+    // An M20 there: its tap drill 17.50 would take 3.80 off the core, more than its 2.50 pitch.
+    expect(machining(at("M20"))).toEqual([
+      [
+        "error",
+        "b2",
+        ["c1"],
+        "the tap M20 in end a at x 20.00, y 20.00 from the centre (c1) does not fit the Ø13.70 core of test-stud:TS80 it is on: M20's tap drill, 17.50, would drill it up 3.80, more than one pitch (2.50)",
+      ],
+    ]);
+    // A thread with no tap drill here: on a core, so the place is right; the fit is not judged.
+    expect(errors(at("1/2-13 UNC"))).toEqual([]);
+    expect(machining(at("1/2-13 UNC"))).toEqual([
+      [
+        "info",
+        "b2",
+        ["c1"],
+        "the tap 1/2-13 UNC in end a at x 20.00, y 20.00 from the centre (c1) is on the Ø13.70 core of test-stud:TS80; its fit is not checked: AluKit has no tap drill and 6H tolerance for 1/2-13 UNC",
+      ],
+    ]);
+    // The M16 the core is sized for fits it, drilled up 0.30 to its 14.00 tap drill.
+    expect(machining(at("M16"))).toEqual([]);
+  });
+
   it("checks a splice's taps in both spliced ends, and a through bar's end taps", async () => {
     // One stud at (10, 5): in b2's end b and b3's end a, each in its own section. TS80's nearest
     // core is (20, 20), √(10² + 15²) = 18.03 off.
