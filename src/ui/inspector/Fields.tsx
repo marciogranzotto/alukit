@@ -3,7 +3,7 @@ import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import { Errors } from "../Feedback.tsx";
 import { shown } from "../focus.ts";
 import type { Model } from "../model.ts";
-import { busy, type CommandOutcome, model, sendCommands, summary } from "../store.ts";
+import { busy, type CommandOutcome, sendCommands, summary } from "../store.ts";
 import { resolveTargets } from "../targets.ts";
 import type { Command } from "./remove.ts";
 import { valueWords } from "./words.ts";
@@ -170,6 +170,3 @@ export function WordsRow({ label, v, fields }: { label: string; v: unknown; fiel
     </Row>
   );
 }
-
-/** The drawn revision, for a field that must not act on a model it was not drawn from. */
-export const drawnRev = () => model.peek()?.rev;
