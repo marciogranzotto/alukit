@@ -5,7 +5,7 @@ import { Errors } from "../Feedback.tsx";
 import { select } from "../focus.ts";
 import type { Model } from "../model.ts";
 import { busy, type CommandOutcome, sendCommands, summary } from "../store.ts";
-import { typedValue } from "../tools.ts";
+import { typedValue } from "../tools/typed.ts";
 
 /**
  * The params (design §8, §4.2: a number, an expression, or a valued field), in the project panel

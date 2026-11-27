@@ -33,6 +33,20 @@ export function newDiagnostics(
   );
 }
 
+/**
+ * Every diagnostic an applied step added (U6: a step that made one connection may break another
+ * bar), those that name one of `ids` first, so what the step was about leads and nothing it
+ * caused elsewhere is hidden.
+ */
+export function stepDiagnostics(
+  outcome: CommandOutcome | undefined,
+  ids: readonly string[],
+): Diagnostic[] {
+  if (!outcome?.ok) return [];
+  const own = newDiagnostics(outcome, ids);
+  return [...own, ...outcome.diagnostics.filter((d) => !own.includes(d))];
+}
+
 export function Diagnostics({ list }: { list: readonly Diagnostic[] }) {
   if (list.length === 0) return null;
   return (

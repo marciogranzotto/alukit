@@ -77,7 +77,9 @@ test("a face connection made with the connect tool derives as the CLI's", async 
   await panel.getByTestId("connect-apply").click();
   await waitDrawn(page, 2);
   await expect(panel.getByTestId("connect-outcome")).toContainText("made c36");
-  await expect(panel.getByTestId("new-diagnostics")).toHaveCount(0);
+  // Derive finds nothing wrong with it. The panel shows every diagnostic the step added (U6),
+  // here one note: the screw's seats go unchecked, which names c36 beside c35.
+  await expect(panel.getByTestId("new-diagnostics").locator("li:not(.info)")).toHaveCount(0);
 
   // The same connection through alukit do, on another copy of the cart.
   const other = await scratchProject("cart");
@@ -179,4 +181,30 @@ test("a pivot carries the ends picked, pointing them at itself in one step", asy
   await expect(page.getByTestId("undo")).toHaveText(
     `Undo · you: ${await lastStepWords(served.dir)}`,
   );
+});
+
+test("a connection that breaks another bar's end shows that error in the panel (U6)", async ({
+  page,
+}) => {
+  // The CLI-built base frame: c1 butts b1.b (the front left post's top) through b5.
+  served = await serve("base-frame/cli");
+  await openTab(page, served, 0);
+  await page.getByTestId("tool-connect").click();
+  const panel = page.getByTestId("panel-connect");
+  // A second butt claiming b1.b, through the left top rail b7: b1.b then has two providers.
+  await click(page, [20, 300, 900], /^bar b7$/);
+  await click(page, [20, 0, 780], /^end b1\.b$/);
+  // A second through bar is not a butt's: the tool leaves it out and says why (U38).
+  await hover(page, [600, 40, 900], /^bar b5: a butt has one through bar/);
+  await page.mouse.click(...(await hover(page, [600, 40, 900], /^bar b5/)));
+  await expect(panel.getByTestId("connect-picks").locator("li")).toHaveCount(2);
+  await panel.getByTestId("connect-apply").click();
+  await waitDrawn(page, 1);
+  await expect(panel.getByTestId("connect-outcome")).toContainText("made c7");
+  // The error is on b1.b, not on the new connection: before, the panel left it out.
+  await expect(
+    panel
+      .getByTestId("new-diagnostics")
+      .locator("li.error", { hasText: "b1.b has 2 providers (c1, c7)" }),
+  ).toHaveCount(1);
 });

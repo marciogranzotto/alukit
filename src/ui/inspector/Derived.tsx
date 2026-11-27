@@ -1,14 +1,14 @@
 import { useState } from "preact/hooks";
-import { selection } from "./focus.ts";
-import type { Model } from "./model.ts";
-import { ProjectPanel } from "./shell/ProjectPanel.tsx";
-import { model } from "./store.ts";
+import { EntityChips } from "../common/EntityChip.tsx";
+import { kg, mm } from "../format.ts";
+import type { Model } from "../model.ts";
+import { endWords, isObject, pointWords, valueWords } from "./words.ts";
 
 /**
- * Properties of the selection (design §8, right): the entity's fields as written, its derived
- * values (read-only: cut, centre, end angles, mass), and its catalog item's numbers, each with a
- * provenance popover (§1, principle 3: every number carries its provenance). A part made from
- * one of the project's own items (§4.8) shows that item as written, and its mass.
+ * What derive says about the selection, read-only (design §8; §1, principle 3: every number
+ * carries its provenance): a bar's cut, centre and design lengths, its ends and mass; a part's
+ * station and datum; the catalog item's numbers, each valued field with its provenance behind a
+ * click; a project item as written, with its mass. Owner: S5.
  */
 
 type O = Record<string, unknown>;
@@ -20,7 +20,7 @@ const SRC: Record<string, string> = {
   calc: "computed",
 };
 
-interface Prov {
+export interface Prov {
   src?: string;
   ref?: string;
   read?: string;
@@ -29,20 +29,25 @@ interface Prov {
   high?: number;
 }
 
-function isObject(x: unknown): x is O {
-  return typeof x === "object" && x !== null && !Array.isArray(x);
-}
-
 function isValued(x: unknown): x is O & { v: number } {
   return isObject(x) && typeof x.v === "number";
 }
 
-const fmt = (x: number) => (Number.isInteger(x) ? String(x) : String(Math.round(x * 1000) / 1000));
+/** A plain number as the inspector writes one that has no quantity of its own. */
+export const fmt = (x: number) =>
+  Number.isInteger(x) ? String(x) : String(Math.round(x * 1000) / 1000);
+
+/** A number in its unit's form: lengths as the cut list writes them, masses as the BOM. */
+function numText(value: number, unit: string | undefined): string {
+  if (unit === "mm") return `${mm(value)} mm`;
+  if (unit === "kg") return `${kg(value)} kg`;
+  return `${fmt(value)}${unit ? ` ${unit}` : ""}`;
+}
 
 /** A number with its provenance behind a click (§3.2's valued fields). */
-function Num({ value, unit, prov }: { value: number; unit?: string; prov?: Prov }) {
+export function ProvNum({ value, unit, prov }: { value: number; unit?: string; prov?: Prov }) {
   const [open, setOpen] = useState(false);
-  const text = `${fmt(value)}${unit ? ` ${unit}` : ""}`;
+  const text = numText(value, unit);
   if (!prov) return <span class="num">{text}</span>;
   return (
     <span class="num prov">
@@ -52,7 +57,7 @@ function Num({ value, unit, prov }: { value: number; unit?: string; prov?: Prov 
         aria-expanded={open}
         onClick={() => setOpen(!open)}
         onBlur={() => setOpen(false)}
-        title="provenance"
+        title="Where this number comes from"
       >
         {text}
       </button>
@@ -74,7 +79,7 @@ function Num({ value, unit, prov }: { value: number; unit?: string; prov?: Prov 
 }
 
 /** The unit a field's suffix names (§2), as printed: `Ix_mm4` gives mm⁴, `mass_kg_per_m` kg/m. */
-function unitOf(key: string): string | undefined {
+export function unitOf(key: string): string | undefined {
   const m = /_(mm4|mm3|mm2|mm|m|N|kN|Nmm|Nm|MPa|kg_per_m3|kg_per_m|kg|deg|per_K|J|km)$/.exec(key);
   if (!m) return undefined;
   return (m[1] as string)
@@ -83,6 +88,13 @@ function unitOf(key: string): string | undefined {
     .replace("mm3", "mm³")
     .replace("mm2", "mm²")
     .replace("deg", "°");
+}
+
+/** A field's name in words: its unit suffix off, underscores as spaces (`Ix_mm4` → `Ix`). */
+function keyWords(key: string): string {
+  return key
+    .replace(/_(mm4|mm3|mm2|mm|m|N|kN|Nmm|Nm|MPa|kg_per_m3|kg_per_m|kg|deg|per_K|J|km)$/, "")
+    .replace(/_/g, " ");
 }
 
 /** An item's numbers, nested keys dotted, each valued field with its own provenance. */
@@ -102,28 +114,8 @@ function itemNumbers(item: O): { key: string; value: number; prov: Prov }[] {
   return out;
 }
 
-function Value({ v }: { v: unknown }) {
-  if (typeof v === "string" || typeof v === "number" || typeof v === "boolean")
-    return <code>{String(v)}</code>;
-  return <code>{JSON.stringify(v)}</code>;
-}
-
-/** The document map an id lives in, by its letter prefix (§2). */
-const KIND_OF_PREFIX: Readonly<Record<string, string>> = {
-  n: "nodes",
-  b: "bars",
-  r: "runs",
-  c: "connections",
-  p: "parts",
-  pt: "patterns",
-};
-
-function kindOf(id: string): string {
-  if (id.startsWith("project:")) return "items";
-  return KIND_OF_PREFIX[/^([A-Za-z]+)\d/.exec(id)?.[1] ?? ""] ?? "";
-}
-
-function Item({ m, id }: { m: Model; id: string }) {
+/** A catalog item's numbers, as the lock pins them, each with its provenance. */
+export function Item({ m, id }: { m: Model; id: string }) {
   const item = m.items[id];
   if (!item) return null;
   return (
@@ -136,9 +128,11 @@ function Item({ m, id }: { m: Model; id: string }) {
         <tbody>
           {itemNumbers(item).map((r) => (
             <tr key={r.key}>
-              <th>{r.key}</th>
+              <th scope="row" title={r.key}>
+                {keyWords(r.key)}
+              </th>
               <td>
-                <Num value={r.value} unit={unitOf(r.key)} prov={r.prov} />
+                <ProvNum value={r.value} unit={unitOf(r.key)} prov={r.prov} />
               </td>
             </tr>
           ))}
@@ -159,11 +153,11 @@ function holeCount(v: unknown): number {
  * A project item (§4.8) as the document writes it, with its mass: computed from its material for
  * a plate or a bent angle, entered for a placeholder or a generic item.
  */
-function ProjectItem({ m, id, part }: { m: Model; id: string; part: string }) {
+export function ProjectItem({ m, id, part }: { m: Model; id: string; part?: string }) {
   const local = id.slice("project:".length);
   const def = ((isObject(m.doc.items) ? m.doc.items : {}) as O)[local];
   if (!isObject(def)) return null;
-  const view = m.display.parts[part];
+  const view = part !== undefined ? m.display.parts[part] : undefined;
   return (
     <section data-testid="project-item">
       <h3>
@@ -172,14 +166,14 @@ function ProjectItem({ m, id, part }: { m: Model; id: string; part: string }) {
       </h3>
       <table class="kv">
         <tbody>
-          {def.mass_kg === undefined && (
+          {def.mass_kg === undefined && part !== undefined && (
             <tr>
-              <th>mass</th>
+              <th scope="row">mass</th>
               <td>
                 {view?.mass_kg !== undefined ? (
-                  <Num value={view.mass_kg} unit="kg" prov={{ src: view.mass_src }} />
+                  <ProvNum value={view.mass_kg} unit="kg" prov={{ src: view.mass_src }} />
                 ) : (
-                  <span class="warn">not computed: see the checks</span>
+                  <span class="warn">not computed: see the problems</span>
                 )}
               </td>
             </tr>
@@ -188,16 +182,16 @@ function ProjectItem({ m, id, part }: { m: Model; id: string; part: string }) {
             .filter(([k]) => k !== "name")
             .map(([k, v]) => (
               <tr key={k}>
-                <th>{k}</th>
+                <th scope="row">{keyWords(k)}</th>
                 <td>
                   {k === "holes" ? (
-                    `${holeCount(v)}, on the Machining tab`
+                    `${holeCount(v)}, on the Machining sheet`
                   ) : typeof v === "number" ? (
-                    <Num value={v} unit={unitOf(k)} />
+                    <ProvNum value={v} unit={unitOf(k)} />
                   ) : isValued(v) ? (
-                    <Num value={v.v} unit={unitOf(k)} prov={v as Prov} />
+                    <ProvNum value={v.v} unit={unitOf(k)} prov={v as Prov} />
                   ) : (
-                    <Value v={v} />
+                    valueWords(v)
                   )}
                 </td>
               </tr>
@@ -208,9 +202,13 @@ function ProjectItem({ m, id, part }: { m: Model; id: string; part: string }) {
   );
 }
 
-function BarDerived({ m, id }: { m: Model; id: string }) {
+/**
+ * A bar's derived lengths, ends and mass, read-only. `ends` is false where the bar's fields
+ * already say what claims each end (a pattern copy has no fields, so its derived values say it).
+ */
+export function BarDerived({ m, id, ends = true }: { m: Model; id: string; ends?: boolean }) {
   const b = m.derived.bars[id];
-  if (!b) return <p class="warn">Does not derive: see the checks.</p>;
+  if (!b) return <p class="warn">Does not derive: see the problems.</p>;
   const view = m.display.bars[id];
   const item = m.items[b.item] ?? {};
   const pm = item.mass_kg_per_m;
@@ -224,8 +222,12 @@ function BarDerived({ m, id }: { m: Model; id: string }) {
     prov.note = `centre-line length × ${fmt(kgm)} kg/m${prov.note ? `; ${prov.note}` : ""}`;
   }
   const end = (e: "a" | "b") => {
-    const x = b.ends[e];
-    return `${x.angle_deg === 0 ? "square" : `${fmt(x.angle_deg)}°`}, by ${x.by}${x.move_mm !== 0 ? `, moved ${fmt(x.move_mm)} mm` : ""}`;
+    const w = endWords(m, id, e);
+    return (
+      <>
+        {w.text} {w.refs.length > 0 && <EntityChips ids={w.refs} />}
+      </>
+    );
   };
   return (
     <section>
@@ -233,160 +235,123 @@ function BarDerived({ m, id }: { m: Model; id: string }) {
       <table class="kv" data-testid="derived">
         <tbody>
           <tr>
-            <th>cut</th>
+            <th scope="row">cut</th>
             <td>
-              <Num value={b.cut_mm} unit="mm" />
+              <ProvNum value={b.cut_mm} unit="mm" />
             </td>
           </tr>
           <tr>
-            <th>centre</th>
+            <th scope="row">centre</th>
             <td>
-              <Num value={b.centre_mm} unit="mm" />
+              <ProvNum value={b.centre_mm} unit="mm" />
             </td>
           </tr>
           {b.short_mm !== b.cut_mm && (
             <tr>
-              <th>short</th>
+              <th scope="row">short</th>
               <td>
-                <Num value={b.short_mm} unit="mm" />
+                <ProvNum value={b.short_mm} unit="mm" />
               </td>
             </tr>
           )}
           {b.span_mm !== undefined && b.span_mm !== b.cut_mm && (
             <tr>
-              <th>span</th>
+              <th scope="row">span</th>
               <td>
-                <Num value={b.span_mm} unit="mm" />
+                <ProvNum value={b.span_mm} unit="mm" />
               </td>
             </tr>
           )}
           <tr>
-            <th>design length</th>
+            <th scope="row">design length</th>
             <td>
-              <Num value={b.len_mm} unit="mm" />
+              <ProvNum value={b.len_mm} unit="mm" />
             </td>
           </tr>
           <tr>
-            <th>end a</th>
-            <td>{end("a")}</td>
+            <th scope="row">from</th>
+            <td>
+              {pointWords(b.a)} to {pointWords(b.b)}
+            </td>
           </tr>
+          {ends && (
+            <>
+              <tr>
+                <th scope="row">end a</th>
+                <td>{end("a")}</td>
+              </tr>
+              <tr>
+                <th scope="row">end b</th>
+                <td>{end("b")}</td>
+              </tr>
+            </>
+          )}
           <tr>
-            <th>end b</th>
-            <td>{end("b")}</td>
-          </tr>
-          <tr>
-            <th>mass</th>
+            <th scope="row">mass</th>
             <td>
               {view?.mass_kg !== undefined ? (
-                <Num value={view.mass_kg} unit="kg" prov={prov} />
+                <ProvNum value={view.mass_kg} unit="kg" prov={prov} />
               ) : (
                 <span class="warn">no mass per metre</span>
               )}
             </td>
           </tr>
-          {b.pattern && (
-            <tr>
-              <th>copy of</th>
-              <td>{b.pattern}</td>
-            </tr>
-          )}
         </tbody>
       </table>
     </section>
   );
 }
 
-function OtherDerived({ m, id }: { m: Model; id: string }) {
-  const kind = kindOf(id);
-  const rows: [string, unknown][] = [];
-  if (kind === "nodes" && m.derived.nodes[id]) rows.push(["position", m.derived.nodes[id]]);
-  if (kind === "runs" && m.derived.runs[id])
-    rows.push(["length", `${m.derived.runs[id]?.len_mm} mm`]);
+/** What derive says about a part, a node, a run or a connection, in words. */
+export function OtherDerived({ m, id }: { m: Model; id: string }) {
+  const rows: [string, string, string[]][] = [];
+  const node = m.derived.nodes[id];
+  if (node) rows.push(["position", pointWords(node), []]);
+  const run = m.derived.runs[id];
+  if (run) rows.push(["length", `${mm(run.len_mm)} mm, bars ${run.bars.join(", ")}`, run.bars]);
   const p = m.derived.parts[id];
   if (p) {
-    if (p.unplaced) rows.push(["counted, not drawn", `${p.qty} (${p.why})`]);
+    if (p.unplaced) rows.push(["counted, not drawn", `${p.qty ?? 1}: ${p.why ?? ""}`, []]);
     else {
-      if (p.bar !== undefined) rows.push(["on", `${p.bar} at ${p.s_mm} mm`]);
-      rows.push(["datum", p.datum], ["point", p.point]);
+      if (p.bar !== undefined && p.s_mm !== undefined) {
+        rows.push(["on", `${p.bar} at ${mm(p.s_mm)} mm`, [p.bar]]);
+      }
+      if (p.datum !== undefined) rows.push(["datum", p.datum, []]);
+      if (p.point) rows.push(["at", pointWords(p.point), []]);
     }
   }
   const f = m.derived.fastenings[id];
-  if (f) rows.push(["fastening", f.fastening], ["stations", f.stations.length]);
-  for (const h of m.derived.hardware.filter((x) => x.source === id))
-    rows.push([h.item, `× ${h.qty}`]);
+  if (f) {
+    rows.push([
+      "fastening",
+      `${f.fastening}, ${f.stations.length} station${f.stations.length === 1 ? "" : "s"}`,
+      [],
+    ]);
+  }
+  for (const h of m.derived.hardware.filter((x) => x.source === id)) {
+    const name = m.items[h.item]?.name;
+    rows.push([
+      "hardware",
+      `${h.item}${typeof name === "string" ? ` ${name}` : ""} × ${h.qty}`,
+      [],
+    ]);
+  }
   if (rows.length === 0) return null;
   return (
     <section>
       <h3>Derived</h3>
-      <table class="kv">
+      <table class="kv" data-testid="derived">
         <tbody>
-          {rows.map(([k, v]) => (
-            <tr key={k}>
-              <th>{k}</th>
+          {rows.map(([k, v, refs], i) => (
+            <tr key={`${k}${i}`}>
+              <th scope="row">{k}</th>
               <td>
-                <Value v={v} />
+                {v} {refs.length > 0 && <EntityChips ids={refs} />}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
     </section>
-  );
-}
-
-export function Properties() {
-  const m = model.value;
-  const sel = [...selection.value];
-  if (!m) return <div class="panel-empty">No model yet.</div>;
-  // Nothing selected: the project panel (D-UX-4), S2's, in the inspector's place.
-  if (sel.length === 0) return <ProjectPanel />;
-  if (sel.length > 1) {
-    return (
-      <div class="props" data-testid="properties">
-        <h2>{sel.length} selected</h2>
-        <p class="ids">{sel.join(", ")}</p>
-      </div>
-    );
-  }
-  const id = sel[0] as string;
-  const kind = kindOf(id);
-  const written = ((m.doc[kind] ?? {}) as O)[id];
-  const fields = isObject(written)
-    ? written
-    : written === undefined
-      ? undefined
-      : { value: written };
-  const barItem = m.derived.bars[id]?.item ?? m.derived.parts[id]?.item;
-  return (
-    <div class="props" data-testid="properties">
-      <h2>
-        {id}
-        {isObject(written) && typeof written.label === "string" && (
-          <span class="sub"> {written.label}</span>
-        )}
-      </h2>
-      {fields ? (
-        <section>
-          <h3>Fields</h3>
-          <table class="kv">
-            <tbody>
-              {Object.entries(fields).map(([k, v]) => (
-                <tr key={k}>
-                  <th>{k}</th>
-                  <td>
-                    <Value v={v} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ) : (
-        <p class="sub">A pattern copy: derive makes it from its template.</p>
-      )}
-      {kind === "bars" ? <BarDerived m={m} id={id} /> : <OtherDerived m={m} id={id} />}
-      {barItem && <Item m={m} id={barItem} />}
-      {barItem?.startsWith("project:") && <ProjectItem m={m} id={barItem} part={id} />}
-    </div>
   );
 }

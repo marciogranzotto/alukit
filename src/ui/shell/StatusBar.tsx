@@ -4,7 +4,7 @@ import { shown } from "../focus.ts";
 import { problemList } from "../problems/source.ts";
 import { ago, who, whoWhat } from "../steps.ts";
 import { connection, heardAt, log, model, notice, summary } from "../store.ts";
-import { toolPrompt } from "../tools.ts";
+import { toolPrompt } from "../tools/state.ts";
 import { presence, stepToasts } from "./presence.ts";
 
 /**

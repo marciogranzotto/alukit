@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TOOLS } from "../tools.ts";
+import { TOOLS } from "../tools/state.ts";
 import { ICON_NAMES } from "./Icons.tsx";
 
 /** The icons cover what the viewport's rail and tool bar place (docs/ux/visual-design.md §4.5). */

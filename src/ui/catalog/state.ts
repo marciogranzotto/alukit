@@ -4,7 +4,7 @@ import { get } from "../api.ts";
 import { type PaletteItem, palette } from "../palette.ts";
 import { readPref, writePref } from "../shell/prefs.ts";
 import { summary } from "../store.ts";
-import { activeTool, type ToolName } from "../tools.ts";
+import { activeTool, type ToolName } from "../tools/state.ts";
 
 /**
  * The catalog's state, kept while the overlay is closed (D-UX-1, S2.3; U15: switching away used

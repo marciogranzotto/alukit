@@ -5,7 +5,6 @@ import {
   endUnder,
   nextAnchor,
   nextRoll,
-  parseLength,
   previewPlacement,
   typedEnd,
   writtenPoint,
@@ -430,10 +429,60 @@ describe("the draw gesture (§8)", () => {
     const top = { p: [0, 0, 900] as V3, written: [0, 0, "H"], label: "" };
     expect(typedEnd(top, [400, 0, 900], 1200)?.written).toEqual([1200, 0, "H"]);
     expect(typedEnd(start, [0, 0, 0], 900)).toBeUndefined();
-    expect(parseLength("900")).toBe(900);
-    expect(parseLength("12.5")).toBe(12.5);
-    expect(parseLength("0")).toBeUndefined();
-    expect(parseLength("9x")).toBeUndefined();
+    expect(typedEnd(start, [0, 0, 437], 0)).toBeUndefined();
+  });
+
+  it("writes a typed expression into the coordinate along the axis, so its params drive it", () => {
+    // From an inline point: the coordinate is the start's plus the expression.
+    const top = { p: [0, 0, 900] as V3, written: [0, 0, "H"], label: "" };
+    expect(typedEnd(top, [400, 0, 900], 620, "W / 2 + 20")?.written).toEqual([
+      "W / 2 + 20",
+      0,
+      "H",
+    ]);
+    expect(typedEnd(top, [0, 0, 400], 620, "W / 2 + 20")?.written).toEqual([
+      0,
+      0,
+      "H - (W / 2 + 20)",
+    ]);
+    // From a node: the coordinates it stands at, the expression added along the axis.
+    const node = { p: [100, 0, 0] as V3, written: "n1", label: "" };
+    expect(typedEnd(node, [100, 0, 50], 600, "W")?.written).toEqual([100, 0, "W"]);
+    expect(typedEnd(node, [500, 0, 0], 600, "W")?.written).toEqual(["100 + W", 0, 0]);
+    // A negative length goes the other way; a plain number stays a number.
+    expect(typedEnd(start, [0, 0, 437], -300)).toMatchObject({ p: [0, 0, -300] });
+    expect(typedEnd(start, [0, 0, 437], -300)?.written).toEqual([0, 0, -300]);
+    // Off the axes, the end is written as the coordinates it comes to.
+    expect(typedEnd(start, [300, 400, 0], 500, "W")?.written).toEqual([300, 400, 0]);
+  });
+
+  it("keeps to an axis locked with the arrow keys, level with a point under the pointer", () => {
+    const S = { p: [0, 0, 0] as V3, written: [0, 0, 0], label: "" };
+    // The pointer is up and to the right: unlocked, the line would rise along Z.
+    const base = {
+      ...over(503, 900),
+      project: front.project,
+      free: false,
+      plane: GROUND,
+      doc: {},
+    };
+    expect(endUnder(S, base)).toMatchObject({ axis: "z" });
+    expect(endUnder(S, { ...base, lock: "x" })).toMatchObject({
+      p: [500, 0, 0],
+      written: [500, 0, 0],
+      axis: "x",
+      how: "axis",
+    });
+    const snap = {
+      p: [730, 200, 650] as V3,
+      kind: "point" as const,
+      label: "end b1.b",
+      ref: { kind: "end" as const, bar: "b1", end: "b" as const },
+    };
+    expect(endUnder(S, { ...base, lock: "x", snap })).toMatchObject({
+      p: [730, 0, 0],
+      label: "+x 730 level with end b1.b",
+    });
   });
 
   it("previews the bar where derive places it: the cart's rolled top rail", () => {

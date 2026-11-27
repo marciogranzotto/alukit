@@ -1,7 +1,6 @@
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { describeKeys, keyHelp, letterKeys, onKey, setLetterKeys } from "../keys.ts";
-import { TOOL_KEYS } from "../tools.ts";
 import { Dialog } from "./Dialog.tsx";
 import { showStart } from "./start.ts";
 
@@ -11,54 +10,19 @@ import { showStart } from "./start.ts";
  * start card again, and the switch that turns single-character shortcuts off (WCAG 2.1.4). The
  * top bar's `?` button opens it too, so it is reachable with the shortcuts off. Owner: S2.
  *
- * Some keys are bound by modules whose owners have not described them yet (the tools' letters,
- * the draw gesture, the views): this module describes them meanwhile, the tools' letters read
- * from `TOOL_KEYS` so the list cannot name a letter that does nothing. Each section goes when
- * its owner describes its own keys (docs/ux/contracts.md, "S2 changes").
+ * Some keys are bound by modules whose owners have not described them yet (the views): this
+ * module describes them meanwhile. Each section goes when its owner describes its own keys
+ * (docs/ux/contracts.md, "S2 changes"); the tools and the drawing gesture describe theirs
+ * (src/ui/tools/wiring.ts, S5).
  */
 
 export const helpOpen = signal(false);
 
 export const GUIDE_URL = "https://github.com/marciogranzotto/alukit/blob/main/docs/guide.md";
 
-const TOOL_NAMES: Readonly<Record<string, string>> = {
-  select: "Select",
-  draw: "Draw bar",
-  connect: "Connect",
-  place: "Place part",
-  pattern: "Pattern",
-  measure: "Measure",
-  frame: "Box frame",
-};
-
 /** The keys described here until their owners describe them. */
 function describeOthers(): () => void {
   const offs = [
-    describeKeys({
-      id: "tools",
-      title: "Tools",
-      order: 10,
-      rows: [
-        ...Object.entries(TOOL_KEYS).map(([k, t]) => ({
-          keys: [k.toUpperCase()],
-          does: TOOL_NAMES[t] ?? t,
-        })),
-        { keys: ["Esc"], does: "Step back: the gesture, then the tool, then the selection" },
-      ],
-    }),
-    describeKeys({
-      id: "drawing",
-      title: "While drawing a bar",
-      order: 20,
-      rows: [
-        { keys: ["0–9", "Enter"], does: "Type the length, in mm, and draw the bar" },
-        { keys: ["Backspace"], does: "Take back the last digit typed" },
-        { keys: ["R"], does: "Roll the profile 90°" },
-        { keys: ["A"], does: "Next anchor on the section" },
-        { keys: ["W"], does: "Pick a face as the work plane" },
-        { keys: ["Shift"], does: "Hold to draw off the axes" },
-      ],
-    }),
     describeKeys({
       id: "view",
       title: "View",

@@ -1,23 +1,52 @@
 /*
- * The inspector (design §8, right): the selection's fields, its derived values and its item's
- * numbers, each number with its provenance behind a click. Owner: S5.
+ * The inspector (design §8, right; docs/ux/plan.md S5.3–S5.5): the selection's fields edited in
+ * place, its derived values and its item's numbers with their provenance, the corner inspector
+ * and Delete's dialog. Every colour is a token. Owner: S5.
  */
 
 .props {
-  padding: 8px 10px;
+  padding: var(--sp-4) var(--sp-5);
 }
 
 .props h2 {
   font-size: var(--fs-figure);
-  margin: 0 0 6px;
+  line-height: var(--lh-figure);
+  margin: 0;
 }
 
 .props h3 {
   font-size: var(--fs-small);
-  margin: 12px 0 4px;
+  margin: var(--sp-5) 0 var(--sp-2);
   color: var(--text-2);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.props p {
+  margin: var(--sp-2) 0;
+}
+
+/* The heading: the id and its label, what it is, and Delete at the end */
+.insp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+
+.insp-head h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.insp-head .btn {
+  align-self: center;
+}
+
+.insp-kind {
+  color: var(--text-3);
+  font-size: var(--fs-small);
 }
 
 .ids {
@@ -33,15 +62,89 @@ table.kv th {
   text-align: left;
   font-weight: 400;
   color: var(--text-2);
-  padding: 1px 8px 1px 0;
+  padding: var(--sp-1) var(--sp-4) var(--sp-1) 0;
   vertical-align: top;
   white-space: nowrap;
 }
 
 table.kv td {
-  padding: 1px 0;
+  padding: var(--sp-1) 0;
+  overflow-wrap: anywhere;
 }
 
+/* An editable row: a little more room, its controls at the body's size */
+table.kv.fields th,
+table.kv.fields td {
+  padding-top: var(--sp-2);
+  padding-bottom: var(--sp-2);
+  vertical-align: middle;
+}
+
+.insp-select {
+  max-width: 100%;
+  min-height: 24px;
+  background: var(--bg-well);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+}
+
+.insp-input {
+  background: var(--bg-well);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 0 var(--sp-2);
+  min-height: 24px;
+  max-width: 100%;
+  font: inherit;
+}
+
+.insp-input:disabled {
+  opacity: 0.6;
+}
+
+/* The row a problem's Show points at (focus.shown.field) */
+table.kv tr.pointed th,
+table.kv tr.pointed td {
+  background: var(--sel-wash);
+}
+
+table.kv tr.pointed th {
+  box-shadow: inset 3px 0 0 var(--sel);
+  padding-left: var(--sp-3);
+}
+
+table.kv tr.row-errors td {
+  padding-top: 0;
+}
+
+table.kv .btn {
+  margin-left: var(--sp-2);
+}
+
+.props .link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--act);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font: inherit;
+}
+
+.props .link + .link {
+  margin-left: var(--sp-3);
+}
+
+/* Problems on the selection, first */
+.insp-problems ul.problems {
+  margin: 0;
+  padding: 0;
+}
+
+/* Provenance: a number whose source is behind a click */
 .num.prov {
   position: relative;
 }
@@ -50,6 +153,8 @@ table.kv td {
   background: none;
   border: none;
   padding: 0;
+  color: inherit;
+  font: inherit;
   cursor: help;
   text-decoration: underline dotted;
   text-underline-offset: 3px;
@@ -62,4 +167,114 @@ table.kv td {
 .num.prov .prov-src,
 .num.prov .prov-meas {
   text-decoration-color: var(--ready);
+}
+
+/* Replace a profile */
+.replace-form {
+  display: grid;
+  gap: var(--sp-3);
+  margin: var(--sp-3) 0;
+  padding: var(--sp-4);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+
+.replace-form .cd-row {
+  display: grid;
+  grid-template-columns: 5.5em minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.replace-scope {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.replace-scope legend {
+  color: var(--text-2);
+  padding: 0;
+  margin-bottom: var(--sp-2);
+}
+
+/* The corner inspector */
+.corner-state {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--text-2);
+}
+
+.corner-ends,
+.corner-connections,
+.arrangements,
+.delete-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.arrangements {
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.arrangement {
+  display: grid;
+  gap: var(--sp-1);
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--bg-raised);
+  color: var(--text-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  font: inherit;
+}
+
+.arrangement:hover {
+  border-color: var(--line-strong);
+}
+
+.arrangement.chosen {
+  border-color: var(--act-line);
+  box-shadow: inset 0 0 0 1px var(--act-line);
+}
+
+.arrangement-title {
+  font-weight: 600;
+}
+
+.arrangement-cuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: var(--lh-mono);
+  color: var(--text-2);
+}
+
+.arrangement-cuts .moved {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+/* Delete's dialog: what goes, in words */
+.delete-list {
+  margin: 0 0 var(--sp-5);
+  padding-left: var(--sp-5);
+  list-style: disc;
+  display: block;
+}
+
+.delete-list li + li {
+  margin-top: var(--sp-1);
 }

@@ -49,6 +49,13 @@ const DRAW = {
       <path d="M4 8.2L2 10l2 1.8M12 8.2l2 1.8-2 1.8" />
     </>
   ),
+  // The box frame tool (S5.7): a frame's rings and posts, seen from a corner
+  frame: (
+    <>
+      <path d="M2 5.5h9v8H2zM2 5.5l3-3h9l-3 3M14 2.5v8l-3 3" />
+      <path d="M5 2.5v8h9M5 10.5l-3 3" opacity="0.5" />
+    </>
+  ),
   // Views: a cube with the face looked at filled
   iso: CUBE,
   top: (

@@ -1,3 +1,4 @@
+import type { DryRun } from "./client/dryrun.ts";
 import type { Model } from "./model.ts";
 
 /** Models for the app's unit tests, which run in Node with no server. */
@@ -24,6 +25,37 @@ export async function viewOf(dir: string, ...batches: readonly unknown[][]): Pro
   } finally {
     await host.close();
   }
+}
+
+/**
+ * A scratch project held open as the server holds it, for tests that ask what a step would do:
+ * `view()` is the drawn view model, `dry(commands)` a dry run as the app's client reads it
+ * (src/ui/client/dryrun.ts), `apply(commands)` a step. Close it when done.
+ */
+export async function hostOf(dir: string): Promise<{
+  view(): Model;
+  dry(commands: readonly unknown[]): Promise<DryRun>;
+  apply(commands: readonly unknown[]): Promise<void>;
+  close(): Promise<void>;
+}> {
+  const { ProjectHost } = await import("../server/host.ts");
+  const { viewModel } = await import("../server/view.ts");
+  const { dryRunOf } = await import("./client/dryrun.ts");
+  const host = await ProjectHost.open({ dir, watch: false });
+  return {
+    view: () => JSON.parse(JSON.stringify(viewModel(host.snapshot()))) as Model,
+    async dry(commands) {
+      const a = await host.dryRun({ commands: commands as never, source: "test" });
+      const read = dryRunOf(a.ok ? 200 : 422, JSON.parse(JSON.stringify(a)));
+      if (!read.ok) throw new Error(read.why);
+      return read.value;
+    },
+    async apply(commands) {
+      const r = await host.commands({ commands: commands as never, source: "test" });
+      if (!r.ok) throw new Error(`refused: ${JSON.stringify(r)}`);
+    },
+    close: () => host.close(),
+  };
 }
 
 export const SMALL = {
