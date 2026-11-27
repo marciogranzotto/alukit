@@ -117,3 +117,34 @@ now serves each test's in the test (`served = await serve(...)` first), where it
     section, orthographic, the tree filtered, read-only, an empty project) equal today's to the
     pixel after each S0 step, but for rounded corners' antialiasing, which also differs between
     two runs of today's build.
+
+## S4 changes
+
+S4 ([s4-decisions.md](s4-decisions.md)) changed these contracts. Each adds, except the sheets' ids,
+which S0 listed as the sheets' present set and which the plan's own grouping (D-UX-2) replaces.
+
+- **Sheet ids** are now `cutlist` (10), `bom` (20), `machining` (30), `order` (40, "Order & costs",
+  with the costs inside), `problems` (50) and `records` (60), then S2's `params` (80). `checks`,
+  `open-items`, `costs`, `decisions` and `history` no longer register; their sections keep their
+  `data-testid`s inside Problems and Records. `badge` returns a figure or a status.
+- **Tokens**: values changed, names did not. Added: `--act-ink`, `--tip-ink`, `--hover-wash`,
+  `--warn-wash`, `--ready-wash`, `--info-wash`. `--mark-active`, `--mark-active-text` and `--act-line`
+  are no longer amber (amber is only the selection). In light, `--sel` is a fill; text and borders in
+  the selection's colour use `--sel-text`.
+- **`theme`** (`theme/theme.ts`) is a `computed`, not a writable signal: write with
+  `chooseTheme(pref)` (`"system" | "dark" | "light"`). `applyTheme()` also starts the system and
+  storage reads, so `main.tsx` needs no change. `ThemeSwitch` is the control S2 places.
+- **`viewTheme(theme)`** returns a two-stop background and a light set. `itemSwatches(model, theme?)`
+  is real (bars first, then by count; eight hues, then a neutral); `swatchCss(n)` writes one for a
+  style attribute.
+- **`format.ts`** adds `date`, `plural`, `plain`, `splitNumber`, `withUnit`, `THIN`, `NBSP`;
+  `group` and every quantity now group thousands (table: from four digits).
+- **Components**: `common/{StatusGlyph,Num,ItemSwatch,EmptyState}.tsx`; `EntityChips` takes `max`.
+  `ProblemRow({ p, compact? })` renders a row with its Show and fixes; `GROUP_LOOK` keeps `word` and
+  `tone` and adds `status` and `label`. `ProblemList` gives the rows the arrow keys.
+- **Tables** (`tables/common.tsx`): `Sheet`, `SheetBar`, `SheetTable`, `Row`, `Clip`, `Stamp`,
+  `useOutput`; `selectionOnly` is honoured. `window.__alukit.hovered()` (declared there) returns
+  `focus.hover`'s ids.
+- **`problems/source.ts`**: `problemList` and `problemCounts` read `store.problems`, with the
+  check's diagnostics standing in until S2.6 fills it (see s4-decisions.md for what to delete).
+- **Fonts** are files in `src/ui/fonts` with `OFL.txt`, not a dependency (D-UX-22 said `@fontsource`).

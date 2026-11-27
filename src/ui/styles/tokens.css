@@ -1,62 +1,71 @@
 /*
- * The design tokens (docs/ux/plan.md §5.3; docs/ux/contracts.md). Every colour the stylesheets
- * use is one of these; no other file writes a colour literal. The names are the contract between
- * the streams; their values may change (S4), their names may not. Until S4 sets the new palette,
- * each holds today's value, so several names share one.
+ * The design tokens (docs/ux/plan.md §5.3; docs/ux/contracts.md; docs/ux/visual-design.md §4).
+ * Every colour the stylesheets use is one of these; no other file writes a colour literal (a unit
+ * test searches for them). The names are the contract between the streams; their values may
+ * change (S4), their names may not. Dark is the default; the light values sit under
+ * `:root[data-theme="light"]`. The contrast of every text pair is held by a unit test
+ * (src/ui/theme/tokens.test.ts) and by theme.spec, and listed in docs/ux/s4-decisions.md.
  *
- * Tokens after "Today's roles" are the S0 additions: roles today's styles have that the §5.3
- * list does not name. They keep the S0 split free of any visible change.
+ * Rules the values keep:
+ * - amber (`--sel`) is only ever the selection; the active tool and tab use `--mark-active`;
+ * - a status is a shape, a word and a colour (StatusGlyph), never a colour alone;
+ * - `--sel`, `--tool`, `--ready`, `--blocked`, `--warn` and `--info` are text colours in dark, and
+ *   fills or lines in light only where a token says so (`--sel`): text uses `--sel-text`.
  */
+
+@import "./fonts.css";
 
 :root {
   /* Surfaces */
-  --bg-app: #1b1f24;
-  --bg-panel: #22272e;
-  --bg-raised: #2a3038;
-  --bg-well: #1b1f24;
+  --bg-app: #181b20;
+  --bg-panel: #1f2329;
+  --bg-raised: #272c33;
+  --bg-well: #14171b;
 
-  /* Lines */
-  --line: #373e47;
-  --line-strong: #373e47;
+  /* Lines: `--line` is decoration; `--line-strong` is a control's border and is at least 3:1 */
+  --line: #343a42;
+  --line-strong: #6b7682;
 
   /* Text */
-  --text-1: #c9d1d9;
-  --text-2: #8b949e;
-  --text-3: #8b949e;
+  --text-1: #e8ecf0;
+  --text-2: #aeb7c1;
+  --text-3: #969fab;
 
-  /* The selection: amber */
-  --sel: #ff9f1c;
-  --sel-text: #ffd7a1;
+  /* The selection: amber. `--sel` is the fill or the 3D tint; `--sel-text` is the same as text */
+  --sel: #ffa133;
+  --sel-text: #ffa133;
   --sel-ink: #201304;
 
-  /* Actions: links, primary buttons */
-  --act: #6cb6ff;
-  --act-fill: #22272e;
+  /* Actions: links, the focus ring, primary buttons */
+  --act: #74b4ff;
+  --act-fill: #2e6bc6;
+  /* Text on `--act-fill` */
+  --act-ink: #ffffff;
 
   /* What a tool is building (the 3D view's picks, previews and section outline) */
-  --tool: #38bdf8;
+  --tool: #3cc8e6;
 
   /* Statuses */
-  --ready: #57ab5a;
-  --blocked: #f47067;
-  --warn: #e0b341;
-  --info: #6cb6ff;
+  --ready: #4fcb8d;
+  --blocked: #ff7a6e;
+  --warn: #ebc84a;
+  --info: #8db8f2;
 
-  /* Type */
-  --font-sans: system-ui, sans-serif;
-  --font-mono: ui-monospace, monospace;
+  /* Type: IBM Plex, bundled (fonts.css); the system's fonts while a file loads */
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
   --fs-display: 24px;
   --lh-display: 28px;
   --fs-title: 18px;
   --lh-title: 24px;
   --fs-figure: 15px;
-  --lh-figure: 1.4;
+  --lh-figure: 20px;
   --fs-body: 13px;
-  --lh-body: 1.4;
+  --lh-body: 18px;
   --fs-small: 12px;
-  --lh-small: 1.4;
+  --lh-small: 16px;
 
-  /* Spacing: not yet used by today's styles (S4 and the owning streams adopt it) */
+  /* Spacing: 2 / 4 / 6 / 8 / 12 / 16 / 24 / 32 */
   --sp-1: 2px;
   --sp-2: 4px;
   --sp-3: 6px;
@@ -66,46 +75,94 @@
   --sp-7: 24px;
   --sp-8: 32px;
 
-  /* Radii and elevation */
-  --radius-control: 4px;
-  --radius-card: 4px;
-  --shadow-float: 0 4px 16px rgb(0 0 0 / 0.4);
+  /* Radii by role: controls and chips, cards and popovers; rows and panels have none */
+  --radius-control: 3px;
+  --radius-card: 6px;
+  /* Elevation: only what floats over the canvas */
+  --shadow-float: 0 8px 24px rgb(0 0 0 / 0.45);
 
-  /* Row heights: today's rows size to their content */
-  --row-h-cut: auto;
-  --row-h-order: auto;
-  --row-h-table: auto;
-  --row-h-compact: auto;
+  /* Row heights: the cut list has a 15 px figure; `compact` is the density switch's */
+  --row-h-cut: 32px;
+  --row-h-order: 30px;
+  --row-h-table: 28px;
+  --row-h-compact: 24px;
 
-  /* Focus: today's is the browser's own ring; this one is not yet used (S2.16) */
+  /* Focus: every control shows it with the keyboard (base.css) */
   --focus-ring: 2px solid var(--act);
 
-  /* Today's roles (S0 additions) */
-  /* The active tool's outline, the active tab's underline, the active tool panel's title */
-  --mark-active: #ff9f1c;
-  /* The active tool's label, the catalog filter chosen, the item armed in the palette */
-  --mark-active-text: #ffd7a1;
+  /* Roles beyond §5.3's list (S0 additions; values S4's) */
+  /* The active tool and tab: a white-ish mark, never amber */
+  --mark-active: #e8ecf0;
+  --mark-active-text: #e8ecf0;
   /* A primary action's border (Restore last good, Set as palette) */
-  --act-line: #ff9f1c;
-  /* A selected row's fill */
-  --sel-wash: #4d3a17;
-  /* The read-only banner: its fill, its text and its hint */
-  --blocked-wash: #4a2323;
-  --blocked-ink: #ffd8d3;
-  --blocked-ink-2: #e7b6b0;
-  /* Text on a status fill (a tab's error count) */
-  --status-ink: #1b1f24;
-  /* The tip by the pointer, over the canvas */
+  --act-line: #74b4ff;
+  /* A selected row's fill (the selection at 13 % over the panel) and a hovered row's */
+  --sel-wash: #3c332a;
+  --hover-wash: rgb(255 255 255 / 0.04);
+  /* Washes for status rows and banners: the status colour at 12 to 14 % over the panel */
+  --blocked-wash: #3e2f33;
+  --warn-wash: #37372d;
+  --ready-wash: #253735;
+  --info-wash: #25303f;
+  /* The read-only banner's text and its hint, on `--blocked-wash` */
+  --blocked-ink: #ffe3df;
+  --blocked-ink-2: #f0c4be;
+  /* Text on a status fill (a tab's count) */
+  --status-ink: #14171b;
+  /* The tip by the pointer, over the canvas: dark in both themes, its text is `--tip-ink` */
   --bg-tip: rgb(15 18 22 / 0.88);
-  /* The smallest text: pills, counts, stamps, the tip */
+  --tip-ink: #e8ecf0;
+  /* The smallest text: pills, counts, stamps, a row's second line */
   --fs-tiny: 11px;
   /* Document literals (code) */
   --fs-mono: 12px;
-  --lh-mono: 1.3;
+  --lh-mono: 16px;
 
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  /* S4.11: the light theme's values. Until then the app has one theme, dark. */
+  --bg-app: #edf0f3;
+  --bg-panel: #ffffff;
+  --bg-raised: #f3f5f8;
+  --bg-well: #ffffff;
+
+  --line: #dadfe5;
+  --line-strong: #7a8591;
+
+  --text-1: #1a1f26;
+  --text-2: #48515c;
+  --text-3: #626c77;
+
+  /* `--sel` is 2.8:1 on white: a fill and a tint only; text and borders use `--sel-text` */
+  --sel: #e08417;
+  --sel-text: #9a4f00;
+  --sel-ink: #201304;
+
+  --act: #1f63c6;
+  --act-fill: #1f63c6;
+
+  --tool: #0b7f9a;
+
+  --ready: #1b7a4b;
+  --blocked: #c2362b;
+  --warn: #8a6200;
+  --info: #2a62b5;
+
+  --shadow-float: 0 6px 18px rgb(20 30 40 / 0.16);
+
+  --mark-active: #1a1f26;
+  --mark-active-text: #1a1f26;
+  --act-line: #1f63c6;
+  --sel-wash: #fbefe1;
+  --hover-wash: rgb(20 30 40 / 0.04);
+  --blocked-wash: #f8e7e6;
+  --warn-wash: #f1ece0;
+  --ready-wash: #e4efe9;
+  --info-wash: #e6edf7;
+  --blocked-ink: #7a1f18;
+  --blocked-ink-2: #8a2a22;
+  --status-ink: #ffffff;
+
+  color-scheme: light;
 }

@@ -19,6 +19,36 @@ button {
   color: inherit;
 }
 
+/* A visible focus on everything the keyboard reaches (WCAG 2.4.7, 2.4.11); the ring is 5.7 to
+   7.3 : 1 on the panels in both themes. A pointer click shows none. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* Text for assistive technology only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Numbers align by digit: tabular figures wherever a number is a figure */
+.num,
+.n {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A number's trailing .00, dimmed: the precision stays and the figure reads first */
+.dim {
+  color: var(--text-3);
+}
+
 code {
   font: var(--fs-mono) / var(--lh-mono) var(--font-mono);
   word-break: break-all;
@@ -93,4 +123,52 @@ code {
 .tp-btn:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* The button the sheets and their forms use; `.primary` is the one action that fixes or advances */
+.btn {
+  min-height: 24px;
+  padding: 0 var(--sp-5);
+  background: var(--bg-raised);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  font: 500 var(--fs-small) / var(--lh-small) var(--font-sans);
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--text-2);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn.primary {
+  background: var(--act-fill);
+  color: var(--act-ink);
+  border-color: var(--act-line);
+}
+
+kbd {
+  padding: 0 var(--sp-2);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: var(--fs-tiny);
+  opacity: 0.85;
+}
+
+/* An icon and its word: the word shows from 1440 px; below it the word and key are the tooltip */
+.icon {
+  flex: none;
+  vertical-align: middle;
+}
+
+@media (max-width: 1439px) {
+  .icon-word {
+    display: none;
+  }
 }

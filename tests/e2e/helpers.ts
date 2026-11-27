@@ -217,6 +217,16 @@ export async function waitDrawn(page: Page, rev: number, timeout = 15_000): Prom
   });
 }
 
+/**
+ * A number as the CLI prints it, as a pattern that also matches the app's grouping: the tables
+ * put a narrow no-break space (U+202F) between thousands (docs/ux/plan.md S4.2), so `1090.00`
+ * and `1 090.00` are one number. Digits and the point still have to match, in order.
+ */
+export function numberText(printed: string): RegExp {
+  const escaped = [...printed].map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return new RegExp(escaped.join(" ?"));
+}
+
 /** The number of bars `alukit derive --json` reports: an oracle independent of the app. */
 export async function derivedBarCount(dir: string): Promise<number> {
   const r = await cli(["derive", dir, "--json"]);

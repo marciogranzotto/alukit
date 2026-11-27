@@ -5,8 +5,7 @@ import type { Model } from "../model.ts";
  * The design tokens as numbers, for three.js (docs/ux/plan.md §5.3; docs/ux/contracts.md): the
  * colour tokens of src/ui/styles/tokens.css, the same values (a unit test holds them equal), and
  * the 3D view's own colours, from which `viewTheme` makes what the viewer draws with. Owner: S4,
- * which changes values, never names. Until S4.11 there is one theme: light has dark's values,
- * as tokens.css's light block is empty.
+ * which changes values, never names.
  */
 
 export type Theme = "dark" | "light";
@@ -36,31 +35,53 @@ export const COLOUR_TOKENS = [
 export type ColourToken = (typeof COLOUR_TOKENS)[number];
 
 const DARK: Readonly<Record<ColourToken, number>> = {
-  "bg-app": 0x1b1f24,
-  "bg-panel": 0x22272e,
-  "bg-raised": 0x2a3038,
-  "bg-well": 0x1b1f24,
-  line: 0x373e47,
-  "line-strong": 0x373e47,
-  "text-1": 0xc9d1d9,
-  "text-2": 0x8b949e,
-  "text-3": 0x8b949e,
-  sel: 0xff9f1c,
-  "sel-text": 0xffd7a1,
+  "bg-app": 0x181b20,
+  "bg-panel": 0x1f2329,
+  "bg-raised": 0x272c33,
+  "bg-well": 0x14171b,
+  line: 0x343a42,
+  "line-strong": 0x6b7682,
+  "text-1": 0xe8ecf0,
+  "text-2": 0xaeb7c1,
+  "text-3": 0x969fab,
+  sel: 0xffa133,
+  "sel-text": 0xffa133,
   "sel-ink": 0x201304,
-  act: 0x6cb6ff,
-  "act-fill": 0x22272e,
-  tool: 0x38bdf8,
-  ready: 0x57ab5a,
-  blocked: 0xf47067,
-  warn: 0xe0b341,
-  info: 0x6cb6ff,
+  act: 0x74b4ff,
+  "act-fill": 0x2e6bc6,
+  tool: 0x3cc8e6,
+  ready: 0x4fcb8d,
+  blocked: 0xff7a6e,
+  warn: 0xebc84a,
+  info: 0x8db8f2,
+};
+
+const LIGHT: Readonly<Record<ColourToken, number>> = {
+  "bg-app": 0xedf0f3,
+  "bg-panel": 0xffffff,
+  "bg-raised": 0xf3f5f8,
+  "bg-well": 0xffffff,
+  line: 0xdadfe5,
+  "line-strong": 0x7a8591,
+  "text-1": 0x1a1f26,
+  "text-2": 0x48515c,
+  "text-3": 0x626c77,
+  sel: 0xe08417,
+  "sel-text": 0x9a4f00,
+  "sel-ink": 0x201304,
+  act: 0x1f63c6,
+  "act-fill": 0x1f63c6,
+  tool: 0x0b7f9a,
+  ready: 0x1b7a4b,
+  blocked: 0xc2362b,
+  warn: 0x8a6200,
+  info: 0x2a62b5,
 };
 
 /** Each theme's colour tokens, as numbers. */
 export const COLOURS: Readonly<Record<Theme, Readonly<Record<ColourToken, number>>>> = {
   dark: DARK,
-  light: DARK,
+  light: LIGHT,
 };
 
 /**
@@ -95,29 +116,100 @@ const VIEW_DARK = {
   },
 } as const;
 
-/** What the 3D view draws with in a theme. */
+/**
+ * The light theme's view colours (visual-design.md §5.1, §4.1): the ground is light, so bodies,
+ * edges, the grid and the overlay's lines are darker than the dark theme's. Bodies keep the
+ * finish tones' order (black darkest, anodised lightest).
+ */
+const VIEW_LIGHT = {
+  ...VIEW_DARK,
+  body: {
+    anodised: 0xa3adb8,
+    black: 0x2e333a,
+    steel: 0x6f7780,
+    part: 0x4a86c5,
+    custom: 0xa9773f,
+    hole: 0x30353b,
+    fastener: 0xa8841a,
+  },
+  edge: { colour: 0x20262d, opacity: 0.6, placeholder: 0x2f6aa8 },
+  grid: { centre: 0x8b95a0, line: 0xc9d0d8 },
+  overlay: {
+    marker: { point: 0x15803d, line: 0x0b7f9a, grid: 0x59636e, free: 0x3a424c, pick: 0xc2640a },
+    axis: { x: 0xdc2626, y: 0x16a34a, z: 0x2563eb },
+    line: 0x1a1f26,
+    ghost: 0xc2640a,
+  },
+} as const;
+
+/** The 3D view's background, top to bottom (visual-design.md §1): a gradient in each theme. */
+const BACKGROUND: Readonly<Record<Theme, readonly [number, number]>> = {
+  dark: [0x2b3038, 0x1c2026],
+  light: [0xeef1f4, 0xd3d9df],
+};
+
+/** What the 3D view draws with in a theme. The selection, tool and status colours are tokens. */
 export function viewTheme(t: Theme): ViewTheme {
   const c = COLOURS[t];
+  const v = t === "dark" ? VIEW_DARK : VIEW_LIGHT;
   return {
-    background: [c["bg-app"]],
-    lights: VIEW_DARK.lights,
-    body: VIEW_DARK.body,
-    translucent: VIEW_DARK.translucent,
-    edge: VIEW_DARK.edge,
+    background: BACKGROUND[t],
+    lights: v.lights,
+    body: v.body,
+    translucent: v.translucent,
+    edge: v.edge,
     selection: c.sel,
-    hover: VIEW_DARK.hover,
+    hover: v.hover,
     tool: c.tool,
     status: { ready: c.ready, blocked: c.blocked, warn: c.warn },
-    grid: VIEW_DARK.grid,
-    overlay: VIEW_DARK.overlay,
+    grid: v.grid,
+    overlay: v.overlay,
   };
 }
 
 /**
  * The colour of each catalog item the model uses, for colouring the view by item and the tables'
- * swatches (S4.3: hues by count, avoiding the selection's amber and the tool's cyan). Today
- * nothing is coloured by item: the map is empty.
+ * swatches (S4.3: hues by count, bars first, avoiding the selection's amber and the tool's cyan), as
+ * 0xRRGGBB for the theme given (dark when absent). Items are the BOM's, so a bar's item and a
+ * part's are one map.
  */
-export function itemSwatches(_m: Model): ReadonlyMap<string, number> {
-  return new Map();
+export function itemSwatches(m: Model, t: Theme = "dark"): ReadonlyMap<string, number> {
+  // Profiles first (the frame's bars are what the colours tell apart), then by how many are used.
+  const uses = new Map<string, { bar: boolean; n: number }>();
+  for (const g of m.bom.groups) {
+    for (const l of g.lines) {
+      const u = uses.get(l.item) ?? { bar: g.kind === "bar", n: 0 };
+      u.n += l.qty;
+      uses.set(l.item, u);
+    }
+  }
+  const ranked = [...uses].sort(
+    (a, b) =>
+      Number(b[1].bar) - Number(a[1].bar) ||
+      b[1].n - a[1].n ||
+      (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0),
+  );
+  const dim = t === "dark" ? 1 : LIGHT_SWATCH_SCALE;
+  return new Map(
+    ranked.map(([item], i) => [item, scale(ITEM_HUES[i] ?? ITEM_NEUTRAL, dim)] as const),
+  );
+}
+
+/**
+ * The item palette (visual-design.md §4.1), most used first: none in the selection's amber or the
+ * tool's cyan. Hues are assigned by count, so the commonest items get the clearest hues; every item
+ * past the eighth shares the neutral. The light theme draws the same hues darker.
+ */
+const ITEM_HUES = [0x86aee0, 0x93c47d, 0xe08f8f, 0xb39dda, 0xd8cf72, 0x6fc2b0, 0xe39ac7, 0xa9b46a];
+const ITEM_NEUTRAL = 0x9aa1a8;
+const LIGHT_SWATCH_SCALE = 0.55;
+
+function scale(rgb: number, k: number): number {
+  const c = (shift: number) => Math.round(((rgb >> shift) & 255) * k);
+  return (c(16) << 16) | (c(8) << 8) | c(0);
+}
+
+/** A swatch's colour as CSS, for a style attribute. */
+export function swatchCss(rgb: number): string {
+  return `#${rgb.toString(16).padStart(6, "0")}`;
 }

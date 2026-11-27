@@ -1,86 +1,170 @@
-import { endText, machiningText, railText } from "#core/cutlist/format.ts";
+import type { CutGroup, CutLine } from "#core/cutlist/cutlist.ts";
+import { endText } from "#core/cutlist/format.ts";
+import { DrawABar, EmptyState, OpenCatalog } from "../common/EmptyState.tsx";
 import { EntityChips } from "../common/EntityChip.tsx";
-import { mm } from "../format.ts";
+import { Num } from "../common/Num.tsx";
+import { date, mm, plural, qty, withUnit } from "../format.ts";
 import type { Model } from "../model.ts";
-import { registerSheet } from "../sheets/registry.ts";
-import { optText, Stamp } from "./common.tsx";
+import { registerSheet, selectionOnly } from "../sheets/registry.ts";
+import { model } from "../store.ts";
+import { anySelected, type Col, optText, Row, Sheet, SheetBar, SheetTable } from "./common.tsx";
+import { EndsPictogram, GroupTitle, MachiningCell, StockDiagram } from "./pictograms.tsx";
 
 /**
- * The cut list (design §8; `alukit cutlist`): its groups by item and options, each line's count,
- * cut, centre and span, end cuts, machining and the pieces it is for, and the stock bars a group
- * is cut from. It comes with the revision's model. Owner: S4.
+ * The cut list (design §8; `alukit cutlist`; docs/ux/visual-design.md §6.2): groups by item and
+ * options, most pieces first, so the frame's main profile leads. Each line is a count, the cut
+ * length as the row's figure (the centre-line, span and ordered lengths on a second line when they
+ * differ), the two ends drawn and written, the machining as pills, and the bars it is for; a
+ * group cut from stock bars comes with a cutting diagram. One table, one set of columns, for the
+ * whole sheet. It comes with the revision's model. Owner: S4.
  */
-export function CutListSheet({ m }: { m: Model }) {
-  const cl = m.cutlist;
-  if (cl.groups.length === 0) return <p class="panel-empty">No pieces.</p>;
+
+const COLS: readonly Col[] = [
+  { id: "qty", head: "Qty", w: "56px", align: "right" },
+  { id: "cut", head: "Cut length", unit: "mm", w: "200px", align: "right" },
+  { id: "ends", head: "Ends", w: "230px" },
+  { id: "machining", head: "Machining" },
+  { id: "bars", head: "Bars", w: "290px" },
+];
+
+/** The second line under a cut length: the other lengths the piece has, when they differ. */
+function otherLengths(l: CutLine): string[] {
+  const out: string[] = [];
+  if (l.centre_mm !== undefined && l.centre_mm !== l.cut_mm) {
+    out.push(`centre ${mm(l.centre_mm, { table: true })}`);
+  }
+  if (l.span_mm !== undefined && l.span_mm !== l.cut_mm) {
+    out.push(`span ${mm(l.span_mm, { table: true })}`);
+  }
+  if (l.ordered_mm !== undefined && l.ordered_mm !== l.cut_mm) {
+    out.push(`ordered ${mm(l.ordered_mm, { table: true })}`);
+  }
+  return out;
+}
+
+function supply(g: CutGroup): string {
+  return g.mode === "cut"
+    ? `Cut to order, ${g.offer}`
+    : g.mode === "stock"
+      ? "From stock bars"
+      : "No offer by length";
+}
+
+function Group({ g }: { g: CutGroup }) {
+  const opt = optText(g.opt);
+  // Selection only: a group with no line of the selection is not shown, head and diagram included.
+  if (selectionOnly.value && !g.lines.some((l) => anySelected(l.sources))) return null;
   return (
-    <div data-testid="cutlist">
-      <p class="sub">
-        Prices on the {cl.price_basis} basis; the oldest was read {cl.oldest_read ?? "(none)"}.{" "}
-        <Stamp lock={cl.lock} />
-      </p>
-      {cl.groups.map((g) => (
-        <section key={`${g.item}${optText(g.opt)}`}>
-          <h4>
-            {g.item} <span class="sub">{g.name}</span>{" "}
-            {optText(g.opt) && <span class="sub">({optText(g.opt)})</span>}
-            <span class="sub">
-              {" "}
-              · {g.pieces} piece{g.pieces === 1 ? "" : "s"}, {mm(g.total_mm)} mm ·{" "}
-              {g.mode === "cut"
-                ? `cut to order (${g.offer})`
-                : g.mode === "stock"
-                  ? `from stock bars`
-                  : "no offer by length"}
+    <tbody data-group={`${g.item}${opt}`}>
+      <tr class="group-head">
+        <td colSpan={COLS.length}>
+          <div class="group-title">
+            <GroupTitle g={g} />
+            {opt && <span class="sub">{opt}</span>}
+            <span class="stats">
+              <span class="stat">
+                <span class="stat-k">Pieces</span>{" "}
+                <span class="stat-v">{qty(g.pieces, { table: true })}</span>
+              </span>
+              <span class="stat">
+                <span class="stat-k">Total</span>{" "}
+                <span class="stat-v">{withUnit(mm(g.total_mm), "mm")}</span>
+              </span>
+              <span class="stat">
+                <span class="stat-k">Supply</span> <span class="stat-v">{supply(g)}</span>
+              </span>
             </span>
-          </h4>
-          <table class="grid">
-            <thead>
-              <tr>
-                <th>count</th>
-                <th>cut mm</th>
-                <th>centre mm</th>
-                <th>span mm</th>
-                <th>ends a / b</th>
-                <th>machining</th>
-                <th>pieces</th>
-              </tr>
-            </thead>
-            <tbody>
-              {g.lines.map((l) => (
-                <tr key={l.sources.join(",")}>
-                  <td class="n">{l.count}</td>
-                  <td class="n">{mm(l.cut_mm, { table: true })}</td>
-                  <td class="n">
-                    {l.centre_mm === undefined ? "" : mm(l.centre_mm, { table: true })}
-                  </td>
-                  <td class="n">{l.span_mm === undefined ? "" : mm(l.span_mm, { table: true })}</td>
-                  <td>
-                    {endText(l.ends.a)} / {endText(l.ends.b)}
-                  </td>
-                  <td>
-                    {[
-                      ...(l.rail ? [railText(l.rail)] : []),
-                      ...l.machining.map(machiningText),
-                    ].join("; ")}
-                  </td>
-                  <td>
-                    <EntityChips ids={l.sources} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {g.stock && (
-            <p class="sub">
-              {g.stock.length} stock bar{g.stock.length === 1 ? "" : "s"}:{" "}
-              {g.stock.map((s) => `${s.length_mm} (offcut ${mm(s.offcut_mm)})`).join(", ")}
-            </p>
-          )}
-        </section>
+          </div>
+        </td>
+      </tr>
+      {g.lines.map((l) => (
+        <Row key={l.sources.join(",")} class="cut-row" ids={l.sources}>
+          <td class="n">{qty(l.count)} ×</td>
+          <td class="n">
+            <div class="figure">
+              <Num text={mm(l.cut_mm, { table: true })} />
+            </div>
+            {otherLengths(l).length > 0 && <div class="second">{otherLengths(l).join(" · ")}</div>}
+          </td>
+          <td>
+            <div class="ends">
+              <EndsPictogram a={l.ends.a} b={l.ends.b} />
+              <span class="ends-text">
+                {endText(l.ends.a)} / {endText(l.ends.b)}
+              </span>
+            </div>
+          </td>
+          <td>
+            <MachiningCell machining={l.machining} rail={l.rail} />
+          </td>
+          <td>
+            <EntityChips ids={l.sources} />
+          </td>
+        </Row>
       ))}
-    </div>
+      {g.stock?.map((bar, i) => (
+        <tr class="diagram" key={i}>
+          <td colSpan={COLS.length}>
+            <StockDiagram g={g} bar={bar} />
+          </td>
+        </tr>
+      ))}
+    </tbody>
   );
 }
 
-registerSheet({ id: "cutlist", title: "Cut list", order: 10, Body: CutListSheet });
+export function CutListSheet({ m }: { m: Model }) {
+  const cl = m.cutlist;
+  if (cl.groups.length === 0) {
+    return (
+      <Sheet testid="cutlist">
+        <EmptyState
+          title="Nothing to cut yet"
+          actions={
+            <>
+              <DrawABar />
+              <OpenCatalog />
+            </>
+          }
+        >
+          Draw a bar, or set a profile from the catalog as the palette.
+        </EmptyState>
+      </Sheet>
+    );
+  }
+  // Most pieces first; equal counts keep the CLI's order (the item id's).
+  const groups = cl.groups
+    .map((g, i) => ({ g, i }))
+    .sort((a, b) => b.g.pieces - a.g.pieces || a.i - b.i)
+    .map((x) => x.g);
+  return (
+    <Sheet testid="cutlist">
+      <SheetBar lock={cl.lock}>
+        <span class="sub">
+          Prices on the {cl.price_basis} basis; the oldest was read{" "}
+          {cl.oldest_read ? date(cl.oldest_read) : "(none)"}
+        </span>
+      </SheetBar>
+      <SheetTable cols={COLS}>
+        {groups.map((g) => (
+          <Group key={`${g.item}${optText(g.opt)}`} g={g} />
+        ))}
+      </SheetTable>
+    </Sheet>
+  );
+}
+
+/** The tab's badge: how many pieces there are to cut. */
+function PiecesBadge() {
+  const groups = model.value?.cutlist.groups ?? [];
+  const n = groups.reduce((sum, g) => sum + g.pieces, 0);
+  return n > 0 ? <span class="badge plain">{plural(n, "piece")}</span> : null;
+}
+
+registerSheet({
+  id: "cutlist",
+  title: "Cut list",
+  order: 10,
+  badge: () => <PiecesBadge />,
+  Body: CutListSheet,
+});

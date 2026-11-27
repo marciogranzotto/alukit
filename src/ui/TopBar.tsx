@@ -19,6 +19,7 @@ import {
   variant,
   verifyRevision,
 } from "./store.ts";
+import { ThemeSwitch } from "./theme/ThemeSwitch.tsx";
 
 /**
  * The top bar (design §8): project, variant, undo and redo naming the step, the revision, the
@@ -81,6 +82,7 @@ export function TopBar() {
       >
         Export GLB
       </button>
+      <ThemeSwitch />
       <span class={`conn ${conn}`} data-testid="connection" title="the server's event stream">
         {conn === "live"
           ? "live"
