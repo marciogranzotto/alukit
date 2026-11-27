@@ -73,12 +73,18 @@ export async function serve(project = "cart"): Promise<Served> {
 /**
  * A project as `alukit new` makes it, with the options given (the README's first run:
  * `--catalog forseti --currency BRL`), in a scratch folder, served by `alukit serve`.
+ * `prepare`, when given, runs on the folder before the server starts (CLI edits, say), so the
+ * served project opens at revision 0 with them in it.
  */
-export async function serveNew(args: string[] = []): Promise<Served> {
+export async function serveNew(
+  args: string[] = [],
+  prepare?: (dir: string) => Promise<void>,
+): Promise<Served> {
   const base = await mkdtemp(join(tmpdir(), "alukit-e2e-new-"));
   const dir = join(base, "project");
   const made = await cli(["new", dir, ...args]);
   if (made.code !== 0) throw new Error(`alukit new failed: ${made.err}`);
+  if (prepare) await prepare(dir);
   return serveAt(dir, base);
 }
 

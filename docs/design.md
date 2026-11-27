@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4" and 100–104 in "3D editing, E5"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "3D editing, E4". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5" and 105–107 in "3D editing, integration"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "3D editing, integration". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -603,7 +603,7 @@ editing streams ([`ux/e0-decisions.md`](ux/e0-decisions.md), cited as "e0"; the 
 [`ux/contracts.md`](ux/contracts.md)): the tools' wiring split one module per tool, an action
 registry, a pick that names the face and station, a context menu, hidden and isolated view state,
 gizmo primitives and the batch builders' module. Nothing in the document, the commands or the
-outputs changes. §8's text takes these in when the editing round is folded in.
+outputs changes. §8 states these since the round's integration ("3D editing, integration", below).
 
 - §8: **every edit is an action in one registry**, which binds its keys and which the help and the
   context menu read; the help lists each action's keys, then the keys of a gesture or a tool's
@@ -647,8 +647,8 @@ Stream E3 of the [editing audit](ux/editing-audit.md) builds the transform and c
 ([`ux/e3-decisions.md`](ux/e3-decisions.md), cited as "e3"; the interfaces in
 [`ux/contracts.md`](ux/contracts.md), "Editing round: E3 changes"). Every edit is a command the
 core had: `transform`, `mirror`, `array`, `removeEntity` and `autoConnect`, so nothing in the
-document, the commands or the CLI changes. §8's text takes these in when the editing round is
-folded in.
+document, the commands or the CLI changes. §8 states these since the round's integration
+("3D editing, integration", below).
 
 - §8: **Rotate is a tool, `Q`**: the gizmo's rings at the selection's centre; a click on a snap
   is the centre, Enter the selection's; X, Y or Z (Z at first); a typed angle, or a ring dragged
@@ -677,7 +677,7 @@ inspector ([`ux/e5-decisions.md`](ux/e5-decisions.md), cited as "e5"): connectio
 parts and a corner's joint. No command is new; each edit is a merge patch through `setConnection`,
 `setPattern` or `setPart`, or `explodePattern`, sent as `alukit do` sends it, one step each.
 The document and the outputs do not change; one command check is fixed (the last bullet). §8's
-text takes these in when the editing round is folded in.
+text states these since the round's integration ("3D editing, integration", below).
 
 - §8 Inspector: **a face joint's fields edit**, in the Connect tool's own form filled from the
   joint, as one `setConnection` of what changed; a field written in a form the form cannot show
@@ -710,8 +710,8 @@ and length, splits and reverses it, edits several selected at once and a node's 
 [`ux/contracts.md`](ux/contracts.md), "Editing round: E4 changes"). Every edit is a command the
 core had (`setBar`, `setConnection`, `removeEntity`, `splitBar`, `reverseBar`, `moveNode`,
 `label`, `tag`), so nothing in the document, the commands or the CLI changes; the server's view
-model gains derive's claims, which `alukit.derived/1` does not carry. §8's text takes these in
-when the editing round is folded in.
+model gains derive's claims, which `alukit.derived/1` does not carry. §8 states these since the
+round's integration ("3D editing, integration", below).
 
 - §8: **an end's words name the joint that claims it, even when the joint fails** ("butts on b3
   (c9); the joint fails, so it is square"), read from derive's claims, so a failed claim no
@@ -730,6 +730,49 @@ when the editing round is folded in.
   every bar end at it follows (e4 16–18). Call 99.
 - §5.4: the BOM's Markdown marks an estimated mass `(est)`, as a computed one is marked `(calc)`
   (e4 22).
+
+### 3D editing, integration
+
+The editing round's streams each wrote a decision note, a changelog group and calls here, and
+left §6 and §8 to this pass. It folds them in, so the design again describes the app as built,
+and scripts the audit's acceptance scenarios (its §12, A1–A15) as `tests/e2e/editing.spec.ts`,
+each driven as a person would and each ending in a comparison with the CLI. What they found, with
+each scenario's clicks, keys, steps and times, is
+[`ux/integration-editing.md`](ux/integration-editing.md) ("ie"). No product code, golden value or
+derived output changed.
+
+- §6: **`transform` as built**: exactly one of `by` and `rotate`, `deg` and `about` numbers, a
+  connection named moves a butt's through body; it moves whole entities, so it stretches the bars
+  joined to the set and not a bar in it. `autoConnect`'s angled-cut declaration and the join at a
+  joined corner, one rule shared with the problem list. A list in a merge patch is replaced whole;
+  `context` through `setBar`, `setPart` and `setConnection`; an expression's names besides the
+  params (`exprNames`, `bore`); `explodePattern`'s copies (e1 1–6, 17; e4 12; e5 29; x11 17).
+- §7.1: **`GET /api/query`**, the selection verbs' one grammar with `alukit query`; §7.3: `like:<id>
+  by tag` (e2 5, 6).
+- §8: the round's notes cited; **Keys** read the action registry; a new part, **Selecting, the
+  menu and the view's state** (the context menu, the header's buttons, the selection verbs and
+  boxes, hide and isolate, the size readout, navigation, labels); **Tools**: Select, point to
+  point, the part's arrow, **Rotate**, **Duplicate, Copy and Paste**, **Mirror**, **Align**, the
+  gestures and their previews; **The inspector** as a part of its own (lengths, ends, actions,
+  holes, several selected, nodes, connections, face joints, patterns, parts); a corner's mitre and
+  splice; **What each edit sends**, a table from each edit in the app to its commands; the pick's
+  face and station; the editing gizmo, ghosts and hiding under Rendering; and **What the editing
+  round left for later**, the v1 limits that remain.
+- §8, **stale statements replaced**: Select works "or by tag" (true now, by a group's head and
+  Select tagged); "the inspector does not edit a face or pivot connection" and "dragging an
+  existing node is not built" (lifted); "a bar's new length moves end b along the bar, written as
+  numbers" (end b, end a or both, a param kept); "the gizmo is HTML over the canvas" (the view's
+  gizmo; the editing gizmo is in the scene); and the stream groups' "§8 takes these in when the
+  round is folded in".
+- §8, **where a stream built otherwise than an E-UX decision**, the text says what was built and
+  why: isolate hides the rest (E-UX-9), Select all acts anywhere but a text field (the audit's
+  §9), a pinch dollies (E-UX-17), the inspector's length writes coordinates rather than `moveEnd`
+  (E-UX-16), Split here rounds rather than snaps (E-UX-21), a part's slide is a `transform` (the
+  audit's E3.7), the view's menu opens in Select only and the outline's in any tool (E-UX-2).
+- The scenarios, as 18 tests (A2 and A14 one per part): 15 pass; 3 are `fixme`, each saying why:
+  A2 (ii) as written (a crossing box, then Move), A6 (a bracket mirrored onto the opposite leg)
+  and A14's part on A6. 12 of the 15 scenarios pass whole, A2 and A14 in part, A6 not; §8's last
+  list holds the limits they found (ie). Calls 105–107.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -2572,11 +2615,21 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   `order` choice, and refuses a pattern copy (skip or explode it instead) (*2.3*). Every
   reference counts, a plane's `normal` naming a bar included (*2.2*).
 - The `set*` commands take an [RFC 7396](https://www.rfc-editor.org/rfc/rfc7396) merge patch:
-  `null` removes a field (*2.3*). A command validates what it creates or changes, not the rest of
-  the document, so an error elsewhere never blocks the edit that fixes it; `alukit check` judges
-  the whole.
+  `null` removes a field (*2.3*); a list is replaced whole, so the app's hole rows send a bar's
+  whole `ops` (*2.3*, [e4](ux/e4-decisions.md) 12). `{ "context": true }` on a bar or a placed
+  part marks it context (§4.4) and `null` unmarks it; `setConnection` marks a butt's through body
+  (*2.3*, gap X11). A command validates what it creates or changes, not the rest of the document,
+  so an error elsewhere never blocks the edit that fixes it; `alukit check` judges the whole. An
+  expression is checked against the params and, in a field whose schema names them
+  (`exprNames`), the names that field binds besides: `bore` in a sleeve's `len_mm` (§4.5), and
+  nowhere else (*2.3*, [e5](ux/e5-decisions.md) 29; every edit of a face joint with such a
+  sleeve was refused before).
 - `autoConnect` takes `optional: true`, doing nothing where nothing butts, so the draw tool sends
-  one per end without repeating §4.5's rule (*2.3*).
+  one per end without repeating §4.5's rule (*2.3*). *2.3* (the editing round, E1.2): it declares
+  `cut: "angle"` on an angled end it makes, never over a cut the end declares, and lists those
+  ends in its answer (`angled`); an end at a corner whose ends are all joined butts on the
+  corner's through bar with a butt of its own (§4.5). Its rule is one function (`planJoin`), which
+  the `unconnected` problem also asks before it offers its join ([e1](ux/e1-decisions.md) 1–6).
 - **`setProject`** (*2.3*) takes a merge patch over `name`, `catalogs`, `currency`,
   `price_basis`, `fx`, `defaults` and `order_rules`, and answers the fields it changed. A catalog
   it adds must be a built-in id or a folder that resolves, symbolic links followed, inside the
@@ -2611,9 +2664,11 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   The app's end handles and length label send it followed by an `autoConnect` with `end`, so an
   end that lands on a bar joins it by the corner rule ([ends](ux/drag-ends-decisions.md) 9, 15).
 - **`transform`** (*2.3*, after the UX redesign; the editing audit's E-UX-3 to E-UX-5) moves
-  (`by: [dx, dy, dz]`) or turns (`rotate: { axis, deg, about }`, about a world axis through a
-  point) nodes, bars, runs, parts and patterns' templates as one step, keeping each in the form it
-  is written: an inline point moves, an expression keeping its params (`W` moved by 100 is
+  (`by: [dx, dy, dz]`, expressions kept) or turns (`rotate: { axis, deg, about }`, about a world
+  axis through a point; `deg` and `about` are numbers, since a turn other than a quarter writes
+  numbers and an expression angle would have nothing to keep), exactly one of the two, nodes,
+  bars, runs, parts and patterns' templates as one step (a connection named moves a butt's through
+  body), keeping each in the form it is written: an inline point moves, an expression keeping its params (`W` moved by 100 is
   `W + 100`, and the step's words say so); a node moves as `moveNode` moves it; a part on a
   station rides its bar, or, moved alone along it, changes `at_mm` (off it, it is refused); a part
   at a world pose moves its pose; a template moves and its copies follow. A quarter turn is exact
@@ -2626,13 +2681,18 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   on the moved set as coordinates where they are. Its answer lists what moved, what followed (the
   rest's ends, and the parts on moved bars), what was freed and what was kept as an expression;
   a dry run adds the cut lengths that move and what is removed ([move](ux/drag-ends-decisions.md)
-  1–9).
+  1–9). It moves whole entities: a bar in the set moves both its ends, so it does not stretch; a
+  bar joined to the set stretches by following (*2.3*, the editing round's integration). The
+  app's Move, Rotate, Align and a part's slide send it, followed by an `autoConnect` at each end
+  of the moved bars (the first 12) (§8).
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
   moves (`cuts`, before and after), the bars it adds with their cuts, the parts it adds (`parts`,
   *2.3*, E1.6: each one's item, the bar and the distance from its design point A for a part on a
   station, and its origin; or the quantity of a part counted, not placed), what it removes, and
-  the ends it claims. The server runs it in its queue, against the revision after every step before it
+  the ends it claims. An `explodePattern` answers which drawn copy each new entity is
+  (`info.copies`, `b26@2` → its entity), so a preview does not draw the copies twice (*2.3*,
+  [e1](ux/e1-decisions.md) 17). The server runs it in its queue, against the revision after every step before it
   ([s1](ux/s1-decisions.md) 14–16).
 - Every answer returns the new revision, the ids each command created, and diagnostics that name
   entities (review m2). A refusal is `{ code, message, entity?, field?, refs? }`; a command never
@@ -2707,6 +2767,11 @@ Agents work at this level of meaning, so they never compute cut lengths by hand.
   joint of its two ends, from the same state, with its effects; or why not: a corner that is not two
   ends, or the error derive gives the joint there, in its words. A corner names its miter or
   splice (`joints`) beside its butts. It answers what `alukit arrangements --json` prints.
+- **`GET /api/query?select=<selector>`** (*2.3*, the editing round, E2.2) answers the ids
+  `alukit query` selects, in id order and unbounded, over the document and the derived model of
+  the variant asked (`{ ok, rev, selector, ids }`, or a 400 with the selector's error). The app's
+  selection verbs (similar, the same tags, connected, the whole assembly) ask it, so one grammar
+  serves the CLI, the server and the app ([e2](ux/e2-decisions.md) 5).
 - **`GET /api/catalog`** lists the built-in catalogs besides the project's (*2.3*): each one's id,
   name, item and bar counts, and whether it sells T-slot profile, so the app adds one by name.
 
@@ -2755,7 +2820,7 @@ source in the log.
 | `alukit arrangements <dir> --at x,y,z [--at …] [--rule r]… [--json]` (*2.3*) | a corner's arrangements (§7.1, §8): per corner rule, the bar that runs through, the cut lengths that move and the batch that applies it, or why the rule is refused; then a miter's and a splice's, or why derive refuses each (`--rule miter`, `--rule splice`; E1.4); writes nothing; exit 1 when the project cannot be read |
 | `alukit cutlist` / `bom` / `machining` / `order` / `costs <dir> [--variant v] [--format md\|csv\|json]` | the outputs; `machining` (*2.3*) has no CSV; `order` and `costs` take `--as-of YYYY-MM-DD` (*2.3*); `order` exits non-zero when blocked |
 | `alukit derive <dir> --json [--select <paths>]` | the derived model, for report builders (`alukit.derived/1`, with its own JSON Schema). `--select` (*2.3*) takes dotted paths, `*` for every member, commas to merge (`bars.*.cut_mm,params`), and keeps the model's shape; a path the model lacks is an error |
-| `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context. *2.3* (E1.5): `like:b1`, the entities of b1's kind with its item and options (a bar's or part's as derived, a connection's of its type too); `connected:b1,c3`, the bars a connection joins to them (through bar, ends, base, layers, a run's bars), and `connected*:b1`, the whole assembly they belong to; the app's "select similar" and "select connected" read the same functions (`similarTo`, `connectedTo` in `src/core/query.ts`) |
+| `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context. *2.3* (E1.5): `like:b1`, the entities of b1's kind with its item and options (a bar's or part's as derived, a connection's of its type too), and `like:b1 by tag`, those carrying every tag b1 carries (E2.2); `connected:b1,c3`, the bars a connection joins to them (through bar, ends, base, layers, a run's bars), and `connected*:b1`, the whole assembly they belong to; the app's "select similar" and "select connected" read the same functions (`similarTo`, `connectedTo` in `src/core/query.ts`) |
 | `alukit do <dir> -f batch.json` (or `-f -` for stdin) | edits from a file or stdin, one process per batch; inline JSON also works. `--dry-run` (*2.3*) says what the batch would do and writes nothing (§6) |
 | `alukit add bar --item … --a n1 --b 0,0,900`, … | sugar over `do`; `alukit add frame <dir> --size W,D,H` (*2.3*) is `addFrame` (§6) |
 | `alukit move <dir> --ids b3,b4 --by dx,dy,dz [--detach]` / `alukit rotate <dir> --ids … --axis z --deg 90 --about x,y,z [--detach]` (*2.3*) | sugar over `do` for one `transform` (§6); `--by` takes expressions; `--dry-run` writes nothing |
@@ -2803,6 +2868,17 @@ measurements, cited by decision number: [s2](ux/s2-decisions.md) (the shell),
 sheets), [s5](ux/s5-decisions.md) (the tools and the inspector) and
 [int](ux/integration-decisions.md). D-UX-n are the plan's decisions.
 
+*2.3*, the 3D editing round: the [editing audit](ux/editing-audit.md) found that once something
+existed the view could not change it, and planned six streams to close the gap (its decisions are
+E-UX-n). Their notes: [ends and move](ux/drag-ends-decisions.md) (the end handles, the length
+label, the Move tool), [e0](ux/e0-decisions.md) (the shared contracts), [e1](ux/e1-decisions.md)
+(the core and the CLI), [e2](ux/e2-decisions.md) (selection, visibility, the menu, navigation),
+[e3](ux/e3-decisions.md) (transform and copy), [e4](ux/e4-decisions.md) (bars and ends),
+[e5](ux/e5-decisions.md) (connections, patterns, parts), and [x11](notes/x11.md) for context.
+The interfaces and their owners are in [`ux/contracts.md`](ux/contracts.md); the round's
+acceptance scenarios, scripted, are `tests/e2e/editing.spec.ts`, with what they found in
+[`ux/integration-editing.md`](ux/integration-editing.md).
+
 ### Layout
 
 | Area | Holds |
@@ -2810,7 +2886,7 @@ sheets), [s5](ux/s5-decisions.md) (the tools and the inspector) and
 | Top bar | the Project menu (settings, revisions, Export GLB, help, the start card), the variant shown, undo and redo naming whose step they take back, the order's readiness, the revision ("Saved as …" or "Not saved"), the theme and help (*2.3*). The read-only banner is a bar of its own under it (*2.3*) |
 | Left | the parts bin over the outline (*2.3*). The bin holds what is armed, the items the project uses, and those pinned or armed lately; the outline is one tree of bars, joints by corner, parts, patterns, runs and points, by kind or by tag, each row in words with its problem mark. The catalog browser (vendor › kind › family, search, item cards with a section thumbnail, fidelity and key data; options and offers) opens wide over the left column and the viewport (`/`; *2.3*) |
 | Centre | the 3D viewport: perspective or orthographic, standard views (iso, top, front, side; *2.3*: and the gizmo's six ends), a section clipping plane, the ground. *2.3*: the tool rail on its left edge, the view controls on top, the command bar at its foot while a tool is active, and the status bar under it |
-| Right | the active tool's form (Connect, Pattern, the box frame), then the inspector (*2.3*): the selection's properties, edited in place; a corner's arrangements; with nothing selected, the project panel (First steps, the project's summary, its params). Every number has a provenance popover; derived values (cut length, end angles, mass, price) are computed, never typed |
+| Right | the active tool's form (Connect, Pattern, the box frame), then the inspector (*2.3*): the selection's header with its edit buttons, its properties, edited in place (below, The inspector); a corner's arrangements; with nothing selected, the project panel (First steps, the project's summary, its params). Every number has a provenance popover; derived values (cut length, end angles, mass, price) are computed, never typed |
 | Bottom | the sheets (*2.3*): Cut list · BOM · Machining · Order & costs · Problems · Records, each tab with its badge. The checks and open items are in Problems, the decisions and the log in Records, the params in the project panel. `T` collapses them, `Shift+T` maximizes them over the viewport, which keeps its size under them |
 
 As built (*2.3*):
@@ -2854,8 +2930,16 @@ As built (*2.3*):
   in one step) and the skill's example as one step (D-UX-6, D-UX-25; s2 7–10). **Project
   settings** save as one `setProject` and list the built-in catalogs the project does not name,
   to add by name (s2 11; int 20–22).
-- **Keys** are described where they are bound, and help lists them; single-key shortcuts can be
-  turned off (WCAG 2.1.4; s2 20, 21; s5 24).
+- **Keys** (*2.3*, the editing round): **every edit is an action in one registry** (E-UX-1): an
+  id, a title, a group, its keys, a `when` that answers true or why it cannot run now, and what it
+  does. The context menu, the keys, the help, the selection header's buttons and the inspector's
+  action row all read it, so no edit exists only as a key or only as a button. A key holds
+  exactly the modifiers it names (Ctrl or Cmd, Shift, Alt; a symbol carries its own Shift), so H
+  and Shift+H are two keys; a key whose action cannot run now is left to the next handler; two
+  actions never share a key in one scope. An Alt key is matched by the key's position where Alt
+  composes a character (Option+H on a Mac types ˙). The help lists each action's keys under its
+  group, then the keys a gesture or a tool describes; single-key shortcuts can be turned off
+  (WCAG 2.1.4; s2 20, 21; s5 24; e0 4–9; e2 15). Calls 78, 79.
 - **The look** (s4): design tokens for a dark and a light theme, the light one when the system
   asks unless chosen (snapshots dark; D-UX-21); IBM Plex bundled as files under the CSP
   (D-UX-22); numbers in the CLI's digits, thousands grouped with a narrow space, units in the
@@ -2866,10 +2950,64 @@ As built (*2.3*):
   but the cut list, project settings, the corner inspector and the example load the first time
   they open, from the server's origin under its `default-src 'self'`. No chunk passes Vite's
   500 kB advice.
-- **v1 limits** (v1.1): the inspector does not edit a face or pivot connection (a butt is
-  rearranged through its corner), and dragging an existing node is not built. *2.3* (after the
-  UX redesign): **a bar end drags**, by its handle (below, Tools); §7.1's rule for a drag holds,
-  a local preview committed as one step on release ([ends](ux/drag-ends-decisions.md)).
+- **v1 limits**: what the editing round left for later is listed at the end of this section
+  (*2.3*). Draft 2.3's earlier limits, that the inspector edits no face or pivot connection and
+  that no bar end or node can be moved, are lifted: every connection's fields edit (below, The
+  inspector), a bar end drags by its handle, and a node moves by its fields or with Move. §7.1's
+  rule for a drag holds throughout: a local preview, committed as one step on release.
+
+### Selecting, the menu and the view's state
+
+*2.3*, the editing round ([e0](ux/e0-decisions.md), [e2](ux/e2-decisions.md)). None of this is a
+step: the revision does not move.
+
+- **The context menu** (E-UX-2): a right-click that does not move (within 4 px, the click's
+  threshold) opens it in the view, in Select, on what is under the pointer, selected first when it
+  is not, else on the selection; a right-drag still pans. A right-click on an outline row opens it
+  about that row, and on a group's head about its members, in any tool (the outline has no
+  gesture to interrupt, and a greyed entry says why it cannot run now). Shift+F10 and the Menu key
+  open it about the selection: by the focused row, else at the selection's middle in the view. It
+  is WAI-ARIA's menu: the first entry that can run has the focus, ↑ ↓ Home End move, a letter
+  jumps, Enter or Space runs, Esc or Tab closes it and gives the focus back; a greyed entry stays
+  focusable and says why under its title. A press outside it, a new revision, a resize or a chord
+  closes it. It lists the registry's actions that apply, by group (select, view, edit, transform,
+  bar, connection, pattern, part); a joint marker's menu offers its one joint's Edit and Change
+  connector (e0 10–13; e2 1, 2; e5 28). Call 79.
+- **The selection header's buttons** are the registry's edit and transform actions (Delete,
+  Duplicate, Copy, Paste, Mirror…, Align to a face…), each its title and first key, greyed with
+  its `when` while it cannot run, read-only included (e2 3, 4).
+- **Selecting.** A click selects, Ctrl or Cmd + click toggles. Shift + drag draws a box: **left to
+  right a window**, solid, taking what lies wholly inside; **right to left a crossing**, dashed,
+  taking what it touches (E-UX-10; a body is the hull of its eight projected corners). **Select
+  all** (Ctrl/Cmd+A) takes the document's bars and placed parts that the view draws and does not
+  hide; it acts anywhere but in a text field, where the audit (§9) said only while the focus is
+  on the view or the outline, since selecting the page's text is never useful here and a field
+  keeps its own Ctrl+A. The menu adds **Select similar** (the same kind, item and
+  options), **Select tagged …** (every tag it carries; greyed when it has none), **Select
+  connected** and **Select the whole assembly**, which ask `GET /api/query` (§7.1) for `like:`,
+  `like:… by tag`, `connected:` and `connected*:`; an answer that comes back after the selection
+  changed is dropped. A click on an outline group's head (a tag, a kind) selects its members,
+  Ctrl or Cmd adding them; its twisty still opens and closes it (e2 5–10). *2.3*: §8 said Select
+  works "or by tag" before this was true (the audit's D6). Calls 75, 86, 87, 89.
+- **Hide, isolate, show all** (E-UX-9): H hides what draws the selection (a corner its bars, a
+  joint its fasteners and bars, a pattern its template and copies) and takes it out of the
+  selection; Shift+H isolates it, hiding every other drawn body; Alt+H shows all. They are in the
+  menu too. It is view state, per tab, like the section plane: a hidden body is not drawn,
+  picked, hovered, boxed, snapped to or framed, and hiding changes visibility only, never a
+  material, so it links no shader program. While anything is hidden the status bar says
+  "n hidden · Show all" ("isolated · " first), and the outline strikes a hidden row's id. **What
+  was built differs from E-UX-9**: isolate hides the rest, rather than ghosting it, so nothing put
+  out of the way is picked or snapped to, and Show's ghost stays Show's (e2 11–14). Call 85.
+- **The size readout**: the bounding box, in world axes, of what draws the selection, or of every
+  body when nothing is selected, as W × D × H in millimetres in the status bar; while Alt is held
+  the same box is drawn in the view with W, D and H by its edges (e2 16, 17).
+- **Navigation** is a preference in the help, per browser: **Mouse** (the default: drag orbits,
+  right-drag pans, the wheel zooms) or **Trackpad** (two fingers pan). A pinch, or Ctrl + wheel,
+  dollies in perspective and zooms in orthographic, in both: **built otherwise than E-UX-17**,
+  which said a pinch zooms, because the lens zoom left the field of view that the fits and the
+  projection switch read behind (e2 18, 19). Call 88.
+- **Labels over the view** stay inside it and clear of the gizmo's footprint, so a label cannot
+  take a press meant for a ring (e2 21, 23).
 
 ### Tools
 
@@ -2882,9 +3020,13 @@ key over the view moves the keyboard into the bar; `=` starts a value with a par
 back one level: what is typed, the last pick, the gesture, the tool, then the selection (D-UX-18;
 s5 9).
 
-- **Select** (`V`): click or box select, or by tag. *2.3*: **Delete** goes at once when its dry
+- **Select** (`V`): click, Ctrl/Cmd + click, a window or crossing box, the outline's group heads
+  and the menu's verbs (above, Selecting). *2.3*: **Delete** goes at once when its dry
   run removes only the selection; otherwise a dialog lists what else goes and what changes first,
-  and the step is sent strict (D-UX-13; s5 29–32).
+  and the step is sent strict (D-UX-13; s5 29–32). In Select, one bar selected shows its **end
+  handles**, and a part alone (or parts on one bar along a world axis) the gizmo's **arrow along
+  its bar** (below).
+- **Move** (`D`) and **Rotate** (`Q`) (*2.3*): below.
 - **Draw bar** (`B`; any bar item: profile, tube, rod, rail):
   1. Click a snap point (*2.3*: or type `[x, y, z]`, or press Enter at a selected corner, node or
      bar end; s5 8).
@@ -2957,11 +3099,141 @@ the way the pointer went (`200`, `=D`), the offset (`0, 200, 0`) or where the ba
 one ghost material; after a snap or a pause, the dry run says what follows, frees, joins or is
 cut ("b2.a, p1 follow · cut b2 580 → 680"), or why the move is refused. The release is one step:
 `transform`, then an `autoConnect` at each moved bar's end. Joined ends follow; Alt frees them.
+*2.3* (the editing round): the first click on a snap is the base point, so a bar moved from its
+end to another bar's end lands on it exactly (point to point, E3.5); with a selection and no
+drag, a value typed starts a move from the selection's centre, and Enter, or a click, commits it.
+The arrow locks are the move's, so they act once it is on (a drag, or a first digit typed); while
+a selection only waits they go to what has the focus, unlike Rotate's X, Y and Z, which start a
+turn (measured by the round's scenarios).
+Move moves whole entities (§6): it stretches the bars joined to the selection, not a bar in it,
+so a side is widened by selecting it with a window, not a crossing (a crossing also takes the
+rails that reach into the box, and they move whole). A part selected alone in Select (or parts all
+on one bar along a world axis) shows **the gizmo's arrow along its bar**: a drag on it slides them
+along the bar in whole millimetres and its release commits; a click on it leaves the slide on, to
+type the distance. That step is a `transform`, which changes `at_mm`, where the audit's E3.7
+named `setPart`: the same document, and one edit path for every move ([e3](ux/e3-decisions.md)
+17). Call 94.
 
-**The inspector** (*2.3*; s5 25–28) edits in place. A bar's new length moves end b along the bar,
-written as numbers; a coordinate a param drives says "driven by H: edit H" and is never
-overwritten, and an end at a reference is read-only, saying what sets it. **Replace** (this bar,
-the selected ones, all like it) and the finish edit the item, each one step.
+**Rotate, `Q`** (*2.3*, the editing round, E-UX-5 and E-UX-24; [e3](ux/e3-decisions.md) 1–5).
+With a selection, the gizmo's three rings stand at its centre. A click on a snap (or a body) is
+the centre instead and starts the turn there, Enter takes the selection's centre, and a digit
+starts a turn about it with the angle typed. The axis is Z until X, Y or Z (or `→ ← ↑`) chooses
+another; those letters are Rotate's while a turn is on or a selection waits, so Q, X, 90, Enter
+turns 90° about X. A typed angle is any number, counter-clockwise looking down the axis, and
+Enter commits; a ring's drag turns about its own axis in 15° steps, and its release commits. The
+turned bars are drawn as ghosts; a dry run comes after a typed angle or a rest. The step is one
+`transform { rotate }`, then an `autoConnect` at each turned bar's end; Alt frees what joins the
+selection to the rest. Calls 90.
+
+**Duplicate, Copy and Paste** (*2.3*, E-UX-6, E-UX-7; e3 8–10). **Duplicate** (Ctrl/Cmd+D, the
+menu or the header's button) is Move's session on a copy, from the original's place: the copy
+follows the pointer, the first click on a snap is the base point and the next where it goes, or
+an offset is typed. After the offset, `4x` (or `x4`) makes four copies at that spacing and `/4`
+four copies dividing it; the count is the typed text's last token, with nothing inside it, so
+`W / 2` stays a division; at most 100 copies. **Copy** (Ctrl/Cmd+C) remembers the selection, in
+the tab, for its project only; **Paste** (Ctrl/Cmd+V, and the menu once something is copied)
+starts the same session with the copies hanging from the pointer by their lowest corner, and the
+first click places them. The step is one `array` along the offset's direction at its length, then
+an `autoConnect` at each new bar's end (the first 48), so a rail duplicated between two legs butts
+on both; the copies' coordinates are numbers, as `array` writes them, and they are selected after
+the step. Call 91.
+
+**Mirror…** (*2.3*, E-UX-8; e3 6, 7), in the menu and the header, for bars, parts and points: a
+plane square to X at first (X, Y or Z, or `→ ← ↑`, turn it), through the selection's centre; it
+follows the snap under the pointer, and a typed value is where it crosses its axis (`500`,
+`=W / 2`, valued, since `mirror` takes a number). A click or Enter commits one `mirror` step; the
+images are drawn mirrored over the plane's grid, the dry run names what it makes or gives the
+core's refusal, and the images are selected after it. **Remove the originals**, a box in the
+command bar, removes what was mirrored in the same step, with Delete's cascade. A part on a bar's
+station is mirrored only where the plane maps that bar onto itself, or with the bar: `mirror`
+does not move a station part onto another bar at its image, so a bracket on one leg is not
+mirrored onto the opposite leg (a v1 limit, below). Call 92.
+
+**Align to a face…** (*2.3*, E-UX-23; e3 16), in the menu and the header: a click on a bar's face
+moves the selection along that face's outward normal until its own face that looks the same way
+is flush ("flush with b1's top · by [0, 0, 7]", said before the click), as Move's step; a face of
+the selection itself, or a selection already flush, is refused. The offset is read from the
+derived bodies in the app, and an agent reads the same numbers from `alukit derive`. Call 93.
+
+**Gestures share one machinery** (`drag.ts`): a press during a gesture is asked of the gesture
+first (a Duplicate's base point, Rotate's centre), and while a gesture is on its keys are its own
+wherever the focus is, except a text field, a dialog or a menu, so a Duplicate started from an
+outline row keeps its arrows and Enter (e3 12, 13). **Every preview is local** (E-UX-20): the
+moved, turned, mirrored or copied bars drawn on the overlay's one ghost material, a mirror's with
+a left-handed frame; a dry run only after a snap, a typed value or a 250 ms rest, so a ring's
+60-move drag asks at most 4 (measured; the audit's bound is 8) (e3 5, 11; move 17). The gizmo is
+one at a time, and each user takes it away only while the view still shows the one it set
+(e3 14).
+
+### The inspector
+
+*2.3* (s5 25–28; the editing round, [e4](ux/e4-decisions.md), [e5](ux/e5-decisions.md),
+[x11](notes/x11.md) 17). The inspector edits the selection in place, one step per edit, each sent
+as `alukit do` sends it. A field takes values as the command bar does (D-UX-17): units and
+expressions, a param written as typed, any other value as the number it comes to; a value that
+cannot be read says why under its row and sends nothing, and a refusal shows under the row that
+sent it (e4 19, 20; e5 1–3). A coordinate a param drives says "driven by H: edit H" and is never
+overwritten.
+
+- **A bar.** Its **length** is typed as a value or an expression (`=D` binds the param), and a
+  select beside it moves end b (the default), end a, or both ends from the middle, which keeps the
+  centre (E-UX-16). The field sends a `setBar` of the end's coordinates, not `moveEnd`, so a
+  butted side rail's length can be bound to a param: **built otherwise than E-UX-16's path**,
+  since `moveEnd` refuses an end a joint holds; off the world axes it asks for a number (e4 16, 17).
+  **Replace** (this bar, the selected ones, all like it), the finish and options, the roll, and
+  the **anchor**, as a list or picked on the section's dots, the command bar's picker made one
+  component (e4 8). **Offset** (`off_mm`) along the section's x and y, each labelled with the
+  world direction it runs in (e4 7). **Context**, a checkbox (§4.4; x11 17). Calls 97, 99.
+- **Its ends** (E4.1). Each end's row names the joint that claims it, from derive's claims (the
+  server's view model carries them beside `alukit.derived/1`), even when the claim fails: "butts
+  on b3 (c9)", "butts on b3 (c9); the joint fails, so it is square", "two joints claim it"; a
+  corner's through end names what bears on it. It edits the **cut** (not declared, angle,
+  square) and the **extension**, a `setBar` merge patch on `ends.<e>`; the **plane**: by its
+  joint, **stopped at a face** (the side faces the end's line meets beyond the bar's other end,
+  the nearest first, with how far the end goes), **flush with an end** (the eight nearest), or
+  **picked in the view**, where the next press in Select names the face or end; a plane frees the
+  end from its joint in the same step and declares `cut: "angle"` when it is angled. **Free from
+  c9** drops the end from the joint that claims it, one step (the joint goes when it was its last
+  end). *2.3*: before this, a failed claim read as an open end, with a Join that `autoConnect`
+  refused (the audit's D2) (e4 1–6). Calls 95, 96.
+- **Its actions**, in the menu and in the inspector's action row: **Split here** at the menu's
+  station, rounded to the millimetre (the menu has no snap: built otherwise than E-UX-21's
+  snapped station); **Split at…** a typed distance, with a splice when asked, a bar in a run
+  always spliced; **Reverse**, which says first why not (a bar in a run, a free end b); and **Add a
+  hole on b1's face +x, 20 mm from end a…**, offered over a bar's side face only, which opens the
+  hole form there. **Each hole is a row** (face, distance, end, size as a drill or a thread such as
+  `M6`, depth, empty for through) that edits and removes it; each change is one `setBar` of the
+  whole `ops` list, keeping a countersink or counterbore the row does not show (E-UX-21, E-UX-22;
+  e4 9–12). Call 97.
+- **Several selected** (E-UX-15): with several bars, their options (when they share one profile),
+  anchor and roll; with any entities, their label and tags; each shows the value they share or
+  "varies", and a change is one step, one patch per entity. The tags field edits only the tags all
+  carry, so a tag some carry survives; length is not shared, each bar's having its own end and
+  driver (e4 13–15). Call 98.
+- **A node** says what uses it (the bar ends at it, the planes through it) and edits where it is:
+  a point's x, y, z, or a station's bar, distance, end and face, each one `moveNode`, so every bar
+  end at it follows; a pivot's point is said, not edited (e4 18).
+- **A connection.** A butt's through bar, connector, quantity, **spacer** and **through end** (the
+  schema's choices, only where it runs through a bar); a **pivot's** base (a station, on a face
+  only), axis, hinge and quantity; a **mitre's** and a **splice's** connector, quantity and gap;
+  each its own `setConnection` merge patch and its own refusal. A connector is chosen among those
+  that join that way: a splice's among splices, a pivot's among hinges, a mitre's among all
+  (e5 1–3, 14–16). **The face each butting end's cross holes go in from** (§4.5 `hole_faces`): one
+  face per end, or AluKit's choice; a face per hole, written by hand or the CLI, shows in words,
+  and derive judges a face as it judges the catalog's (e5 17, 18). Calls 102, 104.
+- **A face joint** is edited in the Connect tool's own form, filled from the joint (E-UX-14): its
+  fastening, fastener, stack and stations; **Apply** sends the difference between what the form
+  wrote when filled and what it writes now, as one `setConnection`, so a field the form cannot
+  hold (a sleeve in the stack, a rail-hole selection) is kept as written. **Change layers…**
+  re-picks the layers in Connect, whose Apply reads "Replace c23" (e5 19–22). Call 100.
+- **A live pattern**: along (a bar or a run), pitch, count (down to 1, the schema's minimum),
+  offsets and skips (copy numbers, `3, 5`), each one `setPattern`; **Explode** is one
+  `explodePattern` that selects everything it made (E-UX-13; e5 4–8). Call 103.
+- **A part**: **Replace** among the catalog's items of its kind, its own family first, for this
+  part or every part like it; its station's bar, face or **groove**, distance and end; its
+  **offset** (`u, v`, across the face then out from it); roll; Context (e5 23–25).
+- **The menu's Edit, Change connector, Explode and Replace part** take the inspector to the field
+  or open its form, so the menu and the inspector stay one place to edit (e5 26, 27).
 
 **A corner** (*2.3*, D-UX-10) is where bar ends meet within the core's length tolerance, or an end
 meets another bar's line; it is not an entity, and its key is its point (s3 1–4). Its marker in
@@ -2969,7 +3241,38 @@ the view and its row in the outline select it, and the inspector shows its **arr
 (D-UX-9): per corner rule, the bar that runs through and the cut lengths it gives, from one
 `GET /api/arrangements` (§7.1; int 13–17). **Apply** is one strict step that takes the corner's
 butts out and joins it by that rule, keeping the connector; **Apply to n matching corners** does
-the same at every corner built the same way (s5 34–39).
+the same at every corner built the same way (s5 34–39). *2.3* (the editing round, E1.4, E5.5): a
+corner of two ends also lists the **mitre** and the **splice** derive accepts there, from the same
+answer, or why not; applying one to the matching corners needs the same profiles at their ends
+too, and derive's dry run of them all first. Only a pivot that sets an end there, or a pattern
+copy, keeps a corner from being arranged. Flip stays which bar runs through: it cycles the butts
+and passes a joint by (e1 13–15; e5 9–13). Calls 76, 101.
+
+**What each edit sends** (*2.3*, the editing round). Every edit in the app is one of §6's
+commands, or a batch of them, sent as `alukit do` sends it and logged under its names; the round
+added two commands, `moveEnd` and `transform`. An agent makes the same edit with the same batch.
+
+| Edit in the app | Step |
+|---|---|
+| Move, a part's arrow, Align | `transform { by }`, then `autoConnect` at each end of the moved bars (the first 12) |
+| Rotate | `transform { rotate }`, then the same joins |
+| An end handle, the length label | `moveEnd`, then `autoConnect { end }` |
+| Duplicate, Paste | `array` along the offset, then `autoConnect` at each new bar's end (the first 48) |
+| Mirror… | `mirror`; with Remove the originals, `removeEntity { cascade }` of each, referrers first |
+| Delete | `removeEntity` (with `cascade`, strict, when the dialog listed more) |
+| Split here, Split at… | `splitBar` |
+| Reverse | `reverseBar` |
+| A hole row, Add a hole | `setBar { ops }`, the whole list |
+| An end's cut, extension | `setBar { ends }` |
+| An end's plane, Free | `setBar { ends }` with `setConnection` or `removeEntity` of the joint it leaves |
+| Length, offset, anchor, roll, options, Replace, Context | `setBar` (several selected: one per bar) |
+| Label, tags (several) | `label`, `tag` |
+| A node's fields | `moveNode` |
+| A connection's fields, a face joint's Apply | `setConnection` |
+| A pattern's fields; Explode | `setPattern`; `explodePattern` |
+| A part's fields, Replace part | `setPart` |
+| A corner's Apply | `removeEntity` of its joint, then `autoConnect` by the rule, or `addConnection` of the mitre or splice |
+| Hide, isolate, show all, the selection verbs, the size readout | none: view state, and `GET /api/query` |
 
 Snap targets are nodes, bar ends, stations on face and groove centre lines and on each bar's
 **design line** (*2.3*: a station with no face lies on it, §4.3), face centres, every placed
@@ -2977,7 +3280,11 @@ part's datums and face centres (*2.3*), and the grid (10 mm by default). A point
 within a few pixels; targets drawn over each other go to the one nearer the eye. Snapping is
 analytic, from the derived model, not a raycast against meshes. **Picking** an entity (select,
 Connect's ends, a pattern's `along`, `W`'s face) does raycast the drawn bodies (*2.3*): it names
-an entity, it does not place a point. The camera is
+an entity, it does not place a point. *2.3* (the editing round): on a bar, the pick also names the
+face (a side `±x`, `±y`, or an end `a`, `b`) and the station along it from its design point a,
+computed from the derived model (the ray against the bar's box between its two end planes, so an
+angled end is cut as derive cuts it), which the menu's Split here and Add a hole read; what is
+hidden is passed over (e0 12, 14). The camera is
 [camera-controls](https://github.com/yomotsu/camera-controls), with orthographic views and fit to
 selection; fitting keeps the view's direction, since `fitToBox` turns it to the nearest axis.
 
@@ -3001,7 +3308,17 @@ selection; fitting keeps the view's direction, since `fitToBox` turns it to the 
   for what blocks or errs, a triangle for a warning) are screen-sized points lifted toward the
   eye, so a corner inside its bars still shows; snap glyphs have a shape per meaning, in the
   tool's colour (s3 17, 18; s5 22). Colour by item takes the BOM's swatches, with a legend
-  (s3 22). The ground fits the model; the gizmo is HTML over the canvas (s3 20, 21).
+  (s3 22). The ground fits the model; the view gizmo (the axes in the corner) is HTML over the
+  canvas (s3 20, 21).
+- *2.3* (the editing round; E-UX-19): **the editing gizmo** is in the scene: arrows along the
+  world axes, a ring square to each and a square in each plane at a point, sized to 96 px on the
+  screen each frame, or the end handles' grips; one at a time. Every geometry and material is made
+  with the viewer, and the viewer links every lasting object's program, hidden ones too, before
+  its first frame (`renderer.compile`), so showing a gizmo, a selection's x-ray, the size box or
+  a marker links nothing. **Previews** (ghosts) are a pool of meshes on the overlay's one ghost
+  material. **Hiding** zeroes a hidden instance's matrix and makes a body of its own invisible,
+  never a material. So `view.spec`'s zero shader links per revision holds across a gizmo, a
+  drag, hide and show (e0 16; e2 11; e3 11).
 - Holes are markers, not booleans, in v1: a rod of the drill's diameter through the material,
   with a wider one for a countersink or counterbore. Hardware uses simple parametric meshes, or a
   GLB per item where one exists. A face connection's fasteners are drawn on their axes; a butt's
@@ -3031,6 +3348,32 @@ selection; fitting keeps the view's direction, since `fitToBox` turns it to the 
 an M1 Max a 1,000-bar lattice holds 60 Hz orbiting and hovering, with 0.25 to 1.9 ms of CPU a
 frame in `renderer.render` and 0.2 to 0.6 ms a hover pick. The hardware items and the derive time
 are *not verified* (review 1 §9).
+
+### What the editing round left for later
+
+*2.3* (v1 limits after the 3D editing round; the [audit](ux/editing-audit.md)'s §10, and what its
+scenarios found, [`ux/integration-editing.md`](ux/integration-editing.md)). Each is a CLI or
+hand edit today unless it says otherwise.
+
+- **A stretch.** Move moves whole entities, so a crossing box over a frame's side moves the rails
+  that reach into it as well; a window over the side, whose joined rails then follow, widens it
+  (§6, `transform`).
+- **Mirror onto another bar.** A part on a bar's station is mirrored only with its bar, or where
+  the plane maps the bar onto itself; a bracket on one leg cannot be mirrored onto the opposite
+  leg (place it there instead).
+- **Picking and arranging**: cycling what lies under the pointer, distribute, nudging with the
+  arrow keys, a plane lock, a bar's up vector, joining collinear bars, a circular pattern, a
+  pattern by a direction or by offsets, a rail's hole layout (`holes`), a butt's stack and
+  `held_by`, a part at a world pose, unplaced lines, runs named by hand.
+- **Values and views**: "Make parameter…", persistent dimensions and guides, readouts to the
+  neighbours while moving, command search, saved views (`saveView`), pasting into another project.
+- **Records**: costs, price bands, offers, variants and checks have no path in the app (a
+  records-and-order audit's), nor project items (a plate or bent-angle editor).
+- **Owner calls** (the audit's §11, defaults taken): a butt's connectors are not drawn in 3D
+  (v1.1; joint markers stay the joint's sign), and an entity's variant scope (`only_in`,
+  `not_in`) is not edited in the app.
+- **The log** names each step's commands and words, not their arguments (§7.1), so an agent
+  replays a session from the commands sent, not from `alukit log`.
 
 ## 9. Exports
 
@@ -3792,6 +4135,20 @@ reasons. Marking the room is the run's own change, in its project.
      connectors that join that way: a splice's among splices, a pivot's among hinges, a mitre's
      among all of them, since no subtype names one. A pivot's base is edited on a face only, as
      Connect picks it (e5 14, 15).
+105. *New in 2.3, 3D editing integration, open.* The round's acceptance scenarios are scripted one
+     test each, each starting from the state the scenarios before it leave, built by the CLI with
+     the commands the app sends (the start card's frame), rather than as one session: a test runs
+     alone, and one that fails hides none after it. A13 and A15, which are about a session, make
+     their own in the app. The times recorded are the script's, a floor, with a keystroke-level
+     estimate beside them for the designer review (ie).
+106. *New in 2.3, 3D editing integration, open.* A scenario is `fixme` only when the app cannot do
+     it as built. Where one path fails and another the app offers works (an arrow lock before a
+     move is on, the anchor dots of a 40 × 80), the test takes the path that works and the defect
+     is listed (ie), so the scenario's check still holds the result.
+107. *New in 2.3, 3D editing integration, open.* Agent parity (A15) replays the commands the app
+     posted, read off its requests, with one `alukit do` per step: `alukit log` keeps each step's
+     command names and words, not its arguments (§7.1), and this pass changes no product code to
+     add them (ie).
 
 ## 15. Review 1 resolution
 

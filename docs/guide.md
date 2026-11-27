@@ -1,9 +1,10 @@
 # AluKit user guide
 
 This guide covers a project day to day: what is in its folder, what the document holds, how to
-draw in the viewer, how to read the outputs, and how to keep catalog data and history under
-control. The examples are lines of the synthetic cart project in
-[`tests/fixtures/cart`](../tests/fixtures/cart) (its catalogs are test data, not a real vendor's).
+draw in the viewer and edit what you drew, how to read the outputs, and how to keep catalog data
+and history under control. The examples are lines of the synthetic cart project in
+[`tests/fixtures/cart`](../tests/fixtures/cart) (its catalogs are test data, not a real vendor's),
+and, for editing, a table frame made on an empty project of the built-in Forseti catalog.
 The [design](design.md) is the full reference; the CLI's `--help` lists every option.
 
 Lengths are in millimetres, angles in degrees, masses in kilograms, and money in integer minor
@@ -244,8 +245,9 @@ be used now is disabled and says why.
 
 | Tool | Key | How |
 |---|---|---|
-| Select | `V` | click to pick, Ctrl or Cmd-click to toggle, Shift-drag a box; `Delete` or `Backspace` deletes the selection, listing first what else goes |
+| Select | `V` | click to pick, Ctrl or Cmd-click to toggle, Shift-drag a box (left to right takes what is inside, right to left what it touches); right-click for the menu; `Delete` or `Backspace` deletes the selection, listing first what else goes |
 | Move | `D` | drag the selection (or a bar or part you press), or click a base point and then where it goes; type `200`, `0, 200, 0` or `[x, y, z]` and `Enter`. `→ ← ↑` lock an axis; joined ends follow, and holding **Alt** frees them instead |
+| Rotate | `Q` | click the centre (or `Enter` for the selection's centre), `X`, `Y` or `Z` for the axis (Z at first), type the angle and `Enter`; or drag one of the rings, in 15° steps |
 | Draw bar | `B` | click a start, then click an end, or type a length and press `Enter` |
 | Box frame | `G` | click the corner, type `1000, 600` and `Enter` (or click the far corner), then the height and `Enter` |
 | Connect | `C` | pick a through bar and the ends that butt, two ends for a miter or splice, or two or more bars for a face joint, then apply. A face joint takes a fastening (none, bolt, T-nut, screw) with its fastener, stack and stations; a pivot takes a station on a face as its base, then the ends it carries, and a hinge. A pick the type cannot take is left out, and the tip says why |
@@ -253,17 +255,8 @@ be used now is disabled and says why.
 | Pattern | `X` | take the selection as the template, click the bar to repeat along, give pitch and count |
 | Measure | `M` | two snapped points: the distance and its components |
 
-**Changing a bar's length.** Select a bar: a handle shows at each end. Drag one to lengthen or
-shorten the bar along its axis; it falls onto the bars it meets and joins them on release, as the
-preview by the end says first ("will butt on b1 · cut 580"). Type a number while dragging to set
-the cut. Or click the cut length on the bar's label and type it, then `Enter`. An end that is
-joined is freed by the drag, and the preview says so; one a pivot, mitre or a param sets is
-locked, and says why ("driven by L: edit L").
-
-**Moving.** With Move (`D`), the moved bars are drawn where they would go, and the preview says
-what comes along, what is freed and which cuts change ("b2.a, p1 follow · cut b2 580 → 680"), or
-why the move cannot keep a joint ("Alt: detach"). A part on a bar slides along it. `alukit move`
-and `alukit rotate` do the same from the command line.
+Changing what you drew (moving, turning, copying, mirroring, lengths and ends, holes, joints,
+patterns) is the next section, [Editing in the 3D view](#editing-in-the-3d-view).
 
 `Esc` steps back one level at a time: what is typed, the last pick, the gesture, the tool, then
 the selection. `Ctrl/Cmd+Z` undoes the last step, and `Shift` with it redoes.
@@ -297,19 +290,18 @@ draws that length toward the pointer. While drawing:
 type the height and `Enter`: four posts, a base and a top ring, every corner butted, as one step.
 The form beside the inspector (and on the start card) sets the rings, a shelf, the corner rule,
 the connector, and whether W, D and H become params; it shows the cut lengths before you make it.
+On the start card, for a table frame of 40 × 40 with a shelf: click the **40 × 40** size, type
+`1000`, `600` and `750` in W, D and H, open **More options**, type `250` in **shelf at** (its top
+face that high above the base) and tick **as params**, choose a bracket under **Joined with**,
+then **Make a box frame**.
 
-**Placing a part.** Click a face or a groove: the part goes there, one step. Type a distance first
-to place it that far from the nearer end. A pattern's copies take no parts: place it on the
-template.
+**Placing a part.** Arm it first: `/` opens the catalog, search (`CT38-06`, `bracket`), open its
+card and press **Use for placing**; Place (`P`) is then on. Click a face or a groove: the part goes
+there, one step. Type a distance first to place it that far from the nearer end (`300`, then the
+click). A pattern's copies take no parts: place it on the template.
 
-**The inspector** edits the selection in place: a bar's length (which moves end b along the bar,
-and says "driven by H: edit H" when a param sets it), its item (**Replace**, for this bar, the
-selected ones or all like it), its finish and options. Select a corner (its marker in the view,
-or its row under Joints in the outline) for the **corner inspector**: each way the bars there can
-meet, which bar runs through and the cut lengths each gives, the current one marked "now".
-**Apply** rearranges the corner as one step; **Apply to n matching corners** does the same at
-every corner built the same way. `alukit arrangements <dir> --at x,y,z` gives the same answer from
-a terminal.
+**The inspector** edits the selection in place; what each kind of selection offers is under
+[Editing in the 3D view](#editing-in-the-3d-view) below.
 
 Views: the toolbar has Iso, Top, Front and Side (the gizmo in the corner turns to the others),
 **Orthographic**, and **Fit**; `O` toggles perspective and orthographic, `F` fits the selection (or
@@ -335,7 +327,190 @@ rejected text, in `.alukit/rejected/`.
 
 `?` lists every key, what the snap names by the pointer mean, and a switch that turns off the
 single-key shortcuts (a letter, `/`, `?`) for screen readers and speech input; the buttons and
-the keys with Ctrl or Cmd still work.
+the keys with Ctrl or Cmd still work. It also has **Navigating the view**: **Mouse** (drag to
+orbit, right-drag to pan, the wheel zooms) or **Trackpad** (drag to orbit, two fingers pan, pinch
+to zoom), kept in your browser.
+
+## Editing in the 3D view
+
+Everything you made can be changed in the app, each change one step that `Ctrl/Cmd+Z` takes back
+and that the CLI would make with the same commands. The examples follow on from one another: a
+table frame of 1000 × 600 × 750 with a shelf ring 250 up, made from the start card with W, D and H
+as params (above, A box frame), whose bars `addFrame` numbers posts b1 (front left), b2 (front
+right), b3 (back left) and b4 (back right), then the base ring b5–b8, the shelf ring b9–b12 and
+the top ring b13–b16, each ring front, back, left, right.
+
+### Selecting
+
+- **Click** a body to select it; **Ctrl or Cmd + click** adds or takes one away.
+- **Shift + drag** a box. Drawn **left to right** it takes what lies wholly inside (a solid
+  outline); drawn **right to left** it takes everything it touches (dashed).
+- **The outline**: tick **by tag** and click a tag's heading (`post`, `shelf`, `top`) to select
+  its members; the small arrow beside it still opens and closes the group. Two clicks select the
+  four legs.
+- **Ctrl/Cmd+A** selects every bar and part the view shows.
+- **The menu** (below) has **Select similar** (the same item and options), **Select tagged …**
+  (the same tags), **Select connected** (the bars its joints join to it) and **Select the whole
+  assembly**. `alukit query <dir> like:b1`, `like:b1 by tag`, `connected:b1` and `connected*:b1`
+  select the same from a terminal.
+
+The status bar shows the size of the selection, W × D × H in millimetres (of everything when
+nothing is selected); hold **Alt** to see it as a box in the view.
+
+### The menu
+
+**Right-click** a body (without moving the mouse: a right-drag still pans) to open the menu on
+it, or on open ground for the current selection; right-click an outline row, or a group's
+heading, for the menu about it. **Shift+F10** or the **Menu** key opens it from the keyboard. It
+lists everything you can do to what it is about, with its key; an entry that cannot run now is
+grey and says why. `↑` `↓` move, a letter jumps, `Enter` runs, `Esc` closes. The buttons at the
+top of the inspector are the same actions: Delete, Duplicate, Copy, Paste, Mirror…, Align to a
+face….
+
+### Hiding
+
+**H** hides the selection, **Shift+H** isolates it (hides everything else), **Alt+H** (Option+H on
+a Mac) shows everything again; the menu has the same three. To hide the top ring and then look at
+one corner alone: select the `top` heading, press `H`; click a corner's marker, press `Shift+H`;
+then `Alt+H`. While anything is hidden the status bar says "n hidden · Show all". Hiding changes
+only what you see, like the section plane: it is not a step, and clicks and snaps pass over what
+is hidden.
+
+### Moving and turning
+
+- **Move (`D`)**. Drag the selection, or click a base point and then where it goes: both snap to
+  ends, faces and grooves, so a bar moved from its end onto another bar's end lands on it exactly.
+  Or type and press `Enter`: one number is the distance along the locked axis or the way the
+  pointer went, three are the offset, `[x, y, z]` is where the base point goes. To move the shelf
+  up 150: select the `shelf` heading, `D`, type `0, 0, 150`, `Enter`. Once the move is on (you
+  are dragging, or have typed its first digit), `→ ← ↑` lock X, Y or Z; before that the arrows
+  belong to whatever has the focus, an outline row say. The moved bars are drawn where they would go, and the preview says what follows,
+  what is freed and which cuts change. Ends joined to what you move **follow** along their own
+  bars, so the rails butted on a moved post stretch with it; hold **Alt** to free them instead.
+- **Widening a frame without params.** Move moves whole bars; it stretches the bars joined to the
+  selection, not the ones in it. So select the side with a box drawn **left to right**, which
+  takes only the posts and side rails wholly inside it (from the front, in orthographic, a box
+  round the right posts), then `D`, type `100, 0, 0`, `Enter`: the front and back rails follow and
+  grow by 100. A box drawn right to left also takes those rails, and
+  they would move whole, leaving their other ends 60 mm off the far posts.
+- **With params**, change the param instead: with nothing selected, the project panel lists the
+  params; **Edit** beside `W`, type `1100`, `Enter`.
+- **A part alone** slides along its bar. Select the bracket: an arrow along its bar shows; drag
+  it, or press `D`, type `150` and `Enter` to move it 150 along the bar (from 300 to 450).
+- **Rotate (`Q`)**. With a selection, three rings stand at its centre. Click a point for the
+  centre (or press `Enter` for the selection's centre), press `X`, `Y` or `Z` for the axis (Z at
+  first), type the angle (counter-clockwise looking down the axis) and `Enter`; or drag a ring,
+  which turns in 15° steps and commits when you let go. `Q`, `X`, `90`, `Enter` turns the
+  selection 90° about X through its centre.
+- **Align to a face…** (the menu): click a bar's face, and the selection moves along it until its
+  own face that looks the same way is flush ("flush with b1's top · by [0, 0, 7]").
+
+### Copying and mirroring
+
+- **Duplicate (`Ctrl/Cmd+D`)**: the copy follows the pointer from the original's place; click a
+  base point and then where it goes, or type the offset. To copy the top front rail 300 down,
+  joined to the legs: select b13, `Ctrl/Cmd+D`, `↑`, `-300`, `Enter`. Type `4x` after the offset
+  for four copies at that spacing, or `/4` for four dividing it (`0, 0, -600 /3`). Each new bar's
+  ends join what they land on.
+- **Copy (`Ctrl/Cmd+C`) and Paste (`Ctrl/Cmd+V`)**: paste hangs the copy from the pointer by its
+  lowest corner; click where it goes.
+- **Mirror…** (the menu): the plane is square to X (press `Y` or `Z`, or `→ ← ↑`, to turn it) and
+  goes through the selection's centre or the point under the pointer; type where it crosses its
+  axis (`500`, `=W / 2`) and press `Enter`. **Remove the originals** in the command bar takes them
+  away in the same step. A part on a bar is mirrored only together with its bar, or when the plane
+  maps that bar onto itself: a bracket on one leg cannot be mirrored onto the opposite leg. Place
+  the second one there instead.
+
+### Lengths and ends
+
+- **A bar's end.** Select a bar: a handle shows at each end. Drag one to lengthen or shorten the
+  bar along its axis; it falls onto the bars it meets and joins them on release, as the preview
+  says first ("will butt on b1 · cut 580"). Type a number while dragging to set the cut. Or click
+  the cut length on the bar's label, type it, `Enter`. A joined end is freed by the drag, and the
+  preview says so; one a pivot, mitre or a param sets is locked, and says why ("driven by L: edit
+  L").
+- **The Length field** in the inspector takes a number or an expression: `=D` makes the bar as
+  long as `D` and keeps following it. The select beside it chooses which end moves: end b, end a,
+  or both from the middle.
+- **Each end's row** says what joins it ("butts on b3 (c9)"; when the joint fails, why). It sets
+  the end's **cut** (angle or square), an **extension**, and where it stops: by its joint, **at a
+  face** (the faces its line meets, nearest first), **flush with an end**, or **Pick in the view**
+  and click the face. **Free from c9** takes the end out of its joint.
+- **A diagonal brace.** Draw it with its ends on the posts' lines and it butts on both, its ends
+  declared cut at an angle: `B`, type `[0, 600, 100]`, `Enter`, click the section's dot on its face
+  `+x` in the command bar (so the brace lies in the posts' plane, not half outside it), type
+  `[1000, 600, 650]`, `Enter`. If one sits off the plane, its **Offset** row moves it along its
+  section's x and y, each labelled with the world direction it runs in.
+- **Split and Reverse.** Right-click a bar where it should be cut: **Split b9 here, 400 mm from end
+  a** splits it there (rounded to the millimetre); **Split b9 at…** takes a typed distance and adds
+  a splice when asked. **Reverse b9** swaps its ends. Both are also buttons in the inspector.
+- **Holes.** Right-click a bar's side: **Add a hole on b1's face +x, 20 mm from end a…** opens the
+  hole form there; set the distance, the end, the size (a drill such as `7`, or a thread such as
+  `M6`) and the depth (empty for through), then **Add the hole**. Each hole is then a row that edits and
+  removes it.
+
+### Several selected, profiles and nodes
+
+- **Several bars** share fields in the inspector: options (when they are one profile), anchor,
+  roll, label and tags, each showing the value they share or "varies". A change is one step for
+  all of them.
+- **Replace…** changes the profile, for the selected bars or all like the one selected. To make the
+  four legs 40 × 80 with the 80 along X: select the `post` heading, **Replace…**, find `40x80`,
+  choose the profile, **Replace 4 bars**; then type `90` in **Roll** and `Enter`. A rolled 40 × 80
+  then needs each leg's **Anchor** turned with it, one leg at a time from the anchor's list, to
+  stay inside the footprint (front left `-x+y`, front right `-x-y`, back left `+x+y`, back right
+  `+x-y`). On a 40 × 80 the section's dots beside the list sit too close together to pick a
+  corner of the narrow face: use the list.
+- **A node** (a point several bar ends share) moves by its x, y and z fields, and every bar end at
+  it follows.
+
+### Joints, patterns and parts
+
+- **A joint's fields**: select it (its row under Joints in the outline, or type its id in the
+  outline's filter). A butt edits its through bar, connector, quantity, spacer and through end; a
+  pivot its base, axis and hinge; a mitre or a splice its connector, quantity and gap; each butting
+  end can name the face its cross holes go in from. The menu's **Edit c9…** and **Change
+  connector…** take you to the field; a joint marker's menu offers them too.
+- **A face joint** (a plate held by bolts, screws or T-nuts) shows the Connect tool's form, filled
+  in. To go from 2 bolts to 3: change its stations from `100, 300` to `100, 200, 300` and press
+  **Apply**. **Change layers…** picks the layers again in Connect.
+- **A corner**: select it (its marker in the view, or its row under Joints) for the **corner
+  inspector**: each way the bars there can meet, which bar runs through and the cut lengths each
+  gives, the current one marked "now"; where two ends meet, a **Mitre** or a **Splice** too.
+  **Apply** rearranges the corner as one step; **Apply to n matching corners** does the same at
+  every corner built the same way. `alukit arrangements <dir> --at x,y,z` gives the same answer.
+- **A pattern.** For four slats across the shelf: draw one (`B`, `[200, 0, 250]`, `Enter`, the
+  section's dot `+y` so its top is flush with the rails', `[200, 600, 250]`, `Enter`), select it,
+  press `X`, type `b9` as the bar to repeat along (or click it), pitch `150`, count `4`, **Apply**.
+  To make it five, select the pattern (`pt1` in the outline) and type `5` in its **Count**. Its
+  pitch (`W / 8` keeps following W), offsets, skips (`3, 5`) and along edit the same way, and
+  **Explode** turns the copies into plain bars, selected.
+- **A part**: **Replace…** picks another item of its kind, for this part or all like it; its bar,
+  face or groove, distance, offset and roll edit in place. **Context** (also on a bar) marks it
+  as something the frame stands in rather than part of it.
+
+### Deleting and undoing
+
+Select the back top rail (b14) and press `Delete` (or right-click it, **Delete**): what goes at
+once goes, and otherwise a dialog lists what else would be removed and what changes (here, the
+two butts it leaves keep their other ends) before **Delete**. `Ctrl/Cmd+Z` undoes the last step,
+whoever made it (the top bar's Undo button names the step it takes back), one press per step;
+`Shift+Ctrl/Cmd+Z` redoes.
+
+### By mouse alone, by keyboard alone
+
+Every edit has a mouse path (the tool rail, the menu, the inspector's buttons) and a keyboard path
+(the keys in `?`, `Shift+F10` for the menu); typed values work in both. To move the shelf by
+mouse: click the `shelf` heading, click **Move** on the rail, type `0, 0, 150`, click in the
+view. To delete the back top rail: right-click its outline row, **Delete**, then the dialog's
+**Delete**; the top bar's **Undo** takes it back.
+
+### What an agent sends
+
+Each edit is a command an agent sends the same way, and the log names it: `alukit log` lists
+each step's commands and words. Moving is `alukit move <dir> --ids b9,b10,b11,b12 --by 0,0,150`,
+turning `alukit rotate`; everything else is `alukit do` with the batch the app sends (the
+[design](design.md), §8, "What each edit sends", lists them).
 
 ## Reading the outputs
 
