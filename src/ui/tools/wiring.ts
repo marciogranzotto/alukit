@@ -151,18 +151,6 @@ export function createTools(viewer: Viewer): Tools {
   const params = () => model.peek()?.derived.params ?? {};
   const typedNow = (): Typed => parseTyped(typed.peek(), params());
 
-  const offModel = model.subscribe((m) => {
-    if (!m) return;
-    targets = snapTargets({
-      nodes: m.derived.nodes,
-      bars: m.derived.bars,
-      parts: m.derived.parts,
-      display: m.display,
-    });
-    // A new revision moves what was under the pointer.
-    refresh();
-  });
-
   const rayAt = (e: ToolPointer) => viewer.ray(e.clientX, e.clientY);
   const snapAt = (e: ToolPointer, filter?: (s: SnapTargets) => SnapTargets) =>
     findSnap(filter ? filter(targets) : targets, {
@@ -1053,6 +1041,22 @@ export function createTools(viewer: Viewer): Tools {
   function handler(): ToolHandler | undefined {
     return handlers[activeTool.peek()];
   }
+
+  // After the handlers: `subscribe` calls at once when the model is already there (the viewer
+  // made after the model came, as in a second tab on a warm server), and `refresh` reads them.
+  // Subscribed before them, that first call threw on `handlers` not yet initialised, and the app
+  // wiring after the tools' never ran (measured: that tab told no step in a toast).
+  const offModel = model.subscribe((m) => {
+    if (!m) return;
+    targets = snapTargets({
+      nodes: m.derived.nodes,
+      bars: m.derived.bars,
+      parts: m.derived.parts,
+      display: m.display,
+    });
+    // A new revision moves what was under the pointer.
+    refresh();
+  });
 
   const offTool = activeTool.subscribe((t) => {
     drawState.value = {};
