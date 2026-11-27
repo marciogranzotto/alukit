@@ -264,6 +264,22 @@ test("the box frame way, joined with nothing, reads ready with a warning, and it
   expect((await cli(["order", served.dir, "--as-of", pinned])).out).toContain("16 forseti:CT38-06");
 });
 
+test("after the start card's frame, B then a click starts a bar of the frame's profile (D1)", async ({
+  page,
+}) => {
+  // The frame's step writes `defaults.bar`; the palette, empty until then, follows it (editing
+  // audit D1, E2.7). Before, Draw said "no bar in the palette" until a reload.
+  await boxFrame(page, "forseti:CT38-06");
+  await page.keyboard.press("b");
+  expect(await page.evaluate(() => window.__alukit?.tool().name)).toBe("draw");
+  await expect(page.getByTestId("palette-bar")).toHaveAttribute("data-id", "forseti:PF40-01");
+  const at = await hover(page, [0, 0, 0], /\S/);
+  await page.mouse.click(at[0], at[1]);
+  await expect
+    .poll(async () => (await page.evaluate(() => window.__alukit?.tool()))?.start ?? "")
+    .not.toBe("");
+});
+
 test("Esc closes the start card, and the help shows it again", async ({ page }) => {
   await open(page);
   const card = page.getByTestId("start-card");
