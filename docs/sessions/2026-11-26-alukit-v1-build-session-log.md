@@ -916,3 +916,11 @@ anything, and each has a default in place.
   - The preview reuses the joint preview with one shared material, and `view.spec` still shows zero shader links.
   - The open calls were renumbered 68–71 in the merge.
 - **14:12**: E0, the editing contracts, started. It splits the tools' wiring and adds the action registry and context menu, picks with face and station, the hidden and isolated view state, gizmo pieces built once and the batch builders. It changes nothing visible; the streams E2–E5 build on it.
+- **14:31**: E1, the 3D editing core, merged (gate PASS, 1,288 tests). Decisions are in `docs/ux/e1-decisions.md`, and the open calls are numbered 72–77.
+  - **Query:** `alukit query` takes `like:<id>` and `connected:<ids>` (`connected*` follows joints transitively).
+  - **Braces:** a brace drawn into a joined corner butts the corner's through bar, and an angled end `autoConnect` makes declares its angle cut.
+  - **Problems:** every diagnostic has words, and an angled end has two fixes.
+  - **Arrangements:** a corner of two ends offers a miter and a splice.
+  - **Dry runs:** the effects list the parts a step adds.
+  - **Mass:** a traced section's computed mass is tagged `est`.
+  - **What moved:** G10 and G11 lose a false `unconnected` warning and its broken Join fix, and four golden cases' problem titles changed. No golden value or cut list moved.
