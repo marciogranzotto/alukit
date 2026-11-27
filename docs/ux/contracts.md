@@ -719,3 +719,22 @@ drawn and checked against but not built or bought. Each adds.*
 - **The inspector** (`src/ui/inspector/context.ts`): `contextOf(model, id)` (whether the entity can
   be marked, whether it is, and the command) and `contextBatch(model, id, on)`; the Context row
   (`ContextRow`, in `BarFields.tsx`) on a bar's and a placed part's fields, one step.
+
+## Editing polish changes
+
+*The editing polish's core and Move keys ([polish-editing-decisions.md](polish-editing-decisions.md),
+"pe"). Each adds to its owner's interface; nothing is renamed.*
+
+- **The selection** (`src/ui/focus.ts`, S2): `select(ids, mode, crossed?)` takes what a box held
+  in part, and `crossedEnds(sel?)` answers, for the selection the boxes made (by identity), each
+  bar a crossing took without holding it whole and its ends inside the box; any other change of
+  the selection leaves it behind. Type `CrossedEnds` (`src/viewer/scene.ts`) (pe 2, 3).
+- **The viewer** (`src/viewer/scene.ts`, S3): `onSelect`'s callback gets a box's `crossed` as its
+  third argument (empty for a window, absent for a click) (pe 2).
+- **Drag gestures** (`src/ui/tools/drag.ts`, E3): `Gestures.starting(handler)`, a tool's keys that
+  start its gesture while a selection waits, asked in the capture phase with the focus on an
+  element; Move's arrow locks and Rotate's axis keys use it beside their `onKey` handlers (pe 15).
+- **Move's rules** (`src/ui/tools/moves.ts`, E3): `moveSet(m, ids, crossed?)` and
+  `MoveSet.ends?`, the ends a crossing stretches; `moveWords` says "stretches …". **The batches**
+  (`src/ui/edit/batches.ts`): `transformBatch` joins at each moved end, the first 24. **The
+  geometry** (`src/ui/edit/geometry.ts`): `Members.ends?`, `stretchedGhosts(m, ends, d)` (pe 7).

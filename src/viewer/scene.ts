@@ -135,6 +135,9 @@ export interface RenderStats {
 
 export type SelectMode = "replace" | "toggle" | "add";
 
+/** For each bar a crossing box took without holding it whole, its ends inside the box. */
+export type CrossedEnds = ReadonlyMap<string, readonly ("a" | "b")[]>;
+
 export type Projection = "perspective" | "orthographic";
 
 /**
@@ -242,8 +245,12 @@ export interface Viewer {
   setSelection(ids: ReadonlySet<string>): void;
   /** Entities a tool has picked (a connection's bars), drawn in the tool's colour. */
   setHighlight(ids: ReadonlySet<string>): void;
-  /** Called with the entities a click or a box picked, and how they combine with the selection. */
-  onSelect(cb: (ids: string[], mode: SelectMode) => void): void;
+  /**
+   * Called with the entities a click or a box picked, and how they combine with the selection.
+   * A crossing box also gives, for each bar it took without holding it whole, the ends of it that
+   * lie inside the box (`crossed`, the bars Move stretches: docs/ux/polish-editing-decisions.md).
+   */
+  onSelect(cb: (ids: string[], mode: SelectMode, crossed?: CrossedEnds) => void): void;
   setTool(tool: ToolHandler | undefined): void;
   /** What the active tool draws over the model. */
   setOverlay(state: OverlayState): void;
@@ -1457,7 +1464,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   // ---------------------------------------------------------------------------------------------
   // Picking: click, hover, and box select with Shift held
 
-  let selectCb: (ids: string[], mode: SelectMode) => void = () => {};
+  let selectCb: (ids: string[], mode: SelectMode, crossed?: CrossedEnds) => void = () => {};
   let hoverCb: (id?: string) => void = () => {};
   const raycaster = new Raycaster();
   const ndc = new Vector2();
@@ -1554,13 +1561,21 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
    * What a box drawn on the screen takes (E-UX-10): as a window, the entities whose body lies
    * wholly inside it; as a crossing, those whose body's outline touches it (`boxTakes`). A body
    * with a corner behind the camera is never wholly inside; a crossing reads the corners in front.
+   * A crossing also says, of each bar it takes without holding it whole, which ends lie inside it
+   * (each end's point, where its face crosses the design line, as its handle stands): what Move
+   * stretches, as AutoCAD's STRETCH moves the endpoints inside a crossing window.
    */
-  function boxed(rect: ScreenRect, mode: "window" | "crossing"): string[] {
-    if (!model) return [];
+  function boxed(
+    rect: ScreenRect,
+    mode: "window" | "crossing",
+  ): { ids: string[]; crossed: Map<string, ("a" | "b")[]> } {
+    const crossed = new Map<string, ("a" | "b")[]>();
+    if (!model) return { ids: [], crossed };
     const r = renderer.domElement.getBoundingClientRect();
     const toWorld = world.matrixWorld;
     const v = new Vector3();
-    const within = (pts: readonly (readonly [number, number, number])[]) => {
+    /** Points on the page, and whether any lies behind the camera. */
+    const onPage = (pts: readonly (readonly [number, number, number])[]) => {
       const seen: P2[] = [];
       let behind = false;
       for (const [a, b, c] of pts) {
@@ -1568,14 +1583,36 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         if (v.z < -1 || v.z > 1) behind = true;
         else seen.push([r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height]);
       }
-      return mode === "window" && behind ? false : boxTakes(seen, rect, mode);
+      return { seen, behind };
+    };
+    const within = (pts: readonly (readonly [number, number, number])[], as = mode) => {
+      const { seen, behind } = onPage(pts);
+      return as === "window" && behind ? false : boxTakes(seen, rect, as);
     };
     const out: string[] = [];
     for (const [id, bar] of Object.entries(model.bars)) {
       if (hiddenIds.has(id)) continue;
       const view = model.display.bars[id];
       const section = view ? model.display.sections[view.section] : undefined;
-      if (view && section && within(barCorners(bar, section, view))) out.push(id);
+      if (!view || !section) continue;
+      const corners = barCorners(bar, section, view);
+      if (!within(corners)) continue;
+      out.push(id);
+      if (mode === "crossing" && !within(corners, "window")) {
+        const inside = (["a", "b"] as const).filter((e) => {
+          const { seen, behind } = onPage([bar.ends[e].point]);
+          const p = seen[0];
+          return (
+            !behind &&
+            !!p &&
+            p[0] >= rect.x0 &&
+            p[0] <= rect.x1 &&
+            p[1] >= rect.y0 &&
+            p[1] <= rect.y1
+          );
+        });
+        crossed.set(id, inside);
+      }
     }
     for (const s of single) {
       if (!model.parts[s.id] || hiddenIds.has(s.id)) continue;
@@ -1591,7 +1628,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
           }
       if (within(pts)) out.push(s.id);
     }
-    return out;
+    return { ids: out, crossed };
   }
 
   let tool: ToolHandler | undefined;
@@ -1763,7 +1800,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       controls.enabled = true;
       if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
       if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) {
-        const ids = boxed(
+        const { ids, crossed } = boxed(
           {
             x0: Math.min(d.x, e.clientX),
             y0: Math.min(d.y, e.clientY),
@@ -1772,7 +1809,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
           },
           e.clientX < d.x ? "crossing" : "window",
         );
-        selectCb(ids, additive ? "add" : "replace");
+        selectCb(ids, additive ? "add" : "replace", crossed);
         return;
       }
     }

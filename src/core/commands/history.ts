@@ -29,8 +29,28 @@ export interface LogEntry {
   what: string;
   /** The step in words, as a person reads it (`add bar b12, joined at 1 end`, BE-4). */
   text: string;
+  /**
+   * A step's commands in canonical form (`canonicalCommands`), what `alukit do` replays; absent
+   * for a file edit, which no command made, and for an undo or a redo, which `of` names.
+   */
+  commands?: unknown[];
   /** For undo and redo entries: the revision of the step undone or redone. */
   of?: number;
+}
+
+/**
+ * Commands in canonical form (the editing polish's defect 6): each `{ cmd, args }` with its
+ * arguments as the command's schema reads them, in the schema's key order, so the same edit is
+ * logged the same way whoever sent it and however its keys were ordered. A command whose
+ * arguments do not parse (none reaches the log: a step's batch has applied) is kept as sent.
+ */
+export function canonicalCommands(commands: readonly unknown[]): unknown[] {
+  return commands.map((c) => {
+    const { cmd, args } = (c ?? {}) as { cmd?: unknown; args?: unknown };
+    const def = typeof cmd === "string" ? COMMANDS.get(cmd) : undefined;
+    const parsed = def?.args.safeParse(args ?? {});
+    return parsed?.success ? { cmd, args: parsed.data } : c;
+  });
 }
 
 export type UndoResult = { ok: true; step: Step; rev: number } | { ok: false; message: string };
@@ -156,6 +176,7 @@ export class History {
       source: s.source,
       what: stepText(s),
       text: stepWords(s),
+      ...(s.commands ? { commands: canonicalCommands(s.commands) } : {}),
     });
   }
 }

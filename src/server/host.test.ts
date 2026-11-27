@@ -109,8 +109,16 @@ describe("steps", () => {
     const r = await h.redo("agent:x");
     expect(r).toMatchObject({ ok: true, rev: 3, redo: null });
     expect(await text(dir)).toBe(after);
+    // A step keeps its commands (canonical form, what `alukit do` replays); an undo or a redo
+    // names the step instead.
     expect(h.log()).toEqual([
-      { rev: 1, source: "cli:a", what: "addNode", text: "add point n2" },
+      {
+        rev: 1,
+        source: "cli:a",
+        what: "addNode",
+        text: "add point n2",
+        commands: [{ cmd: "addNode", args: { at: [1, 2, 3] } }],
+      },
       { rev: 2, source: "ui", what: "undo addNode", text: "undo add point n2", of: 1 },
       { rev: 3, source: "agent:x", what: "redo addNode", text: "redo add point n2", of: 1 },
     ]);
@@ -135,6 +143,8 @@ describe("steps", () => {
       rev: 2,
       between: [{ rev: 1, source: "cli:other", what: "addNode" }],
     });
+    // The steps between name their sources; their commands are the log's alone.
+    expect((a as { between: object[] }).between[0]).not.toHaveProperty("commands");
     const s = await h.commands({
       commands: [addNode([3, 0, 0])],
       source: "ui",

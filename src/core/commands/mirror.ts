@@ -26,10 +26,12 @@ import { idList } from "./words.ts";
 
 /**
  * `mirror` (design §4.7, §6, call 21): copies entities as their mirror image in a plane square to
- * a world axis, as ordinary entities. References inside the set go to the copies; those outside
- * are kept, which is right only for what the plane maps onto itself: a node on the plane, or a
- * bar that lies in it or crosses it symmetrically (the bar a mirrored brace attaches to).
- * Anything else outside the set is refused, naming what to include.
+ * a world axis, as ordinary entities. References inside the set go to the copies. A node outside
+ * it is kept only when it lies on the plane. A bar outside it is taken as the bar at its image
+ * (design §6, call 112; docs/ux/polish-editing-decisions.md 8–11): itself when it lies in the
+ * plane or crosses it symmetrically (the bar a mirrored brace attaches to), else an existing bar
+ * of the same section standing exactly where its image would (the opposite leg a bracket lands
+ * on). Anything else outside the set is refused, naming what to include.
  *
  * A mirrored bar keeps its item when its section has a mirror symmetry (§4.4's four lines, the
  * same a reversed bar uses); otherwise it takes the item's other `hand`, read as the section
@@ -52,7 +54,9 @@ const Mirror = z.strictObject({
   ids: z
     .array(z.string())
     .min(1)
-    .describe("the nodes, bars, runs, connections and parts to mirror"),
+    .describe(
+      "the nodes, bars, runs, connections and parts to mirror; a bar they name outside the set is taken as the bar at its image: itself, or an existing bar standing there (a bracket on one leg lands on the opposite leg)",
+    ),
   plane: z
     .strictObject({ axis: z.enum(AXES), at_mm: z.number() })
     .describe("the mirror plane: square to a world axis, at a coordinate along it"),
@@ -73,7 +77,10 @@ export const mirror: CommandDef<z.infer<typeof Mirror>> = {
   summary:
     "copy entities as their mirror image in a plane square to a world axis, as ordinary entities",
   args: Mirror,
-  describe: (a, d) => `mirror ${idList(a.ids)}, making ${idList(d.created)}`,
+  describe(a, d) {
+    const onto = Object.values((d.info as MirrorInfo | undefined)?.onto ?? {});
+    return `mirror ${idList(a.ids)}, making ${idList(d.created)}${onto.length > 0 ? ` on ${idList([...new Set(onto)])}` : ""}`;
+  },
   apply: (ctx, a) => guard(() => mirrorSet(ctx, a)),
 };
 
@@ -129,63 +136,118 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
     maps.set(id, { ...first, to: copyOf.get(id) as string });
   }
 
-  // A bar outside the set must be its own image: it lies in the plane, or crosses it symmetrically.
-  const outside = new Map<string, BarMap>();
-  const selfMap = (bar: string, where: string): BarMap => {
-    const hit = outside.get(bar);
-    if (hit) return hit;
-    if (bar.startsWith("r")) {
-      throw refusal("geometry", `${where}: run ${bar} is not mirrored; include it and its bars`, {
-        refs: [bar],
-      });
-    }
-    const db = derivedBar(ctx, bar);
-    const { A, B, frame, box } = db.placed;
-    const notOwn = () =>
-      refusal(
-        "geometry",
-        `${where}: ${bar} is not mirrored and the plane does not map it onto itself; include it`,
-        {
-          entity: where.split("/")[0],
-          refs: [bar],
-        },
-      );
-    if (!B) throw notOwn();
-    const RA = R(A);
-    const RB = R(B);
+  // A bar outside the set is referred to as the bar at its image (the editing polish, gap 2):
+  // itself when the plane maps it onto itself (it lies in the plane, or crosses it
+  // symmetrically), else an existing bar that stands exactly where its image would, so a bracket
+  // on one leg mirrored alone lands on the opposite leg. Where no bar stands there, it is refused.
+  const docBars = Object.keys(isObject(doc0.bars) ? doc0.bars : {}).sort(compareIds);
+  /** How bar `src`'s image lies on bar `dst`, or undefined when it is not `dst`'s body. */
+  const onto = (src: string, dst: string): BarMap | undefined => {
+    const s = derivedBar(ctx, src).placed;
+    const d = ctx.derived().bars.get(dst)?.placed;
+    if (!s.B || !d?.B) return undefined;
+    const RA = R(s.A);
+    const RB = R(s.B);
     let reversed: boolean;
-    if (dist(RA, A) <= TOL.len && dist(RB, B) <= TOL.len) reversed = false;
-    else if (dist(RA, B) <= TOL.len && dist(RB, A) <= TOL.len) reversed = true;
-    else throw notOwn();
-    const Rx = Rdir(frame.x);
-    const Ry = Rdir(frame.y);
-    const got = [dot(Rx, frame.x), dot(Ry, frame.x), dot(Rx, frame.y), dot(Ry, frame.y)];
+    if (dist(RA, d.A) <= TOL.len && dist(RB, d.B) <= TOL.len) reversed = false;
+    else if (dist(RA, d.B) <= TOL.len && dist(RB, d.A) <= TOL.len) reversed = true;
+    else return undefined;
+    const Rx = Rdir(s.frame.x);
+    const Ry = Rdir(s.frame.y);
+    const got = [dot(Rx, d.frame.x), dot(Ry, d.frame.x), dot(Rx, d.frame.y), dot(Ry, d.frame.y)];
     const m = (Object.keys(MATRIX) as Map2[]).find((key) =>
       MATRIX[key].every((v, i) => Math.abs(v - (got[i] as number)) <= 1e-9),
     );
-    const section = sectionOf(ctx, bar, getEntity(doc0, bar) as O);
-    // The box, about the design line, must be its own image too.
+    const section = sectionOf(ctx, src, getEntity(doc0, src) as O);
+    if (dst !== src && sectionOf(ctx, dst, getEntity(doc0, dst) as O).id !== section.id) {
+      return undefined;
+    }
+    // The box, about the design line, must land on the other's (its own, for itself).
     const [m00, m01, m10, m11] = MATRIX[m ?? "i"];
     const corners: [number, number][] = [
-      [box.x0, box.y0],
-      [box.x1, box.y1],
+      [s.box.x0, s.box.y0],
+      [s.box.x1, s.box.y1],
     ];
     const image = corners.map(
       ([u, v]) => [m00 * u + m01 * v, m10 * u + m11 * v] as [number, number],
     );
     const xs = image.map((p) => p[0]).sort((p, q) => p - q);
     const ys = image.map((p) => p[1]).sort((p, q) => p - q);
-    const boxOwn =
-      Math.abs((xs[0] as number) - box.x0) <= TOL.len &&
-      Math.abs((xs[1] as number) - box.x1) <= TOL.len &&
-      Math.abs((ys[0] as number) - box.y0) <= TOL.len &&
-      Math.abs((ys[1] as number) - box.y1) <= TOL.len;
-    if (m === undefined || !boxOwn || (m !== "i" && !hasSymmetry(section, m))) throw notOwn();
-    const bm: BarMap = { to: bar, reversed, m, section };
-    outside.set(bar, bm);
-    return bm;
+    const boxOn =
+      Math.abs((xs[0] as number) - d.box.x0) <= TOL.len &&
+      Math.abs((xs[1] as number) - d.box.x1) <= TOL.len &&
+      Math.abs((ys[0] as number) - d.box.y0) <= TOL.len &&
+      Math.abs((ys[1] as number) - d.box.y1) <= TOL.len;
+    if (m === undefined || !boxOn || (m !== "i" && !hasSymmetry(section, m))) return undefined;
+    return { to: dst, reversed, m, section };
   };
-  const mapOf = (bar: string, where: string) => maps.get(bar) ?? selfMap(bar, where);
+  type Home = { map: BarMap } | { why: string; refs: string[] };
+  const homes = new Map<string, Home>();
+  /** The bar a bar outside the set lands on, or why none. */
+  const homeOf = (bar: string): Home => {
+    const hit = homes.get(bar);
+    if (hit) return hit;
+    let home: Home;
+    if (bar.startsWith("r"))
+      home = { why: `run ${bar} is not mirrored; include it and its bars`, refs: [bar] };
+    else {
+      const own = onto(bar, bar);
+      if (own) home = { map: own };
+      else {
+        const s = derivedBar(ctx, bar).placed;
+        const RA = R(s.A);
+        const RB = s.B ? R(s.B) : undefined;
+        const lined = docBars.filter((x) => {
+          const d = x === bar ? undefined : ctx.derived().bars.get(x)?.placed;
+          if (!d?.B || !RB) return false;
+          return (
+            (dist(RA, d.A) <= TOL.len && dist(RB, d.B) <= TOL.len) ||
+            (dist(RA, d.B) <= TOL.len && dist(RB, d.A) <= TOL.len)
+          );
+        });
+        const found = lined.flatMap((x) => {
+          const bm = onto(bar, x);
+          return bm ? [bm] : [];
+        });
+        const plane = `${AXES[k]} = ${at}`;
+        if (found.length === 1) home = { map: found[0] as BarMap };
+        else if (found.length > 1) {
+          const ids = found.map((x) => x.to);
+          home = {
+            why: `${bar} is not mirrored, and ${idList(ids)} all stand at its image across ${plane}; include ${bar}`,
+            refs: [bar, ...ids],
+          };
+        } else if (lined.length > 0) {
+          home = {
+            why: `${bar} is not mirrored, and ${idList(lined)} ${lined.length > 1 ? "stand" : "stands"} on its image's line but ${lined.length > 1 ? "are" : "is"} not its mirror image (another section or placement); include ${bar}`,
+            refs: [bar, ...lined],
+          };
+        } else {
+          home = {
+            why: `${bar} is not mirrored, and no bar stands at its image across ${plane}; include ${bar}`,
+            refs: [bar],
+          };
+        }
+      }
+    }
+    homes.set(bar, home);
+    return home;
+  };
+  const outsideMap = (bar: string, where: string): BarMap => {
+    const h = homeOf(bar);
+    if ("map" in h) return h.map;
+    throw refusal("geometry", `${where}: ${h.why}`, {
+      entity: where.split("/")[0],
+      refs: h.refs,
+    });
+  };
+  const mapOf = (bar: string, where: string) => maps.get(bar) ?? outsideMap(bar, where);
+  /** The map that produced a bar id as rewritten: a copy's, or an outside bar's home. */
+  const mapOfImage = (id: string, where: string): BarMap => {
+    for (const bm of maps.values()) if (bm.to === id) return bm;
+    for (const h of homes.values()) if ("map" in h && h.map.to === id) return h.map;
+    return outsideMap(id, where);
+  };
 
   const rw: Rewriter = {
     id: (x) => {
@@ -200,7 +262,7 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
           });
         }
       }
-      if (x.startsWith("b") || x.startsWith("r")) selfMap(x, x);
+      if (x.startsWith("b") || x.startsWith("r")) return outsideMap(x, x).to;
       if (x.startsWith("c") || x.startsWith("p")) {
         throw refusal("geometry", `${x} is named by what is mirrored; include it`, { refs: [x] });
       }
@@ -210,17 +272,20 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
       const [bar, e] = ref.split(".") as [string, string];
       const c = copyOf.get(bar);
       if (c) return `${c}.${e}`;
-      return selfMap(bar, ref).reversed ? swapEnd(ref) : ref;
+      const bm = outsideMap(bar, ref);
+      return bm.reversed ? swapEnd(`${bm.to}.${e}`) : `${bm.to}.${e}`;
     },
     axisBar: (bar, where) => {
       // A plane square to a bar reads only its axis t. Its image is square to R(t), so a bar
       // outside the set still serves when R(t) = ±t: its axis lies in the plane's directions
-      // (t_k = 0) or is square to the plane.
+      // (t_k = 0) or is square to the plane; otherwise the bar standing at its image does.
       const c = copyOf.get(bar);
       if (c) return c;
       const t = derivedBar(ctx, bar).placed.frame.t;
       const along = Math.abs(t[k] as number);
       if (along <= 1e-9 || Math.abs(along - 1) <= 1e-9) return bar;
+      const h = homeOf(bar);
+      if ("map" in h) return h.map.to;
       throw refusal(
         "geometry",
         `${where}: the plane is square to ${bar}, which is not mirrored and whose axis the mirror turns; include it`,
@@ -232,7 +297,26 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
       if (typeof v === "string") return v[1] === AXES[k] ? `${v[0] === "+" ? "-" : "+"}${v[1]}` : v;
       return v.map((c, i) => (i === k ? negate(c) : c)) as unknown as typeof v;
     },
-    station: (st, where) => mapStation(st, mapOf(st.bar as string, where), where),
+    station: (st, where) => {
+      const bm = mapOf(st.bar as string, where);
+      const from = (st.from as string | undefined) ?? "a";
+      // Measured from a cut, on a bar outside the set: the bar it lands on must be cut there as
+      // the image of this one, or the station would land elsewhere than the image.
+      if (from.endsWith(".cut") && !maps.has(st.bar as string)) {
+        const e = from[0] as "a" | "b";
+        const te = bm.reversed ? (e === "a" ? "b" : "a") : e;
+        const was = derivedBar(ctx, st.bar as string).ends[e].move;
+        const now = derivedBar(ctx, bm.to).ends[te].move;
+        if (Math.abs(was - now) > TOL.len) {
+          throw refusal(
+            "geometry",
+            `${where}: it is measured from ${st.bar as string}.${e}'s cut, and ${bm.to}.${te} is not cut as its image; include ${st.bar as string}`,
+            { entity: where.split("/")[0], refs: [st.bar as string, bm.to] },
+          );
+        }
+      }
+      return mapStation(st, bm, where);
+    },
     face: (bar, face, where) => mapFace(mapOf(bar, where).m, face),
     pose: (p, where) => {
       const { rot_deg: _, ...rest } = p;
@@ -245,7 +329,8 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
         ...(rot ? { rot_deg: rot } : {}),
       };
     },
-    entity: (kind, id, v) => entityImage(ctx, kind, id, v, { maps, rollC, hand, mapOf, k }),
+    entity: (kind, id, v) =>
+      entityImage(ctx, kind, id, v, { maps, rollC, hand, mapOf, mapOfImage }),
   };
 
   const created: string[] = [];
@@ -256,7 +341,26 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
     created.push(copy);
   }
   checkAll(ctx, doc, created);
-  return done(withDoc(ctx, doc), { created }, { copies: Object.fromEntries(copyOf) });
+  // The bars outside the set that the images landed on other than themselves.
+  const rehomed = [...homes.entries()].flatMap(([bar, h]) =>
+    "map" in h && h.map.to !== bar ? [[bar, h.map.to] as const] : [],
+  );
+  return done(
+    withDoc(ctx, doc),
+    { created },
+    {
+      copies: Object.fromEntries(copyOf),
+      ...(rehomed.length > 0 ? { onto: Object.fromEntries(rehomed) } : {}),
+    },
+  );
+}
+
+/** What a mirror did beyond its copies: the bars outside the set its images landed on. */
+export interface MirrorInfo {
+  /** Each entity mirrored, and its copy. */
+  copies: Record<string, string>;
+  /** A bar outside the set whose image another bar stands at, and that bar; absent when none. */
+  onto?: Record<string, string>;
 }
 
 interface Env {
@@ -264,7 +368,8 @@ interface Env {
   rollC: ReadonlyMap<string, number>;
   hand: ReadonlyMap<string, O>;
   mapOf: (bar: string, where: string) => BarMap;
-  k: number;
+  /** The map that produced a bar id as the images name it (a hook sees the rewritten entity). */
+  mapOfImage: (id: string, where: string) => BarMap;
 }
 
 function entityImage(ctx: CommandContext, kind: Kind, id: string, v: O, env: Env): O {
@@ -278,7 +383,7 @@ function entityImage(ctx: CommandContext, kind: Kind, id: string, v: O, env: Env
   }
   if (kind === "parts") {
     if (isObject(v.on)) {
-      const bm = env.mapOf(v.on.bar as string, `${id}/on`);
+      const bm = env.mapOfImage(v.on.bar as string, `${id}/on`);
       // On a copy (or a bar in the plane) the part turns over in its own y: roll −ρ; on a bar
       // the plane reverses, measured from the other end: roll 180° − ρ (§4.7's part frame).
       const roll = turnedRoll(bm.reversed ? 180 : 0, v.roll_deg as Expr | undefined);
@@ -296,7 +401,7 @@ function entityImage(ctx: CommandContext, kind: Kind, id: string, v: O, env: Env
       typeof v.through === "string" &&
       !v.through.includes(".")
     ) {
-      const bm = env.mapOf(v.through, `${id}/through`);
+      const bm = env.mapOfImage(v.through, `${id}/through`);
       if (bm.reversed) {
         const te = v.through_end;
         return { ...v, through_end: { ...te, end: te.end === "a" ? "b" : "a" } };
@@ -310,8 +415,7 @@ function entityImage(ctx: CommandContext, kind: Kind, id: string, v: O, env: Env
 function faceImage(ctx: CommandContext, id: string, v: O, env: Env): O {
   // The hook sees the copy: its layers are the images' ids. Map them back to their maps.
   const layers = v.bars as string[];
-  const byImage = new Map([...env.maps.values()].map((bm) => [bm.to, bm]));
-  const mapOfImage = (l: string) => byImage.get(l) ?? env.mapOf(l, `${id}/bars`);
+  const mapOfImage = (l: string) => env.mapOfImage(l, `${id}/bars`);
   const out: O = { ...v };
   if (Array.isArray(v.faces)) {
     out.faces = (v.faces as [Face, Face][]).map(([f, g], i) => [

@@ -80,6 +80,65 @@ describe("the Move tool", () => {
     ]);
   });
 
+  it("stretches what a crossing box held in part: its ends inside move, in one step", async () => {
+    // tests/fixtures/brace: a box over the right side holds the right posts and side rails whole,
+    // and crosses the front and back rails with their ends b inside.
+    const frameDir = join(dir, "..", "..", "brace");
+    const frame = await viewOf(frameDir);
+    const crossed = new Map<string, ("a" | "b")[]>([
+      ["b5", ["b"]],
+      ["b6", ["b"]],
+      ["b9", ["b"]],
+      ["b10", ["b"]],
+      ["b7", []],
+    ]);
+    const sel = ["b2", "b4", "b5", "b6", "b7", "b8", "b9", "b10", "b12"];
+    const set = moveSet(frame, sel, crossed);
+    if ("why" in set) throw new Error(set.why);
+    expect(set).toEqual({
+      ids: ["b12", "b2", "b4", "b8", "b10.b", "b5.b", "b6.b", "b9.b"],
+      bars: ["b12", "b2", "b4", "b8"],
+      parts: [],
+      nodes: [],
+      ends: ["b10.b", "b5.b", "b6.b", "b9.b"],
+    });
+    expect(slideAxis(frame, set)).toBeUndefined();
+    // The joins: both ends of each bar moved whole, then each stretched end.
+    const batch = transformBatch(set, [100, 0, 0], false, undefined);
+    expect(batch[0]).toEqual({
+      cmd: "transform",
+      args: { ids: set.ids, by: [100, 0, 0] },
+    });
+    expect(batch.slice(1).map((c) => (c.args as { end: string }).end)).toEqual([
+      "b12.a",
+      "b12.b",
+      "b2.a",
+      "b2.b",
+      "b4.a",
+      "b4.b",
+      "b8.a",
+      "b8.b",
+      "b10.b",
+      "b5.b",
+      "b6.b",
+      "b9.b",
+    ]);
+    const h = await hostOf(frameDir);
+    try {
+      const r = await h.dry(batch);
+      if (!r.ok) throw new Error(r.why);
+      expect(moveWords(r as DryRun, false).text).toBe(
+        "stretches b5, b6 and 2 more · cut b5 920 → 1020, b6 920 → 1020, b9 920 → 1020 …",
+      );
+    } finally {
+      await h.close();
+    }
+    // Only crossed, with no end inside: nothing moves.
+    expect(moveSet(frame, ["b7"], crossed)).toEqual({
+      why: "the crossing box holds no end of the bars it crosses: nothing in it moves",
+    });
+  });
+
   it("says what a move does before it: what follows and what is cut, or why not", async () => {
     const h = await hostOf(dir);
     try {

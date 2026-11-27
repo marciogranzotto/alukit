@@ -11,7 +11,8 @@ export const SERVER_USAGE_OF = {
     "alukit undo | redo <dir> [--as <name>|agent:<name>] [--json]",
     "    take back the latest step, whoever made it, or apply again the last one taken back",
     "alukit log <dir> [--json]",
-    "    the server's log: every step, undo and redo, with its source",
+    "    the server's log: every step, undo and redo, with its source; --json gives each step's",
+    "    commands, which `alukit do` replays",
   ].join("\n"),
 } as const;
 

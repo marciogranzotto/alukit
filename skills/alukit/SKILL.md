@@ -285,7 +285,8 @@ alukit serve <dir> [--port N] [--no-open]
 alukit undo | redo <dir> [--as <name>|agent:<name>] [--json]
     take back the latest step, whoever made it, or apply again the last one taken back
 alukit log <dir> [--json]
-    the server's log: every step, undo and redo, with its source
+    the server's log: every step, undo and redo, with its source; --json gives each step's
+    commands, which `alukit do` replays
 alukit derive <dir> [--json] [--select <paths>] [--variant v] [--frozen]
     the derived model: frames, end planes, cut lengths and angles, parts, rail holes,
     fastenings, generated machining and hardware (alukit.derived/1); --select answers
@@ -323,7 +324,8 @@ alukit add bar|point|connection|part|frame <dir> [options] [--json]
     lists the options
 alukit move <dir> --ids <id,id,...> --by <dx,dy,dz> [--detach] [--dry-run] [--json] [--as <name>]
     move nodes, bars, runs, parts or a pattern's template by an offset, as sugar over `do`
-    (`transform`); joined ends follow, or --detach frees them; expressions keep their params
+    (`transform`); joined ends follow, or --detach frees them; expressions keep their params;
+    a bar end (b5.b) moves alone, its bar stretching while the other end stays
 alukit rotate <dir> --ids <id,id,...> --axis x|y|z --deg <deg> --about <x,y,z> [--detach] [--dry-run] [--json] [--as <name>]
     turn them about a world axis through a point (`transform`); exact at multiples of 90°
 alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]
@@ -430,7 +432,7 @@ string; `<…>` is a string of that form; `?` marks an optional field.
   - `to` (optional): `string` — a bar, or a bar's end: the end goes where its axis meets that bar's design line, or to that end's design point
   - `detach` (optional): `boolean` — free an end that a node, a station, another bar's end or a butt holds (whether or not the butt derives): write it as coordinates and drop it from every butt that lists it (a butt goes with its last end)
 - **`transform`** (structure): move or turn nodes, bars, runs, parts and pattern templates as one step, keeping or freeing what joins them to the rest
-  - `ids`: `[string, …]` — the nodes, bars, runs, parts, patterns (their templates) and connections to move
+  - `ids`: `[string, …]` — the nodes, bars, runs, parts, patterns (their templates) and connections to move; a bar end (b5.b) moves alone, its bar stretching while the other end stays (with by only)
   - `by` (optional): `[expr, expr, expr]` — [dx, dy, dz]: move by this; an expression over params is kept (W moved by D is W + D)
   - `rotate` (optional): `{ axis: "x" | "y" | "z", deg: number, about: [number, number, number] }` — turn about a world axis through a point; exact at multiples of 90°
   - `joined` (optional): `"follow" | "detach"` — what joins the moved set to the rest: follow (default) keeps each joint, the rest's joined ends sliding along their own bars to stay on what moved, or refuses naming the joint it would break; detach frees them
@@ -505,7 +507,7 @@ string; `<…>` is a string of that form; `?` marks an optional field.
 - **`explodePattern`** (parts and patterns): turn a pattern's copies into ordinary entities, so one can be edited on its own
   - `id`: `string` — a pattern: pt<number>
 - **`mirror`** (parts and patterns): copy entities as their mirror image in a plane square to a world axis, as ordinary entities
-  - `ids`: `[string, …]` — the nodes, bars, runs, connections and parts to mirror
+  - `ids`: `[string, …]` — the nodes, bars, runs, connections and parts to mirror; a bar they name outside the set is taken as the bar at its image: itself, or an existing bar standing there (a bracket on one leg lands on the opposite leg)
   - `plane`: `{ axis: "x" | "y" | "z", at_mm: number }` — the mirror plane: square to a world axis, at a coordinate along it
 - **`array`** (parts and patterns): copy entities at a pitch along a bar, run or direction, as ordinary entities (§4.7)
   - `ids`: `[string, …]` — the nodes, bars, connections and parts to copy

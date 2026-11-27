@@ -40,6 +40,14 @@ import { idList } from "./words.ts";
  * - **detach** frees them: the moved set's ends leave the butts, mitres, splices, pivots and face
  *   connections that join it to the rest (a connection goes with its last end or layer), and the
  *   rest's ends written on the moved set are written as coordinates where they are.
+ *
+ * A bar end named alone (`b5.b`, the editing polish's gap 1) moves by the offset while its bar's
+ * other end stays, so the bar stretches, as AutoCAD's STRETCH moves the endpoints inside a
+ * crossing window and leaves the rest (docs/ux/polish-editing-decisions.md 1–6). The end belongs
+ * to the moved set: a joint between it and what moves is kept, one between it and the rest is
+ * followed or freed as above. A stretched bar carries the ends that bear on it only when its line
+ * moves (the end goes off its axis); along its axis its line stays, and so do they. Translation
+ * only: a turn moves whole entities.
  */
 
 type O = Record<string, unknown>;
@@ -54,7 +62,9 @@ const Transform = z
     ids: z
       .array(z.string())
       .min(1)
-      .describe("the nodes, bars, runs, parts, patterns (their templates) and connections to move"),
+      .describe(
+        "the nodes, bars, runs, parts, patterns (their templates) and connections to move; a bar end (b5.b) moves alone, its bar stretching while the other end stays (with by only)",
+      ),
     by: Vec3Expr.optional().describe(
       "[dx, dy, dz]: move by this; an expression over params is kept (W moved by D is W + D)",
     ),
@@ -91,7 +101,18 @@ export interface TransformInfo {
   freed: string[];
   /** A written expression the move kept, one per param it reads: `b3.a y: W + 100`. */
   kept: string[];
+  /** The bar ends that moved alone (`b5.b`), their bars stretching; absent when none did. */
+  stretched?: string[];
 }
+
+/** The bars of some bar ends, each once, in the ends' order. */
+const barsOf = (ends: readonly string[]): string[] => [
+  ...new Set(ends.map((x) => x.split(".")[0] as string)),
+];
+
+/** Bar ends in id order, end a before end b. */
+const compareEnds = (x: string, y: string): number =>
+  compareIds(x.split(".")[0] as string, y.split(".")[0] as string) || (x < y ? -1 : x > y ? 1 : 0);
 
 export const transform: CommandDef<Args> = {
   name: "transform",
@@ -107,6 +128,7 @@ export const transform: CommandDef<Args> = {
       : `turn ${what} ${a.rotate?.deg}° about ${a.rotate?.axis} through [${a.rotate?.about.join(", ")}]`;
     if (!info) return head;
     const tail = [
+      info.stretched?.length ? `stretching ${idList(barsOf(info.stretched))}` : "",
       info.followed.length > 0 ? `${idList(info.followed)} following` : "",
       info.freed.length > 0 ? `freed from ${idList(info.freed)}` : "",
       info.kept.length > 0 ? `keeping ${idList(info.kept, 2)}` : "",
@@ -266,6 +288,7 @@ function motionOf(ctx: CommandContext, a: Args): Motion {
 // ---------------------------------------------------------------------------------------------
 
 const isEndRef = (x: unknown): x is string => typeof x === "string" && /^b\d+\.[ab]$/.test(x);
+const barOf = (ref: string) => ref.split(".")[0] as string;
 const isNode = (x: unknown): x is string => typeof x === "string" && /^n\d+$/.test(x);
 const isVec = (x: unknown): x is unknown[] => Array.isArray(x) && x.length === 3;
 
@@ -279,8 +302,28 @@ function apply(ctx: CommandContext, a: Args): Outcome {
   const conns0 = (isObject(doc0.connections) ? doc0.connections : {}) as Record<string, O>;
   const runs0 = isObject(doc0.runs) ? doc0.runs : {};
 
-  // The moved set: what was named, with runs as their bars and patterns as their templates.
-  const M = { bars: new Set<string>(), nodes: new Set<string>(), parts: new Set<string>() };
+  /** A derived bar's design point at an end. */
+  const placed = (id: string, e: End): V3 => {
+    const b = D.bars.get(id);
+    const p = e === "a" ? b?.placed.A : b?.placed.B;
+    if (!p) throw refusal("derive", `${id} does not derive`, { entity: id });
+    return p;
+  };
+  /** A derived bar's unit axis, from end a to end b. */
+  const axisOf = (id: string): V3 => {
+    const A = placed(id, "a");
+    const B = placed(id, "b");
+    return scale(sub(B, A), 1 / dist(B, A));
+  };
+
+  // The moved set: what was named, with runs as their bars and patterns as their templates, and
+  // the bar ends named alone.
+  const M = {
+    bars: new Set<string>(),
+    nodes: new Set<string>(),
+    parts: new Set<string>(),
+    ends: new Set<string>(),
+  };
   const named = { conns: new Set<string>() };
   const take = (id: string) => {
     const kind = kindOf(id);
@@ -298,6 +341,12 @@ function apply(ctx: CommandContext, a: Args): Outcome {
     }
   };
   for (const id of a.ids) {
+    if (isEndRef(id)) {
+      const missing = requireEntity(doc0, barOf(id), "bars");
+      if (missing.length > 0) return failed(missing);
+      M.ends.add(id);
+      continue;
+    }
     const missing = requireEntity(doc0, id);
     if (missing.length > 0) return failed(missing);
     if (kindOf(id) === "patterns") {
@@ -305,9 +354,46 @@ function apply(ctx: CommandContext, a: Args): Outcome {
       for (const t of (p.template as string[]) ?? []) take(t);
     } else take(id);
   }
+  // An end named with its bar is the bar's; both ends of a bar are the bar.
+  for (const ref of [...M.ends]) {
+    const b = barOf(ref);
+    if (M.bars.has(b)) M.ends.delete(ref);
+    else if (M.ends.has(`${b}.${ref.endsWith(".a") ? "b" : "a"}`)) {
+      M.bars.add(b);
+      M.ends.delete(`${b}.a`);
+      M.ends.delete(`${b}.b`);
+    }
+  }
+  if (motion.R && M.ends.size > 0) {
+    const ref = [...M.ends].sort(compareEnds)[0] as string;
+    throw refusal(
+      "args",
+      `${ref} is an end: a turn moves whole entities; turn ${barOf(ref)}, or move the end by an offset`,
+      { entity: barOf(ref), field: "ids" },
+    );
+  }
   // A run moves whole or is a joint: a station on it rides it only when every bar of it moves.
   const movedBar = (b: string): boolean =>
     M.bars.has(b) || (kindOf(b) === "runs" && runBars(runs0[b]).every((x) => M.bars.has(x)));
+  /** Whether a bar end moves: its bar does, or it was named alone. */
+  const endMoves = (ref: string): boolean => M.bars.has(barOf(ref)) || M.ends.has(ref);
+  /** The bars whose line moves although they do not: an end moved alone, off the bar's axis. */
+  const turned = new Set<string>();
+  for (const ref of M.ends) {
+    const b = barOf(ref);
+    const u = axisOf(b);
+    const d = motion.d as V3;
+    if (norm(sub(d, scale(u, dot(d, u)))) > TOL.len) turned.add(b);
+  }
+  /** Whether a bar's design line moves: the bar does, or an end of it goes off its axis. */
+  const lineMoves = (b: string): boolean => M.bars.has(b) || turned.has(b);
+  /** A bar's design line after the move, from its derived design points. */
+  const movedLine = (b: string): [V3, V3] => {
+    const A = placed(b, "a");
+    const B = placed(b, "b");
+    if (M.bars.has(b)) return [motion.num(A), motion.num(B)];
+    return [M.ends.has(`${b}.a`) ? motion.num(A) : A, M.ends.has(`${b}.b`) ? motion.num(B) : B];
+  };
 
   let doc = doc0;
   const changed = new Set<string>();
@@ -337,13 +423,6 @@ function apply(ctx: CommandContext, a: Args): Outcome {
     return out;
   };
 
-  /** A derived bar's design point at an end. */
-  const placed = (id: string, e: End): V3 => {
-    const b = D.bars.get(id);
-    const p = e === "a" ? b?.placed.A : b?.placed.B;
-    if (!p) throw refusal("derive", `${id} does not derive`, { entity: id });
-    return p;
-  };
   const here = (p: V3): Vec => p.map((x) => len(x)) as Vec;
 
   /** A station on a bar that stays, moved along that bar, or the refusal for a move off it. */
@@ -367,13 +446,51 @@ function apply(ctx: CommandContext, a: Args): Outcome {
     return { ...st, at_mm: at };
   };
 
+  /**
+   * A free length (`{ len_mm, dir }`, §4.3) after the move of the end it reaches (sign 1) or the
+   * end a it is counted from (−1): it takes up a move along its direction, a typed offset along a
+   * world axis kept as written; any other move is refused, since the end would leave its line.
+   */
+  const lengthBy = (w: O, u: V3, sign: 1 | -1, subject: string, m: string): Expr => {
+    const dir = typeof w.dir === "string" ? w.dir : `[${(w.dir as unknown[]).join(", ")}]`;
+    if (sign < 0 && w.from === "a.cut") {
+      throw refusal(
+        "args",
+        `${subject} counted from end a's cut, which moving end a alone would move: move ${m} whole`,
+        { entity: m },
+      );
+    }
+    const d = motion.d as V3;
+    const s = dot(d, u);
+    if (norm(sub(d, scale(u, s))) > TOL.len) {
+      throw refusal(
+        "geometry",
+        `${subject} a free length along ${dir} from end a, which the move does not run along: move ${m} whole, or along ${dir}`,
+        { entity: m },
+      );
+    }
+    const k = u.findIndex((x) => Math.abs(Math.abs(x) - 1) < 1e-12);
+    const out =
+      k >= 0 && motion.by && d.every((x, i) => i === k || x === 0)
+        ? offsetBy(
+            w.len_mm as Expr,
+            (sign * Math.sign(u[k] as number)) as 1 | -1,
+            motion.by[k] as Expr,
+          )
+        : plus(w.len_mm as Expr, sign * s);
+    keep(`${m}.b len_mm:`, w.len_mm, out);
+    return out;
+  };
+
   /** A moved bar's end, written where the motion takes it. */
   const movedEnd = (m: string, e: End, w: unknown, where: string): unknown => {
     if (isVec(w)) return moveVec(w, where);
     if (isNode(w)) {
       if (M.nodes.has(w)) return w;
       const users = referrers(doc0, w).filter((r) => r.from !== w);
-      const shared = users.some((r) => !(kindOf(r.from) === "bars" && M.bars.has(r.from)));
+      const moves = (r: { from: string; field: string }) =>
+        kindOf(r.from) === "bars" && (M.bars.has(r.from) || M.ends.has(`${r.from}.${r.field}`));
+      const shared = users.some((r) => !moves(r));
       if (!shared || mode === "follow") {
         M.nodes.add(w);
         return w;
@@ -384,7 +501,7 @@ function apply(ctx: CommandContext, a: Args): Outcome {
     }
     if (isEndRef(w)) {
       const [x, xe] = w.split(".") as [string, End];
-      if (M.bars.has(x)) return w;
+      if (M.bars.has(x) || M.ends.has(w)) return w;
       if (mode === "detach") return here(motion.num(placed(m, e)));
       // A point shared with the rest: the other bar's end comes along.
       followed.add(w);
@@ -458,6 +575,27 @@ function apply(ctx: CommandContext, a: Args): Outcome {
     write(m, next);
   }
 
+  // 1b. The ends named alone: each moves, its bar's other end staying, so the bar stretches.
+  for (const ref of [...M.ends].sort(compareEnds)) {
+    const [m, e] = ref.split(".") as [string, End];
+    const spec = bar(m);
+    const w = spec[e];
+    const u = axisOf(m);
+    const next: O = { ...spec };
+    if (isObject(w) && w.len_mm !== undefined) {
+      // A free length from end a (§4.3): it takes up a move along its direction.
+      next[e] = { ...w, len_mm: lengthBy(w, u, 1, `${ref} is`, m) };
+    } else {
+      next[e] = movedEnd(m, e, w, ref);
+      const b = spec.b;
+      if (e === "a" && isObject(b) && b.len_mm !== undefined) {
+        // End b counted from end a would go with it: its length takes up the move instead.
+        next.b = { ...b, len_mm: lengthBy(b, u, -1, `${m}'s end b is`, m) };
+      }
+    }
+    write(m, next);
+  }
+
   // 2. Nodes in the moved set: as moveNode moves them, so what uses them follows.
   for (const n of [...M.nodes].sort(compareIds)) {
     const v = nodes0[n];
@@ -520,7 +658,6 @@ function apply(ctx: CommandContext, a: Args): Outcome {
   }
 
   // 4. Connections: what joins the moved set to the rest.
-  const barOf = (ref: string) => ref.split(".")[0] as string;
   for (const c of Object.keys(conns0).sort(compareIds)) {
     const conn = conns0[c] as O;
     if (removed.has(c)) continue;
@@ -529,10 +666,13 @@ function apply(ctx: CommandContext, a: Args): Outcome {
       const ends = (conn.ends as string[]) ?? [];
       const body = isObject(through);
       const tBar = body ? undefined : barOf(through as string);
-      const allEnds = ends.every((x) => M.bars.has(barOf(x)));
-      const movedThrough = tBar ? M.bars.has(tBar) : named.conns.has(c) || allEnds;
-      const rest = ends.filter((x) => !M.bars.has(barOf(x)));
-      const mine = ends.filter((x) => M.bars.has(barOf(x)));
+      const allEnds = ends.every(endMoves);
+      // A through bar moves when its line does; through a bar's end, when that end moves too.
+      const movedThrough = tBar
+        ? lineMoves(tBar) || (isEndRef(through) && endMoves(through))
+        : named.conns.has(c) || allEnds;
+      const rest = ends.filter((x) => !endMoves(x));
+      const mine = ends.filter(endMoves);
       if (body && movedThrough && isObject(through)) {
         const at = through.at;
         const nat = isVec(at)
@@ -548,13 +688,13 @@ function apply(ctx: CommandContext, a: Args): Outcome {
       } else if (!movedThrough && mine.length > 0 && mode === "detach") leave(c, mine);
     } else if (conn.type === "miter" || conn.type === "splice") {
       const ends = conn.ends as string[];
-      const n = ends.filter((x) => M.bars.has(barOf(x))).length;
+      const n = ends.filter(endMoves).length;
       if (n > 0 && n < ends.length && mode === "detach") leave(c, ends);
     } else if (conn.type === "pivot") {
       const base = isObject(conn.base) ? (conn.base.bar as string) : "";
       const ends = (conn.ends as string[]) ?? [];
       if (movedBar(base)) {
-        const rest = ends.filter((x) => !M.bars.has(barOf(x)));
+        const rest = ends.filter((x) => !endMoves(x));
         if (rest.length > 0 && mode === "detach") leave(c, rest);
       }
     } else if (conn.type === "face") {
@@ -564,22 +704,21 @@ function apply(ctx: CommandContext, a: Args): Outcome {
     }
   }
 
-  /** A rest end that bears on moved bar `t` (butt `c`): along its own bar, to stay on `t`. */
+  /** A rest end that bears on bar `t` (butt `c`), whose line moves: along its own bar, to stay on `t`. */
   function follow(ref: string, t: string, c: string) {
     const [r, e] = ref.split(".") as [string, End];
     const spec = bar(r);
     const w = spec[e];
     // Written on the moved bar, or at a point that moves with it: it follows by itself.
     if (isObject(w) && isObject(w.on) && movedBar(w.on.bar as string)) return;
-    if (isEndRef(w) && M.bars.has(barOf(w))) return;
+    if (isEndRef(w) && endMoves(w)) return;
     if (isNode(w) && M.nodes.has(w)) return;
     const P = placed(r, e);
     const Q = placed(r, e === "a" ? "b" : "a");
     const L = dist(P, Q);
     const u = scale(sub(P, Q), 1 / L);
-    const tb = D.bars.get(t);
-    if (!tb?.placed.B) throw refusal("derive", `${t} does not derive`, { entity: t });
-    const m = axisMeetsLine(Q, u, motion.num(tb.placed.A), motion.num(tb.placed.B));
+    const [tA, tB] = movedLine(t);
+    const m = axisMeetsLine(Q, u, tA, tB);
     if ("why" in m) {
       throw refusal(
         "geometry",
@@ -629,13 +768,15 @@ function apply(ctx: CommandContext, a: Args): Outcome {
     const spec = bar(r);
     let next: O | undefined;
     for (const e of ENDS) {
+      // An end named alone moved in 1b.
+      if (M.ends.has(`${r}.${e}`)) continue;
       const w = spec[e];
       if (isNode(w) && M.nodes.has(w)) {
         followed.add(`${r}.${e}`);
         continue;
       }
       const onMoved =
-        (isEndRef(w) && M.bars.has(barOf(w))) ||
+        (isEndRef(w) && endMoves(w)) ||
         (isObject(w) && isObject(w.on) && movedBar(w.on.bar as string)) ||
         (isObject(w) && typeof w.pivot === "string" && pivotMoves(w.pivot));
       if (!onMoved) continue;
@@ -683,12 +824,15 @@ function apply(ctx: CommandContext, a: Args): Outcome {
     }
   }
 
-  const first = [...M.bars, ...M.nodes, ...M.parts].filter((x) => changed.has(x));
+  const first = [...M.bars, ...barsOf([...M.ends]), ...M.nodes, ...M.parts].filter((x) =>
+    changed.has(x),
+  );
   const info: TransformInfo = {
     moved: [...first.sort(compareIds), ...ids.filter((x) => !first.includes(x))],
     followed: [...followed].sort(compareIds),
     freed: [...freed].sort(compareIds),
     kept,
+    ...(M.ends.size > 0 ? { stretched: [...M.ends].sort(compareEnds) } : {}),
   };
   return done(withDoc(ctx, doc as RawDoc), { changed: ids, removed: [...removed] }, info);
 }

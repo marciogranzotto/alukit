@@ -32,19 +32,38 @@ const q = (x: number) => {
   return r === 0 ? 0 : r;
 };
 
-/** What a selection moves: its bars, parts and nodes; a pattern copy moves with its template. */
+/**
+ * What a selection moves: its bars, parts and nodes; a pattern copy moves with its template. A
+ * bar a crossing box held only in part moves by its ends inside the box (`ends`, `b5.b`), so it
+ * stretches (docs/ux/polish-editing-decisions.md): those ends go into `ids` after the rest, and
+ * the bar is not among `bars`. `ends` is absent when no bar stretches.
+ */
 export interface MoveSet {
   ids: string[];
   bars: string[];
   parts: string[];
   nodes: string[];
+  ends?: string[];
 }
 
-export function moveSet(m: Model, selected: Iterable<string>): MoveSet | { why: string } {
+export function moveSet(
+  m: Model,
+  selected: Iterable<string>,
+  crossed?: ReadonlyMap<string, readonly ("a" | "b")[]>,
+): MoveSet | { why: string } {
   const out: MoveSet = { ids: [], bars: [], parts: [], nodes: [] };
+  const ends: string[] = [];
+  let held = 0;
   for (const id of [...selected].sort()) {
     if (id.includes("@")) {
       return { why: `${id} is a pattern copy: move ${id.split("@")[0]}, its template` };
+    }
+    const part = m.derived.bars[id] ? crossed?.get(id) : undefined;
+    if (part && part.length < 2) {
+      // Held in part: only its ends inside the box move (none: it stays, unless joints carry it).
+      held++;
+      for (const e of part) ends.push(`${id}.${e}`);
+      continue;
     }
     if (m.derived.bars[id]) out.bars.push(id);
     else if (m.derived.parts?.[id]) out.parts.push(id);
@@ -52,7 +71,14 @@ export function moveSet(m: Model, selected: Iterable<string>): MoveSet | { why: 
     else continue;
     out.ids.push(id);
   }
-  return out.ids.length > 0 ? out : { why: "select the bars, parts or points to move" };
+  if (ends.length > 0) {
+    out.ends = ends;
+    out.ids.push(...ends);
+  }
+  if (out.ids.length > 0) return out;
+  return held > 0
+    ? { why: "the crossing box holds no end of the bars it crosses: nothing in it moves" }
+    : { why: "select the bars, parts or points to move" };
 }
 
 /**
@@ -61,6 +87,7 @@ export function moveSet(m: Model, selected: Iterable<string>): MoveSet | { why: 
  */
 export function slideAxis(m: Model, set: MoveSet): { bar: string; u: V3 } | undefined {
   if (set.bars.length > 0 || set.nodes.length > 0 || set.parts.length === 0) return undefined;
+  if (set.ends?.length) return undefined;
   const doc = m.doc as { parts?: Record<string, { on?: { bar?: string } }> };
   const on = new Set(set.parts.map((p) => doc.parts?.[p]?.on?.bar));
   if (on.size !== 1) return undefined;
@@ -134,8 +161,9 @@ export function moveWords(r: DryRun, detach: boolean): JointWords {
     return { text: `${why}${hint}`, shape: "refused", joins: false };
   }
   const info = r.results[0]?.info as
-    | { followed?: string[]; freed?: string[]; kept?: string[] }
+    | { followed?: string[]; freed?: string[]; kept?: string[]; stretched?: string[] }
     | undefined;
+  const stretched = [...new Set((info?.stretched ?? []).map((x) => x.split(".")[0] as string))];
   const joins = r.results
     .slice(1)
     .filter((x) => x.created.length > 0)
@@ -145,6 +173,7 @@ export function moveWords(r: DryRun, detach: boolean): JointWords {
     });
   const cuts = Object.entries(r.effects.cuts).map(([b, [a, c]]) => `${b} ${a} → ${c}`);
   const parts = [
+    ...(stretched.length > 0 ? [`stretches ${list(stretched)}`] : []),
     ...(info?.followed?.length ? [`${list(info.followed)} follow`] : []),
     ...(info?.freed?.length ? [`frees ${list(info.freed)}`] : []),
     ...joins,

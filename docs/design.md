@@ -790,6 +790,36 @@ derived output changed.
   and A14's part on A6. 12 of the 15 scenarios pass whole, A2 and A14 in part, A6 not; §8's last
   list holds the limits they found (ie). Calls 105–107.
 
+### Editing polish, core
+
+Two of the gaps and two of the defects the editing round's scenarios found
+([`ux/integration-editing.md`](ux/integration-editing.md), "What the scenarios found"), each
+closed at its cause, with the decisions, sources and measurements in
+[`ux/polish-editing-decisions.md`](ux/polish-editing-decisions.md) ("pe"). The three scenarios
+that were `fixme` pass, each ending in its CLI comparison. No golden value or fixture's
+diagnostics moved (measured on all 58 fixture projects).
+
+- §6, §8: **a stretch** (gap 1, A2 (ii)). `transform` takes bar ends in `ids` (`b5.b`): an end
+  moves alone by the offset, its bar's other end staying, kept in its form, off the axis too; a
+  joint between it and what moves is kept, one with the rest followed or freed; a stretched bar
+  carries what bears on it only when its line moves; the answer lists `stretched`. A crossing
+  box records the ends inside it of the bars it takes without holding whole, and Move after it
+  sends one `transform` of the bars held whole and those ends, as AutoCAD's STRETCH does; a
+  window keeps moving whole entities. `alukit move --ids b2,b5.b` (pe 1–7).
+- §6, §8: **`mirror` lands on the bar at the image** (gap 2, A6): a reference to a bar outside
+  the set goes to the bar standing at its image, itself or another of the same section whose
+  line, frame and box are the image's, so a bracket on one leg mirrors onto the opposite leg; the
+  refusal where none stands there says so; the answer names `onto`, the words "on b2". A part
+  mirrored with its bar, refused before ("b13 does not derive"), lands on the bar's copy (pe 8–11).
+- §6, §7.1: **the log keeps each step's commands** in canonical form (defect 6, A15), so
+  `alukit log --json` gives what `alukit do` replays; in memory only, not in the event stream nor
+  in a command's `between` (pe 12, 13).
+- §8: **Move's arrow locks start a move** while a selection waits (defect 4, A3), and a tool's
+  starting keys are its own wherever the focus is but a text field, a dialog or a menu, so D, ↑,
+  150, Enter moves the shelf from the outline (pe 14, 15).
+- §8's "What the editing round left for later" loses the stretch, the mirror onto another bar
+  and the log; calls 106 and 107 note what superseded them. Calls 109–114.
+
 ## Draft 2.2 — what changed (2026-11-26)
 
 - **A shoe mitred square to a strut (gap G-A; §4.5, §16).** A plane's `normal` may name a bar:
@@ -2653,7 +2683,10 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   items, the default bar say: the new catalogs open before it runs ([s1](ux/s1-decisions.md) 4–6).
 - **Every command describes what it did** (*2.3*), so a step reads in words: "add bar b12, joined
   at 1 end", "add bars b1, b2 and b3", "undo add point n2". The log keeps the command names as
-  `what` beside the words, `text` ([s1](ux/s1-decisions.md) 7).
+  `what` beside the words, `text` ([s1](ux/s1-decisions.md) 7), and (*2.3*, the editing polish)
+  each step's commands, `commands`, in canonical form: each `{ cmd, args }` with its arguments as
+  its schema reads them, in the schema's key order, so the log replays with `alukit do` (§7.1;
+  [pe](ux/polish-editing-decisions.md) 12, 13; call 113).
 - **`addFrame`** (*2.3*, D-UX-8) adds a box frame in one step: four posts, a base and a top ring
   (either may be left out), an optional shelf ring (its top face `shelf_mm` above the base), and a
   butt at every corner by the corner rule (§4.5), with the connector and count given or the
@@ -2703,9 +2736,29 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   rest's ends, and the parts on moved bars), what was freed and what was kept as an expression;
   a dry run adds the cut lengths that move and what is removed ([move](ux/drag-ends-decisions.md)
   1–9). It moves whole entities: a bar in the set moves both its ends, so it does not stretch; a
-  bar joined to the set stretches by following (*2.3*, the editing round's integration). The
-  app's Move, Rotate, Align and a part's slide send it, followed by an `autoConnect` at each end
-  of the moved bars (the first 12) (§8).
+  bar joined to the set stretches by following (*2.3*, the editing round's integration).
+  *2.3* (the editing polish): **a bar end in `ids` (`b5.b`) moves alone**, by `by`, its bar's
+  other end staying, so the bar stretches, as AutoCAD's STRETCH moves the endpoints inside a
+  crossing window: kept in its form as any point (a node moves as `moveNode` moves it, a free
+  length takes up a move along its direction and refuses one across it), off the bar's axis too.
+  An end named with its bar is the bar, and both ends are the bar; a turn refuses an end. The end
+  belongs to the moved set, so a joint between it and what moves is kept and one with the rest is
+  followed or freed by `joined`; a stretched bar carries the ends that bear on it only when its
+  line moves. The answer lists the ends (`stretched`) and the words say "stretching b5"
+  ([pe](ux/polish-editing-decisions.md) 4–7; calls 110, 111). The app's Move, Rotate, Align and
+  a part's slide send it, followed by an `autoConnect` at each moved end (the first 24: both ends
+  of each bar moved whole, then the ends stretched) (§8).
+- **`mirror`** (§4.7; *2.3*, the editing polish) copies entities as their image in a plane square
+  to a world axis. **A reference to a bar outside the set lands on the bar at its image**: the
+  bar itself when the plane maps it onto itself, else an existing bar of the same section whose
+  design points, frame and box are the image's within `tol.len`, so a bracket on one leg mirrored
+  alone lands on the opposite leg, at the mirrored station and face; a station part, a bar end
+  on a station, a butt's through bar, an end named as a point and an end plane's face alike. A
+  station measured from a cut lands only on a bar cut there as the image is. Where no bar stands
+  at the image it is refused, saying so ("p1/on: b1 is not mirrored, and no bar stands at its
+  image across x = 400; include b1"), as it is where a bar on the image's line is not its image,
+  or two bars stand there. The answer names the bars landed on (`onto`), and the words end
+  "on b2" ([pe](ux/polish-editing-decisions.md) 8–11; call 112).
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
   moves (`cuts`, before and after), the bars it adds with their cuts, the parts it adds (`parts`,
@@ -2744,7 +2797,14 @@ Agents work at this level of meaning, so they never compute cut lengths by hand.
   carries its words, `text`, beside its commands' names, `what` (*2.3*, §6). Undo pops the latest step, whoever made
   it, and names it; redo applies again the last one taken back; `alukit log` shows what happened
   and what was undone. The log lives as long as the server process; git keeps the rest, so
-  `undo`, `redo` and `log` need a running server and say so without one (*2.3*).
+  `undo`, `redo` and `log` need a running server and say so without one (*2.3*). *2.3* (the
+  editing polish): a step's entry in the log (`alukit log --json`, `GET /api/log`) also keeps its
+  commands in canonical form (§6), which `alukit do` replays: a session is replayed from the log
+  by `alukit do` for each step, `alukit undo` and `alukit redo` for theirs, which keep none (`of`
+  names the step), or by the steps still in effect alone; a file edit keeps none, since no
+  command made it. They live in memory only, behind the same token as the document (§7.2), and
+  neither the event stream nor a command's answer (`between`) carries them
+  ([pe](ux/polish-editing-decisions.md) 12, 13; call 113).
 - **A step** is applied, its files written (lock, then document, only those whose canonical text
   changed), then committed to the history and broadcast (*2.3*). A failed write leaves no step
   and makes the project read-only with the error. Every change in the queue first reads the files
@@ -2844,8 +2904,8 @@ source in the log.
 | `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context. *2.3* (E1.5): `like:b1`, the entities of b1's kind with its item and options (a bar's or part's as derived, a connection's of its type too), and `like:b1 by tag`, those carrying every tag b1 carries (E2.2); `connected:b1,c3`, the bars a connection joins to them (through bar, ends, base, layers, a run's bars), and `connected*:b1`, the whole assembly they belong to; the app's "select similar" and "select connected" read the same functions (`similarTo`, `connectedTo` in `src/core/query.ts`) |
 | `alukit do <dir> -f batch.json` (or `-f -` for stdin) | edits from a file or stdin, one process per batch; inline JSON also works. `--dry-run` (*2.3*) says what the batch would do and writes nothing (§6) |
 | `alukit add bar --item … --a n1 --b 0,0,900`, … | sugar over `do`; `alukit add frame <dir> --size W,D,H` (*2.3*) is `addFrame` (§6) |
-| `alukit move <dir> --ids b3,b4 --by dx,dy,dz [--detach]` / `alukit rotate <dir> --ids … --axis z --deg 90 --about x,y,z [--detach]` (*2.3*) | sugar over `do` for one `transform` (§6); `--by` takes expressions; `--dry-run` writes nothing |
-| `alukit log` / `alukit undo` / `alukit redo` | the server's log; undo the latest step; redo the last one undone (*2.3*: all three need a running server) |
+| `alukit move <dir> --ids b3,b4 --by dx,dy,dz [--detach]` / `alukit rotate <dir> --ids … --axis z --deg 90 --about x,y,z [--detach]` (*2.3*) | sugar over `do` for one `transform` (§6); `--by` takes expressions; `--dry-run` writes nothing; *2.3* (the editing polish): a bar end in `--ids` (`b5.b`) moves alone, its bar stretching |
+| `alukit log` / `alukit undo` / `alukit redo` | the server's log; undo the latest step; redo the last one undone (*2.3*: all three need a running server; *2.3*, the editing polish: `log --json` gives each step's commands, which `alukit do` replays) |
 | `alukit lock update <dir> [--item id] [--dry-run]` | §4.13 |
 | `alukit fmt <dir> [--check]` | canonical form |
 | `alukit diff <a> <b>` | files, `git:<ref>:<path>`, revisions (`rev:<name>`) or variants; each side with its own lock |
@@ -2999,7 +3059,9 @@ step: the revision does not move.
   its `when` while it cannot run, read-only included (e2 3, 4).
 - **Selecting.** A click selects, Ctrl or Cmd + click toggles. Shift + drag draws a box: **left to
   right a window**, solid, taking what lies wholly inside; **right to left a crossing**, dashed,
-  taking what it touches (E-UX-10; a body is the hull of its eight projected corners). **Select
+  taking what it touches (E-UX-10; a body is the hull of its eight projected corners), and
+  noting, of each bar it touches without holding whole, its ends inside it, which Move stretches
+  (*2.3*, the editing polish; below). **Select
   all** (Ctrl/Cmd+A) takes the document's bars and placed parts that the view draws and does not
   hide; it acts anywhere but in a text field, where the audit (§9) said only while the focus is
   on the view or the outline, since selecting the page's text is never useful here and a field
@@ -3123,12 +3185,20 @@ cut ("b2.a, p1 follow · cut b2 580 → 680"), or why the move is refused. The r
 *2.3* (the editing round): the first click on a snap is the base point, so a bar moved from its
 end to another bar's end lands on it exactly (point to point, E3.5); with a selection and no
 drag, a value typed starts a move from the selection's centre, and Enter, or a click, commits it.
-The arrow locks are the move's, so they act once it is on (a drag, or a first digit typed); while
-a selection only waits they go to what has the focus, unlike Rotate's X, Y and Z, which start a
-turn (measured by the round's scenarios).
-Move moves whole entities (§6): it stretches the bars joined to the selection, not a bar in it,
-so a side is widened by selecting it with a window, not a crossing (a crossing also takes the
-rails that reach into the box, and they move whole). A part selected alone in Select (or parts all
+*2.3* (the editing polish): so does an arrow lock, the move starting with that axis locked, as
+Rotate's X, Y and Z start a turn, so D, ↑, 150, Enter moves 150 up; a tool's starting keys are its
+own wherever the focus is but a text field, a dialog or a menu, so the outline's row, which takes
+its arrows for itself, no longer gets them in Move, and `↓`, which starts nothing, stays its
+([pe](ux/polish-editing-decisions.md) 14, 15; call 114).
+Move moves whole entities (§6), and stretches the bars joined to the selection by following.
+*2.3* (the editing polish): **after a crossing box it stretches**, as AutoCAD's STRETCH does: the
+box records, of each bar it takes without holding it whole, the ends whose point lies inside it,
+and the step's `transform` moves the bars the box holds whole and those ends, the bars crossed
+stretching while their ends outside stay; a crossed bar with no end inside stays. The record
+belongs to the selection the boxes made (an added box merges), and any other change of the
+selection leaves it; a window box, Rotate, Align and Duplicate move whole entities. The stretched
+bars are drawn where they would be, and the preview says "stretches b5 …"
+([pe](ux/polish-editing-decisions.md) 1–7; call 109). A part selected alone in Select (or parts all
 on one bar along a world axis) shows **the gizmo's arrow along its bar**: a drag on it slides them
 along the bar in whole millimetres and its release commits; a click on it leaves the slide on, to
 type the distance. That step is a `transform`, which changes `at_mm`, where the audit's E3.7
@@ -3165,10 +3235,11 @@ follows the snap under the pointer, and a typed value is where it crosses its ax
 `=W / 2`, valued, since `mirror` takes a number). A click or Enter commits one `mirror` step; the
 images are drawn mirrored over the plane's grid, the dry run names what it makes or gives the
 core's refusal, and the images are selected after it. **Remove the originals**, a box in the
-command bar, removes what was mirrored in the same step, with Delete's cascade. A part on a bar's
-station is mirrored only where the plane maps that bar onto itself, or with the bar: `mirror`
-does not move a station part onto another bar at its image, so a bracket on one leg is not
-mirrored onto the opposite leg (a v1 limit, below). Call 92.
+command bar, removes what was mirrored in the same step, with Delete's cascade. *2.3* (the editing
+polish): a part on a bar's station lands on the bar at that bar's image (§6, `mirror`), so a
+bracket on one leg mirrored across the frame's middle lands on the opposite leg's inner face at
+the same height; where no bar stands there, the preview gives the core's refusal, which says so.
+Call 92.
 
 **Align to a face…** (*2.3*, E-UX-23; e3 16), in the menu and the header: a click on a bar's face
 moves the selection along that face's outward normal until its own face that looks the same way
@@ -3275,7 +3346,7 @@ added two commands, `moveEnd` and `transform`. An agent makes the same edit with
 
 | Edit in the app | Step |
 |---|---|
-| Move, a part's arrow, Align | `transform { by }`, then `autoConnect` at each end of the moved bars (the first 12) |
+| Move, a part's arrow, Align | `transform { by }`, then `autoConnect` at each moved end (the first 24: both ends of each bar moved whole, then the ends a crossing box stretches, *2.3*, the editing polish) |
 | Rotate | `transform { rotate }`, then the same joins |
 | An end handle, the length label | `moveEnd`, then `autoConnect { end }` |
 | Duplicate, Paste | `array` along the offset, then `autoConnect` at each new bar's end (the first 48) |
@@ -3376,12 +3447,6 @@ are *not verified* (review 1 §9).
 scenarios found, [`ux/integration-editing.md`](ux/integration-editing.md)). Each is a CLI or
 hand edit today unless it says otherwise.
 
-- **A stretch.** Move moves whole entities, so a crossing box over a frame's side moves the rails
-  that reach into it as well; a window over the side, whose joined rails then follow, widens it
-  (§6, `transform`).
-- **Mirror onto another bar.** A part on a bar's station is mirrored only with its bar, or where
-  the plane maps the bar onto itself; a bracket on one leg cannot be mirrored onto the opposite
-  leg (place it there instead).
 - **Picking and arranging**: cycling what lies under the pointer, distribute, nudging with the
   arrow keys, a plane lock, a bar's up vector, joining collinear bars, a circular pattern, a
   pattern by a direction or by offsets, a rail's hole layout (`holes`), a butt's stack and
@@ -3393,8 +3458,8 @@ hand edit today unless it says otherwise.
 - **Owner calls** (the audit's §11, defaults taken): a butt's connectors are not drawn in 3D
   (v1.1; joint markers stay the joint's sign), and an entity's variant scope (`only_in`,
   `not_in`) is not edited in the app.
-- **The log** names each step's commands and words, not their arguments (§7.1), so an agent
-  replays a session from the commands sent, not from `alukit log`.
+- *2.3* (the editing polish): the stretch, the mirror onto another bar and the log's arguments,
+  which this list held, are built (§6, §7.1, §8 Move; [pe](ux/polish-editing-decisions.md)).
 
 ## 9. Exports
 
@@ -4163,16 +4228,42 @@ reasons. Marking the room is the run's own change, in its project.
 106. *New in 2.3, 3D editing integration, open.* A scenario is `fixme` only when the app cannot do
      it as built. Where one path fails and another the app offers works (an arrow lock before a
      move is on, the anchor dots of a 40 × 80), the test takes the path that works and the defect
-     is listed (ie), so the scenario's check still holds the result.
+     is listed (ie), so the scenario's check still holds the result. (The arrow lock is fixed
+     since: call 114.)
 107. *New in 2.3, 3D editing integration, open.* Agent parity (A15) replays the commands the app
      posted, read off its requests, with one `alukit do` per step: `alukit log` keeps each step's
      command names and words, not its arguments (§7.1), and this pass changes no product code to
-     add them (ie).
+     add them (ie). *Superseded by call 113*: the log keeps them, and A15 replays the log itself.
 108. *New in 2.3, after 3D editing E4, open.* An end two providers claim is held by both: one that
      fixes it (its own plane, a miter, a pivot, a splice, a named `through_end`) wins and the move
      is refused; otherwise `detach` drops it from every butt that lists it, so none is left
      claiming it, and `moveEnd`'s `detached` became a list for it. A claim the hold cannot name
      fixes the end rather than freeing it (e4 24).
+109. *New in 2.3, the editing polish, open.* Move after a crossing box stretches, as AutoCAD's
+     STRETCH does: the bars the box holds whole move, the bars it crosses move their ends inside
+     it. A stretch is Move's, as SketchUp's Move stretches, not a tool of its own; a window, a
+     click or any other selection moves whole entities, and so do Rotate, Align and Duplicate. The
+     box's record belongs to the selection it made, by identity (pe 1–3).
+110. *New in 2.3, the editing polish, open.* The core's stretch is `transform` taking bar ends in
+     `ids`, not `moveEnd` in the same batch: `moveEnd` moves along the bar's axis only, and after
+     `transform`'s follow it would move a joined end twice. An end moves by the whole offset, off
+     its bar's axis too (MicroStation's fence stretch turns an arc with one end inside), kept in
+     its written form; a turn refuses an end (pe 4, 5).
+111. *New in 2.3, the editing polish, open.* A stretched bar carries the ends that bear on it only
+     when its line moves (its end goes off its axis); along its axis its line stays, and the ends
+     butted on its side stay, under detach too (pe 6).
+112. *New in 2.3, the editing polish, open.* `mirror` refers every reference to a bar outside the
+     set, not only a station part's, to the bar at its image: itself, or an existing bar of the
+     same section whose design points, frame and box are the image's within `tol.len`. None, two,
+     or one on the line that is not the image are refused, each saying which (pe 8–10).
+113. *New in 2.3, the editing polish, open.* The log keeps each step's commands as their schemas
+     read them, in memory for the server's life and behind its token, as the document is; the
+     event stream and a command's answer do not carry them. The A15 session's log grows from 657
+     to 2,023 bytes against a 3,368-byte document (pe 12, 13).
+114. *New in 2.3, the editing polish, open.* In Move, an arrow lock starts the move while a
+     selection waits, and a tool's starting keys (Move's arrows, Rotate's X, Y, Z and arrows) are
+     its own wherever the focus is but a text field, a dialog or a menu, asked in the capture
+     phase as a live gesture's keys are; `↓` stays the outline's (pe 14, 15).
 
 ## 15. Review 1 resolution
 

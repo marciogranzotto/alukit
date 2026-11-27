@@ -6,8 +6,14 @@ import type { Grab, Hit, ToolHandler, ToolPointer, Viewer } from "../../../viewe
 import { rayLineParams, type Snap, type SnapTargets } from "../../../viewer/snap.ts";
 import { rayPlane } from "../../../viewer/workplane.ts";
 import { duplicateBatch, transformBatch } from "../../edit/batches.ts";
-import { centreOf, ghostsOf, splitCopies, translation } from "../../edit/geometry.ts";
-import { select, selection } from "../../focus.ts";
+import {
+  centreOf,
+  ghostsOf,
+  splitCopies,
+  stretchedGhosts,
+  translation,
+} from "../../edit/geometry.ts";
+import { crossedEnds, select, selection } from "../../focus.ts";
 import { chord, describeKeys, onKey } from "../../keys.ts";
 import type { Model } from "../../model.ts";
 import { model } from "../../store.ts";
@@ -119,7 +125,11 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
     let label = "";
     let arrow: V3 | undefined;
     let copies: { count?: number; divide?: number } = {};
-    const moving = new Set([...set.bars, ...set.parts]);
+    const moving = new Set([
+      ...set.bars,
+      ...set.parts,
+      ...(set.ends ?? []).map((x) => x.split(".")[0] as string),
+    ]);
     /** What the moved set is not: its own ends and faces are no place to move to. */
     const others = (t: SnapTargets): SnapTargets => ({
       points: t.points.filter((p) => {
@@ -156,7 +166,10 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
         ? Array.from({ length: Math.min(steps, 24) }, (_, i) =>
             ghostsOf(m, set.bars, translation(scale(pitch, i + 1)), 48),
           ).flat()
-        : ghostsOf(m, set.bars, translation(d));
+        : [
+            ...ghostsOf(m, set.bars, translation(d)),
+            ...stretchedGhosts(m, set.ends ?? [], d),
+          ].slice(0, 48);
       viewer.setOverlay({
         ghosts: ghosts.slice(0, 96),
         line: norm(d) > 0 ? { a: base, b: dest } : undefined,
@@ -334,7 +347,9 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
   ): boolean {
     const m = model.peek();
     if (!m) return false;
-    const set = moveSet(m, ids);
+    // The selection a crossing box made stretches the bars it held in part; a copy is whole.
+    const sel = selection.peek();
+    const set = moveSet(m, ids, !copy && ids === sel ? crossedEnds(sel) : undefined);
     if ("why" in set) {
       const why = copy ? set.why.replace("to move", "to copy") : set.why;
       lastResult.value = { rev: m.rev, created: [], error: why };
@@ -443,25 +458,28 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
     return begin(selection.peek(), undefined, undefined, false);
   }
 
+  /**
+   * Move with a selection and no drag on: a value typed moves it from the keyboard (D-UX-17), and
+   * an arrow lock starts the move with that axis locked (docs/ux/polish-editing-decisions.md, as
+   * Rotate's X, Y and Z start a turn, e3 2), so D, ↑, 150, Enter moves 150 up. Asked above the
+   * drag's own keys (wiring.ts), which take them once the move is on, and in the capture phase
+   * with the focus on an element (`starting`), so the outline's row does not take the arrows.
+   */
+  const startKey = (e: KeyboardEvent): boolean =>
+    !chord(e) &&
+    activeTool.peek() === "move" &&
+    !gestures.live() &&
+    ((e.key.length === 1 && VALUE_START.test(e.key)) || MOVE_LOCKS[e.key] !== undefined) &&
+    startFromKeyboard() &&
+    gestures.key(e);
+
   const offKeys = [
     selection.subscribe(restArrow),
     model.subscribe(restArrow),
     activeTool.subscribe(restArrow),
     gesture.subscribe(restArrow),
-    // Move with a selection and no drag on: a value typed moves it from the keyboard (D-UX-17).
-    // Above the drag's own keys (wiring.ts), which take the value once the move is on.
-    onKey(
-      "tool",
-      (e) =>
-        !chord(e) &&
-        activeTool.peek() === "move" &&
-        !gestures.live() &&
-        e.key.length === 1 &&
-        VALUE_START.test(e.key) &&
-        startFromKeyboard() &&
-        gestures.key(e),
-      51,
-    ),
+    onKey("tool", startKey, 51),
+    gestures.starting(startKey),
     describeKeys({
       id: "moving",
       title: "While moving (D)",
@@ -475,7 +493,10 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
           keys: ["0–9", "Enter"],
           does: "Type the distance (along the lock or the way you dragged), x, y, z, or [x, y, z]",
         },
-        { keys: ["→", "←", "↑"], does: "Lock the move to X, Y or Z (again, or ↓, to free it)" },
+        {
+          keys: ["→", "←", "↑"],
+          does: "Lock the move to X, Y or Z, starting it with a selection (again, or ↓, to free it)",
+        },
         { keys: ["Shift"], does: "Hold to move freely, snapping to nothing" },
         {
           keys: ["Alt"],

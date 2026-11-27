@@ -48,11 +48,11 @@ characters as keys. Steps are the server's.
 |---|---|---|---|---|---|---|---|---|
 | A1 | Table frame, shelf ring 250, W, D, H as params | ≤ 45 s, ≤ 8 clicks, ≤ 20 keys, 1 step | pass: the cut list is `alukit add frame --shelf 250 --params`'s, byte for byte; **10 clicks** | 10 | 13 | 1 | 2.8 s | 30 s |
 | A2 (i) | Widen by 100, editing W | ≤ 10 s, 1 step | pass: the 1100-wide frame's cut list | 2 | 5 | 1 | 0.8 s | 7 s |
-| A2 (ii) | Widen by 100 on a frame without params: crossing box over the right side, Move +100 X | ≤ 20 s, 1 step | **fixme**: gap 1 | (3) | (11) | (1) | (5.6 s) | (11 s) |
-| A3 | Shelf up 150 | ≤ 15 s, 1 step | pass: cuts as before, ends 150 up, no new diagnostic, `alukit move`'s project | 2 | 11 | 1 | 0.7 s | 8 s |
+| A2 (ii) | Widen by 100 on a frame without params: crossing box over the right side, Move +100 X | ≤ 20 s, 1 step | pass since the polish (gap 1 closed): the box, D, →, 100, Enter; the 1100-wide frame's cut list, byte for byte, `alukit move`'s project of the box's ids and ends | 3 | 6 | 1 | 5.1 s ‡ | 10 s |
+| A3 | Shelf up 150 | ≤ 15 s, 1 step | pass: cuts as before, ends 150 up, no new diagnostic, `alukit move`'s project; since the polish by D, ↑, 150, Enter, the focus on the outline (defect 4 closed) | 2 | 6 | 1 | 1.6 s ‡ | 7 s |
 | A4 | Four legs to 40 × 80, the 80 along X | ≤ 30 s, ≤ 2 steps, legs in ≤ 2 clicks | pass: the CLI's cut list (front and back rails 840, sides 520 by hand); legs in 2 clicks; **6 steps** (gap 3) | 20 | 8 | 6 | 3.8 s | 55 s |
 | A5 | Diagonal brace in the back plane, joined at both ends | ≤ 45 s, ≤ 2 steps | pass: no error, both ends `angle`, its cut the dry run's of the same batch | 1 | 32 | 1 | 1.4 s | 12 s |
-| A6 | Bracket on the front-left leg's inner face at 300, mirrored to the front-right leg | ≤ 20 s for the mirror, 1 step | **fixme**: gap 2 | | | | | |
+| A6 | Bracket on the front-left leg's inner face at 300, mirrored to the front-right leg | ≤ 20 s for the mirror, 1 step | pass since the polish (gap 2 closed): Esc leaves Place, the menu's Mirror…, `=W / 2`, Enter; p2 on b2's face −x at 300, `alukit do mirror`'s project. Placing: 5 clicks, 10 keys, 1.5 s, 16 s | 2 | 8 | 1 | 1.6 s ‡ | 8 s |
 | A7 | Top front rail duplicated 300 down, joined to the legs | ≤ 15 s, 1 step | pass: butts at both ends, its cut the top rail's, the CLI's `array` and joins | 1 | 7 | 1 | 1.8 s | 5 s |
 | A8 | Four slats across the shelf, evenly spaced; then five by editing the pattern | ≤ 30 s, then ≤ 10 s, 1 step each | pass: spacing equal within 0.01 mm, the count follows, the CLI's project; four slats are **2 steps** (a slat, then its pattern) | 6, then 2 | 39, then 2 | 2, then 1 | 2.9 s, then 0.3 s | 27 s, then 6 s |
 | A9 | Bracket slid from 300 to 450 along its leg | ≤ 10 s, 1 step | pass: `at_mm` 450, `alukit move`'s project | 1 | 5 | 1 | 0.5 s | 4 s |
@@ -60,27 +60,34 @@ characters as keys. Steps are the server's.
 | A11 | Hide the top ring, isolate a corner, show all | ≤ 10 s, no step | pass: no step, `alukit diff` empty | 3 | 3 | 0 | 0.9 s | 9 s |
 | A12 | A T-nut plate's face joint from 2 bolts to 3 | ≤ 20 s, 1 step | pass: one screw and one T-nut more, the BOM of `alukit do setConnection` | 4 | 16 | 1 | 0.8 s | 15 s |
 | A13 | Undo it all | 1 key per step, each Undo naming its step | pass: three steps, three keys, each named as `alukit log` words it; the empty project again | 0 | 3 | 3 undone | 0.4 s | 1 s |
-| A14 (A3) | The shelf up 150, by mouse (the rail's Move, the offset typed, a click) | ≤ 1.5 × the keyboard's | pass, the same project; 1.56 × A3's estimate, 1.3 × its script time | 4 | 9 | 1 | 0.9 s | 13 s |
-| A14 (A6) | The bracket mirrored, by mouse | | **fixme**: waits on A6 (gap 2) | | | | | |
+| A14 (A3) | The shelf up 150, by mouse (the rail's Move, the offset typed, a click) | ≤ 1.5 × the keyboard's | pass, the same project; 1.56 × A3's estimate, 1.3 × its script time; against A3 by ↑ since the polish, 1.86 × its estimate | 4 | 9 | 1 | 0.9 s | 13 s |
+| A14 (A6) | The bracket mirrored, by mouse | ≤ 1.5 × the keyboard's | pass since the polish: Select on the rail, the outline row's menu, Mirror…, 500 typed, a click in the view; the same project; 1.51 × A6's mirror estimate, 0.9 × its script time | 4 | 3 | 1 | 1.4 s ‡ | 11 s |
 | A14 (A10) | The rail deleted from the outline row's menu, undone from the top bar | ≤ 1.5 × the keyboard's | pass, the same project; 1.42 × A10's estimate, 1.6 × its script time | 3 | 0 | 1 | 1.3 s | 8 s |
-| A15 | Agent parity: the session's commands replayed with `alukit do` | `alukit diff` empty | pass: five steps (the frame, the shelf, a brace, a duplicate, a delete) replayed from the commands the app posted (gap 6) | | | 5 | | |
+| A15 | Agent parity: the session's commands replayed with `alukit do` | `alukit diff` empty | pass: five steps (the frame, the shelf, a brace, a duplicate, a delete); since the polish replayed from `alukit log --json` itself, whose commands are what the app posted (defect 6 closed) | | | 5 | | |
 
-A2 (ii)'s numbers in brackets are its run as written, which fails its check; the same steps with
-the window's corners swapped (left to right) pass it (**measured**, a probe not kept).
+‡ The polish's run (one run of the spec, the machine loaded by other agents), not the
+integration's. The integration's A2 (ii), as then written, failed its check (3 clicks, 11 keys,
+5.6 s); the same steps with the window's corners swapped (left to right) passed it (**measured**,
+a probe not kept).
 
 ## What the scenarios found
+
+*Since closed* (the editing polish, [polish-editing-decisions.md](polish-editing-decisions.md),
+cited as "pe"; design's "Editing polish, core"): gaps 1 and 2 and defects 4 and 6. A2 (ii), A6 and A14 (A6)
+pass, each ending in its CLI comparison; A3 runs by D, ↑, 150, Enter, and A15 replays
+`alukit log --json` itself. The entries below are as the integration found them, each marked.
 
 Gaps (the app cannot do it as built; listed in design §8, "What the editing round left for
 later"):
 
-1. **No stretch (A2 (ii)).** Move moves whole entities (`transform`, §6). A crossing box over the
+1. **Closed: a crossing box then Move stretches** (pe 1–7). **No stretch (A2 (ii)).** Move moves whole entities (`transform`, §6). A crossing box over the
    frame's right side takes the right posts and side rails and also the front and back rails that
    reach into it, which then move whole: their left ends land 60 mm off the left posts, six
    `end-far` warnings, and the cut list is not the 1100-wide frame's (**measured**). A window
    (left to right) takes only b2, b4, b8, b12 and b16, the rails butted on them follow, and the cut
    list is the 1100-wide frame's, byte for byte (**measured**). The audit assumed a crossing would
    stretch (its row 1); the guide teaches the window.
-2. **Mirror does not re-home a station part (A6).** `mirror` keeps a part on its bar's station, so
+2. **Closed: `mirror` lands on the bar at the image** (pe 8–11). **Mirror does not re-home a station part (A6).** `mirror` keeps a part on its bar's station, so
    a bracket on b1 mirrored across x = 500 is refused unless b1 is mirrored with it ("p1/on: b1 is
    not mirrored and the plane does not map it onto itself; include it", **measured** with
    `alukit do --dry-run`), and with b1 it copies the leg. Placing the second bracket on b2 works.
@@ -98,7 +105,7 @@ Defects and friction (the scenario passed by another path; for the designer revi
    covers the corner's centre: a press on `-x+y` goes to `+y` (**measured**: Playwright refuses
    the click, naming the dot that takes it). The anchor's list beside the dots works. Both are
    E4's (`ManyFields.tsx`, `AnchorDots.tsx`).
-4. **Move's arrow locks wait for a move (A3, A2 (ii)).** `→ ← ↑` are the move gesture's keys
+4. **Closed: the arrow locks start the move, wherever the focus is** (pe 14, 15). **Move's arrow locks wait for a move (A3, A2 (ii)).** `→ ← ↑` are the move gesture's keys
    (`wire/move.ts`), so they act once a drag or a first digit has started it; while a selection
    only waits, they go to what has the focus, the outline's head or row after selecting there
    (it opens, closes or moves) (**measured**: D, ↑, 150 left the move asking for a direction).
@@ -106,7 +113,7 @@ Defects and friction (the scenario passed by another path; for the designer revi
    (`0, 0, 150`) works, and the guide gives it.
 5. **A1 takes 10 clicks** (§12: ≤ 8): the shelf and "as params" are under More options, and the
    joint is a select (two). Its keys and time are within the target.
-6. **The log carries no arguments (A15).** `alukit log` keeps each step's command names (`what`)
+6. **Closed: the log keeps each step's commands** (pe 12, 13). **The log carries no arguments (A15).** `alukit log` keeps each step's command names (`what`)
    and words (`text`), so "replay the log's commands" cannot be done from it; the test replays the
    commands the app posted, read off its requests, one `alukit do` per step, and checks that the
    log names the same commands (call 107).

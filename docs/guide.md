@@ -344,7 +344,8 @@ the top ring b13–b16, each ring front, back, left, right.
 
 - **Click** a body to select it; **Ctrl or Cmd + click** adds or takes one away.
 - **Shift + drag** a box. Drawn **left to right** it takes what lies wholly inside (a solid
-  outline); drawn **right to left** it takes everything it touches (dashed).
+  outline); drawn **right to left** it takes everything it touches (dashed), and remembers which
+  ends of the bars it only crosses lie inside it, so that Move stretches those bars (below).
 - **The outline**: tick **by tag** and click a tag's heading (`post`, `shelf`, `top`) to select
   its members; the small arrow beside it still opens and closes the group. Two clicks select the
   four legs.
@@ -381,18 +382,20 @@ is hidden.
 - **Move (`D`)**. Drag the selection, or click a base point and then where it goes: both snap to
   ends, faces and grooves, so a bar moved from its end onto another bar's end lands on it exactly.
   Or type and press `Enter`: one number is the distance along the locked axis or the way the
-  pointer went, three are the offset, `[x, y, z]` is where the base point goes. To move the shelf
-  up 150: select the `shelf` heading, `D`, type `0, 0, 150`, `Enter`. Once the move is on (you
-  are dragging, or have typed its first digit), `→ ← ↑` lock X, Y or Z; before that the arrows
-  belong to whatever has the focus, an outline row say. The moved bars are drawn where they would go, and the preview says what follows,
+  pointer went, three are the offset, `[x, y, z]` is where the base point goes. `→ ← ↑` lock X,
+  Y or Z (again, or `↓`, frees it), and with a selection they start the move too, wherever the
+  focus is. To move the shelf up 150: select the `shelf` heading, `D`, `↑`, `150`, `Enter` (or
+  type `0, 0, 150`). The moved bars are drawn where they would go, and the preview says what follows,
   what is freed and which cuts change. Ends joined to what you move **follow** along their own
   bars, so the rails butted on a moved post stretch with it; hold **Alt** to free them instead.
-- **Widening a frame without params.** Move moves whole bars; it stretches the bars joined to the
-  selection, not the ones in it. So select the side with a box drawn **left to right**, which
-  takes only the posts and side rails wholly inside it (from the front, in orthographic, a box
-  round the right posts), then `D`, type `100, 0, 0`, `Enter`: the front and back rails follow and
-  grow by 100. A box drawn right to left also takes those rails, and
-  they would move whole, leaving their other ends 60 mm off the far posts.
+- **Widening a frame without params: a stretch.** From the front, in orthographic, draw a box
+  **right to left** over the right side (round the right posts and the rails' ends against them),
+  then `D`, `→`, `100`, `Enter`. What the box holds whole (the right posts and side rails) moves;
+  the front and back rails it only crosses keep their left ends and move their right ends, which
+  lie inside it, so they grow by 100, as AutoCAD's STRETCH does. The preview says "stretches b5,
+  b6 …" before you commit. A box drawn left to right gives the same frame here, since the rails
+  butted on the moved posts follow; any other selection, and Rotate and Duplicate, move whole
+  bars. `alukit move <dir> --ids b2,b5.b --by 100,0,0` moves b2 whole and only b5's end b.
 - **With params**, change the param instead: with nothing selected, the project panel lists the
   params; **Edit** beside `W`, type `1100`, `Enter`.
 - **A part alone** slides along its bar. Select the bracket: an arrow along its bar shows; drag
@@ -417,9 +420,10 @@ is hidden.
 - **Mirror…** (the menu): the plane is square to X (press `Y` or `Z`, or `→ ← ↑`, to turn it) and
   goes through the selection's centre or the point under the pointer; type where it crosses its
   axis (`500`, `=W / 2`) and press `Enter`. **Remove the originals** in the command bar takes them
-  away in the same step. A part on a bar is mirrored only together with its bar, or when the plane
-  maps that bar onto itself: a bracket on one leg cannot be mirrored onto the opposite leg. Place
-  the second one there instead.
+  away in the same step. A part on a bar lands on the bar standing where that bar's image is: a
+  bracket on the front-left leg's inner face at 300, mirrored at `=W / 2`, lands on the
+  front-right leg's inner face at 300 ("mirror p1, making p2 on b2"). Where no bar stands at the
+  image, the preview says so and nothing is made.
 
 ### Lengths and ends
 
@@ -507,8 +511,9 @@ view. To delete the back top rail: right-click its outline row, **Delete**, then
 
 ### What an agent sends
 
-Each edit is a command an agent sends the same way, and the log names it: `alukit log` lists
-each step's commands and words. Moving is `alukit move <dir> --ids b9,b10,b11,b12 --by 0,0,150`,
+Each edit is a command an agent sends the same way, and the log keeps it: `alukit log` lists
+each step's words, and `alukit log --json` each step's commands, which `alukit do` replays one step
+at a time (an undo or a redo is `alukit undo` or `alukit redo`). Moving is `alukit move <dir> --ids b9,b10,b11,b12 --by 0,0,150`,
 turning `alukit rotate`; everything else is `alukit do` with the batch the app sends (the
 [design](design.md), §8, "What each edit sends", lists them).
 
