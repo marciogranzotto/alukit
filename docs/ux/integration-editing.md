@@ -35,8 +35,9 @@ do is listed below as a gap.
 ## Results and times
 
 **Script** is the time of the in-app steps as the test ran them, from the first click or key to
-the drawn revision (**measured**, headless Chromium on SwiftShader, 1280 × 800, the machine
-running other agents): a floor, not a person's. **Estimate** is a person's at a steady pace by the
+the drawn revision (**measured**, one run of the spec on the merged tree, headless Chromium on
+SwiftShader, 1280 × 800, the machine running other agents): a floor, not a person's, and noisy
+from run to run (A4 took 5.1 s in an earlier run); the counts do not vary. **Estimate** is a person's at a steady pace by the
 keystroke-level model (Card, Moran and Newell, 1980): 2.65 s per click (a mental preparation,
 1.35 s, then pointing, 1.1 s, and the press, 0.2 s) and 0.28 s per key (an average typist); it
 counts no thinking within a typed sequence, so it is low for the keyboard paths (**inferred**).
@@ -45,23 +46,23 @@ characters as keys. Steps are the server's.
 
 | # | Task | Target (§12) | Result | Clicks | Keys | Steps | Script | Estimate |
 |---|---|---|---|---|---|---|---|---|
-| A1 | Table frame, shelf ring 250, W, D, H as params | ≤ 45 s, ≤ 8 clicks, ≤ 20 keys, 1 step | pass: the cut list is `alukit add frame --shelf 250 --params`'s, byte for byte; **10 clicks** | 10 | 13 | 1 | 2.6 s | 30 s |
-| A2 (i) | Widen by 100, editing W | ≤ 10 s, 1 step | pass: the 1100-wide frame's cut list | 2 | 5 | 1 | 0.3 s | 7 s |
+| A1 | Table frame, shelf ring 250, W, D, H as params | ≤ 45 s, ≤ 8 clicks, ≤ 20 keys, 1 step | pass: the cut list is `alukit add frame --shelf 250 --params`'s, byte for byte; **10 clicks** | 10 | 13 | 1 | 2.8 s | 30 s |
+| A2 (i) | Widen by 100, editing W | ≤ 10 s, 1 step | pass: the 1100-wide frame's cut list | 2 | 5 | 1 | 0.8 s | 7 s |
 | A2 (ii) | Widen by 100 on a frame without params: crossing box over the right side, Move +100 X | ≤ 20 s, 1 step | **fixme**: gap 1 | (3) | (11) | (1) | (5.6 s) | (11 s) |
-| A3 | Shelf up 150 | ≤ 15 s, 1 step | pass: cuts as before, ends 150 up, no new diagnostic, `alukit move`'s project | 2 | 11 | 1 | 0.8 s | 8 s |
-| A4 | Four legs to 40 × 80, the 80 along X | ≤ 30 s, ≤ 2 steps, legs in ≤ 2 clicks | pass: the CLI's cut list (front and back rails 840, sides 520 by hand); legs in 2 clicks; **6 steps** (gap 3) | 20 | 8 | 6 | 5.1 s | 55 s |
-| A5 | Diagonal brace in the back plane, joined at both ends | ≤ 45 s, ≤ 2 steps | pass: no error, both ends `angle`, its cut the dry run's of the same batch | 1 | 33 | 1 | 1.9 s | 12 s |
+| A3 | Shelf up 150 | ≤ 15 s, 1 step | pass: cuts as before, ends 150 up, no new diagnostic, `alukit move`'s project | 2 | 11 | 1 | 0.7 s | 8 s |
+| A4 | Four legs to 40 × 80, the 80 along X | ≤ 30 s, ≤ 2 steps, legs in ≤ 2 clicks | pass: the CLI's cut list (front and back rails 840, sides 520 by hand); legs in 2 clicks; **6 steps** (gap 3) | 20 | 8 | 6 | 3.8 s | 55 s |
+| A5 | Diagonal brace in the back plane, joined at both ends | ≤ 45 s, ≤ 2 steps | pass: no error, both ends `angle`, its cut the dry run's of the same batch | 1 | 32 | 1 | 1.4 s | 12 s |
 | A6 | Bracket on the front-left leg's inner face at 300, mirrored to the front-right leg | ≤ 20 s for the mirror, 1 step | **fixme**: gap 2 | | | | | |
 | A7 | Top front rail duplicated 300 down, joined to the legs | ≤ 15 s, 1 step | pass: butts at both ends, its cut the top rail's, the CLI's `array` and joins | 1 | 7 | 1 | 1.8 s | 5 s |
-| A8 | Four slats across the shelf, evenly spaced; then five by editing the pattern | ≤ 30 s, then ≤ 10 s, 1 step each | pass: spacing equal within 0.01 mm, the count follows, the CLI's project; four slats are **2 steps** (a slat, then its pattern) | 6, then 2 | 39, then 2 | 2, then 1 | 2.1 s, then 0.3 s | 27 s, then 6 s |
-| A9 | Bracket slid from 300 to 450 along its leg | ≤ 10 s, 1 step | pass: `at_mm` 450, `alukit move`'s project | 1 | 5 | 1 | 0.7 s | 4 s |
-| A10 | Back top rail and its joints deleted; Undo | ≤ 10 s, 1 step | pass: the dialog lists b14 and the two butts it changes, no end left open, `removeEntity { cascade }`'s project; Undo gives the frame back | 2 | 1 | 1 | 1.9 s | 6 s |
-| A11 | Hide the top ring, isolate a corner, show all | ≤ 10 s, no step | pass: no step, `alukit diff` empty | 3 | 3 | 0 | 1.4 s | 9 s |
-| A12 | A T-nut plate's face joint from 2 bolts to 3 | ≤ 20 s, 1 step | pass: one screw and one T-nut more, the BOM of `alukit do setConnection` | 4 | 16 | 1 | 0.7 s | 15 s |
-| A13 | Undo it all | 1 key per step, each Undo naming its step | pass: three steps, three keys, each named as `alukit log` words it; the empty project again | 0 | 3 | 3 undone | 0.3 s | 1 s |
-| A14 (A3) | The shelf up 150, by mouse (the rail's Move, the offset typed, a click) | ≤ 1.5 × the keyboard's | pass, the same project; 1.56 × A3's estimate, 1.9 × its script time | 4 | 9 | 1 | 1.5 s | 13 s |
+| A8 | Four slats across the shelf, evenly spaced; then five by editing the pattern | ≤ 30 s, then ≤ 10 s, 1 step each | pass: spacing equal within 0.01 mm, the count follows, the CLI's project; four slats are **2 steps** (a slat, then its pattern) | 6, then 2 | 39, then 2 | 2, then 1 | 2.9 s, then 0.3 s | 27 s, then 6 s |
+| A9 | Bracket slid from 300 to 450 along its leg | ≤ 10 s, 1 step | pass: `at_mm` 450, `alukit move`'s project | 1 | 5 | 1 | 0.5 s | 4 s |
+| A10 | Back top rail and its joints deleted; Undo | ≤ 10 s, 1 step | pass: the dialog lists b14 and the two butts it changes, no end left open, `removeEntity { cascade }`'s project; Undo gives the frame back | 2 | 1 | 1 | 0.8 s | 6 s |
+| A11 | Hide the top ring, isolate a corner, show all | ≤ 10 s, no step | pass: no step, `alukit diff` empty | 3 | 3 | 0 | 0.9 s | 9 s |
+| A12 | A T-nut plate's face joint from 2 bolts to 3 | ≤ 20 s, 1 step | pass: one screw and one T-nut more, the BOM of `alukit do setConnection` | 4 | 16 | 1 | 0.8 s | 15 s |
+| A13 | Undo it all | 1 key per step, each Undo naming its step | pass: three steps, three keys, each named as `alukit log` words it; the empty project again | 0 | 3 | 3 undone | 0.4 s | 1 s |
+| A14 (A3) | The shelf up 150, by mouse (the rail's Move, the offset typed, a click) | ≤ 1.5 × the keyboard's | pass, the same project; 1.56 × A3's estimate, 1.3 × its script time | 4 | 9 | 1 | 0.9 s | 13 s |
 | A14 (A6) | The bracket mirrored, by mouse | | **fixme**: waits on A6 (gap 2) | | | | | |
-| A14 (A10) | The rail deleted from the outline row's menu, undone from the top bar | ≤ 1.5 × the keyboard's | pass, the same project; 1.42 × A10's estimate | 3 | 0 | 1 | 2.1 s | 8 s |
+| A14 (A10) | The rail deleted from the outline row's menu, undone from the top bar | ≤ 1.5 × the keyboard's | pass, the same project; 1.42 × A10's estimate, 1.6 × its script time | 3 | 0 | 1 | 1.3 s | 8 s |
 | A15 | Agent parity: the session's commands replayed with `alukit do` | `alukit diff` empty | pass: five steps (the frame, the shelf, a brace, a duplicate, a delete) replayed from the commands the app posted (gap 6) | | | 5 | | |
 
 A2 (ii)'s numbers in brackets are its run as written, which fails its check; the same steps with
