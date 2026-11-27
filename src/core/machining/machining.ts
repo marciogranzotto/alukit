@@ -1,5 +1,6 @@
 import type { Bom } from "../bom/bom.ts";
 import type { CutList } from "../cutlist/cutlist.ts";
+import { machiningText } from "../cutlist/format.ts";
 import type { Derived } from "../derive/derive.ts";
 import type { Diagnostic } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
@@ -12,8 +13,9 @@ import { QUANTUM, quantize } from "../quantum.ts";
  * The machining sheet (M6, design §4.8): per custom part the BOM uses (a plate, a bent angle), its
  * stock and blank, and every hole with its position from the part's named datum, its type and its
  * size. A fabricator works from it. A bar's machining is on the cut list, measured from a named
- * end (§5.3); the sheet lists the cut-list lines that carry some, as a cross-reference, and does
- * not repeat them.
+ * end (§5.3); the sheet lists the cut-list lines that carry some, each with its machining in the
+ * cut list's words, which name the face a hole in a bar's side is drilled from (after the round-4
+ * acceptance, X9: the face is what the shop reads).
  *
  * Datums: a plate's is its outline's origin, (0, 0), with x and y as the outline is drawn. A bent
  * angle's is its heel at end 0: x along its length, y from the heel's outside face up each leg;
@@ -84,7 +86,7 @@ export interface SheetPart {
   holes: SheetHole[];
 }
 
-/** A cut-list line that carries machining: where to find it, not what it is (§5.3). */
+/** A cut-list line that carries machining, and what it is, in the cut list's words (§5.3). */
 export interface SheetBarRef {
   item: string;
   opt: Readonly<Record<string, string>>;
@@ -92,6 +94,8 @@ export interface SheetBarRef {
   count: number;
   /** Operations per piece, as the cut list lists them. */
   ops: number;
+  /** Each operation in the cut list's words: a hole in a bar's side names its face (X9). */
+  machining: string[];
   sources: string[];
 }
 
@@ -198,6 +202,7 @@ export function machiningSheet(input: MachiningInput): MachiningSheet {
         cut_mm: l.cut_mm,
         count: l.count,
         ops: l.machining.length,
+        machining: l.machining.map(machiningText),
         sources: l.sources,
       })),
   );

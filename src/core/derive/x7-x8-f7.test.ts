@@ -258,9 +258,11 @@ describe("a far-face head on the hole F2 makes (F7)", () => {
 
 describe("Forseti's base-40 quick connector, from the catalog (X7, X8)", () => {
   // A 40x80 post (PF40-02, its cores at (0, ±20)) on an 80x80 rail (PF40-03B, its top grooves at
-  // ±20 across; groove c8-40: lip 3.79, depth 9.99, undercut 22.01 tapering from 7.03 to 12.24).
-  // The post's section x runs along world X and y along world Y, so its cores stand over the
-  // rail's grooves. A recipe places one CN40-01 at each core, as a two-core end is written.
+  // ±20 across). The rail's own groove (after the round-4 acceptance, F9): lip 4, depth 10 and
+  // undercut 22 as p. 20 prints them, opening 8.2, the taper from 7.0 to 13.3 and the hooks 13.9
+  // wide read off its raster image. The post's section x runs along world X and y along world Y,
+  // so its cores stand over the rail's grooves. A recipe places one CN40-01 at each core, as a
+  // two-core end is written.
   const doc = (connector: string, qty?: number) => ({
     schema: "alukit.project/1",
     name: "quick connector",
@@ -307,7 +309,16 @@ describe("Forseti's base-40 quick connector, from the catalog (X7, X8)", () => {
 
   it("drills a cross hole over each core and seats each head under the rail's lips", async () => {
     const d = derive(doc("local:QC-4080"), await withRecipe());
-    expect(d.diagnostics.filter((x) => x.severity !== "info")).toEqual([]);
+    // Each Ø18 head bears on the lips' underside from the 8.2 opening out to the 13.9 hooks
+    // (F8): 38.75 % of its seat, under F2b's 50 %. Draft 2.3 credited the face beside the opening
+    // (54.41 %) and the rail took the 40x40 básico's groove (F9).
+    const warn = (at: string) =>
+      `the head of forseti:CN40-01 at b2.a ${at}, Ø18.00, bears on 38.8 % of its seat on the lips of b1's face +y, less than 50 %`;
+    expect(said(d, "fit")).toEqual([
+      ["warn", "c1", warn("(0.00, -20.00)")],
+      ["warn", "c1", warn("(0.00, 20.00)")],
+    ]);
+    expect(d.diagnostics.filter((x) => x.severity !== "info" && x.code !== "fit")).toEqual([]);
     expect(holes(d, "b2")).toEqual([
       { op: "hole", face: "-y", from: "a", at: 25, d: 18, depth: 28, by: "c1" },
       { op: "hole", face: "+y", from: "a", at: 25, d: 18, depth: 28, by: "c1" },
@@ -319,7 +330,8 @@ describe("Forseti's base-40 quick connector, from the catalog (X7, X8)", () => {
       depth: Math.round((h.room?.depth ?? Number.NaN) * 100) / 100,
       side: Math.round((h.room?.side ?? Number.NaN) * 1000) / 1000,
     }));
-    const seat = { on: "b1 +y (under its lips)", pct: 54.41, depth: 1.72, side: 2.005 };
+    // Room: 10 − 4 − 4.48 deep; 2 a side.
+    const seat = { on: "b1 +y (under its lips)", pct: 38.75, depth: 1.52, side: 2 };
     expect(heads).toEqual([
       { at: [0, -20], ...seat },
       { at: [0, 20], ...seat },

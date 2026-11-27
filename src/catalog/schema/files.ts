@@ -44,7 +44,10 @@ export type Material = z.infer<typeof Material>;
  * Groove type (§3.3). The chamber under the lip is `undercut_mm` wide; when it narrows toward the
  * bottom, `taper_from_mm` is the depth where it starts to and `bottom_mm` its width at
  * `depth_mm` (M2a; real slots taper, and a full-width chamber down to the bottom would cross the
- * neighbouring groove's on a 40x40).
+ * neighbouring groove's on a 40x40). When the lip's underside is a hook narrower than the chamber
+ * (the chamber rising toward the face beyond it), `hook_mm` is the width over both hooks, where the
+ * underside ends, and `wall_mm` the face wall's thickness beyond it (after the round-4 acceptance,
+ * F8). A section may state its own dimensions over its type's (`groove_dims`, F9).
  */
 export const GrooveType = z
   .strictObject({
@@ -54,6 +57,10 @@ export const GrooveType = z
     undercut_mm: Valued,
     taper_from_mm: Valued.optional().describe("the depth where the chamber starts to narrow"),
     bottom_mm: Valued.optional().describe("the chamber's width at depth_mm, when it narrows"),
+    hook_mm: Valued.optional().describe(
+      "the width over the lips' hooks: where the lip's underside ends and the chamber rises toward the face (with wall_mm)",
+    ),
+    wall_mm: Valued.optional().describe("the face wall's thickness beyond the hook"),
     class: z
       .enum(["standard", "light"])
       .describe("some makers rate T-nuts in standard grooves only"),
@@ -62,6 +69,10 @@ export const GrooveType = z
   .refine((g) => (g.taper_from_mm === undefined) === (g.bottom_mm === undefined), {
     message: "taper_from_mm and bottom_mm go together",
     path: ["bottom_mm"],
+  })
+  .refine((g) => (g.hook_mm === undefined) === (g.wall_mm === undefined), {
+    message: "hook_mm and wall_mm go together",
+    path: ["wall_mm"],
   });
 export type GrooveType = z.infer<typeof GrooveType>;
 

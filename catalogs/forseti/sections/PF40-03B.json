@@ -7,7 +7,7 @@
     "ref": "pdf:catalogo_forsetiA4.pdf#p20",
     "method": "generator",
     "read": "2026-11-26",
-    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the page draws this profile as a raster image. The Ø5 corner holes the page draws are 4.5 mm in from both faces, as printed and as the vector outlines of PF40-01 and PF40-03 measure them. The module cores are labelled M16 by the drawing on p. 20, the corner holes M6 by the drawing on p. 20"
+    "note": "a T-slot envelope from the printed overall size and core bore, with its own groove dimensions (groove_dims) over the groove type measured on the series' vector outline; the page draws this profile as a raster image. The Ø5 corner holes the page draws are 4.5 mm in from both faces, as printed and as the vector outlines of PF40-01 and PF40-03 measure them. The module cores are labelled M16 by the drawing on p. 20, the corner holes M6 by the drawing on p. 20"
   },
   "generator": "tslot",
   "params": {
@@ -33,6 +33,47 @@
       { "at_mm": [35.5, -35.5], "d_mm": 5, "threads": ["M6"] },
       { "at_mm": [-35.5, 35.5], "d_mm": 5, "threads": ["M6"] },
       { "at_mm": [35.5, 35.5], "d_mm": 5, "threads": ["M6"] }
-    ]
+    ],
+    "groove_dims": {
+      "opening_mm": {
+        "v": 8.2,
+        "src": "est",
+        "ref": "pdf:catalogo_forsetiA4.pdf#p20",
+        "low": 7.9,
+        "high": 8.5
+      },
+      "lip_mm": { "v": 4, "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p20" },
+      "depth_mm": { "v": 10, "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p20" },
+      "undercut_mm": { "v": 22, "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p20" },
+      "taper_from_mm": {
+        "v": 7,
+        "src": "est",
+        "ref": "pdf:catalogo_forsetiA4.pdf#p20",
+        "low": 6.7,
+        "high": 7.3
+      },
+      "bottom_mm": {
+        "v": 13.3,
+        "src": "est",
+        "ref": "pdf:catalogo_forsetiA4.pdf#p20",
+        "low": 12.2,
+        "high": 14.4
+      },
+      "hook_mm": {
+        "v": 13.9,
+        "src": "est",
+        "ref": "pdf:catalogo_forsetiA4.pdf#p20",
+        "low": 13.6,
+        "high": 14.2
+      },
+      "wall_mm": {
+        "v": 2.6,
+        "src": "est",
+        "ref": "pdf:catalogo_forsetiA4.pdf#p20",
+        "low": 2.3,
+        "high": 2.9
+      },
+      "note": "lip, depth and undercut as p. 20's drawing prints them; the opening, the taper, the bottom and the lips' hooks read off its raster image, the line weight taken out against the printed values"
+    }
   }
 }

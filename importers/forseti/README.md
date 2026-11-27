@@ -20,6 +20,12 @@ python3 -m venv .cache/forseti/venv
 (the variations, and the products without any: 1,196 of them); `src/catalog/forseti-orderable-skus.json`
 is that list, and `build` refuses to write unless every one of them has an offer.
 
+`read-groove <catalogo_forsetiA4.pdf> <page> <xref> <w> <h> <face> <at> [<x0,y0,x1,y1>]` prints the
+raw readings of one groove of a profile drawn as a raster image (the image `xref` on `page`, the
+profile `w` by `h`, the groove on `face` at `at`, optionally cropped to leave dimensions out). The
+build does not run it: its readings, calibrated against the dimensions the page prints, are the
+reviewed values of `OWN_GROOVES` in `tables.py`, each with its range (`docs/notes/x9-f8-f9.md`).
+
 `fetch` refuses a folder that exists, so each snapshot is new and whole. `build` writes into
 `catalogs/forseti` (or a third argument), prints what it emitted and what it left out, and fails
 rather than guess when the data is not where the tables say. `.cache/` is not committed.

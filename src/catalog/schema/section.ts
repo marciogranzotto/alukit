@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { GENERATORS } from "../sections/generators/index.ts";
 import { DatumName, Face, IsoDate, LocalId, Ref, SourceRef, Thread, Vec2 } from "./common.ts";
+import { GrooveGeometry } from "./groove.ts";
 
 /**
  * A section file, `sections/<id>.json` (design §3.5): one section, in mm, about its nominal
@@ -70,6 +71,9 @@ export const DrawnSection = z.strictObject({
   holes: z.array(RingSchema).optional(),
   bbox_mm: Box2.describe("the nominal box, which cut lengths use (§3.5)"),
   grooves: z.array(GrooveAt).optional(),
+  groove_dims: GrooveGeometry.optional().describe(
+    "its grooves' own dimensions over their groove type's, each with its source (F9)",
+  ),
   cores: z
     .array(CoreAt)
     .optional()
@@ -99,6 +103,9 @@ export const BoxSection = z.strictObject({
   props_ok: z.literal(false),
   bbox_mm: Box2,
   grooves: z.array(GrooveAt).optional(),
+  groove_dims: GrooveGeometry.optional().describe(
+    "its grooves' own dimensions over their groove type's, each with its source (F9)",
+  ),
   datums: z.record(DatumName, Vec2).optional(),
 });
 

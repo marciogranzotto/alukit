@@ -1,0 +1,19 @@
+{
+  "schema": "alukit.section/1",
+  "id": "H40-UNREAD",
+  "fidelity": "parametric",
+  "props_ok": false,
+  "generator": "tslot",
+  "params": {
+    "w_mm": 40,
+    "h_mm": 40,
+    "groove": "c8h",
+    "bores": [{ "at_mm": [0, 0], "d_mm": 13.7 }],
+    "groove_dims": {
+      "opening_mm": { "v": 8.2, "src": "src" },
+      "lip_mm": { "v": 4, "src": "src" },
+      "unread": ["taper_from_mm", "bottom_mm", "hook_mm", "wall_mm"],
+      "note": "its drawing shows each face closed by its cover"
+    }
+  }
+}

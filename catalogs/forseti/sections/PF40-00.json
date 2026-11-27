@@ -863,5 +863,16 @@
       [12.2576, -18.5009],
       [13.4038, -18.5009]
     ]
-  ]
+  ],
+  "groove_dims": {
+    "opening_mm": 8.2,
+    "lip_mm": 4.01,
+    "depth_mm": 10.25,
+    "undercut_mm": 22,
+    "taper_from_mm": 8.31,
+    "bottom_mm": 16.96,
+    "hook_mm": 11.2,
+    "wall_mm": 1.5,
+    "note": "measured on this section's vector outline as its groove type is on its source profile's: the median over its 4 grooves, whose openings, lips, depths and undercuts differ by at most 0.02 mm"
+  }
 }

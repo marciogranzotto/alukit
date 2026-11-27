@@ -160,6 +160,12 @@
       "cut_mm": 300,
       "count": 2,
       "ops": 4,
+      "machining": [
+        "Ø11.00 hole 100.00 mm from end a on face -y, -15.00 across",
+        "Ø11.00 hole 100.00 mm from end a on face -y, 15.00 across",
+        "Ø11.00 hole 200.00 mm from end a on face -y, -15.00 across",
+        "Ø11.00 hole 200.00 mm from end a on face -y, 15.00 across"
+      ],
       "sources": [
         "b20",
         "b23"
@@ -171,6 +177,12 @@
       "cut_mm": 200,
       "count": 2,
       "ops": 4,
+      "machining": [
+        "Ø11.00 hole 50.00 mm from end a on face -y, -15.00 across",
+        "Ø11.00 hole 50.00 mm from end a on face -y, 15.00 across",
+        "Ø11.00 hole 150.00 mm from end a on face -y, -15.00 across",
+        "Ø11.00 hole 150.00 mm from end a on face -y, 15.00 across"
+      ],
       "sources": [
         "b21",
         "b22"
@@ -182,6 +194,16 @@
       "cut_mm": 520,
       "count": 1,
       "ops": 8,
+      "machining": [
+        "Ø11.00 hole 210.00 mm from end a on face +x, -15.00 across, 4.00 deep",
+        "Ø11.00 hole 210.00 mm from end a on face +x, 15.00 across, 4.00 deep",
+        "Ø11.00 hole 210.00 mm from end a on face -x, -15.00 across, 4.00 deep",
+        "Ø11.00 hole 210.00 mm from end a on face -x, 15.00 across, 4.00 deep",
+        "Ø11.00 hole 310.00 mm from end a on face +x, -15.00 across, 4.00 deep",
+        "Ø11.00 hole 310.00 mm from end a on face +x, 15.00 across, 4.00 deep",
+        "Ø11.00 hole 310.00 mm from end a on face -x, -15.00 across, 4.00 deep",
+        "Ø11.00 hole 310.00 mm from end a on face -x, 15.00 across, 4.00 deep"
+      ],
       "sources": [
         "b18"
       ]
@@ -194,6 +216,9 @@
       "cut_mm": 660,
       "count": 1,
       "ops": 1,
+      "machining": [
+        "tap M8 in end a, 20.00 deep"
+      ],
       "sources": [
         "b11"
       ]
@@ -206,6 +231,9 @@
       "cut_mm": 460,
       "count": 1,
       "ops": 1,
+      "machining": [
+        "tap M8 in end a, 20.00 deep"
+      ],
       "sources": [
         "b12"
       ]

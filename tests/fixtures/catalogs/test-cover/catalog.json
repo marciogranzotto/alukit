@@ -1,0 +1,161 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-cover",
+  "name": "Cross hole cover and lip hook test catalog (synthetic)",
+  "vendor": "test-cover-vendor",
+  "currency": "BRL",
+  "prov": {
+    "src": "est",
+    "note": "synthetic test data for a cross hole whose mouth another member covers (X9), a head bearing on the underside of hooked lips (F8) and a profile's own groove (F9); the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, its hooks included, not a vendor's item"
+  },
+  "materials": {
+    "al": { "name": "Aluminium (synthetic)", "density_kg_per_m3": 2700 }
+  },
+  "grooves": {
+    "c8h": {
+      "opening_mm": 8.18,
+      "lip_mm": 3.79,
+      "depth_mm": 9.99,
+      "undercut_mm": 22.01,
+      "taper_from_mm": 7.03,
+      "bottom_mm": 12.24,
+      "hook_mm": 13.6,
+      "wall_mm": 1.8,
+      "class": "standard"
+    }
+  },
+  "systems": {
+    "s40h": { "type": "tslot", "series_mm": 40, "groove": "c8h" }
+  },
+  "items": {
+    "H40": {
+      "kind": "bar",
+      "name": "Profile 40x40, hooked lips, a centre core (synthetic)",
+      "shape": "tslot",
+      "section": "H40",
+      "system": "s40h",
+      "material": "al",
+      "mass_kg_per_m": 1.5
+    },
+    "H40-B": {
+      "kind": "bar",
+      "name": "The same profile, listed apart for the members that stand in front of a hole (synthetic)",
+      "shape": "tslot",
+      "section": "H40",
+      "system": "s40h",
+      "material": "al",
+      "mass_kg_per_m": 1.5
+    },
+    "H40-OWN": {
+      "kind": "bar",
+      "name": "Profile 40x40 whose drawing gives its own groove: a deeper lip, wider hooks (synthetic)",
+      "shape": "tslot",
+      "section": "H40-OWN",
+      "system": "s40h",
+      "material": "al",
+      "mass_kg_per_m": 1.5
+    },
+    "H40-UNREAD": {
+      "kind": "bar",
+      "name": "Profile 40x40 drawn with its faces closed: its lips' undersides not given (synthetic)",
+      "shape": "tslot",
+      "section": "H40-UNREAD",
+      "system": "s40h",
+      "material": "al",
+      "mass_kg_per_m": 1.5
+    },
+    "HC40": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "A quick connector: a pin in the butting bar's core, its domed head under the through bar's lips, a cross bush in a hole over the core (synthetic)",
+      "fits": ["s40h"],
+      "mass_kg": 0.06,
+      "dims": { "dk_mm": 18, "d_mm": 7.8, "k_mm": 4.48, "rf_mm": 17.5 },
+      "requires": [
+        { "op": "access-hole", "on": "butting", "d_mm": 18, "depth_mm": 28, "from_end_mm": 25 }
+      ]
+    },
+    "HC40-FACE": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "The quick connector, its cross hole named on +y (synthetic)",
+      "fits": ["s40h"],
+      "mass_kg": 0.06,
+      "dims": { "dk_mm": 18, "d_mm": 7.8, "k_mm": 4.48, "rf_mm": 17.5 },
+      "requires": [
+        {
+          "op": "access-hole",
+          "on": "butting",
+          "d_mm": 18,
+          "depth_mm": 28,
+          "from_end_mm": 25,
+          "face": "+y"
+        }
+      ]
+    },
+    "HC40-ACCESS": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "The quick connector, its tool needing 1 mm in front of the cross hole (synthetic)",
+      "fits": ["s40h"],
+      "mass_kg": 0.06,
+      "dims": { "dk_mm": 18, "d_mm": 7.8, "k_mm": 4.48, "rf_mm": 17.5 },
+      "requires": [
+        {
+          "op": "access-hole",
+          "on": "butting",
+          "d_mm": 18,
+          "depth_mm": 28,
+          "from_end_mm": 25,
+          "access_mm": 1
+        }
+      ]
+    },
+    "H80": {
+      "kind": "bar",
+      "name": "Profile 80x80, hooked lips, four cores (synthetic)",
+      "shape": "tslot",
+      "section": "H80",
+      "system": "s40h",
+      "material": "al",
+      "mass_kg_per_m": 5
+    },
+    "HPLATE": {
+      "kind": "generic",
+      "name": "A plate 100 x 10 x 100, standing against a bar's face (synthetic)",
+      "mass_kg": 0.27,
+      "bbox_mm": [[-50, -5, -50], [50, 5, 50]]
+    },
+    "HR-2": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Two quick connectors, in two diagonal cores (synthetic)",
+      "fits": ["s40h"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [
+            { "at_mm": [-20, -20, 0], "d_mm": 13.7 },
+            { "at_mm": [20, 20, 0], "d_mm": 13.7 }
+          ],
+          "fasteners": { "s40h": [{ "item": "HC40", "qty": 1 }] }
+        }
+      ]
+    },
+    "HR-X": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "One quick connector at the core, its mount's hole naming -x for the cross hole (synthetic)",
+      "fits": ["s40h"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 13.7, "face": "-x" }],
+          "fasteners": { "s40h": [{ "item": "HC40", "qty": 1 }] }
+        }
+      ]
+    }
+  }
+}

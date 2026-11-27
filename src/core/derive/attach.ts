@@ -1,6 +1,7 @@
 import { compareIds } from "../ids.ts";
 import type { Ctx } from "./context.ts";
 import { coreTaps } from "./cores.ts";
+import { Covers } from "./cover.ts";
 import type { DerivedBar } from "./derive.ts";
 import { duplicateOps } from "./duplicates.ts";
 import { faceTaps } from "./face-taps.ts";
@@ -25,7 +26,8 @@ import type {
  * 2. parts and part patterns, which may measure from cut ends and stand at rail holes (§4.7);
  * 3. face contacts, stations, fasteners and sleeves cut from bar stock, grips, and the holes a
  *    `bolt` or `screw` needs (§4.5);
- * 4. connectors' hardware sets by system and their machining (§3.4);
+ * 4. connectors' hardware sets by system and their machining (§3.4), a hole in a butting bar's
+ *    side from a face no other member covers (X9);
  * 5. coincident machining: one op made twice at one place is an error (acceptance gap A8).
  *
  * Generated machining is appended to each bar's `ops`, after the holes a person wrote, in a fixed
@@ -58,7 +60,7 @@ export function attach(
     heads: new Map(),
   };
   generateFaces(ctx, bars, runs, parts, out);
-  connectorHardware(ctx, bars, out, stacks);
+  connectorHardware(ctx, bars, out, stacks, new Covers(ctx, bars, parts));
   duplicateOps(ctx, bars);
   coreTaps(ctx, bars);
   faceTaps(ctx, bars);

@@ -186,6 +186,12 @@ class GrooveDims:
     undercut_mm: float
     taper_from_mm: float | None
     bottom_mm: float | None
+    #: A lip whose underside is a hook (after the round-4 acceptance, F8): the width over both
+    #: hooks, where the underside ends and the chamber rises toward the face, and the face wall's
+    #: thickness there (the depth the rise ends at). None when the underside runs out to the
+    #: chamber's wall.
+    hook_mm: float | None = None
+    wall_mm: float | None = None
 
 
 def measure_groove(outline: g.Ring, holes: list[g.Ring], w: float, h: float, face: str,
@@ -195,7 +201,11 @@ def measure_groove(outline: g.Ring, holes: list[g.Ring], w: float, h: float, fac
     line meets material (the depth). The chamber is the run of widths within CHAMBER_TOL_MM of the
     widest (the undercut); the lip ends where it starts; the opening is the narrowest width above
     it (a chamfered mouth is wider at the face); when the chamber narrows before the bottom, the
-    taper runs from where it ends to the last width sampled (the bottom)."""
+    taper runs from where it ends to the last width sampled (the bottom). Just above the lip's
+    underside, the material beside the opening may end before the chamber's wall: the lip is a
+    hook, and the chamber rises toward the face beyond it. The hook is the width over both hooks'
+    ends and the wall the depth the rise ends at, down the middle of each rise (averaged over the
+    two sides)."""
     f = _face_frame(face, w, h)
     rings = [[f(x, y) for x, y in r] for r in [outline, *holes]]
     widths: list[tuple[float, float]] = []
@@ -219,8 +229,36 @@ def measure_groove(outline: g.Ring, holes: list[g.Ring], w: float, h: float, fac
     end = chamber[-1] + half
     bottom = widths[-1][1]
     tapered = depth - end > 0.2 and bottom < undercut - CHAMBER_TOL_MM
+    hook, wall = _hook(rings, at_mm, lip, undercut)
     r2 = lambda x: round(x, 2)  # noqa: E731
     return GrooveDims(
         r2(opening), r2(lip), r2(depth), r2(undercut),
         r2(end) if tapered else None, r2(bottom) if tapered else None,
+        r2(hook) if hook is not None else None, r2(wall) if wall is not None else None,
     )
+
+
+def _hook(rings: list[g.Ring], at_mm: float, lip: float, undercut: float) -> tuple[float | None, float | None]:
+    """The width over a groove's hooks and the face wall beyond them, in the face frame (u along
+    the face, v inward), or (None, None) when the lips' undersides run out to the chamber's wall."""
+    v = lip - 2 * STEP_MM
+    xs = g.crossings(rings, v)
+    left = [x for x in xs if x <= at_mm]
+    right = [x for x in xs if x > at_mm]
+    # The opening's edges, then each hook's end: where the next empty run (the rise) begins.
+    if len(left) < 2 or len(right) < 2 or len(left) % 2 or len(right) % 2:
+        return None, None
+    ends = (left[-2], right[1])
+    wall_u = (at_mm - undercut / 2, at_mm + undercut / 2)
+    if not (ends[0] > wall_u[0] + 2 * STEP_MM and ends[1] < wall_u[1] - 2 * STEP_MM):
+        return None, None
+    walls = []
+    for end, outer in zip(ends, wall_u):
+        mid = (end + outer) / 2
+        # Down the middle of the rise: the face's edge, then where the face wall ends.
+        vs = g.crossings([[(y, x) for x, y in r] for r in rings], mid)
+        under = [y for y in vs if 2 * STEP_MM < y < lip]
+        if not under:
+            return None, None
+        walls.append(under[0])
+    return ends[1] - ends[0], sum(walls) / 2

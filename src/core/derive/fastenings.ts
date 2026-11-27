@@ -400,14 +400,27 @@ function overlap(f: BodyFace, g: BodyFace): number {
   return c.length < 3 ? 0 : Math.abs(area2(c));
 }
 
+/** The spans of `spans` outside [lo, hi]. */
+function without(spans: [number, number][], lo: number, hi: number): [number, number][] {
+  return spans.flatMap(([a, z]): [number, number][] => {
+    if (hi <= a || lo >= z) return [[a, z]];
+    return [
+      ...(lo > a ? [[a, lo] as [number, number]] : []),
+      ...(hi < z ? [[hi, z] as [number, number]] : []),
+    ];
+  });
+}
+
 /**
  * The material of a layer's face that a seat can bear on, in the face's own plane's terms, as
  * convex pieces (after acceptance run 4). A bar's bounding face is its side less every opening
- * in it: where the section's outline, read SEAT_DEPTH below the face, is not there (a T-slot's
- * groove between its lips), and the opening of each groove declared on it, where its groove
- * type gives one. An inner face, or a part's, is its face whole.
+ * in it: where the section's outline, less its holes, read `depth` below the face (SEAT_DEPTH), is
+ * not there (a T-slot's groove between its lips), and the opening of each groove declared on it,
+ * where its groove type gives one. An inner face, or a part's, is its face whole. Read just above
+ * a groove's lip (`depth` the lip less SEAT_DEPTH), it is the lips' underside, which a head under
+ * the lips bears on (after the round-4 acceptance, F8).
  */
-function seatMaterial(body: Body, f: BodyFace): P2[][] {
+function seatMaterial(body: Body, f: BodyFace, depth = SEAT_DEPTH): P2[][] {
   const poly = ownPoly(f);
   const b = body.bar;
   if (!b || !f.bounding) return [poly];
@@ -419,25 +432,20 @@ function seatMaterial(body: Body, f: BodyFace): P2[][] {
   // u is local x on the ±y faces and local y on the ±x faces (BarBody).
   const alongX = face === "+y" || face === "-y";
   const o: Vec2 = alongX
-    ? [x0 - 1, face === "+y" ? y1 - SEAT_DEPTH : y0 + SEAT_DEPTH]
-    : [face === "+x" ? x1 - SEAT_DEPTH : x0 + SEAT_DEPTH, y0 - 1];
+    ? [x0 - 1, face === "+y" ? y1 - depth : y0 + depth]
+    : [face === "+x" ? x1 - depth : x0 + depth, y0 - 1];
   const d: Vec2 = alongX ? [1, 0] : [0, 1];
   const shift = alongX ? -placed.anchor[0] + placed.off[0] : -placed.anchor[1] + placed.off[1];
   const start = (alongX ? o[0] : o[1]) + shift;
-  let spans = materialAlong(section.draw.outline, o, d).map(
-    ([a, z]) => [start + a, start + z] as [number, number],
-  );
+  const moved = ([a, z]: [number, number]) => [start + a, start + z] as [number, number];
+  let spans = materialAlong(section.draw.outline, o, d).map(moved);
+  for (const h of section.draw.holes) {
+    for (const [a, z] of materialAlong(h, o, d).map(moved)) spans = without(spans, a, z);
+  }
   for (const g of placed.item.grooves) {
     if (g.face !== face || g.opening_mm === undefined) continue;
     const c = g.at_mm + shift;
-    const [lo, hi] = [c - g.opening_mm / 2, c + g.opening_mm / 2];
-    spans = spans.flatMap(([a, z]): [number, number][] => {
-      if (hi <= a || lo >= z) return [[a, z]];
-      return [
-        ...(lo > a ? [[a, lo] as [number, number]] : []),
-        ...(hi < z ? [[hi, z] as [number, number]] : []),
-      ];
-    });
+    spans = without(spans, c - g.opening_mm / 2, c + g.opening_mm / 2);
   }
   // The face's u runs along the side; its other coordinate, along the bar, is left whole.
   let vLo = Infinity;
@@ -459,15 +467,23 @@ function seatMaterial(body: Body, f: BodyFace): P2[][] {
 }
 
 /**
- * The fraction of an annulus about X (from radius r to R) on a face's material (`seatMaterial`):
- * what a head, nut or washer bears on (after acceptance run 4). 0 for an empty annulus.
+ * The fraction of an annulus about X (from radius r to R) on a face's material (`seatMaterial`,
+ * read `depth` below the face): what a head, nut or washer bears on (after acceptance run 4). 0
+ * for an empty annulus.
  */
-function annulusBearing(body: Body, f: BodyFace, X: V3, R: number, r: number): number {
+function annulusBearing(
+  body: Body,
+  f: BodyFace,
+  X: V3,
+  R: number,
+  r: number,
+  depth = SEAT_DEPTH,
+): number {
   const ring = Math.PI * (R * R - r * r);
   if (ring <= 0) return 0;
   const c = to2(f, X);
   let bears = 0;
-  for (const piece of seatMaterial(body, f)) {
+  for (const piece of seatMaterial(body, f, depth)) {
     bears += discArea(c, R, piece) - (r > 0 ? discArea(c, r, piece) : 0);
   }
   return Math.min(1, Math.max(0, bears / ring));
@@ -481,6 +497,27 @@ export function barFaceBearing(bar: DerivedBar, face: Face, X: V3, dOut: number,
   const body = barBody(bar);
   const f = body.faces.find((x) => x.name === face) as BodyFace;
   return annulusBearing(body, f, X, dOut / 2, dIn / 2);
+}
+
+/**
+ * The fraction of the annulus from `dIn` to `dOut` about X (on the face's plane) that bears on
+ * the underside of the lips of a groove of a bar's bounding face, `lip` deep: a head under the
+ * lips (F2b, X8). It is the material just above the lip's depth, as the section's outline gives
+ * it, less the groove's opening: on a lip whose underside is a hook narrower than the head, the
+ * rest of the head is under the chamber (after the round-4 acceptance, F8). Draft 2.3 read the
+ * face itself, which credits the head with the whole width of the face beside the opening.
+ */
+export function lipBearing(
+  bar: DerivedBar,
+  face: Face,
+  lip: number,
+  X: V3,
+  dOut: number,
+  dIn = 0,
+): number {
+  const body = barBody(bar);
+  const f = body.faces.find((x) => x.name === face) as BodyFace;
+  return annulusBearing(body, f, X, dOut / 2, dIn / 2, lip - SEAT_DEPTH);
 }
 
 /**

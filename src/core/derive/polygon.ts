@@ -224,3 +224,24 @@ function discTriangle(a: P2, b: P2, r: number): number {
   const p2 = t2 < 1 ? at(t2) : b;
   return (t1 > 0 ? sector(a, p1) : 0) + tri(p1, p2) + (t2 < 1 ? sector(p2, b) : 0);
 }
+
+/**
+ * The convex hull of points, counter-clockwise, collinear points dropped: Andrew's monotone chain
+ * (A. M. Andrew, "Another efficient algorithm for convex hulls in two dimensions", 1979).
+ */
+export function convexHull(points: readonly P2[]): P2[] {
+  const ps = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (ps.length < 3) return ps;
+  const cross = (o: P2, a: P2, b: P2) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const half = (seq: readonly P2[]): P2[] => {
+    const out: P2[] = [];
+    for (const p of seq) {
+      while (out.length >= 2 && cross(out.at(-2) as P2, out.at(-1) as P2, p) <= 0) out.pop();
+      out.push(p);
+    }
+    out.pop();
+    return out;
+  };
+  return [...half(ps), ...half([...ps].reverse())];
+}

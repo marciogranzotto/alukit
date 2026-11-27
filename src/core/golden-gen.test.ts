@@ -135,6 +135,8 @@ interface Expect {
   >;
   /** Every warning derive reports, by code and entity (and refs), where the case gives them. */
   warnings?: { code: string; entity: string; refs?: string[] }[];
+  /** Every info derive reports, likewise (a check it cannot make, F9). */
+  infos?: { code: string; entity: string; refs?: string[] }[];
   errors: { code: string; entity: string; refs?: string[] }[];
 }
 
@@ -199,6 +201,13 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
       warns.map((w) => ({ code: w.code, entity: w.entity, ...(w.refs ? { refs: w.refs } : {}) })),
       `${label}: warnings ${JSON.stringify(warns, null, 1)}`,
     ).toEqual(want.warnings);
+  }
+  if (want.infos) {
+    const infos = shown(d.diagnostics, "info");
+    expect(
+      infos.map((w) => ({ code: w.code, entity: w.entity, ...(w.refs ? { refs: w.refs } : {}) })),
+      `${label}: infos ${JSON.stringify(infos, null, 1)}`,
+    ).toEqual(want.infos);
   }
   for (const [id, seats] of Object.entries(want.butts ?? {})) {
     const got = d.butts.get(id)?.ends.map((e) => ({
@@ -420,7 +429,7 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
 const dirs = subdirs(join(FIXTURES, "golden-gen"));
 
 describe("golden generation cases (design §4.6)", () => {
-  it("has one fixture per case G22–G26 and G29–G48", () => {
+  it("has one fixture per case G22–G26 and G29–G49", () => {
     expect(dirs.map((d) => basename(d))).toEqual([
       "G22",
       "G23",
@@ -447,6 +456,7 @@ describe("golden generation cases (design §4.6)", () => {
       "G46",
       "G47",
       "G48",
+      "G49",
     ]);
   });
 

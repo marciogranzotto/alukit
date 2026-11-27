@@ -106,13 +106,13 @@ export function machiningMarkdown(s: MachiningSheet): string {
   if (s.bars.length === 0) out.push("No bar is machined.", "");
   else {
     out.push(
-      "Each bar's machining is on the cut list (`alukit cutlist`), from a named end. These lines carry some:",
+      "Each bar's machining is on the cut list (`alukit cutlist`), from a named end. These lines carry some, each hole in a bar's side on the face it is drilled from:",
       "",
-      "| Item | Options | Cut | Pieces | Ops each | Bars |",
-      "|---|---|---:|---:|---:|---|",
+      "| Item | Options | Cut | Pieces | Ops each | Machining | Bars |",
+      "|---|---|---:|---:|---:|---|---|",
       ...s.bars.map(
         (b) =>
-          `| ${b.item} | ${optText(b.opt)} | ${mm(b.cut_mm)} | ${b.count} | ${b.ops} | ${b.sources.join(", ")} |`,
+          `| ${b.item} | ${optText(b.opt)} | ${mm(b.cut_mm)} | ${b.count} | ${b.ops} | ${b.machining.join("; ")} | ${b.sources.join(", ")} |`,
       ),
       "",
     );

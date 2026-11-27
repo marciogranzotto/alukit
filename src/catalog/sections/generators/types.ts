@@ -3,7 +3,7 @@ import type { Region, Ring, Vec2 } from "#core/section-properties.ts";
 import type { Face } from "../../schema/common.ts";
 import type { ClosedForm } from "../closed-form.ts";
 
-/** A groove's dimensions, from its groove type (design §3.3). */
+/** A groove's dimensions: its groove type's, with the section's own over them (design §3.3, F9). */
 export interface GrooveDims {
   opening_mm: number;
   lip_mm: number;
@@ -12,6 +12,13 @@ export interface GrooveDims {
   /** A chamber that narrows: from this depth, to `bottom_mm` wide at `depth_mm`. */
   taper_from_mm?: number;
   bottom_mm?: number;
+  /**
+   * A lip whose underside is a hook: the underside runs from the opening out to `hook_mm` across
+   * (the width over both hooks), and beyond it the chamber rises to `wall_mm` under the face (after
+   * the round-4 acceptance, F8).
+   */
+  hook_mm?: number;
+  wall_mm?: number;
 }
 
 /** What a generator may look up: groove types by the reference its params use. */
