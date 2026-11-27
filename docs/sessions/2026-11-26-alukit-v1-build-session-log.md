@@ -761,3 +761,21 @@ anything, and each has a default in place.
   - Third time, so measured rather than re-run. Interleaved A/B runs at the same load (34–42): before S3, 78 / 92 / 138 ms; with S3, 905 / 989 ms when passing, and 5 of 7 runs failing.
   - S3's view draws on demand (no idle render loop), so the cost is in the update path.
   - A real regression against design §12's 1 s requirement. The unpushed merge was taken back out of `main`, and S3's agent is finding and fixing the cause. The test stays as it is.
+- **06:59**: Gap batch X7 / X8 / F7 merged and pushed (`bc6a9c7`, gate PASS, 988 tests).
+  - A connector in a recipe's fastener set is placed at each hole of its mount, and brings its own access hole, drilled over each core from the nearest face.
+  - A connector's own head is seat-checked, with domes computed exactly; derive reports the room to the floor and to each side.
+  - A head is seated only on a hole F2 makes.
+  - Golden cases G46–G48 and calls 52–56; no diagnostic moved across 149 cases.
+- **07:00**: S2 finished (S2.1–S2.17). Its decisions are in `docs/ux/s2-decisions.md`.
+  - Layout: the parts bin over the outline, a wide catalog overlay, and six sheets that collapse, split and maximise.
+  - Top bar: an undo that names whose step it is (asking before undoing someone else's), a readiness pill, "Saved as / Not saved", and a variant strip.
+  - A start card: two clicks and a list choice to an armed, sold profile, or the skill's example in one step.
+- **07:01–07:12**: `live.spec` timing, measured again.
+  - S2 against `main` at load 21–35: no material change, 8 of 8 passing.
+  - Load then climbed to 40–120, from other sessions on the same machine, and `live.spec` failed alone as well as in the suite.
+  - CI, on an unloaded runner, passed all 43 e2e tests on every head today.
+- **07:14**: S3's agent found the cause of the live-update regression, and of `live.spec`'s flakiness on `main` too.
+  - Every revision disposed the old model's materials before drawing the new one, so three.js relinked six shader programs, each link waiting on the GPU process: 112 ms of `main`'s 137 ms update, and 1.1 s with S3's heavier frames.
+  - Fixed: the old model is disposed after the frame that draws the new one, and marker layers keep their materials.
+  - The update now takes 4–19 ms at load 31–51 (`main` before: 125–324). A new test counts shader links across a revision and expects none.
+- **07:20**: S2 and then S3 merged locally. `live.spec` now passes under load. Two tests fail only in combination (selecting a problem's connection in the outline, and a revision drawn under the new layout), so they went back to S3's agent to fix at the cause. Nothing is pushed until the gate passes.
