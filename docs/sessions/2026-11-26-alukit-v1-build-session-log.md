@@ -116,6 +116,7 @@ anything, and each has a default in place.
 | v1 limits: the stamp on every output, `bbox()` over parts, end taps on cores | **done**, merged (00:17), pushed | Note: `docs/notes/v1-limits-closed.md`. |
 | Forseti sections: secondary cores, and the tap's thread against the core | **built** (01:07); merge held until the acceptance re-runs finish | Note: `docs/notes/section-cores.md`. |
 | Acceptance re-runs on the reference project's new heads (internal) | running (2 × Opus), launched 01:05 | its decided frame (run 4) and, for the first time, its alternative all-extrusion frame |
+| F2: end-hole axis, butt end-face coverage, head seats | running (Opus, worktree), launched 01:30 | goldens G35–G37 |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -510,3 +511,17 @@ anything, and each has a default in place.
   - Two Opus agents read the record only via `git show` at the exact heads, into snapshots: run 4 on
     the decided frame, and a first acceptance of the alternative frame (two variants).
   - The sections merge waits so the code under them doesn't change.
+- **01:26**: Acceptance run 4 on the decided frame's new head: **pass**, with no exceptions.
+  - Cut list identical; mass +0.05 %; cost within rounding.
+  - The owner's claims were checked: the new core positions and screw counts are verified, its
+    "bush lines added" only partly.
+  - Two more record inconsistencies were reported to that session.
+  - The owner says those heads will be replaced after its own review; this run is the baseline.
+  - **F2, an AluKit finding:** of the 13 end-joint faults the record's own new check lists, AluKit
+    catches 2. The others are end-face overhangs and overlaps, and screw heads seated on slot lips,
+    which v1 doesn't check. And A4's end holes follow the receiving bar's axis, while the screw
+    follows the core it threads into: on an angled joint they drift about 21 mm apart.
+- **01:30**: An Opus agent launched on F2 in a worktree.
+  - The end-hole axis follows the fastener (G35).
+  - New checks for end-face overhang and overlap (G36) and head seats on material (G37).
+  - Geometric only: no load ratings, which are v2.
