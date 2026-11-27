@@ -59,9 +59,10 @@ describe("the largest minor diameter of a 6H internal thread", () => {
 });
 
 describe("a tap on a core", () => {
-  it("fits the core its thread is sized for, drilled up to its tap drill", () => {
-    // M6 in Ø5: tap drill 5.00, the core itself. M8 in Ø6.8: 6.8 ≤ 6.912, and the tap drill
-    // 6.75 takes nothing off. M16 in Ø13.7: drilled up 0.30 to 14.00, within its 2 mm pitch.
+  it("fits the core its thread is sized for, drilled up to its tap drill, labelled or not", () => {
+    // M6 in Ø5: tap drill 5.00, the core itself. M8 in Ø6.8, the cart's TS40, whose bore carries
+    // no label: 6.8 ≤ 6.912, and the tap drill 6.75 takes nothing off (cart.test.ts holds the
+    // cart's whole verdict). M16 in Ø13.7: drilled up 0.30 to 14.00, within its 2 mm pitch.
     // M14 in Ø12.1 (the 30 series): 12.1 ≤ 11.835 + 0.375 = 12.210. M8 in Ø6.5: drilled up 0.25.
     expect(tapFit("M6", { d_mm: 5 })).toEqual({ fits: true });
     expect(tapFit("M8", { d_mm: 6.8 })).toEqual({ fits: true });

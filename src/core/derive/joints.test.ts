@@ -465,7 +465,7 @@ describe("an end tap on its section's cores (§5.5)", () => {
   });
 });
 
-describe("an end tap on a Forseti 80x80's cores, the corner holes among them (§3.5, §5.5)", () => {
+describe("an end tap on a Forseti section's cores, labelled by the vendor (§3.5, §5.5)", () => {
   // PF40-03B, the 80x80 básico (p. 20): four Ø13.7 (M16) cores at (±20, ±20), an open channel at
   // the centre, and four Ø5 (M6) corner holes 4.5 in from both faces, at (±35.5, ±35.5). PF40-03,
   // the reforçado (p. 21), has the same cores, read from its vector outline.
@@ -483,11 +483,11 @@ describe("an end tap on a Forseti 80x80's cores, the corner holes among them (§
       item: (ref) => {
         const m = /^test-stud:TAP_(M\d+)_(-?[\d.]+)_(-?[\d.]+)$/.exec(ref);
         if (!m) return base.item(ref);
-        // A connector for Forseti's base 40 that taps the butting end at one place, and does
-        // nothing else.
+        // A connector for Forseti's bases 40 and 20 that taps the butting end at one place, and
+        // does nothing else.
         const item = ConnectorItem.parse({
           ...bush.item,
-          fits: ["forseti:s40-c8"],
+          fits: ["forseti:s40-c8", "forseti:s20-c6"],
           mounts: undefined,
           requires: [
             { op: "end-tap", on: "butting", thread: m[1], at_mm: [[Number(m[2]), Number(m[3])]] },
@@ -498,7 +498,7 @@ describe("an end tap on a Forseti 80x80's cores, the corner holes among them (§
     };
   });
 
-  /** b2, an 80x80 post, butts through b1 with a tap at (x, y) in its end a. */
+  /** b2, a post of the section, butts through b1, of the same, with a tap at (x, y) in its end a. */
   const post = (section: string, thread: string, x: number, y: number) => {
     const bar = { item: `forseti:${section}`, opt: { finish: "anodised" } };
     return derive(
@@ -535,12 +535,13 @@ describe("an end tap on a Forseti 80x80's cores, the corner holes among them (§
     });
 
     it(`${section}: an M16 in a corner hole is a machining error: on a core, and not fitting it`, () => {
-      // M16's tap drill, 14.00, is 9.00 over the Ø5 hole, more than its 2.00 pitch.
+      // Not its label, M6, so the cut-thread rule: M16's tap drill, 14.00, is 9.00 over the Ø5
+      // hole, more than its 2.00 pitch.
       expect(machining(post(section, "M16", 35.5, -35.5))).toEqual([
         [
           "error",
           "b2",
-          `the tap M16 in end a at x 35.50, y -35.50 from the centre (c1) does not fit the Ø5.00 core of forseti:${section} it is on: M16's tap drill, 14.00, would drill it up 9.00, more than one pitch (2.00)`,
+          `the tap M16 in end a at x 35.50, y -35.50 from the centre (c1) does not fit the Ø5.00 core of forseti:${section} (labelled M6) it is on: M16's tap drill, 14.00, would drill it up 9.00, more than one pitch (2.00)`,
         ],
       ]);
     });
@@ -557,4 +558,33 @@ describe("an end tap on a Forseti 80x80's cores, the corner holes among them (§
       }
     });
   }
+
+  it("passes an M5 in a 20-series Ø4.6 core, the thread the vendor labels it with", () => {
+    // The 20x60 V-slot's drawing prints "Ø4,6 (M5)" (p. 11); the 40x40 V-slot's and the 40x80C's
+    // cores are M5 by the shop's description. By the cut-thread rule 4.6 is wider than M5's
+    // 4.334; Ø4.6 is a forming tap's pre-hole, and the vendor's label sanctions it.
+    expect(machining(post("PF20-14", "M5", 0, 20))).toEqual([]);
+    expect(machining(post("PF20-15", "M5", 0, 0))).toEqual([]);
+    expect(machining(post("PF20-13", "M5", -10, 30))).toEqual([]);
+  });
+
+  it("passes an M6 and an M5 in PF20-21's Ø6 core, which the shop's description labels both", () => {
+    // "Centro permite rosca: M5 / M6" (the shop); the drawing (PF20-01's, p. 10) prints Ø6 and no
+    // thread. Neither would pass as a cut thread: Ø6 is wider than M6's 5.153 and M5's 4.334.
+    expect(machining(post("PF20-21", "M6", 0, 0))).toEqual([]);
+    expect(machining(post("PF20-21", "M5", 0, 0))).toEqual([]);
+  });
+
+  it("judges a thread the drawing does not label as a cut thread: M5 in the 20x40's Ø5 (M6)", () => {
+    // p. 11 prints the 20x40 V-slot's cores Ø5 (M6), and the drawing's label wins over the shop's
+    // M5: an M5 there is cut, and Ø5 is wider than its 4.334.
+    expect(machining(post("PF20-12", "M5", 0, 10))).toEqual([
+      [
+        "error",
+        "b2",
+        "the tap M5 in end a at x 0.00, y 10.00 from the centre (c1) does not fit the Ø5.00 core of forseti:PF20-12 (labelled M6) it is on: the core is wider than M5's largest minor diameter, 4.334 (6H), so the thread would be shallow",
+      ],
+    ]);
+    expect(machining(post("PF20-12", "M6", 0, 10))).toEqual([]);
+  });
 });
