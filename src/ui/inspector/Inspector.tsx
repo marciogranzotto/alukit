@@ -15,6 +15,7 @@ import { resolveTargets } from "../targets.ts";
 import { drawnCorners } from "../viewport/viewer.ts";
 import { inspectorActions, useReplaceAsked } from "./actions.ts";
 import { BarFields, ReplaceForm } from "./BarFields.tsx";
+import { barActions } from "./barActions.ts";
 import { DeleteButton, DeleteFlow } from "./Delete.tsx";
 import { BarDerived, Item, OtherDerived, ProjectItem } from "./Derived.tsx";
 import { PointedField, pointedFor } from "./Fields.tsx";
@@ -287,6 +288,8 @@ export function Inspector() {
   const sel = [...selection.value];
   // Delete, Join and Replace, for the keys and the menus, while the inspector is shown.
   useEffect(() => inspectorActions(), []);
+  // A bar's own actions (E4): split, reverse, holes.
+  useEffect(() => barActions(), []);
   return (
     <>
       <DeleteFlow />

@@ -4,6 +4,7 @@ import { OptionSelects, useOptions } from "../catalog/Card.tsx";
 import { cardOf } from "../catalog/state.ts";
 import { fetchCatalogItems } from "../client/catalog.ts";
 import { EntityChips } from "../common/EntityChip.tsx";
+import { splitBatch } from "../edit/batches.ts";
 import { Errors } from "../Feedback.tsx";
 import { mm, plural } from "../format.ts";
 import type { Model } from "../model.ts";
@@ -11,7 +12,9 @@ import { optionFields } from "../options.ts";
 import { pointParam } from "../records/Params.tsx";
 import { busy } from "../store.ts";
 import { typedNumber, typedValue } from "../tools/typed.ts";
+import { ActionRow } from "./ActionRow.tsx";
 import { useReplaceAsked } from "./actions.ts";
+import { runOf, splitAsked } from "./barActions.ts";
 import { EndRows } from "./Ends.tsx";
 import { CommitInput, Row, RowErrors, readOnly, useSend, WordsRow } from "./Fields.tsx";
 import { type LengthEnd, lengthMode, lengthPatch } from "./length.ts";
@@ -530,12 +533,91 @@ export function LabelRows({ m, id }: { m: Model; id: string }) {
   );
 }
 
+/**
+ * Split at a typed distance (E-UX-21), as the Split at… action asks: from end a's design point,
+ * an expression over params valued as typed (`splitBar` takes a number), with a splice when asked;
+ * a bar in a run is always spliced. One step.
+ */
+function SplitForm({ m, id }: { m: Model; id: string }) {
+  const run = runOf(m, id);
+  const [text, setText] = useState("");
+  const [splice, setSplice] = useState(false);
+  const [bad, setBad] = useState<string>();
+  const { outcome, send } = useSend();
+  const close = () => {
+    splitAsked.value = undefined;
+  };
+  const len = m.derived.bars[id]?.len_mm ?? 0;
+  return (
+    <form
+      class="split-form"
+      data-testid="split-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const t = typedNumber(text.trim().replace(/^=\s*/, ""), m.derived.params);
+        const b = "why" in t ? t : splitBatch(m, id, t.value, { splice: splice || !!run });
+        setBad("why" in b ? b.why : undefined);
+        if ("why" in b) return;
+        void send(b, `split ${id} at ${"why" in t ? "" : t.value} mm`).then((o) => {
+          if (o.ok) close();
+        });
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          close();
+        }
+      }}
+    >
+      <label>
+        Split {id} at{" "}
+        <input
+          class="insp-input"
+          data-testid="split-at"
+          size={8}
+          value={text}
+          placeholder={mm(len / 2).replace(/\.00$/, "")}
+          ref={(el) => el?.focus()}
+          onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
+        />{" "}
+        mm from end a
+      </label>{" "}
+      <label title={run ? `${id} is in run ${run}: its pieces are spliced` : undefined}>
+        <input
+          type="checkbox"
+          data-testid="split-splice"
+          checked={splice || !!run}
+          disabled={!!run}
+          onChange={(e) => setSplice((e.currentTarget as HTMLInputElement).checked)}
+        />{" "}
+        with a splice
+      </label>
+      <div class="tp-row">
+        <button
+          type="submit"
+          class="btn primary"
+          data-testid="split-apply"
+          disabled={readOnly() || busy.value}
+        >
+          Split
+        </button>
+        <button type="button" class="btn" onClick={close}>
+          Cancel
+        </button>
+      </div>
+      <Errors outcome={bad !== undefined ? { ok: false, why: bad, errors: [] } : outcome} />
+    </form>
+  );
+}
+
 export function BarFields({ m, id }: { m: Model; id: string }) {
   const w = written(m, id) as O;
   const rest = Object.entries(w).filter(([k]) => !SHOWN.has(k));
   return (
     <section>
       <h3>Bar</h3>
+      <ActionRow m={m} ids={[id]} groups={["bar"]} />
+      {splitAsked.value === id && <SplitForm m={m} id={id} />}
       <table class="kv fields" data-testid="fields">
         <tbody>
           <LengthRow m={m} id={id} />

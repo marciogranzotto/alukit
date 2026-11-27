@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import {
   cli,
+  contextMenu,
   lastStepWords,
   numberText,
   openTab,
@@ -262,4 +263,48 @@ test("a length typed as =D binds the param (E-UX-16); from the middle keeps the 
     b: [1400, 500, 0],
   });
   expect(cutOf(await cutList(served.dir), "b13")).toBe("400.00");
+});
+
+test("split and reverse from the menu (E-UX-21): one step each, as the CLI cuts them", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  served = await serve("base-frame/cli");
+  await openTab(page, served, 0);
+  const before = await cutList(served.dir);
+  expect(cutOf(before, "b9")).toBe("1120.00");
+
+  // A right-click on the front base rail b9 (z = Hb = 100, its top at 120) offers a split where
+  // the menu opened, and a split at a typed distance.
+  const menu = await contextMenu(page, [400, 20, 120]);
+  await expect(
+    menu.getByRole("menuitem", { name: /^Split b9 here, \d+ mm from end a/ }),
+  ).toBeVisible();
+  await menu.getByRole("menuitem", { name: /^Split b9 at…/ }).click();
+  const form = page.getByTestId("split-form");
+  await form.getByTestId("split-at").fill("400");
+  await form.getByTestId("split-at").press("Enter");
+  await waitDrawn(page, 1);
+  // Two bars whose cuts sum to b9's: from b1's face to 400, and on to b2's face.
+  const split = await cutList(served.dir);
+  expect(cutOf(split, "b9")).toBe("360.00");
+  expect(cutOf(split, "b11")).toBe("760.00");
+  expect(await lastStepWords(served.dir)).toBe("split b9 at 400 mm, making n1 and b11");
+  // One Undo restores b9.
+  await page.getByTestId("undo").click();
+  await waitDrawn(page, 2);
+  expect(await cutList(served.dir)).toEqual(before);
+
+  // Reverse, from the inspector's action row: the ends swap, the body and its cut stay.
+  await pick(page, "b9");
+  await page.getByTestId("action-reverse").click();
+  await waitDrawn(page, 3);
+  expect((await written(served.dir)).bars?.b9).toMatchObject({
+    a: ["W", 0, "Hb"],
+    b: [0, 0, "Hb"],
+  });
+  expect(cutOf(await cutList(served.dir), "b9")).toBe("1120.00");
+  expect(errors).toEqual([]);
 });

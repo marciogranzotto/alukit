@@ -114,15 +114,27 @@ export function arrayBatch(
 
 /**
  * Split (E-UX-21): `bar` cut in two at `at_mm` from end a's design point, one `splitBar` step,
- * with a splice when the bar is in a run or `splice` asks. E4.3.
+ * with a splice when `splice` asks; a bar in a run gets one anyway (the core adds it, as the run
+ * needs it), and no other connector is bought unasked. E4.3.
  */
 export function splitBatch(
-  _m: Model,
-  _bar: string,
-  _at_mm: number,
-  _opts: { splice?: boolean } = {},
+  m: Model,
+  bar: string,
+  at_mm: number,
+  opts: { splice?: boolean } = {},
 ): Batch {
-  return notYet("split, E4.3");
+  const template = bar.split("@")[0] as string;
+  if (bar.includes("@"))
+    return { why: `${bar} is a pattern copy: split its template, ${template}` };
+  const d = m.derived.bars[bar];
+  if (!d) return { why: /^b\d+$/.test(bar) ? `${bar} does not derive` : `${bar} is not a bar` };
+  const at = q2(at_mm);
+  if (!(at > 0.01 && at < d.len_mm - 0.01)) {
+    return { why: `split ${bar} inside it: between 0 and its length, ${q2(d.len_mm)} mm` };
+  }
+  return [
+    { cmd: "splitBar", args: { id: bar, at_mm: at, ...(opts.splice ? { splice: true } : {}) } },
+  ];
 }
 
 /**

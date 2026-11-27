@@ -75,6 +75,9 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
     /^Delete\s*Delete/,
     /^Join b1\.a/,
     /^Replace profile…/,
+    /^Split b1 here, \d+ mm from end a/,
+    /^Split b1 at…/,
+    /^Reverse b1/,
     /^Fit to the selection\s*F/,
     /^Show/,
   ]);
@@ -84,6 +87,9 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
     ["delete", true],
     ["join-end", true],
     ["replace", true],
+    ["split-here", true],
+    ["split-at", true],
+    ["reverse", true],
     ["fit", true],
     ["show", true],
   ]);
@@ -92,7 +98,7 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
   await page.keyboard.press("ArrowDown");
   await expect(items.nth(1)).toBeFocused();
   await page.keyboard.press("s");
-  await expect(items.nth(4)).toBeFocused();
+  await expect(items.nth(3)).toBeFocused();
 
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);
