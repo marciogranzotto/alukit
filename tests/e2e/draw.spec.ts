@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
+import { lockStamp, oldestCutRead, withStamp } from "../../src/core/testing.ts";
 import { cli, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
 
 /**
@@ -209,9 +210,19 @@ test("draws the cart's base frame with the mouse; its cut list and BOM equal the
     const r = await cli([cmd, served.dir, "--format", "json"]);
     expect(r.code, r.err).toBe(0);
     const expected = await readFile(join(FIXTURE, file), "utf8");
-    expect(restrict(r.out)).toEqual(restrict(expected));
+    // The outputs state the lock they derived from (design §5.4), and the cut list its oldest
+    // price read date: the golden plus the stamp's lines.
+    const lock = lockStamp(served.dir);
+    const stamped =
+      cmd === "cutlist"
+        ? withStamp(expected, "price_basis", {
+            oldest_read: oldestCutRead(JSON.parse(expected), served.dir),
+            lock,
+          })
+        : withStamp(expected, "schema", { lock });
+    expect(restrict(r.out)).toEqual(restrict(stamped));
     // Restricting changes nothing: the drawn project is the base frame and nothing else.
-    expect(`${r.out.trimEnd()}\n`).toBe(expected);
+    expect(`${r.out.trimEnd()}\n`).toBe(stamped);
   }
   expect(errors).toEqual([]);
 });

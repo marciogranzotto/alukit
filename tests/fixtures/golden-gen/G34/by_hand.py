@@ -14,7 +14,9 @@ The rule (design §3.4, §5.3; docs/notes/acceptance-gaps-2.md, A8):
 - a splice taps one core per stud, at the positions its item gives, in both spliced ends; with
   none, every stud's tap is at the centre;
 - ops of one kind and size at one place are one op made several times: a machining error;
-- a position must fall inside the butting end's section box, else a connection error.
+- a position must fall inside the butting end's section box, else a connection error;
+- an end tap must stand on one of its section's cores, its centre within 0.01 of the core's: a
+  tap is cut in a core. Else a machining error on the bar, one for each place (design 2.3, §5.5).
 
 The geometry (design §4.4): b1 runs along +X: local x = +Y, local y = +Z. The posts b2 and b3 run
 upward: local x = +X, local y = +Y. All three are 80x80 with four cores at (±20, ±20), centred on
@@ -27,6 +29,8 @@ import os
 HALF = 40.0  # an 80x80's half width
 HALF_40 = 20.0  # a 40x40's
 TOL = 0.01
+# The cores, from each section's bores (test-stud's TS80 and TS40C), from the box centre.
+CORES = {HALF: [(-20.0, -20.0), (20.0, -20.0), (-20.0, 20.0), (20.0, 20.0)], HALF_40: [(0.0, 0.0)]}
 J4_HOLES = [(-20.0, -20.0), (20.0, -20.0), (-20.0, 20.0), (20.0, 20.0)]
 SPLICE4_CORES = J4_HOLES
 X_POST = 300.0
@@ -81,6 +85,17 @@ def case(j4="positions", splice="positions", post_half=HALF):
         dup = sorted({b for by in groups.values() if len(by) > 1 for b in by})
         if dup:
             errors.append(("machining", bar, dup))
+    # Taps on no core, per bar and place: b2's section is the post's, b1 and b3 stay 80x80.
+    for bar in ("b1", "b2", "b3"):
+        cores = CORES[post_half if bar == "b2" else HALF]
+        places = {}
+        for o in ops[bar]:
+            if o["op"] == "end-tap":
+                places.setdefault(key(o), []).append(o)
+        for taps in places.values():
+            x, y = taps[0].get("off", [0.0, 0.0])
+            if min(((x - cx) ** 2 + (y - cy) ** 2) ** 0.5 for cx, cy in cores) > TOL:
+                errors.append(("machining", bar, sorted({t["by"] for t in taps})))
     errors.sort(key=lambda e: (e[1][0], int(e[1][1:])))
     # Lengths: b2 from b1's top face (z = 40) to the splice at z = 500; b3 from 500 to 1000.
     cuts = {"b1": 600.0, "b2": 500.0 - HALF, "b3": 500.0}

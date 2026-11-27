@@ -1,5 +1,4 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,7 +23,7 @@ import {
 import { type Order, order } from "./order/order.ts";
 import { type OpenedProject, openProject } from "./project/open.ts";
 import { projectItems } from "./project-items/source.ts";
-import { FIXTURES, mergePatch, readJson } from "./testing.ts";
+import { FIXTURES, lockStamp, mergePatch, oldestCutRead, readJson, withStamp } from "./testing.ts";
 
 /**
  * The cart (design §12): a small synthetic cart with eccentric anchors, rolled 40x80 rails, a
@@ -173,6 +172,14 @@ describe("the cart", () => {
     for (const g of cl.groups.filter((x) => x.mode === "stock")) {
       expect([g.kerf_mm, g.trim_mm]).toEqual([expected.kerf_mm, expected.trim_mm]);
     }
+  });
+
+  it("states the oldest read date of the offers its cut list chose, worked from the lock", () => {
+    const expected = readJson(join(CART, "expected-cutlist.json")) as Parameters<
+      typeof oldestCutRead
+    >[0];
+    const cl = cutList({ derived: derive(project.raw, project.items), items: project.items });
+    expect(cl.oldest_read).toBe(oldestCutRead(expected, CART));
   });
 
   it("has the bill of materials worked by hand", () => {
@@ -337,35 +344,31 @@ describe("the cart", () => {
       "c23.s3",
       "c23.s4",
     ]);
-    // The cut list and the BOM from another process equal this process's, byte for byte.
+    // The cut list and the BOM from another process equal this process's, byte for byte, each
+    // stating the lock it was derived from (§5.4): its hash, which any sha256 tool gives from the
+    // canonical lock file.
+    const lock = lockStamp(CART);
     const d = derive(project.raw, project.items);
     expect(run(["cutlist", CART, "--format", "json"])).toBe(
-      cutListJson(cutList({ derived: d, items: project.items })),
+      cutListJson(cutList({ derived: d, items: project.items, lock })),
     );
     expect(run(["bom", CART, "--format", "json"])).toBe(
-      bomJson(bom({ derived: d, items: project.items })),
+      bomJson(bom({ derived: d, items: project.items, lock })),
     );
-    // The machining sheet from another process is the golden worked by hand.
+    // The machining sheet from another process is the golden worked by hand, plus the stamp.
     expect(run(["machining", CART, "--format", "json"])).toBe(
-      readFileSync(join(CART, "expected-machining.json"), "utf8"),
+      withStamp(readFileSync(join(CART, "expected-machining.json"), "utf8"), "schema", { lock }),
     );
     // `alukit order` exits 1, since suppliers are blocked, and prints why. Its JSON is the golden
-    // plus one line, the stamp (§4.13, §9): the lock's hash, which any sha256 tool gives from the
-    // canonical lock file.
+    // plus one line, the stamp (§4.13, §9).
     const o = spawnSync(
       process.execPath,
       [MAIN, "order", CART, "--format", "json", "--as-of", AS_OF],
       { encoding: "utf8" },
     );
     expect(o.status).toBe(1);
-    const lock = createHash("sha256").update(readFileSync(join(CART, "alukit.lock.json")));
     const golden = readFileSync(join(CART, "expected-order.json"), "utf8");
-    expect(o.stdout).toBe(
-      golden.replace(
-        /^( {2}"oldest_read": .*\n)/m,
-        `$1  "lock": "sha256:${lock.digest("hex")}",\n`,
-      ),
-    );
+    expect(o.stdout).toBe(withStamp(golden, "oldest_read", { lock }));
     expect(o.stderr).toMatch(/^BLOCKED test-vendor: est-price: test:PSU-24V: /m);
   });
 });

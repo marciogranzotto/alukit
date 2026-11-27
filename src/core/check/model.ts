@@ -1,14 +1,18 @@
+// The one module outside src/core it reads: the bodies the viewer and the GLB draw, three-free.
+import { modelExtent, type NoBox } from "../../mesh/extent.ts";
 import { Ctx } from "../derive/context.ts";
 import type { Derived, DerivedBar } from "../derive/derive.ts";
 import { expandPatterns } from "../derive/patterns.ts";
 import { type Ast, ExprError, type ExprScope, type Value } from "../expr.ts";
+import { compareIds } from "../ids.ts";
 import type { ItemSource } from "../items.ts";
-import { addScaled, dist, dot, type V3 } from "../vec.ts";
+import { dist, type V3 } from "../vec.ts";
 
 /**
  * The accessors that read the derived model (design §4.9), for project checks only: document
  * values may not read the model they define. `len(b3)`, `cut(b3)`, `pos(n3)`, `dist(n1, n2)`,
- * `bbox()` and `count(tag:leg)` read the geometry. `mass()` and `cost()` read the bill of
+ * `bbox()` and `count(tag:leg)` read the geometry: `bbox()` the extent of every body the viewer
+ * draws and the GLB holds (`src/mesh/extent.ts`). `mass()` and `cost()` read the bill of
  * materials and the prices: the caller supplies them (`outputAccessors` in `outputs.ts`, as
  * `alukit check`, `do`, `order` and `costs` do), and a caller that does not reports a check that
  * uses them as pending, not failed.
@@ -28,44 +32,20 @@ export class PendingAccessor extends ExprError {
 /** Accessors that read the bill of materials and the prices, supplied by their callers. */
 export const PENDING = ["mass", "cost"] as const;
 
+/** "no box for test:TNUT-M8 (p9, p9@1): its item gives no bbox_mm", by item in id order. */
+function noBoxText(parts: readonly NoBox[]): string {
+  const byItem = new Map<string, string[]>();
+  for (const p of parts) byItem.set(p.item, [...(byItem.get(p.item) ?? []), p.id]);
+  const items = [...byItem.keys()].sort(compareIds);
+  const list = items.map((i) => `${i} (${(byItem.get(i) as string[]).join(", ")})`).join(", ");
+  return `no box for ${list}: ${items.length === 1 ? "its item gives" : "their items give"} no bbox_mm`;
+}
+
 function idArg(name: string, args: readonly Ast[], n = 1): string[] {
   if (args.length !== n || args.some((a) => a.t !== "name")) {
     throw new ExprError(`${name} takes ${n === 1 ? "one id" : `${n} ids`}`);
   }
   return args.map((a) => (a as { name: string }).name);
-}
-
-/**
- * The corners of a bar's body: its placed box swept between its end planes. Exact for every
- * planar cut: each corner line meets its end plane.
- */
-export function bodyCorners(b: DerivedBar): V3[] {
-  const { frame, box } = b.placed;
-  const out: V3[] = [];
-  for (const e of [b.ends.a, b.ends.b]) {
-    const along = dot(e.normal, frame.t);
-    for (const u of [box.x0, box.x1]) {
-      for (const v of [box.y0, box.y1]) {
-        const off = addScaled(addScaled([0, 0, 0], frame.x, u), frame.y, v);
-        const s = Math.abs(along) < 1e-12 ? 0 : -dot(e.normal, off) / along;
-        out.push(addScaled(addScaled(e.point, off, 1), frame.t, s));
-      }
-    }
-  }
-  return out;
-}
-
-/** The model's extent along each world axis, over the bar bodies. */
-export function modelBox(d: Derived): { min: V3; max: V3 } | undefined {
-  let min: number[] | undefined;
-  let max: number[] | undefined;
-  for (const b of d.bars.values()) {
-    for (const c of bodyCorners(b)) {
-      min = min ? min.map((m, i) => Math.min(m, c[i] as number)) : [...c];
-      max = max ? max.map((m, i) => Math.max(m, c[i] as number)) : [...c];
-    }
-  }
-  return min && max ? { min: min as unknown as V3, max: max as unknown as V3 } : undefined;
 }
 
 /** Every entity after pattern expansion, with its tags, as derive sees them (in its variant). */
@@ -113,7 +93,7 @@ export function modelScope(input: ModelScopeInput): ExprScope {
   // `sec()` and params as derive values them: the scope of the document the variant builds.
   const base = new Ctx(d.doc, input.items);
   let tags: Map<string, readonly string[]> | undefined;
-  let box: { min: V3; max: V3 } | undefined | null = null;
+  let box: ReturnType<typeof modelExtent> | undefined;
 
   const bar = (name: string, id: string): DerivedBar => {
     const b = d.bars.get(id);
@@ -140,9 +120,11 @@ export function modelScope(input: ModelScopeInput): ExprScope {
     },
     bbox: (args) => {
       if (args.length !== 0) throw new ExprError("bbox takes no arguments");
-      if (box === null) box = modelBox(d);
-      if (!box) throw new ExprError("bbox(): no bar derives");
-      const { min, max } = box;
+      box ??= modelExtent(d, input.items);
+      // A part whose extent is not known leaves the box partial: never a pass on it (§4.9).
+      if (!box.ok) throw new ExprError(`bbox(): ${noBoxText(box.noBox)}`);
+      if (!box.extent) throw new ExprError("bbox(): no body derives");
+      const { min, max } = box.extent;
       return { kind: "vec", v: [max[0] - min[0], max[1] - min[1], max[2] - min[2]] };
     },
     count: (args) => {

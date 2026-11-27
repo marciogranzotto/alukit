@@ -1,9 +1,9 @@
 import { ShapeUtils, Vector2 } from "three";
-import { cosDeg, sinDeg } from "#core/trig.ts";
 import type { MeshData } from "./data.ts";
 import type { V3, ViewHole, ViewShape } from "./model.ts";
 import type { P2 } from "./outline.ts";
 import type { PartShape } from "./place.ts";
+import { area2, type Prism, shapePrism } from "./shapes.ts";
 import { boxMesh } from "./solids.ts";
 
 /**
@@ -23,53 +23,24 @@ import { boxMesh } from "./solids.ts";
  *
  * The one piece of three.js here is its triangulator (`ShapeUtils.triangulateShape`, earcut) for
  * the end faces of an outline, which may be concave: the same one a section's extrusion uses in
- * `bars.ts`. No geometry class, no renderer.
+ * `bars.ts`. No geometry class, no renderer. The prisms themselves are `shapes.ts`'s, which the
+ * checks' `bbox()` reads too (§4.9).
  */
 
 /** How far a hole's marker stands proud of a face, so it shows (mm). */
 export const MARK_PROUD_MM = 0.5;
-
-/** Chords per bend arc: 90° in 8 steps of 11.25° stays under the edge angle, so it draws smooth. */
-const ARC_SEGMENTS = 8;
 
 /** Sides of a hole's rod: more than a fastener's, as a hole is often small and seen end on. */
 export const HOLE_SEGMENTS = 16;
 
 type PlateShape = Extract<ViewShape, { kind: "plate" }>;
 type AngleShape = Extract<ViewShape, { kind: "bent-angle" }>;
-type Axis = 0 | 1 | 2;
-
-/** Twice the signed area of a ring: positive when it runs counter-clockwise. */
-function area2(ring: readonly P2[]): number {
-  let a = 0;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const p = ring[j] as P2;
-    const q = ring[i] as P2;
-    a += p[0] * q[1] - q[0] * p[1];
-  }
-  return a;
-}
-
-/** A ring with no corner repeated next to itself (nor the last as the first), counter-clockwise. */
-function cleanRing(ring: readonly P2[]): P2[] {
-  const out: P2[] = [];
-  for (const p of ring) {
-    const last = out[out.length - 1];
-    if (!last || last[0] !== p[0] || last[1] !== p[1]) out.push(p);
-  }
-  const first = out[0];
-  const last = out[out.length - 1];
-  if (out.length > 1 && first && last && first[0] === last[0] && first[1] === last[1]) out.pop();
-  return area2(out) < 0 ? out.reverse() : out;
-}
 
 /**
- * A ring in the (u, v) plane extruded along w from 0 to `depth`: both end faces triangulated, one
- * flat quad per side. `axes` says which of the item's x, y and z each of u, v and w is; it must be
- * an even permutation, so that a counter-clockwise ring stays counter-clockwise seen from +w.
+ * A shape's prism (`shapes.ts`: its clean, counter-clockwise ring in the (u, v) plane, extruded
+ * along w from 0 to `depth`): both end faces triangulated, one flat quad per side.
  */
-function prism(ring0: readonly P2[], depth: number, axes: readonly [Axis, Axis, Axis]): MeshData {
-  const ring = cleanRing(ring0);
+function prism({ ring, depth, axes }: Prism): MeshData {
   const n = ring.length;
   const positions: number[] = [];
   const normals: number[] = [];
@@ -128,39 +99,14 @@ function prism(ring0: readonly P2[], depth: number, axes: readonly [Axis, Axis, 
   };
 }
 
+/** A plate: its outline extruded along z through its thickness. */
 export function plateMesh(s: PlateShape): MeshData {
-  return prism(s.outline, s.thickness, [0, 1, 2]);
+  return prism(shapePrism(s));
 }
 
-/**
- * A bent angle's section in the plane of its legs, u along leg a (the item's y) and v along leg b
- * (its z), counter-clockwise: from leg a's free edge up to its inside face, round the inside arc
- * (radius R) to leg b's inside face, out to leg b's free edge, down its outside face and round the
- * outside arc (radius R + T) back to leg a's outside face. With R = 0 the inside arc is a corner.
- */
-export function angleSection(s: AngleShape): P2[] {
-  const [A, B] = s.legs;
-  const T = s.thickness;
-  const R = s.radius;
-  const c = R + T;
-  const arc = (r: number, from: number, to: number): P2[] =>
-    Array.from({ length: ARC_SEGMENTS + 1 }, (_, i) => {
-      const deg = from + ((to - from) * i) / ARC_SEGMENTS;
-      return [c + r * cosDeg(deg), c + r * sinDeg(deg)] as P2;
-    });
-  return [
-    [A, 0],
-    [A, T],
-    ...(R > 0 ? arc(R, 270, 180) : [[T, T] as P2]),
-    [T, B],
-    [0, B],
-    ...arc(c, 180, 270),
-  ];
-}
-
-/** The section extruded along the item's x: u → y, v → z, w → x (an even permutation). */
+/** A bent angle: its section (`angleSection`) extruded along the item's x: u → y, v → z, w → x. */
 export function angleMesh(s: AngleShape): MeshData {
-  return prism(angleSection(s), s.length, [1, 2, 0]);
+  return prism(shapePrism(s));
 }
 
 export function itemMesh(s: ViewShape): MeshData {

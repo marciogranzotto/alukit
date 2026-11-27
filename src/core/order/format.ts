@@ -1,4 +1,5 @@
 import type { Diagnostic } from "../diagnostics.ts";
+import { lockLines, oldestText } from "../stamp.ts";
 // From types.ts, not order.ts: the viewer imports these helpers, and nothing of the pricing.
 import {
   type CostOut,
@@ -171,9 +172,9 @@ function problems(ds: readonly Diagnostic[]): string[] {
 export function orderMarkdown(o: Order): string {
   const out: string[] = ["# Order list", ""];
   out.push(
-    `${o.status}. Prices on the ${o.price_basis} basis${o.currency ? ` in ${o.currency}` : ""}, as of ${o.as_of}; the oldest was read ${o.oldest_read ?? "(none)"}.`,
+    `${o.status}. Prices on the ${o.price_basis} basis${o.currency ? ` in ${o.currency}` : ""}, as of ${o.as_of}; ${oldestText(o.oldest_read)}.`,
     "",
-    ...stampLines(o.lock),
+    ...lockLines(o.lock),
   );
   for (const s of o.suppliers) {
     out.push(`## ${supplierName(s)}: ${s.status}`, "");
@@ -201,14 +202,18 @@ export function orderMarkdown(o: Order): string {
   return out.join("\n");
 }
 
-/** The lock the output was derived from (§4.13, §9), as a line of its own. */
-function stampLines(lock: string | undefined): string[] {
-  return lock === undefined ? [] : [`Derived from the lock ${lock}.`, ""];
-}
-
-/** The stamp as the first CSV row: `stamp`, named `lock`, the hash in `details`. */
-function stampRow(row: Row, lock: string | undefined): void {
-  if (lock !== undefined) row({ row: "stamp", name: "lock", details: lock });
+/**
+ * The stamp as the first CSV rows (§5.4): `stamp` rows, each naming its field in `name` with the
+ * value in `details`: the lock when derived from one, then the price basis and the oldest read
+ * date (empty when no price was read).
+ */
+function stampRows(
+  row: Row,
+  s: { lock?: string; price_basis: string; oldest_read: string | null },
+): void {
+  if (s.lock !== undefined) row({ row: "stamp", name: "lock", details: s.lock });
+  row({ row: "stamp", name: "price_basis", details: s.price_basis });
+  row({ row: "stamp", name: "oldest_read", details: s.oldest_read ?? undefined });
 }
 
 function csvCell(s: string | number | undefined): string {
@@ -278,7 +283,7 @@ function csvTable(columns: readonly Column[], fill: (row: Row) => void): string 
 export function orderCsv(o: Order): string {
   const m = (x: number | undefined) => (x === undefined ? undefined : money(x));
   return csvTable(CSV_COLUMNS, (row) => {
-    stampRow(row, o.lock);
+    stampRows(row, o);
     for (const s of o.suppliers) {
       for (const l of s.lines) {
         row({
@@ -364,6 +369,8 @@ export interface CostsOutput {
   currency: string | null;
   price_basis: Order["price_basis"];
   as_of: string;
+  /** The order's: the oldest read date of a price its lines use, which the totals add up. */
+  oldest_read: string | null;
   /** The stamp: the content hash of the lock it was derived from. */
   lock?: string;
   costs: CostOut[];
@@ -377,6 +384,7 @@ export function costsOf(o: Order): CostsOutput {
     currency: o.currency,
     price_basis: o.price_basis,
     as_of: o.as_of,
+    oldest_read: o.oldest_read,
     ...(o.lock !== undefined ? { lock: o.lock } : {}),
     costs: o.costs,
     totals: o.totals,
@@ -388,9 +396,9 @@ export function costsMarkdownDoc(c: CostsOutput): string {
   const out = [
     "# Costs",
     "",
-    `Prices on the ${c.price_basis} basis${c.currency ? ` in ${c.currency}` : ""}, as of ${c.as_of}.`,
+    `Prices on the ${c.price_basis} basis${c.currency ? ` in ${c.currency}` : ""}, as of ${c.as_of}; ${oldestText(c.oldest_read)}.`,
     "",
-    ...stampLines(c.lock),
+    ...lockLines(c.lock),
     ...costsMarkdown(c.costs),
     ...totalsMarkdown(c.totals),
     ...problems(c.diagnostics),
@@ -400,7 +408,7 @@ export function costsMarkdownDoc(c: CostsOutput): string {
 
 export function costsCsv(c: CostsOutput): string {
   return csvTable(COSTS_COLUMNS, (row) => {
-    stampRow(row, c.lock);
+    stampRows(row, c);
     for (const x of c.costs) costRow(row, x);
     totalRows(row, c.totals);
   });

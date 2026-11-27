@@ -21,7 +21,8 @@ below as dvb), so that the design again describes the system as built. A recorde
 proved the better choice is now the rule; a feature v1 does not have is stated as a **v1 limit**,
 with the version that takes it up. Calls left for the owner's review are marked *open* (§14, call 6
 and calls 31–34; after the second acceptance run, 36–38). Changed text is marked *2.3*. The build
-was not changed for this draft, except as "After acceptance run 2" below records. Notes are cited by
+was not changed for this draft, except as "After acceptance run 2" and "After acceptance run 3"
+below record. Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -62,8 +63,8 @@ name and decision number ("m4a 13" is decision 13 of
   v1; project items hold numbers, default to supplier `local`, and take the hole and price rules
   as built (m6 1–15; dvb 17).
 - §4.9: `cost(high)`, not `cost("high")`, since the language has no strings; accessors are for
-  checks only; `bbox()` holds bars only, a v1 limit; margins per operator (m3a 7, 8; m3b-doc 34,
-  37, 39; dvb 13).
+  checks only; `bbox()` holds bars only, a v1 limit, *closed after acceptance run 3*; margins per
+  operator (m3a 7, 8; m3b-doc 34, 37, 39; dvb 13).
 - §4.10: cost lines take `only_in` and `not_in` (A5); `only_in` leaves an entity out of the
   document derived with no variant; what a swap replaces and what it leaves (acceptance-gaps A5;
   m5 3–6; dvb 15, 21).
@@ -82,8 +83,8 @@ name and decision number ("m4a 13" is decision 13 of
 - §5.3: kerf and trim defaults; end holes listed from their end; identity by where machining
   physically is; a rail's holes as one record (m3a 33; m3b-gen 5, 6, 32; acceptance-gaps A4).
 - §5.4: a bar's mass from its centre-line length; joint recipes listed apart; the **machining
-  sheet**; a v1 limit: only the order and the costs state the lock's hash (m3b-gen 35, 36;
-  acceptance-gaps A2; m6 18–22; m3b-doc 40; m3b-order).
+  sheet**; a v1 limit: only the order and the costs state the lock's hash, *closed after
+  acceptance run 3* (m3b-gen 35, 36; acceptance-gaps A2; m6 18–22; m3b-doc 40; m3b-order).
 - §5.5: fit by role; the order's date, `as_of`; a placeholder holds its own group; the cover does
   not avoid an out-of-stock offer (m3b-doc 41; m3b-order 5, 10; m6 16; dvb 16).
 
@@ -117,7 +118,7 @@ name and decision number ("m4a 13" is decision 13 of
 **§9 Exports, §10 Stack, §11 Forseti**
 
 - §9: the GLB's root node, its hole children and extras; the machining sheet; which outputs carry
-  the lock's hash (m5 22–27, 40; m6 18).
+  the lock's hash, every one *after acceptance run 3* (m5 22–27, 40; m6 18).
 - §10: `serve` does not rebuild `dist/`, a v1 limit; the API in Vite's dev server; the pins as M0
   kept them, with vite's release-age exclusion still open (m4a 43, 44; the
   [build session log](sessions/2026-11-26-alukit-v1-build-session-log.md)).
@@ -158,6 +159,29 @@ value of G1–G32 moved.
   and connections (acceptance-gaps-2 13, 15, 16).
 - §12–§14: the second run's gaps row and fixtures; §13's second run (tests 1–4 passed with no
   exception; failed on A9; both gaps fixed); calls 36–38, all open.
+
+### After acceptance run 3
+
+The third run passed. Three v1 limits the design named are closed in the build, each with tests
+written first, and the design no longer calls them limits
+([`notes/v1-limits-closed.md`](notes/v1-limits-closed.md), cited as "v1-limits"). No golden value
+moved; two of G34's fault cases and G31's tapped case gain an error (below).
+
+- §4.11, §5.4, §9, §4.13: **every output states the stamp**. The cut list, the BOM, the machining
+  sheet and `derive --json` state the lock's hash as the order and the costs did; the cut list
+  and the costs state the oldest price read date beside the basis, and the order's and the costs'
+  CSV the basis and the date as `stamp` rows; the server answers as the CLI, byte for byte;
+  `revision verify` does not count a stamp a stored output lacks as drift (v1-limits 1–9).
+- §4.9: **`bbox()` covers every body** the viewer draws and the GLB holds: bars, placed parts
+  (project shapes, placeholders and catalog boxes) and face fasteners, from the same shapes and
+  placement in `src/mesh/`; a placed part whose item gives no box makes the check that reads it an
+  error (v1-limits 10–15).
+- §3.4, §3.5, §5.1, §5.5, §13: **a tap into a bar's end is checked against its section's
+  cores**: an end tap, a connector's in a butting or a through bar's end or a splice's, and a
+  tapped end hole. On none of them, a `machining` error naming the bar, the end and the nearest
+  cores; a section that gives no core positions (only a `tslot`'s `bores` do) an info. Two of
+  G34's fault cases, their taps at the centre, gain that error beside the coincidence error, and
+  G31's tapped case gains it, its M8 10.00 off the block's core; no value moves (v1-limits 16–21).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -508,7 +532,9 @@ the face it butts into, or the end face. A hole in the butting bar's side takes 
 or whose hole misses the face, makes no op and is a `connection` error. A **splice** taps one core
 per stud in both spliced ends: at the positions of its `at_mm`, else each at the centre, where
 several coincide (§5.5). `catalog check` warns about a splice whose studs have no positions and
-refuses one whose positions do not number them.
+refuses one whose positions do not number them. Every tap into a bar's end, a requirement's end
+tap or tapped end hole or a splice's tap, is then checked against the cores of its bar's section
+(§3.5): one on none of them is a `machining` error naming the nearest (*2.3*, §5.5).
 
 **The ratings bag** (review m7, m16). Instead of fixed schemas for drive, damper and anchor, which
 nothing reads in v1, every item has `ratings`: a map whose keys come from one vocabulary file in
@@ -552,7 +578,8 @@ A section file holds one section, in mm, about its nominal centre (local x = wid
 | `box` | the bounding box only | as a box | no |
 
 **Generators**: `tslot` (overall size, the groove from its groove type, one groove centred per
-face by default, a list of core `bores`), `rhs` (with corner radii), `tube` (round), `rod`,
+face by default, a list of core `bores`, which are the section's cores where an end tap is cut,
+§5.5, *2.3*), `rhs` (with corner radii), `tube` (round), `rod`,
 `threaded-rod` (nominal for drawing, stress area for properties), `flat`, `angle` (rolled, with
 root and toe radii), `rail` (envelope from published dimensions). A local steel catalog then needs
 no outline files. Arcs are flattened at a fixed 0.5° step, which keeps the error relative: 0.0025 %
@@ -1022,10 +1049,10 @@ not move with the built-in catalogs.
 | G26 | `price_bands: [{supplier: S, low_pct: -10, high_pct: 25}]`; two lines of S at likely R$ 156.86 and R$ 10.05; a third line of S, 2 units of an offer priced `regular_minor: {v: 5000, low: 4500, high: 6000}` (R$ 50.00, 45.00 to 60.00) | a band on minor units, rounded once, half away from zero; an offer's own range wins (§4.11) | 156.86: low 141.17, high 196.08 (19,607.5 minor units rounds up). 10.05: low 9.05 (904.5 rounds up; round-half-even would give 9.04), high 12.56. Third line: low 90.00, likely 100.00, high 120.00 |
 | G29 | angle L76.2x6.35 (root 9.525, toe 4.76) b1 (0,0,0)→(300,0,0), anchor `heel`; a 40x40 b2 (0,26.35,50)→(300,26.35,50) on the upright leg's inner face; `face` [b1, b2], `bolt` M12, `at_mm: [100]` | a layer on an inner face; the walk through the material (gap A3, *2.3*) | in contact on the leg's inner face (`+x@-31.75`); station (100, 6.35, 38.10); grip 46.35, and 46.35 through the layers; one Ø13.5 hole in each, the leg's from its outer face. On the outer face (b2 at y = −20): grip 46.35, where the angle's box gave 116.20. 0.1 mm off the inner face: a `face` error; with `gaps_mm: [0.1]`, 46.45. `across_mm: [11.9]`: station (100, 6.35, 50.00). On a channel 100x50x6x8's bottom flange, the block at (3, −22), `across_mm: [3]`: station (100, 3, −42), grip 48.00, the flange's hole 8 deep |
 | G30 | RHS 100x50x4 (no system) b1 (0,0,0)→(1000,0,0); 40x40 b2 (500,0,0)→(500,600,0); `butt` through b1 with a bush end whose mount's set, for the 40x40's system, is a bush and a sleeve `{item: tube 18x2, inside: "through", len_mm: "bore"}` | fit by role; a joint recipe (gaps A1, A2, *2.3*) | no error; b2 575.00; one sleeve 42.00; one bush and one bush end. Two butting ends, one from −Y: two of each. Through a T-slot bar: a `fit` error on the through bar, b2 580.00. A T-slot bracket with no sleeve, or an end connector with no mounts, on the RHS: a `fit` error on b1. The bush end on a flat bar of no system: a `fit` error on the flat bar only, and no bush and no sleeve. A sleeve of a fixed length: cut as given (40.00); through a T-slot bar, a `fit` error on it. A recipe with the same mount: the same bush and sleeve, no connector counted, the recipe listed once |
-| G31 | block b1 (0,0,0)→(120,0,0); brace b2 (1720,1210,0)→(120,10,0), `cut: "angle"` at b, 10 off the block's centre line; `butt` through `b1.b` with a connector that `requires` a Ø9 hole `on: "through"` | a hole into the end a butt bears on (gap A4, *2.3*) | b1 120.00 with an `end-hole` Ø9 at end b, 10.00 off its centre in x, through, listed "Ø9.00 hole in end a along the axis, at x -10.00, y 0.00 from the centre, through"; b2 long point 2015.00. With `spacer_mm: 8`: the hole 16.00 off centre; b2 2005.00 (centre line 1990.00). A tapped M8 20 deep: the same place, "tap M8 in end a along the axis, … 20.00 deep" |
+| G31 | block b1 (0,0,0)→(120,0,0); brace b2 (1720,1210,0)→(120,10,0), `cut: "angle"` at b, 10 off the block's centre line; `butt` through `b1.b` with a connector that `requires` a Ø9 hole `on: "through"` | a hole into the end a butt bears on (gap A4, *2.3*) | b1 120.00 with an `end-hole` Ø9 at end b, 10.00 off its centre in x, through, listed "Ø9.00 hole in end a along the axis, at x -10.00, y 0.00 from the centre, through"; b2 long point 2015.00. With `spacer_mm: 8`: the hole 16.00 off centre; b2 2005.00 (centre line 1990.00). A tapped M8 20 deep: the same place, "tap M8 in end a along the axis, … 20.00 deep", and a `machining` error on b1: 10.00 off the 40x40's one core, at its centre, the tap has no core to be cut in (*2.3*, §5.5) |
 | G32 | G25's joint with the sleeve's `len_mm: "bore + sec(b3).t_mm"`, so it passes the RHS's head-side wall | a hole a sleeve passes clears it (gap A7, *2.3*) | 4 × 46.00 sleeve; the head-side wall's 4 holes Ø20 (ISO 273 medium for 18), the other 20 Ø11. With `clearance_mm: 1`: Ø19; with 0: Ø18. A 50 mm sleeve also enters the flat below the RHS 4 mm: its 4 holes there Ø11 with a counterbore Ø20 × 4 |
 | G33 | RHS 200x100x4.75 (no system) b1 (0,0,0)→(1000,0,0); 40x40 b2 (500,0,0)→(500,600,0) and b3 (500,−600,0)→(500,0,0); c1 `butt` through b1, ends [b2.a], a stud end (a stud, a bush, a sleeve `{inside: "through", len_mm: "bore"}`, an M16 end tap, a Ø9 hole through the through bar); c2 `butt` through b1, ends [b3.b], a bush end (a bush, the tap), `held_by: "c1"` | one through-fastener for two coaxial ends (gap A9, *2.3*) | no error; b2 and b3 550.00; one stud, two bushes; one sleeve 90.50; one Ø9 hole in b1 at 500.00 on face +x; an M16 tap in each butting end; the stud crosses 100.00 between the butting end faces. One butt with both ends and the stud end on each: two studs, two sleeves, the hole made twice (a `machining` error on b1). No `held_by`: a `fit` error on c2. b3 at x = 520: a `connection` error on c2 (20.00 off). A holder whose connector passes nothing through b1: a `connection` error on c2, and c1's `fit` error. The held butt's connector passing its own stud: a `connection` error on c2 (and the hole made twice) |
-| G34 | 80x80 bars, four cores at (±20, ±20): b1 (0,0,0)→(600,0,0); post b2 (300,0,0)→(300,0,500), `butt` through b1 with J4 (an M16 end tap and a Ø9 `through-hole` `at_holes: 0`, a mount of four holes at (±20, ±20) with a bush each); post b3 (300,0,500)→(300,0,1000) spliced to b2 with four M16 studs at `at_mm` (±20, ±20) | machining at positions; one splice tap per stud; coincident machining (gap A8, *2.3*) | b1 600.00, four Ø9 holes on face +y at 280.00 and 320.00 from end a, −20.00 and 20.00 across; b2 460.00, four M16 taps in each end at x, y ±20.00 from the centre; b3 500.00, four in end a; four bushes and four studs; no error. Positions as `at_mm`: the same. Each requirement written four times with no position: a `machining` error on b1 and on b2. Four studs and no positions: four taps at each end's centre, a `machining` error on b2 and on b3. On 40x40 posts: a `connection` error on c1 (the taps fall off the end); b1's four holes stand |
+| G34 | 80x80 bars, four cores at (±20, ±20): b1 (0,0,0)→(600,0,0); post b2 (300,0,0)→(300,0,500), `butt` through b1 with J4 (an M16 end tap and a Ø9 `through-hole` `at_holes: 0`, a mount of four holes at (±20, ±20) with a bush each); post b3 (300,0,500)→(300,0,1000) spliced to b2 with four M16 studs at `at_mm` (±20, ±20) | machining at positions; one splice tap per stud; coincident machining (gap A8, *2.3*) | b1 600.00, four Ø9 holes on face +y at 280.00 and 320.00 from end a, −20.00 and 20.00 across; b2 460.00, four M16 taps in each end at x, y ±20.00 from the centre; b3 500.00, four in end a; four bushes and four studs; no error. Positions as `at_mm`: the same. Each requirement written four times with no position: a `machining` error on b1 and on b2, and a second on b2, its taps at the centre, which is no core (*2.3*). Four studs and no positions: four taps at each end's centre, a `machining` error on b2 and on b3, and a second on each for the same reason (*2.3*). On 40x40 posts: a `connection` error on c1 (the taps fall off the end); b1's four holes stand |
 
 ### 4.7 Parts, rails and patterns (D14)
 
@@ -1149,8 +1176,15 @@ A small, safe language; no JS `eval`.
   name, not draft 2's `cost("high")`). A total that leaves something out (an item with no mass, a
   line with no price, a cost line with no rate) makes the check one that cannot be evaluated, an
   error naming what is missing, never a pass on a partial sum.
-- `bbox()` is the extent of the bar bodies, each swept between its end planes. **v1 limit**
-  (*2.3*): parts are not in it yet (v1.1).
+- `bbox()` is the extent of every body the viewer draws and the GLB holds (*2.3*): the bars, each
+  its section's box swept between its end planes; the placed parts, a project plate or bent
+  angle by its shape, a placeholder and any other part by its item's box, each in its frame on its
+  station; and the face connections' fasteners, as the rods drawn through their layers. It reads
+  the same shapes and the same placement as the viewer and the GLB (`src/mesh/`), so the three
+  agree: to the output quantum for a bar, which they place from `derive --json`, and exactly for
+  the rest. A part's hole markers stand proud of it to show and are not bodies. A placed part
+  whose item gives no box is drawn as a marker, which is not its extent, so a check that reads
+  `bbox()` then cannot be evaluated, an error naming the part, never a pass on a partial box.
 - `^` is right-associative and binds tighter than unary minus (`-2^2` is −4); comparisons do not
   chain; `if` evaluates one branch (*2.3*).
 - `sec(b3)` reads the bar's section, after swaps (*2.1*): `sec(b3).t_mm` and the other parameters
@@ -1200,8 +1234,9 @@ any two.
 - **`currency`**: the project's. Offers keep their catalog's currency. `fx` holds dated rates as
   valued fields (`"fx": { "EUR": { "v": 6.2, "src": "src", "ref": "…", "read": "…" } }`). Lines are
   converted per line; a line with no rate is a missing price (§5.5).
-- **`price_basis`**: `regular` (default), `sale` or `lowest`. The order list states the basis and
-  the oldest read date.
+- **`price_basis`**: `regular` (default), `sale` or `lowest`. Every output that carries prices
+  (the cut list, the order list, the costs) states the basis and the oldest read date of a price
+  it uses (§5.4; *2.3*).
 - **`costs`**: lines that are not parts: `{ "id", "label", "kind", "supplier"?, "low_minor",
   "likely_minor", "high_minor", "currency"?, provenance, "blocks"?, "covers"?, "only_in"?,
   "not_in"? }`, with `kind` one of `machining`, `fabrication`, `labour`, `freight`, `lifting`,
@@ -1290,7 +1325,8 @@ the folder never changes the next stamp (*2.3*).
 - Opening a revision shows the stored outputs: what was published, whatever the tool does now.
 - `alukit revision verify <name>` re-derives with the current tool, from the stored document and
   lock and no catalog, and reports any drift, a broken hash, and a tool-version difference as a
-  note.
+  note. Each stored output carries its stamp (§5.4); a stamp field the stored output does not
+  have, saved before that output was stamped, is not drift (*2.3*).
 - Old schema versions are read through migrations kept forever; stored outputs are never
   migrated.
 
@@ -1320,7 +1356,8 @@ which gives its stored outputs (*2.3*).
    judged by role (§3.4); a connector's machining at its positions, a splice's taps one per stud,
    and a butt held by another's through-fastener (*2.3*, §3.4, §4.5); fastening stacks, their walk
    and their grip. Last, ops of one bar of the same kind and size at one place, one op made twice,
-   are a `machining` error (*2.3*, §5.5).
+   are a `machining` error (*2.3*, §5.5), and so is a tap into a bar's end on none of its
+   section's cores (*2.3*, §5.5).
 5. **Collect.** Cut list, BOM (joint recipes apart), machining sheet, order list (offers, packs,
    kits), costs and totals (§5.3, §5.4).
 6. **Check.** Built-in and project checks, then the order rules (§5.5).
@@ -1414,10 +1451,23 @@ along the box's centre line from each end face (*2.3*).
   price band, §4.11), cut pieces and machining services. Services are priced
   from the supplier's `services.json`, or by a cost line that covers them; in v1 only by a cost
   line (§3.1, §4.11).
-- Every output states the lock hash, the price basis and the oldest price read date. **v1 limit**
-  (*2.3*): the order list and the costs state the lock's sha256 in every format, and the GLB
-  carries the full stamp (§9); the cut list, the BOM and the machining sheet do not state the lock
-  yet (v1.1).
+- Every output states the lock hash, the price basis and the oldest price read date: **the
+  stamp** (*2.3*). Each output derived from a lock (the cut list, the BOM, the machining sheet,
+  the order list, the costs and `derive --json`) states the lock's sha256, taken of its canonical
+  text, so `shasum -a 256 alukit.lock.json` gives it: `lock` in JSON, a line "Derived from the
+  lock …" in Markdown, a first `stamp` row in CSV. An output that carries prices also states the
+  basis and the oldest read date of the prices it uses: the cut list, those of the offers it chose
+  (each cut-to-length group's, each stock bar's); the order list, those of its priced lines; the
+  costs, the order's. In JSON these are `price_basis`, `oldest_read` and `lock`, in that order; in
+  CSV, `stamp` rows after the lock's, where the CSV has prices (the order list and the costs; the
+  cut list's CSV gives none). The BOM, the machining sheet and the derived model carry no prices,
+  so they state the lock alone, and `derive --select` keeps it as it keeps `schema`. The server's
+  `/api/*` answers are the CLI's, byte for byte; the GLB carries the full stamp (§9). Called from
+  code without a lock, an output states no lock, which keeps the hand goldens statements about the
+  values: a test compares an output with its golden plus the stamp's lines. A revision stores each
+  output with its stamp; `revision verify` compares a stored stamp field, and one the store does
+  not have (an output saved before it was stamped) is not drift, since the revision's own stamp
+  already covers the lock (§4.13).
 - Output as Markdown, CSV or JSON.
 
 ### 5.5 Checks and what blocks the order (review M8)
@@ -1428,7 +1478,8 @@ along the box's centre line from each end face (*2.3*).
 | Ends and connections | the validation column of §4.5, two providers, an undeclared angled cut, a chain of end providers, a station on a run's joint, a run not spliced in order; a `held_by` that does not hold, a connector position that falls off its end or face (*2.3*) | error |
 | Unconnected ends | a point shared by two or more bar ends with no connection | warn |
 | Fit | a connector that holds a joined bar in no way it may (§3.4, by role; *2.3*); a T-nut that does not fit its groove; a carriage on another rail system; a `face` with no contact | error |
-| Machining (*2.3*) | two ops of one bar of the same kind and size at one place, one op made twice (§5.1): a requirement written once per screw, a splice whose studs have no positions, two ends that each pass a hole through one axis. Places compare as the cut list's identity does, a through hole by its axis | error |
+| Machining (*2.3*) | two ops of one bar of the same kind and size at one place, one op made twice (§5.1): a requirement written once per screw, a splice whose studs have no positions, two ends that each pass a hole through one axis. Places compare as the cut list's identity does, a through hole by its axis. A tap into a bar's end on none of its section's cores (its centre more than `tol.len` from every core's): an end tap, a connector's in a butting or a through bar's end or a splice's, or a tapped end hole (a drilled one is not checked); the error names the bar, the end, the place and the nearest cores (*2.3*) | error |
+| Machining (*2.3*) | a tap into the end of a bar whose section gives no core positions, so it is not checked: in v1 only a `tslot` generator's `bores` give them (§3.5); a drawn, traced or box section does not say which of its holes is a core | info |
 | Lengths | cut length ≤ 0, outside the offer's range, a cut angle outside the supplier's service range | error |
 | Rails | end distance E outside the rail's range; a factory end that is not square | error |
 | Rails | a stock rail with no factory end named (§4.7) | warn |
@@ -1750,9 +1801,10 @@ selection; fitting keeps the view's direction, since `fitToBox` turns it to the 
     revision, variant, and the git commit and dirty flag as a second field (review M5). This
     answers the "published page traced to no commit" lesson.
 - **Cut list, BOM, machining sheet (*2.3*), order list and costs** as Markdown, CSV or JSON (the
-  machining sheet without CSV), with the same stamp; in v1 only the order list and the costs carry
-  the lock's hash (§5.4).
-- **`derive --json`**, the full derived model for external report builders.
+  machining sheet without CSV), each stating the lock's hash, and where it prices the basis and
+  the oldest read date (§5.4; *2.3*).
+- **`derive --json`**, the full derived model for external report builders, stating the lock's
+  hash (*2.3*).
 
 STEP, DXF flats and a self-contained report come in v2 (D6).
 
@@ -1778,7 +1830,9 @@ docs/
 ```
 
 `src/core/` and `src/catalog/` import no three.js and nothing from `src/ui/`; the CLI imports
-nothing that reaches `.tsx`.
+nothing that reaches `.tsx`. The checks' `bbox()` reads the bodies from `src/mesh/`'s three-free
+modules (`extent.ts` and what it imports), so it measures what is drawn (*2.3*); a test walks
+the imports of `src/core/` and `src/catalog/` and fails on any that reaches three.js.
 
 **`alukit serve`** serves the built app (`dist/`, rebuilt by the CLI when its source hash
 changes) from `node:http`. **v1 limit** (*2.3*): `serve` does not rebuild `dist/`; it refuses to
@@ -1997,6 +2051,9 @@ ops from 16 to none and the splice taps to the record's count. AluKit's `check` 
 fault in the record itself (two screws of a joint leave the block they fix), confirmed by hand.
 One minor finding moved no test: an end tap is not checked against the section's cores, so a tap
 written with no position on a section with no centre core passes silently (a v1 limit, §5.5).
+*Closed after the run* (*2.3*): a tap into a bar's end on none of its section's cores is a
+`machining` error, and a section that gives no core positions an info
+([notes](notes/v1-limits-closed.md) 16–21).
 
 ## 14. Calls made without asking (veto any)
 

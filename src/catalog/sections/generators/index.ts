@@ -5,7 +5,7 @@ import { rod, threadedRod, tube } from "./round.ts";
 import { tslot } from "./tslot.ts";
 import type { Generator } from "./types.ts";
 
-export type { GeneratedSection, GeneratorContext, GrooveDims } from "./types.ts";
+export type { GeneratedSection, GeneratorContext, GrooveDims, SectionCore } from "./types.ts";
 export { NO_CONTEXT } from "./types.ts";
 
 /**

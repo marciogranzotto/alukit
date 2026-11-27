@@ -15,10 +15,18 @@ import {
   squareMatrix,
 } from "./bars.ts";
 import type { Mat4, MeshData } from "./data.ts";
+import { extentOf, fastenerPoints, shapePoints } from "./extent.ts";
 import { angleMesh, holeMarks, MARK_PROUD_MM, partMesh, plateMesh } from "./items.ts";
-import type { BarJson, MeshInput, PartJson, ViewSection, ViewShape } from "./model.ts";
+import type {
+  BarJson,
+  MeshInput,
+  PartJson,
+  ViewFastener,
+  ViewSection,
+  ViewShape,
+} from "./model.ts";
 import { simplifyRing } from "./outline.ts";
-import { holeMatrix, partShape } from "./place.ts";
+import { fastenerMatrix, holeMatrix, partShape } from "./place.ts";
 import { boxMesh, rodMesh } from "./solids.ts";
 
 /**
@@ -400,5 +408,51 @@ describe("project items (§4.8): the cart's plate, bent angle and placeholder", 
     const b = extent(rod, holeMatrix(b1 as NonNullable<typeof b1>));
     near(b.min, [25 - 1.65, -P, 18 - 1.65]);
     near(b.max, [25 + 1.65, 3 + P, 18 + 1.65]);
+  });
+});
+
+describe("bodies (§4.9's bbox()): what the viewer draws and the GLB holds, as points", () => {
+  const shapeOf = (id: string) => models.cart?.display.parts[id]?.shape as ViewShape;
+  const near = (got: readonly number[], want: readonly number[]) => {
+    for (let k = 0; k < 3; k++) expect(got[k]).toBeCloseTo(want[k] as number, 12);
+  };
+
+  it("give a project shape's vertices, the very ones its mesh has", () => {
+    const plate = shapeOf("p6") as Extract<ViewShape, { kind: "plate" }>;
+    const angle = shapeOf("p7") as Extract<ViewShape, { kind: "bent-angle" }>;
+    // By hand: the plate's outline through its 8 mm; the angle 50 long, legs 40 and 30.
+    expect(extentOf(shapePoints(plate))).toEqual({ min: [0, 0, 0], max: [160, 100, 8] });
+    expect(extentOf(shapePoints(angle))).toEqual({ min: [0, 0, 0], max: [50, 40, 30] });
+    // Every vertex is one of its mesh's, and every one of its mesh's is among them.
+    for (const [s, mesh] of [
+      [plate, plateMesh(plate)],
+      [angle, angleMesh(angle)],
+    ] as const) {
+      const key = (p: readonly number[]) => p.map((x) => Math.fround(x)).join(",");
+      const points = new Set(shapePoints(s).map(key));
+      const drawn = new Set([...positions({ array: mesh.positions })].map(key));
+      expect(points).toEqual(drawn);
+    }
+  });
+
+  it("give a fastener's rod: from its head along its axis, its diameter across", () => {
+    // By hand: an M10 rod 110 long from (545, 250, 85) along +X (the cart's c23.f1). Its 12 sides
+    // have vertices at 0°, 90°, 180° and 270°, so it reaches 5 either side in y and z.
+    const f: ViewFastener = {
+      connection: "c23",
+      k: 1,
+      item: "test:M10-ROD",
+      head: [545, 250, 85],
+      axis: [1, 0, 0],
+      len: 110,
+      d: 10,
+    };
+    const e = extentOf(fastenerPoints(f)) as { min: P3; max: P3 };
+    near(e.min, [545, 245, 80]);
+    near(e.max, [655, 255, 90]);
+    // The rod the viewer and the GLB draw reaches the same.
+    const drawn = extent(rodMesh(), fastenerMatrix(f));
+    near(e.min, drawn.min);
+    near(e.max, drawn.max);
   });
 });

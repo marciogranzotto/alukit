@@ -1,3 +1,4 @@
+import { lockLines, oldestText, stampRow } from "../stamp.ts";
 import type { CutGroup, CutLine, CutList, EndCut, Machining, PieceRail } from "./cutlist.ts";
 
 /** The cut list as Markdown, CSV or JSON (design §5.4: "Output as Markdown, CSV or JSON"). */
@@ -72,8 +73,9 @@ export function cutListMarkdown(cl: CutList): string {
   const out: string[] = ["# Cut list", ""];
   out.push(
     "Lengths in mm at the long point; a piece with an angled end also gives its centre-line length.",
-    `Prices on the ${cl.price_basis} basis, in minor units.`,
+    `Prices on the ${cl.price_basis} basis, in minor units; ${oldestText(cl.oldest_read)}.`,
     "",
+    ...lockLines(cl.lock),
   );
   for (const g of cl.groups) {
     out.push(`## ${groupTitle(g)}`, "");
@@ -128,7 +130,11 @@ function csvCell(s: string | number | undefined): string {
   return /[",\n]/.test(t) ? `"${t.replaceAll('"', '""')}"` : t;
 }
 
-/** One row per line, then one per stock bar (`kind` tells them apart). */
+/**
+ * One row per line, then one per stock bar (`kind` tells them apart). Derived from a lock, a
+ * first `stamp` row names the `lock` and gives its hash in `sources`, where a row says what it
+ * comes from (§5.4). The CSV gives no prices, so no basis and no read date.
+ */
 export function cutListCsv(cl: CutList): string {
   const head = [
     "kind",
@@ -151,6 +157,9 @@ export function cutListCsv(cl: CutList): string {
     "sources",
   ];
   const rows: string[] = [head.join(",")];
+  if (cl.lock !== undefined) {
+    rows.push(stampRow(head, { kind: "stamp", item: "lock", sources: cl.lock }));
+  }
   for (const g of cl.groups) {
     for (const l of g.lines) {
       rows.push(

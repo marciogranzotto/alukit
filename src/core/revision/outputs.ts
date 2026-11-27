@@ -1,6 +1,13 @@
 import type { Bom } from "../bom/bom.ts";
 import { type CheckResult, checkModel } from "../check/check.ts";
-import { checkedMachining, checkedOrder, modelOutputs, outputAccessors } from "../check/outputs.ts";
+import {
+  checkedBom,
+  checkedCutList,
+  checkedMachining,
+  checkedOrder,
+  modelOutputs,
+  outputAccessors,
+} from "../check/outputs.ts";
 import type { CutList } from "../cutlist/cutlist.ts";
 import { type Derived, derive } from "../derive/derive.ts";
 import { derivedJson } from "../derive/output.ts";
@@ -39,7 +46,7 @@ export interface Outputs {
 export interface OutputsInput {
   raw: unknown;
   items: ItemSource;
-  /** The lock the items come from: the order states its hash. */
+  /** The lock the items come from: every output states its hash. */
   lock?: Lock;
   variant?: string;
   /** The order's date (the stale-price rule). */
@@ -65,19 +72,16 @@ export function deriveOutputs(input: OutputsInput): { derived: Derived; outputs:
     ...d,
     diagnostics: sortDiagnostics([...(input.diagnostics ?? []), ...d.diagnostics]),
   };
-  const outputs = modelOutputs(derived, items);
-  const cl = outputs.cutList();
-  const b = outputs.bom();
+  // Each output states the lock it was derived from (the stamp, §5.4).
+  const stamp = input.lock ? { lock: lockHash(input.lock) } : {};
+  const outputs = modelOutputs(derived, items, stamp);
   const checked = checkModel({ raw, derived, items, accessors: outputAccessors(outputs) });
-  const order = checkedOrder(outputs, checked.diagnostics, {
-    asOf: input.asOf,
-    ...(input.lock ? { lock: lockHash(input.lock) } : {}),
-  });
+  const order = checkedOrder(outputs, checked.diagnostics, { asOf: input.asOf, ...stamp });
   const outputsJson = plain({
     ...(derived.variant !== undefined ? { variant: derived.variant } : {}),
-    derived: derivedJson(derived),
-    cutlist: { ...cl, diagnostics: sortDiagnostics([...derived.diagnostics, ...cl.diagnostics]) },
-    bom: { ...b, diagnostics: sortDiagnostics([...derived.diagnostics, ...b.diagnostics]) },
+    derived: derivedJson(derived, stamp),
+    cutlist: checkedCutList(derived, outputs),
+    bom: checkedBom(derived, outputs),
     order,
     costs: costsOf(order),
     machining: checkedMachining(derived, outputs),

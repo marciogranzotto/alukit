@@ -254,6 +254,8 @@ export const tslot: Generator<TslotParams> = {
       bbox_mm: box2(w, h),
       grooves,
       datums: {},
+      // The bores are its cores, where an end tap is cut (§5.5); with none given, not known.
+      ...(p.bores ? { cores: p.bores.map((b) => ({ at_mm: b.at_mm, d_mm: b.d_mm })) } : {}),
     };
   },
 

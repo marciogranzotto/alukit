@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { at, FIXTURES, fixtureCopy, patchJson } from "#catalog/testing.ts";
-import { editJson, scratchFixtures } from "#core/testing.ts";
+import { editJson, lockStamp, oldestCutRead, scratchFixtures } from "#core/testing.ts";
 import { helpText, run } from "./cli.ts";
 
 const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {
@@ -191,7 +191,8 @@ describe("alukit derive, cutlist and bom", () => {
     const r = await capture(["derive", project("cart"), "--select", "bars.*.cut_mm,params"]);
     expect(r.code).toBe(0);
     const d = JSON.parse(r.out.join("\n"));
-    expect(Object.keys(d)).toEqual(["schema", "params", "bars"]);
+    // The schema and the stamp (§5.4) are always kept.
+    expect(Object.keys(d)).toEqual(["schema", "lock", "params", "bars"]);
     expect(d.params).toEqual(whole.params);
     expect(Object.keys(d.bars)).toEqual(Object.keys(whole.bars));
     expect(d.bars.b14).toEqual({ cut_mm: whole.bars.b14.cut_mm });
@@ -344,6 +345,88 @@ describe("alukit derive, cutlist and bom", () => {
     // --frozen derives from the lock alone, and states the same one.
     const frozen = await capture(["order", ...args, "--format", "json", "--frozen"]);
     expect(JSON.parse(frozen.out.join("\n")).lock).toBe(stamp);
+  });
+
+  it("states the lock in the cut list, the BOM, the machining sheet and the derived model too", async () => {
+    const dir = project("cart");
+    const stamp = lockStamp(dir);
+    const outputs: [string, string[]][] = [
+      ["cutlist", ["md", "csv", "json"]],
+      ["bom", ["md", "csv", "json"]],
+      ["machining", ["md", "json"]],
+    ];
+    for (const [cmd, formats] of outputs) {
+      for (const format of formats) {
+        const r = await capture([cmd, dir, "--format", format]);
+        const text = r.out.join("\n");
+        if (format === "json") expect(JSON.parse(text).lock, cmd).toBe(stamp);
+        if (format === "md") expect(text, cmd).toContain(`\n\nDerived from the lock ${stamp}.\n\n`);
+        // The first row after the header: `stamp`, named `lock`, the hash in the last free text.
+        if (format === "csv") {
+          expect(text.split("\n")[1], cmd).toMatch(new RegExp(`^stamp,lock,+${stamp},?$`));
+        }
+      }
+    }
+    const derived = JSON.parse((await capture(["derive", dir, "--json"])).out.join("\n"));
+    expect(Object.keys(derived).slice(0, 2)).toEqual(["schema", "lock"]);
+    expect(derived.lock).toBe(stamp);
+    // A selection keeps the stamp, as it keeps the schema.
+    const some = JSON.parse((await capture(["derive", dir, "--select", "params"])).out.join("\n"));
+    expect(Object.keys(some)).toEqual(["schema", "lock", "params"]);
+    expect(some.lock).toBe(stamp);
+  });
+
+  it("states the price basis and the oldest read date wherever an output carries prices", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "cart");
+    const asOf = ["--as-of", "2026-11-26"];
+    const cutJson = async () =>
+      JSON.parse((await capture(["cutlist", dir, "--format", "json", "--frozen"])).out.join("\n"));
+    // The cut list prices the stock bars it nests: the oldest read of the offers it chose, worked
+    // from the lock by hand.
+    const cl = await cutJson();
+    expect(Object.keys(cl).slice(0, 4)).toEqual(["schema", "price_basis", "oldest_read", "lock"]);
+    expect([cl.price_basis, cl.oldest_read]).toEqual(["regular", oldestCutRead(cl, dir)]);
+    expect(cl.oldest_read).toBe("2026-11-26");
+    const md = (await capture(["cutlist", dir])).out.join("\n");
+    expect(md).toContain(
+      "\nPrices on the regular basis, in minor units; the oldest was read 2026-11-26.\n",
+    );
+    // An older read of one nested offer, which the order prices too, is the oldest of both.
+    await editJson(join(dir, "alukit.lock.json"), (l) => {
+      l.offers["test-geo:FB-50x10-6000"].offer.price.read = "2026-09-15";
+    });
+    expect((await cutJson()).oldest_read).toBe("2026-09-15");
+
+    // The costs state the order's: the nuts, read 56 days before the order's date.
+    const order = JSON.parse(
+      (await capture(["order", dir, "--format", "json", ...asOf, "--frozen"])).out.join("\n"),
+    );
+    const costs = JSON.parse(
+      (await capture(["costs", dir, "--format", "json", ...asOf, "--frozen"])).out.join("\n"),
+    );
+    expect(Object.keys(costs).slice(0, 6)).toEqual([
+      "schema",
+      "currency",
+      "price_basis",
+      "as_of",
+      "oldest_read",
+      "lock",
+    ]);
+    expect([costs.price_basis, costs.oldest_read]).toEqual([order.price_basis, order.oldest_read]);
+    expect(costs.oldest_read).toBe("2026-09-15");
+    expect((await capture(["costs", dir, ...asOf, "--frozen"])).out.join("\n")).toContain(
+      "\nPrices on the regular basis in BRL, as of 2026-11-26; the oldest was read 2026-09-15.\n",
+    );
+    // In CSV, stamp rows after the lock's: the basis and the oldest read date.
+    for (const cmd of ["order", "costs"]) {
+      const rows = (await capture([cmd, dir, "--format", "csv", ...asOf, "--frozen"])).out
+        .join("\n")
+        .split("\n");
+      expect(rows[1], cmd).toMatch(/^stamp,+lock,+sha256:[0-9a-f]{64}$/);
+      expect(rows[2], cmd).toMatch(/^stamp,+price_basis,+regular$/);
+      expect(rows[3], cmd).toMatch(/^stamp,+oldest_read,+2026-09-15$/);
+    }
   });
 
   it("runs the project's checks before the order rules: a failing one holds the order", async () => {

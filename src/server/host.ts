@@ -11,7 +11,7 @@ import { localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
 import type { ItemSource } from "#core/items.ts";
-import { pinLock } from "#core/lock/pin.ts";
+import { lockHash, pinLock } from "#core/lock/pin.ts";
 import { documentRefs, lockCovers } from "#core/lock/refs.ts";
 import { LOCK_FILE, type Lock, lockText } from "#core/lock/schema.ts";
 import { lockItems } from "#core/lock/source.ts";
@@ -93,7 +93,9 @@ export interface Snapshot {
   state: State;
   items: ItemSource;
   derived: Derived;
-  /** The cut list, the BOM and the priced order (§5.1 stage 5), each on first use. */
+  /** What every output states (§5.4): the content hash of the lock it derives from. */
+  stamp: { lock: string };
+  /** The cut list, the BOM and the priced order (§5.1 stage 5), each on first use, stamped. */
   outputs: ModelOutputs;
   /** The checks of `alukit check`, whose `mass()` and `cost()` read the outputs (§4.9). */
   check: CheckOutput;
@@ -636,7 +638,8 @@ export class ProjectHost {
     const state = this.state;
     const items = lockItems(state.lock);
     const derived = derive(state.doc, items, { variant });
-    const outputs = modelOutputs(derived, items);
+    const stamp = { lock: lockHash(state.lock) };
+    const outputs = modelOutputs(derived, items, stamp);
     // The same checks as `alukit check` and a headless `alukit do`: mass() and cost() evaluate.
     const check = checkModel({
       raw: state.doc,
@@ -649,6 +652,7 @@ export class ProjectHost {
       state,
       items,
       derived,
+      stamp,
       outputs,
       check,
       catalogs: this.catalogDiagnostics,

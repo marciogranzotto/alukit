@@ -1,4 +1,5 @@
 import { LOCAL } from "../project-items/supplier.ts";
+import { lockLines } from "../stamp.ts";
 import type { MachiningSheet, SheetHole, SheetPart } from "./machining.ts";
 
 /** The machining sheet as Markdown or JSON (M6). */
@@ -97,6 +98,7 @@ export function machiningMarkdown(s: MachiningSheet): string {
     "",
     "Custom parts, each hole from the part's datum. Lengths in mm.",
     "",
+    ...lockLines(s.lock),
   ];
   if (s.parts.length === 0) out.push("No custom parts.", "");
   for (const p of s.parts) out.push(...partHead(p), ...holeRows(p));

@@ -7,7 +7,12 @@ import { type Face, isValuedObject, num } from "./schema/common.ts";
 import type { GrooveType, Material, System } from "./schema/files.ts";
 import type { Item } from "./schema/items.ts";
 import type { Offer } from "./schema/offers.ts";
-import { GENERATORS, type GeneratorContext, type GrooveDims } from "./sections/generators/index.ts";
+import {
+  GENERATORS,
+  type GeneratorContext,
+  type GrooveDims,
+  type SectionCore,
+} from "./sections/generators/index.ts";
 
 /**
  * Several loaded catalogs, linked (design §3.1): references resolve across them, a catalog id
@@ -318,6 +323,12 @@ export interface BuiltSection {
   bbox_mm: readonly [Vec2, Vec2];
   grooves: { face: Face; at_mm: number; type?: string }[];
   datums: Record<string, Vec2>;
+  /**
+   * Its cores, where an end tap is cut (§5.5), in section coordinates: a generator's, where its
+   * params give them (a `tslot`'s `bores`). Absent when not known: a drawn or traced section's
+   * holes do not say which is a core, and a box has none drawn.
+   */
+  cores?: readonly SectionCore[];
 }
 
 function boxRing([a, b]: readonly [Vec2, Vec2]): Vec2[] {
@@ -375,6 +386,7 @@ export function buildSection(
       bbox_mm: g.bbox_mm,
       grooves: g.grooves,
       datums: g.datums,
+      ...(g.cores ? { cores: g.cores } : {}),
     };
   }
   if (s.fidelity === "box") {

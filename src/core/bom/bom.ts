@@ -78,6 +78,11 @@ export interface BomRecipe {
 
 export interface Bom {
   schema: typeof BOM_SCHEMA;
+  /**
+   * The stamp (§5.4, §4.13): the content hash of the lock it was derived from, when it was. It
+   * carries no prices, so it states no basis and no read date.
+   */
+  lock?: string;
   groups: BomGroup[];
   /** Present when the connections use joint recipes; they are in no group and no total. */
   recipes?: BomRecipe[];
@@ -112,9 +117,12 @@ interface Acc {
 export interface BomInput {
   derived: Derived;
   items: ItemSource;
+  /** The content hash of the lock the items come from: the BOM states it. */
+  lock?: string;
 }
 
-export function bom({ derived, items: catalogs }: BomInput): Bom {
+export function bom(input: BomInput): Bom {
+  const { derived, items: catalogs } = input;
   const items = projectItems(catalogs, derived.doc).source;
   const d = new Diagnostics();
   const acc = new Map<string, Acc>();
@@ -215,6 +223,7 @@ export function bom({ derived, items: catalogs }: BomInput): Bom {
 
   return {
     schema: BOM_SCHEMA,
+    ...(input.lock !== undefined ? { lock: input.lock } : {}),
     groups,
     ...(recipeList.length > 0 ? { recipes: recipeList } : {}),
     mass_kg: mass(groups.reduce((s, g) => s + g.mass_kg, 0)),

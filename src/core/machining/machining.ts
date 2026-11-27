@@ -97,6 +97,11 @@ export interface SheetBarRef {
 
 export interface MachiningSheet {
   schema: typeof MACHINING_SCHEMA;
+  /**
+   * The stamp (§5.4, §4.13): the content hash of the lock it was derived from, when it was. It
+   * carries no prices, so it states no basis and no read date.
+   */
+  lock?: string;
   parts: SheetPart[];
   /** The bars' machining is on the cut list: these lines carry some. */
   bars: SheetBarRef[];
@@ -108,6 +113,8 @@ export interface MachiningInput {
   items: ItemSource;
   bom: Bom;
   cutList: CutList;
+  /** The content hash of the lock the items come from: the sheet states it. */
+  lock?: string;
 }
 
 const len = (x: number) => quantize(x, QUANTUM.len_mm);
@@ -194,5 +201,11 @@ export function machiningSheet(input: MachiningInput): MachiningSheet {
         sources: l.sources,
       })),
   );
-  return { schema: MACHINING_SCHEMA, parts, bars, diagnostics: [] };
+  return {
+    schema: MACHINING_SCHEMA,
+    ...(input.lock !== undefined ? { lock: input.lock } : {}),
+    parts,
+    bars,
+    diagnostics: [],
+  };
 }

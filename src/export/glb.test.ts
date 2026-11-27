@@ -7,15 +7,19 @@ import { type GLTF, GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { beforeAll, describe, expect, it } from "vitest";
 import { derive } from "#core/derive/derive.ts";
 import { derivedJson } from "#core/derive/output.ts";
+import { LockFile } from "#core/lock/schema.ts";
+import { lockItems } from "#core/lock/source.ts";
 import { openProject } from "#core/project/open.ts";
-import { FIXTURES } from "#core/testing.ts";
+import { FIXTURES, readJson } from "#core/testing.ts";
 import { capture } from "../cli/testing.ts";
 import { barCorners } from "../mesh/bars.ts";
 import { meshDisplay } from "../mesh/display.ts";
+import { type Extent, extentOf, modelBodies } from "../mesh/extent.ts";
 import type { BarJson, MeshInput, PartJson, ViewSection } from "../mesh/model.ts";
 import { partShape } from "../mesh/place.ts";
 import { boxMesh, rodMesh } from "../mesh/solids.ts";
 import { writeGlb } from "./glb.ts";
+import { projectGlb } from "./project.ts";
 
 /**
  * The GLB writer (design §9): two exports of the cart are the same bytes, and three's own
@@ -217,6 +221,64 @@ describe("the GLB writer (§9)", () => {
     );
     const want = new Vector3(20, 20, 4).applyMatrix4(p6.matrix);
     expect(mid.distanceTo(want)).toBeLessThan(1e-9);
+  });
+
+  it("holds every body bbox() measures, each with the same extent: the three agree (§4.9)", async () => {
+    const raw = readJson(join(CART, "alukit.json"));
+    const lock = LockFile.parse(readJson(join(CART, "alukit.lock.json")));
+    const items = lockItems(lock);
+    const derived = derive(raw, items);
+    const { scene } = projectGlb({
+      raw,
+      lock,
+      items,
+      version: "0.0.0",
+      git: null,
+      asOf: "2026-11-26",
+    });
+    // Each top-level node's mesh under its matrix, in the model's millimetres (Z up); a part's
+    // hole markers are its children and stand proud of it, so they are not bodies.
+    const apply = (m: readonly number[] | undefined, p: readonly number[]) =>
+      [0, 1, 2].map((r) =>
+        m
+          ? (m[r] as number) * (p[0] as number) +
+            (m[4 + r] as number) * (p[1] as number) +
+            (m[8 + r] as number) * (p[2] as number) +
+            (m[12 + r] as number)
+          : (p[r] as number),
+      );
+    const inGlb = new Map<string, { min: number[]; max: number[] }>();
+    for (const i of scene.nodes[0]?.children ?? []) {
+      const n = scene.nodes[i];
+      if (n?.mesh === undefined) continue;
+      const pos = scene.meshes[n.mesh]?.data.positions as Float32Array;
+      const box = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
+      for (let k = 0; k < pos.length; k += 3) {
+        const w = apply(n.matrix, [pos[k], pos[k + 1], pos[k + 2]] as number[]);
+        box.min = box.min.map((x, j) => Math.min(x, w[j] as number));
+        box.max = box.max.map((x, j) => Math.max(x, w[j] as number));
+      }
+      inGlb.set(n.extras?.id as string, box);
+    }
+    const { bodies, noBox } = modelBodies(derived, items);
+    expect(noBox).toEqual([]);
+    // Every node is a body and every body a node: bars, parts and fasteners alike.
+    expect(bodies.map((b) => b.id).sort()).toEqual([...inGlb.keys()].sort());
+    const kinds = new Set(bodies.map((b) => b.kind));
+    expect([...kinds].sort()).toEqual(["bar", "fastener", "part"]);
+    // The same extent. A part's and a fastener's to the GLB's float32 positions: both place them
+    // from `derive --json`, through the same functions. A bar's to the output quantum, 0.01 mm:
+    // the GLB places it from `derive --json`'s rounded points, bbox() from derive's own; its mesh
+    // is its outline, whose extent is its section's box on the cart's sections.
+    for (const b of bodies) {
+      const want = extentOf(b.points) as Extent;
+      const got = inGlb.get(b.id) as { min: number[]; max: number[] };
+      const tol = b.kind === "bar" ? 0.01 : 1e-3;
+      const off = (g: readonly number[], w: readonly number[]) =>
+        Math.max(...[0, 1, 2].map((k) => Math.abs((g[k] as number) - (w[k] as number))));
+      expect(off(got.min, want.min), `${b.id} min`).toBeLessThan(tol);
+      expect(off(got.max, want.max), `${b.id} max`).toBeLessThan(tol);
+    }
   });
 
   it("shares one mesh per section and colour among square bars", () => {

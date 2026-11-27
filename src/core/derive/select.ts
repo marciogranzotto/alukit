@@ -1,7 +1,8 @@
 /**
  * `alukit derive <dir> --json --select <paths>` (design §7.3): the derived model cut down to the
  * members a report builder asks for, each kept where it sits, so the answer is still
- * `alukit.derived/1`, with fewer members. `schema` and `variant` are always kept.
+ * `alukit.derived/1`, with fewer members. `schema`, `variant` and the stamp, `lock` (§5.4), are
+ * always kept.
  *
  * A path is dotted from the top: `bars.b3`, `bars.b3.cut_mm`, `params`. `*` stands for every
  * member of an object, or every element of a list (`bars.*.cut_mm`, `pieces.*.item`); a list is
@@ -69,7 +70,10 @@ function apply(src: unknown, sel: Selection, at: string, missing: string[]): unk
   return out;
 }
 
-/** The members of `derived` the paths name, with its `schema` and `variant`; or what is not there. */
+/**
+ * The members of `derived` the paths name, with its `schema`, `variant` and `lock`; or what is not
+ * there.
+ */
 export function selectDerived(
   derived: Readonly<Record<string, unknown>>,
   paths: readonly (readonly string[])[],
@@ -78,7 +82,9 @@ export function selectDerived(
   const picked = apply(derived, tree(paths), "", missing) as Record<string, unknown>;
   if (missing.length > 0) return { ok: false, missing };
   const value: Record<string, unknown> = {};
-  for (const k of ["schema", "variant"]) if (Object.hasOwn(derived, k)) value[k] = derived[k];
+  for (const k of ["schema", "variant", "lock"]) {
+    if (Object.hasOwn(derived, k)) value[k] = derived[k];
+  }
   for (const [k, v] of Object.entries(picked)) if (!(k in value)) value[k] = v;
   return { ok: true, value };
 }

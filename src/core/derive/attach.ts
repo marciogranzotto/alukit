@@ -1,5 +1,6 @@
 import { compareIds } from "../ids.ts";
 import type { Ctx } from "./context.ts";
+import { coreTaps } from "./cores.ts";
 import type { DerivedBar } from "./derive.ts";
 import { duplicateOps } from "./duplicates.ts";
 import { type GenOut, generateFaces } from "./fastenings.ts";
@@ -41,6 +42,7 @@ export function attach(
   generateFaces(ctx, bars, runs, parts, out);
   connectorHardware(ctx, bars, out);
   duplicateOps(ctx, bars);
+  coreTaps(ctx, bars);
   return {
     parts,
     fastenings: out.fastenings,

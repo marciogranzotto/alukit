@@ -68,7 +68,7 @@ function placeKey(b: DerivedBar, o: ResolvedOp): string {
 }
 
 /** An op as one line of a message: what it is, then where. */
-function opText(b: DerivedBar, o: ResolvedOp): string {
+export function opText(b: DerivedBar, o: ResolvedOp): string {
   const at = (p: readonly [number, number] | undefined) =>
     p ? `at x ${mm(p[0])}, y ${mm(p[1])} from the centre` : "at the centre";
   if (o.op === "end-tap") return `the tap ${o.thread} in end ${o.from} ${at(o.off)}`;

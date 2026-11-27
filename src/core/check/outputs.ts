@@ -35,12 +35,39 @@ function once<T>(f: () => T): () => T {
   };
 }
 
-export function modelOutputs(derived: Derived, items: ItemSource): ModelOutputs {
-  const cl = once(() => cutList({ derived, items }));
-  const b = once(() => bom({ derived, items }));
+/**
+ * With `lock`, the content hash of the lock the items come from, the cut list, the BOM and the
+ * machining sheet state it (the stamp, §5.4); the order takes it in `checkedOrder`.
+ */
+export function modelOutputs(
+  derived: Derived,
+  items: ItemSource,
+  stamp: { lock?: string } = {},
+): ModelOutputs {
+  const lock = stamp.lock !== undefined ? { lock: stamp.lock } : {};
+  const cl = once(() => cutList({ derived, items, ...lock }));
+  const b = once(() => bom({ derived, items, ...lock }));
   const priced = once(() => priceOrder({ derived, items, bom: b(), cutList: cl() }));
-  const machining = once(() => machiningSheet({ derived, items, bom: b(), cutList: cl() }));
+  const machining = once(() =>
+    machiningSheet({ derived, items, bom: b(), cutList: cl(), ...lock }),
+  );
   return { cutList: cl, bom: b, priced, machining };
+}
+
+/**
+ * The cut list with every problem met on the way to it: deriving the model, then its own.
+ * `alukit cutlist`, the server's `GET /api/cutlist` and a revision's stored cut list are built
+ * here, so they answer the same, byte for byte.
+ */
+export function checkedCutList(derived: Derived, outputs: ModelOutputs): CutList {
+  const cl = outputs.cutList();
+  return { ...cl, diagnostics: sortDiagnostics([...derived.diagnostics, ...cl.diagnostics]) };
+}
+
+/** The BOM with every problem met on the way to it, as `checkedCutList`: `alukit bom`, `/api/bom`. */
+export function checkedBom(derived: Derived, outputs: ModelOutputs): Bom {
+  const b = outputs.bom();
+  return { ...b, diagnostics: sortDiagnostics([...derived.diagnostics, ...b.diagnostics]) };
 }
 
 /**

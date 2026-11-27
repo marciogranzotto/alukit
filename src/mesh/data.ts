@@ -42,6 +42,16 @@ export function mulMatrix(a: Mat4, b: Mat4): Mat4 {
   return out;
 }
 
+/** A point under a matrix. */
+export function applyMatrix(m: Mat4, p: V3): V3 {
+  const at = (r: number) =>
+    (m[r] as number) * p[0] +
+    (m[4 + r] as number) * p[1] +
+    (m[8 + r] as number) * p[2] +
+    (m[12 + r] as number);
+  return [at(0), at(1), at(2)];
+}
+
 /** A scale along x, y and z. */
 export function scaleMatrix(sx: number, sy: number, sz: number): Mat4 {
   // biome-ignore format: a diagonal

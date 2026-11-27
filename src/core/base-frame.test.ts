@@ -7,7 +7,7 @@ import { cutList } from "./cutlist/cutlist.ts";
 import { derive } from "./derive/derive.ts";
 import { derivedJson } from "./derive/output.ts";
 import { openProject } from "./project/open.ts";
-import { FIXTURES, scratchFixtures } from "./testing.ts";
+import { FIXTURES, lockStamp, oldestCutRead, scratchFixtures, withStamp } from "./testing.ts";
 
 /**
  * The cart's base frame (M4b, design §12), the oracle the draw tool's Playwright script is held
@@ -49,15 +49,22 @@ describe("the CLI-built base frame", () => {
     }
   });
 
-  it("has the cut list and BOM the CLI prints", async () => {
+  it("has the cut list and BOM the CLI prints, each stating the lock it came from", async () => {
     const dir = join(BASE, "cli");
-    for (const [cmd, file] of [
-      ["cutlist", "expected-cutlist.json"],
-      ["bom", "expected-bom.json"],
-    ] as const) {
+    const lock = lockStamp(dir);
+    const cutlist = await readFile(join(dir, "expected-cutlist.json"), "utf8");
+    // The stamp's lines (§5.4): the cut list prices, so it states its oldest read date too.
+    const expected = {
+      cutlist: withStamp(cutlist, "price_basis", {
+        oldest_read: oldestCutRead(JSON.parse(cutlist), dir),
+        lock,
+      }),
+      bom: withStamp(await readFile(join(dir, "expected-bom.json"), "utf8"), "schema", { lock }),
+    };
+    for (const cmd of ["cutlist", "bom"] as const) {
       const r = await capture([cmd, dir, "--format", "json"]);
       expect(r.code, r.err).toBe(0);
-      expect(`${r.out}\n`).toBe(await readFile(join(dir, file), "utf8"));
+      expect(`${r.out}\n`).toBe(expected[cmd]);
     }
   });
 });
