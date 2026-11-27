@@ -271,6 +271,13 @@ test("the audit's brace: its rows name the butts that claim its ends (D2), and d
   await expect(page.getByTestId("row-end-b")).toContainText("butts on b4 (c10)");
   // Claimed, so not open: no Join.
   await expect(page.getByTestId("join-end-a")).toHaveCount(0);
+  // Claimed, so held: its handle frees it from c9 as from a joint that derives, and says so.
+  const h = await handle(page, "a");
+  expect(h.state).toBe("detach");
+  await page.mouse.move(h.at[0], h.at[1]);
+  await expect(page.getByTestId("tool-hint")).toContainText(
+    "b13.a butts on b3 (c9), and the joint fails: dragging frees it",
+  );
 
   // The cut, from each end's row: one step each.
   await page.getByTestId("end-cut-a").selectOption("angle");

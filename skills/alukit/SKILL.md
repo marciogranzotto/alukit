@@ -428,7 +428,7 @@ string; `<…>` is a string of that form; `?` marks an optional field.
   - `cut_mm` (optional): `expr` — the bar's new cut length: the end moves so the cut is this long, its plane being its own default after the move; an expression over params is kept, the design length written as it plus the ends' allowance (`W + 20`)
   - `by_mm` (optional): `number` — move the end outward by this much; negative shortens
   - `to` (optional): `string` — a bar, or a bar's end: the end goes where its axis meets that bar's design line, or to that end's design point
-  - `detach` (optional): `boolean` — free an end that a node, a station, another bar's end or a butt holds: write it as coordinates and drop it from its butt (the butt goes with its last end)
+  - `detach` (optional): `boolean` — free an end that a node, a station, another bar's end or a butt holds (whether or not the butt derives): write it as coordinates and drop it from every butt that lists it (a butt goes with its last end)
 - **`transform`** (structure): move or turn nodes, bars, runs, parts and pattern templates as one step, keeping or freeing what joins them to the rest
   - `ids`: `[string, …]` — the nodes, bars, runs, parts, patterns (their templates) and connections to move
   - `by` (optional): `[expr, expr, expr]` — [dx, dy, dz]: move by this; an expression over params is kept (W moved by D is W + D)

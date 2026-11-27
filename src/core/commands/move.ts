@@ -8,7 +8,7 @@ import { addScaled, cross, dist, dot, norm, scale, sub, type V3 } from "../vec.t
 import { getEntity, isObject, withEntity, withoutEntity } from "./doc.ts";
 import { checkAll, derivedBar, guard } from "./geometry.ts";
 import { failed, requireEntity, withDoc } from "./helpers.ts";
-import { drivenEnd, drivers, type End, endHold, movingAxes } from "./hold.ts";
+import { drivenEnd, drivers, type End, endHold, heldWords, movingAxes } from "./hold.ts";
 import { len, offsetBy, plus } from "./numbers.ts";
 import { referrers } from "./refs.ts";
 import { refusal } from "./rewrite.ts";
@@ -22,10 +22,11 @@ import { type CommandContext, type CommandDef, done, type Outcome, type RawDoc }
  *
  * Where the end goes is one of: a design length (`len_mm`), a cut length (`cut_mm`), a distance
  * outward (`by_mm`), or another bar (`to`): where the axis meets that bar's design line, or that
- * bar's end. What holds the end is `hold.ts`'s rule: a free end moves; one a node, a station,
+ * bar's end. What holds the end is `hold.ts`'s rule, read from the providers that claim it (a
+ * joint that fails holds its end as one that derives): a free end moves; one a node, a station,
  * another bar's end or a butt holds moves with `detach: true`, which writes it as coordinates and
- * drops it from its butt; one a pivot, miter, splice or its own plane sets is refused, and so is a
- * move that would overwrite a coordinate a param drives.
+ * drops it from every butt that lists it; one a pivot, miter, splice or its own plane sets is
+ * refused, and so is a move that would overwrite a coordinate a param drives.
  */
 
 type O = Record<string, unknown>;
@@ -54,7 +55,7 @@ const MoveEnd = z
       .boolean()
       .optional()
       .describe(
-        "free an end that a node, a station, another bar's end or a butt holds: write it as coordinates and drop it from its butt (the butt goes with its last end)",
+        "free an end that a node, a station, another bar's end or a butt holds (whether or not the butt derives): write it as coordinates and drop it from every butt that lists it (a butt goes with its last end)",
       ),
   })
   .refine((a) => [a.len_mm, a.cut_mm, a.by_mm, a.to].filter((x) => x !== undefined).length === 1, {
@@ -69,8 +70,8 @@ export interface MoveEndInfo {
   /** The design length before and after, mm. */
   from_mm: number;
   len_mm: number;
-  /** The butt the end was dropped from (or that went with its last end). */
-  detached?: string;
+  /** The butts the end was dropped from (or that went with their last end), in id order. */
+  detached?: string[];
   /** The node, bar end or station bar the end no longer sits at. */
   left?: string;
 }
@@ -86,7 +87,7 @@ export const moveEnd: CommandDef<Args> = {
     const bar = a.end.split(".")[0] as string;
     if (!info) return `move ${a.end}`;
     const verb = info.len_mm >= info.from_mm ? "lengthen" : "shorten";
-    const freed = [info.detached, info.left].filter((x) => x !== undefined);
+    const freed = [...(info.detached ?? []), ...(info.left ? [info.left] : [])];
     return `${verb} ${bar} at end ${a.end.slice(-1)} to ${info.len_mm} mm${
       freed.length > 0 ? `, freed from ${freed.join(" and ")}` : ""
     }`;
@@ -165,14 +166,15 @@ function apply(ctx: CommandContext, a: Args): Outcome {
   const L0 = dist(P, Q);
   const u = scale(sub(P, Q), 1 / L0);
 
-  const hold = endHold(doc as O, bar, e, db.ends[e].by);
+  const claims = ctx.derived().claims.get(a.end) ?? [];
+  const hold = endHold(doc as O, bar, e, { claims, by: db.ends[e].by });
   if (hold.kind === "fixed") throw refusal("held", hold.words, { entity: bar, refs: hold.refs });
   if (hold.kind === "detach" && !a.detach) {
-    throw refusal(
-      "held",
-      `${a.end} ${hold.words.join(" and ")}: give detach: true to free it and move it`,
-      { entity: bar, field: e, refs: hold.refs },
-    );
+    throw refusal("held", `${a.end} ${heldWords(hold)}: give detach: true to free it and move it`, {
+      entity: bar,
+      field: e,
+      refs: hold.refs,
+    });
   }
   const driven = drivenEnd(doc as O, bar, e, u);
   if (driven) throw refusal("driven", driven.words, { entity: bar, field: e, refs: driven.params });
@@ -259,7 +261,7 @@ function written(
   L0: number,
   lenExpr: string | undefined,
   hold: ReturnType<typeof endHold>,
-): { doc: RawDoc; changed: string[]; removed: string[]; detached?: string } {
+): { doc: RawDoc; changed: string[]; removed: string[]; detached?: string[] } {
   const N = addScaled(Q, u, L);
   const w = spec[e];
   const moving = new Set(movingAxes(u));
@@ -320,26 +322,26 @@ function written(
   let doc = withEntity(ctx.state.doc, bar, next);
   const changed = [bar];
   const removed: string[] = [];
-  let detached: string | undefined;
-  if (hold.kind === "detach" && hold.conn) {
-    detached = hold.conn;
-    const c = getEntity(doc, hold.conn) as O;
+  // Dropped from every butt that lists it: one left listing it would still hold it.
+  const detached = hold.kind === "detach" ? (hold.conns ?? []) : [];
+  for (const conn of detached) {
+    const c = getEntity(doc, conn) as O;
     const ends = (c.ends as string[]).filter((x) => x !== `${bar}.${e}`);
     if (ends.length > 0) {
-      doc = withEntity(doc, hold.conn, { ...c, ends });
-      changed.push(hold.conn);
+      doc = withEntity(doc, conn, { ...c, ends });
+      changed.push(conn);
     } else {
-      const refs = referrers(doc, hold.conn).map((r) => r.from);
+      const refs = referrers(doc, conn).map((r) => r.from);
       if (refs.length > 0) {
         throw refusal(
           "refs",
-          `${bar}.${e} is ${hold.conn}'s last end, and ${refs.join(", ")} refer to ${hold.conn}: edit them first`,
-          { entity: hold.conn, refs },
+          `${bar}.${e} is ${conn}'s last end, and ${refs.join(", ")} refer to ${conn}: edit them first`,
+          { entity: conn, refs },
         );
       }
-      doc = withoutEntity(doc, hold.conn);
-      removed.push(hold.conn);
+      doc = withoutEntity(doc, conn);
+      removed.push(conn);
     }
   }
-  return { doc, changed, removed, ...(detached ? { detached } : {}) };
+  return { doc, changed, removed, ...(detached.length > 0 ? { detached } : {}) };
 }

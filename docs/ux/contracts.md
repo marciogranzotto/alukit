@@ -405,7 +405,9 @@ adds, except the move marked **moved**.*
 - **The hook** adds `handles()` (each end's point, whether locked, and its state) and `gesture()`.
 - **Core**: `src/core/commands/hold.ts` (`endHold`, `drivenEnd`, `drivers`, `movingAxes`), free of
   the schemas, which the app reads; `src/core/commands/move.ts` (`moveEnd`); `numbers.ts` adds
-  `offsetBy`.
+  `offsetBy`. After E4, `endHold` takes the end's claims and `by` (`EndClaims`; the app passes the
+  view model's `claims`), a detachable hold carries `conns` and `fails`, and `heldWords` says it
+  as one clause, for the handles' hint, the label's refusal and `moveEnd`'s (e4 23, 24).
 
 ## Move tool changes
 

@@ -1,4 +1,4 @@
-import { drivenEnd, type End, endHold } from "#core/commands/hold.ts";
+import { drivenEnd, type End, endHold, heldWords } from "#core/commands/hold.ts";
 import { offsetBy } from "#core/commands/numbers.ts";
 import type { V3 } from "../../mesh/model.ts";
 import type { Model } from "../model.ts";
@@ -40,7 +40,7 @@ export interface EndAxis {
 
 export type EndState =
   | { kind: "free"; corner?: string }
-  | { kind: "detach"; words: string[]; conn?: string; at?: string }
+  | { kind: "detach"; words: string[]; fails?: string; conns?: string[]; at?: string }
   | { kind: "fixed"; words: string }
   | { kind: "driven"; words: string; params: string[]; expr: string };
 
@@ -71,11 +71,15 @@ export function endAxis(m: Model, bar: string, e: End): EndAxis | undefined {
   };
 }
 
-/** What holds an end, and whether a param drives the coordinates a move would change. */
+/**
+ * What holds an end, and whether a param drives the coordinates a move would change: `endHold`
+ * on the view model's claims, as `moveEnd` reads derive's, so a joint that fails holds its end.
+ */
 export function endState(m: Model, bar: string, e: End): EndState {
   const b = m.derived.bars[bar];
   if (!b) return { kind: "fixed", words: `${bar} does not derive: see the problems` };
-  const hold = endHold(m.doc, bar, e, b.ends[e].by);
+  const claims = m.claims?.[`${bar}.${e}`] ?? [];
+  const hold = endHold(m.doc, bar, e, { claims, by: b.ends[e].by });
   if (hold.kind === "fixed") return { kind: "fixed", words: hold.words };
   const axis = endAxis(m, bar, e);
   const driven = axis ? drivenEnd(m.doc, bar, e, axis.u) : undefined;
@@ -84,7 +88,8 @@ export function endState(m: Model, bar: string, e: End): EndState {
     return {
       kind: "detach",
       words: hold.words,
-      ...(hold.conn ? { conn: hold.conn } : {}),
+      ...(hold.fails ? { fails: hold.fails } : {}),
+      ...(hold.conns ? { conns: hold.conns } : {}),
       ...(hold.at ? { at: hold.at } : {}),
     };
   }
@@ -339,7 +344,7 @@ export function labelEnd(
   if (a.kind === "free") return { end: "a" };
   if (a.kind === "driven") return { driven: a };
   const say = (e: End, s: EndState) =>
-    s.kind === "detach" ? `${bar}.${e} ${s.words.join(" and ")}` : (s as { words: string }).words;
+    s.kind === "detach" ? `${bar}.${e} ${heldWords(s)}` : (s as { words: string }).words;
   return {
     why: `both ends are held: ${say("a", a)}; ${say("b", b)}. Drag an end to free it`,
   };
