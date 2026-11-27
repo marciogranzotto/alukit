@@ -1,5 +1,22 @@
 import type { Thumb } from "../../server/catalog.ts";
 
+/**
+ * A section that is only its box: four corners, no holes. A parametric bar with no drawn section
+ * (a linear guide) has this, and drawn as a solid it reads as a black block, in the light theme
+ * above all; it is drawn as the box it is (review N6).
+ */
+export function isPlainBox(s: Pick<Thumb, "outline" | "holes">): boolean {
+  if (s.holes.length > 0) return false;
+  const o = s.outline;
+  const closed =
+    o.length > 1 && o[0]?.[0] === o[o.length - 1]?.[0] && o[0]?.[1] === o[o.length - 1]?.[1];
+  const corners = closed ? o.length - 1 : o.length;
+  if (corners !== 4) return false;
+  const xs = new Set(o.map((p) => p[0]));
+  const ys = new Set(o.map((p) => p[1]));
+  return xs.size === 2 && ys.size === 2;
+}
+
 /** A section drawn small, y up, fitted to its box: the catalog's lists and cards. Owner: S2. */
 export function SectionThumb({
   s,
@@ -16,7 +33,7 @@ export function SectionThumb({
     `${r.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x} ${-y}`).join(" ")} Z`;
   return (
     <svg
-      class="thumb"
+      class={isPlainBox(s) ? "thumb plain" : "thumb"}
       width={size}
       height={size}
       viewBox={`${x0 - pad} ${-y1 - pad} ${w + 2 * pad} ${h + 2 * pad}`}

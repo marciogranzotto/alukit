@@ -11,6 +11,7 @@
  */
 .command-row {
   flex: none;
+  container: command / inline-size;
   box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
@@ -40,34 +41,76 @@
   }
 
   /*
-   * What gives way, in this order: the prompt, then the value's words and the armed profile's
-   * name, down to nothing (their words are in their titles; the prompt is announced). The result
-   * of the last step keeps 8em, so a refusal is always seen.
+   * What the row exists to say (the prompt, what the value comes to, what the last step came to
+   * or why it was refused) comes first (review N3). Those three wrap to two lines of the row's
+   * 44 px rather than being cut at one, and each keeps a floor wide enough to be read. What gives
+   * way is the armed profile's name, which the parts panel states too (its words are in its title):
+   * it shrinks a hundred times faster than they do, down to nothing.
    */
+  .command-row > .cb-prompt,
+  .command-row > .cb-eval,
+  .command-row > .cb-chip {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+  }
+
   .command-row > .cb-prompt {
     flex: 1 1 0;
     min-width: 0;
   }
 
-  .command-row > .cb-armed,
   .command-row > .cb-eval {
     flex: 0 1 auto;
+    min-width: 0;
+    max-width: 22em;
+  }
+
+  .command-row > .cb-chip {
+    flex: 0 1 auto;
+    min-width: 8em;
+    max-width: 22em;
+  }
+
+  /*
+   * With the width the 1440 px window gives the row, the floors rise to what the words need in
+   * two lines; at 1280 px there is no room for them beside the options, and they give way as
+   * before (the result keeps 8em, so a refusal is always seen).
+   */
+  @container command (min-width: 800px) {
+    .command-row > .cb-prompt {
+      flex-basis: 11em;
+      min-width: 11em;
+    }
+
+    .command-row > .cb-eval {
+      min-width: 8.5em;
+    }
+
+    .command-row > .cb-chip {
+      min-width: 9.5em;
+    }
+  }
+
+  .command-row > .cb-armed {
+    flex: 0 100 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .command-row .cb-field {
-    width: 8em;
+  .command-row > .cb-armed.cb-missing {
+    flex-shrink: 0;
   }
 
-  .command-row > .cb-chip {
-    flex: 0 1 auto;
-    min-width: 8em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .command-row .cb-field {
+    width: 7em;
   }
 
   .command-row.viewport-help {

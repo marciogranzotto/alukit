@@ -241,7 +241,8 @@ export const SEARCH_LIMIT = 200;
  *    "Parafuso M8", not of "M8x16"), so an accessory "for 40x40" comes after the profile;
  * 4. the rest.
  *
- * Within a rank, the kind `prefer` names comes first; then the shorter name (the more of it the
+ * Within a rank, the kind `prefer` names comes first (a linear guide, a rail, last of the bars:
+ * it is a bar but not one to draw a frame with); then the shorter name (the more of it the
  * query says), then id order; with no query, browsing, id order alone. `total` counts every
  * match; `items` is the page `offset` and `limit` (50 by default, at most `SEARCH_LIMIT`) cut
  * from them.
@@ -268,8 +269,14 @@ export function searchCatalog(
     }
     return words.every((w) => isWhole(own, w)) ? 3 : 4;
   };
+  // A bar is wanted to draw a frame with: a linear guide is a bar too, but not that bar, so it
+  // comes after the profiles and before the other kinds (review N6). Its ids sorted first.
   const preferred = (e: CatalogEntry) =>
-    query.prefer !== undefined && e.kind === query.prefer ? 0 : 1;
+    query.prefer === undefined || e.kind !== query.prefer
+      ? 2
+      : query.prefer === "bar" && e.shape === "rail"
+        ? 1
+        : 0;
   const hits = entries
     .filter(
       (e) =>

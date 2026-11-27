@@ -30,6 +30,7 @@ import {
   type ToolName,
   toolPrompt,
   typed,
+  wayKnown,
   workPlane,
 } from "./state.ts";
 import { parseTyped, typedWords } from "./typed.ts";
@@ -312,16 +313,15 @@ function valueWords(tool: ToolName): { text: string; error: boolean } | undefine
     const axis = drawOptions.value.lock ?? end?.axis;
     if (!start) return { text: `${words}: click a start point first`, error: false };
     // No way to go yet (review M2): the pointer has not left the start, and no axis is locked.
-    const away = end !== undefined && end.p.some((c, i) => Math.abs(c - (start.p[i] ?? 0)) > 1e-6);
-    if (!axis && !away)
-      return { text: `${words} from ${start.label}: point the way`, error: false };
+    if (!wayKnown(start, end, drawOptions.value.lock))
+      return { text: `${words}: point the way`, error: false };
     const k = axis ? { x: 0, y: 1, z: 2 }[axis] : undefined;
     const sign =
       k !== undefined && end ? ((end.p[k] as number) >= (start.p[k] as number) ? 1 : -1) : 1;
     const dir = axis
       ? `, along ${(sign * Math.sign(t.value || 1) > 0 ? "+" : "-") + axis.toUpperCase()}`
       : "";
-    return { text: `${words}, from ${start.label}${dir}`, error: false };
+    return { text: `${words}${dir}`, error: false };
   }
   if (tool === "place") {
     const st = placeState.value.station;
@@ -341,6 +341,9 @@ function valueWords(tool: ToolName): { text: string; error: boolean } | undefine
 function Result() {
   const r = lastResult.value;
   if (!r) return null;
+  // "Which way?" is answered once the pointer shows the way, or an axis is locked (review N2).
+  const { start, end } = drawState.value;
+  if (r.wayNeeded && (!start || wayKnown(start, end, drawOptions.value.lock))) return null;
   if (r.error)
     return (
       <output class="cb-chip error" data-testid="tool-result" data-error="true" title={r.error}>

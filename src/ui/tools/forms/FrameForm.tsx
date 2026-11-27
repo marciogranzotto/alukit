@@ -9,7 +9,7 @@ import { optionsText } from "../../options.ts";
 import { palette } from "../../palette.ts";
 import { type FrameProfile, frameWay } from "../../shell/start.ts";
 import { busy, type CommandOutcome, model, sendCommands } from "../../store.ts";
-import { frameBatch } from "../commands.ts";
+import { type frameBatch, frameSizing, JOINT_UNCHOSEN } from "../commands.ts";
 import {
   activeTool,
   CORNER_RULES,
@@ -42,7 +42,7 @@ import { parseTyped } from "../typed.ts";
 const NUMBERS_MS = 300;
 
 /** What the frame would come to, from its dry run: each part's cut lengths, or why not. */
-type Numbers = { lines: string[] } | { why: string } | undefined;
+type Numbers = { lines: string[]; problems?: string } | { why: string } | undefined;
 
 interface FrameInfo {
   posts?: string[];
@@ -92,13 +92,16 @@ function useNumbers(key: string, batch: Batch): Numbers {
             return ids ? [`${RING_WORDS[ring]} ${cuts(ids, added)}`] : [];
           }),
           `${info.connections?.length ?? 0} butts`,
-          ...(r.value.diagnostics.length > 0
-            ? [
-                `${r.value.diagnostics.length} new ${r.value.diagnostics.length === 1 ? "problem" : "problems"}: ${r.value.diagnostics[0]?.message ?? ""}`,
-              ]
-            : []),
         ];
-        setNumbers({ lines });
+        const n = r.value.diagnostics.length;
+        setNumbers({
+          lines,
+          ...(n > 0
+            ? {
+                problems: `${n} new ${n === 1 ? "problem" : "problems"}: ${r.value.diagnostics[0]?.message ?? ""}`,
+              }
+            : {}),
+        });
       }
     }, NUMBERS_MS);
     return () => {
@@ -175,11 +178,21 @@ export function FrameForm({
   const connectors = useConnectors(systems);
   const at: V3 = d.at ?? [0, 0, 0];
   const project = { hasDefaultBar: hasDefault, defaultButt };
-  const batch: Batch =
-    inCard && !profile
-      ? { why: "pick a profile above" }
-      : frameBatch({ ...d, at }, o, bar, project, params, profile?.patch);
-  const numbers = useNumbers(JSON.stringify(batch), batch);
+  // `batch` is what Make sends; `asked` is what the numbers come from, which while the joint is
+  // the only thing missing is the frame as if nothing joined it (review N4).
+  const { batch, asked, pending } = ((): { batch: Batch; asked: Batch; pending: boolean } => {
+    if (inCard && !profile) {
+      const why = { why: "pick a profile above" };
+      return { batch: why, asked: why, pending: false };
+    }
+    const s = frameSizing({ ...d, at }, o, bar, project, params, profile?.patch);
+    return {
+      batch: s.pending ? { why: JOINT_UNCHOSEN } : s.batch,
+      asked: s.batch,
+      pending: s.pending,
+    };
+  })();
+  const numbers = useNumbers(JSON.stringify(asked), asked);
   // The panel's numbers are the command bar's too, while the frame tool draws (review m9).
   useEffect(() => {
     if (inCard) return;
@@ -374,18 +387,29 @@ export function FrameForm({
         </div>
       </details>
       <div class="frame-numbers" data-testid="frame-numbers" aria-live="polite">
-        {"why" in batch ? (
-          <p class="hint-text">{batch.why}</p>
+        {"why" in asked ? (
+          <p class="hint-text">{asked.why}</p>
         ) : numbers === undefined ? (
           <p class="hint-text">working out the cut lengths…</p>
         ) : "why" in numbers ? (
           <p class="warn">{numbers.why}</p>
         ) : (
-          <ul>
-            {numbers.lines.map((l) => (
-              <li key={l}>{l}</li>
-            ))}
-          </ul>
+          <>
+            <ul>
+              {/* While the joint is open the dry run assumed "Nothing": its warning is not news. */}
+              {[...numbers.lines, ...(numbers.problems && !pending ? [numbers.problems] : [])].map(
+                (l) => (
+                  <li key={l}>{l}</li>
+                ),
+              )}
+            </ul>
+            {pending && (
+              <p class="hint-text" data-testid="frame-joint-pending">
+                Choose how the corners are joined to make it: the joint adds its connectors to the
+                order, and does not change these lengths.
+              </p>
+            )}
+          </>
         )}
       </div>
       <button

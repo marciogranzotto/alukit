@@ -20,10 +20,17 @@ import { firstStepsHidden, hideFirstSteps, orderSeen, startedEmpty } from "./sta
 
 const count = (x: unknown) => (typeof x === "object" && x !== null ? Object.keys(x).length : 0);
 
+const defaultBar = (m: Model) => m.defaults.bar as { item?: unknown } | undefined;
+
 /** The four first steps, each ticked by what the project and the tab hold (B §4.3). */
-function steps(m: Model): { label: string; done: boolean }[] {
+export function steps(m: Model): { label: string; done: boolean }[] {
   return [
-    { label: "Choose a profile to draw with", done: palette.value.bar !== undefined },
+    // The profile is the project's (its `defaults.bar`, which the start card's box frame writes)
+    // as well as the tab's palette: either is a profile chosen (review N5).
+    {
+      label: "Choose a profile to draw with",
+      done: palette.value.bar !== undefined || typeof defaultBar(m)?.item === "string",
+    },
     { label: "Draw a bar", done: count(m.doc.bars) > 0 },
     { label: "Join two bars", done: count(m.doc.connections) > 0 },
     { label: "Read the order", done: orderSeen.value },

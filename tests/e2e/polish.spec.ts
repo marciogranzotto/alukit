@@ -63,7 +63,7 @@ test("a length typed with no way to go says which way, and makes nothing (M2)", 
   await page.keyboard.press("Enter");
   const result = page.getByTestId("tool-result");
   await expect(result).toHaveAttribute("data-error", "true");
-  await expect(result).toContainText("Which way? Move the pointer, or press → ← ↑");
+  await expect(result).toContainText("Which way? Point, or press → ← ↑");
   // Seen whole within the bar, which keeps to its row (M5): nothing runs out of it.
   const bar = page.getByTestId("command-bar");
   const [r, b] = [await result.boundingBox(), await bar.boundingBox()];

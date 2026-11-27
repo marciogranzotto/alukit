@@ -645,6 +645,9 @@ details.mach[open] > summary {
   margin: 0;
   padding: 0;
   list-style: none;
+  /* The rows lay themselves out by the list's width, not the window's: the same row sits in the
+     wide Problems sheet and in the narrow inspector and callout (review N1). */
+  container-type: inline-size;
 }
 
 .problem {
@@ -701,6 +704,24 @@ details.mach[open] > summary {
   justify-content: flex-end;
   align-items: center;
   gap: var(--sp-3);
+}
+
+/*
+ * The actions' column is as wide as its buttons side by side (`auto`), which in a narrow list
+ * leaves the words no room: one word to a line, the buttons over them (review N1). Below the
+ * width where words and buttons fit together, the actions sit under the words, in the words'
+ * column, and wrap there.
+ */
+@container (max-width: 34rem) {
+  .problem {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+
+  .problem-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+    margin-top: var(--sp-3);
+  }
 }
 
 .fix-panel {

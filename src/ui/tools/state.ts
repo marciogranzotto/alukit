@@ -136,11 +136,32 @@ export const jointPreview = signal<JointPreview | undefined>(undefined);
  * not be sent, shown where it happened (U30).
  */
 export const lastResult = signal<
-  { rev: number; created: readonly string[]; error?: string | undefined } | undefined
+  | {
+      rev: number;
+      created: readonly string[];
+      error?: string | undefined;
+      /** The refusal is "which way?": it holds only until a way is known (review N2). */
+      wayNeeded?: true;
+    }
+  | undefined
 >(undefined);
 
 /** The draw tool's gesture, for the panel and the test hook. */
 export const drawState = signal<{ start?: DrawPoint; end?: DrawEnd }>({});
+
+/**
+ * Whether a length typed in Draw has a way to go: an axis is locked, or the pointer has left the
+ * start (review M2, N2). Without one Enter refuses with "Which way?", and that refusal is stale
+ * the moment this turns true.
+ */
+export function wayKnown(
+  start: DrawPoint,
+  end: DrawEnd | undefined,
+  lock: Axis | undefined,
+): boolean {
+  if (lock) return true;
+  return end !== undefined && end.p.some((c, i) => Math.abs(c - (start.p[i] ?? 0)) > 1e-6);
+}
 
 export type ConnectType = "butt" | "miter" | "splice" | "pivot" | "face";
 export interface ConnectPick {
@@ -286,18 +307,20 @@ export function frameStage(d: FrameDraft): "corner" | "size" | "height" | "done"
 export const toolPrompt = computed<string>(() => {
   switch (activeTool.value) {
     case "draw": {
-      const { start, end } = drawState.value;
-      if (!start) return "Click a start point, or type [x, y, z] and press Enter.";
-      return `From ${start.label}${end ? ` to ${end.label}` : ""}: click the end, or type a length and press Enter.`;
+      const { start } = drawState.value;
+      if (!start) return "Click a start point, or type [x, y, z].";
+      // Short on purpose (review N3): it shares one row with the value and what it comes to. The
+      // start and the end under the pointer are in the view's label by the pointer.
+      return "Click the end, or type a length.";
     }
     case "frame":
       switch (frameStage(frameDraft.value)) {
         case "corner":
-          return "Click the frame's corner, or type [x, y, z] and press Enter.";
+          return "Click the frame's corner, or type [x, y, z].";
         case "size":
-          return "Click the far corner, or type the width and depth (W, D) and press Enter.";
+          return "Click the far corner, or type W, D.";
         default:
-          return "Click the height, or type it (H) and press Enter.";
+          return "Click the height, or type H.";
       }
     case "connect":
       return `${

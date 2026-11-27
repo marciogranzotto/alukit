@@ -186,6 +186,18 @@ describe("search", () => {
     expect(ids("profile", "bar")).toEqual(["v:P4080", "v:P40L", "v:P2040", "v:P40", "v:CAP-40"]);
     expect(ids("kit", "bar")).toEqual(["v:HINGE"]);
   });
+
+  // docs/ux/review-phase4.md N6: browsing for a frame's bar, the profiles come before the guides.
+  it("ranks a linear guide after the profiles when a bar is wanted, and not otherwise", () => {
+    const guide = { ...entry("v:A-GUIDE", "bar", "Guide 15", [15, 15]), shape: "rail" };
+    const profile = { ...entry("v:Z-PROFILE", "bar", "Profile 40", [40, 40]), shape: "tslot" };
+    const cap = entry("v:B-CAP", "accessory", "Cap");
+    const all = [guide, profile, cap];
+    const ids = (prefer?: string) =>
+      searchCatalog(all, prefer ? { prefer } : {}).items.map((e) => e.id);
+    expect(ids()).toEqual(["v:A-GUIDE", "v:B-CAP", "v:Z-PROFILE"]);
+    expect(ids("bar")).toEqual(["v:Z-PROFILE", "v:A-GUIDE", "v:B-CAP"]);
+  });
 });
 
 function entry(id: string, kind: string, name: string, size?: [number, number]): CatalogEntry {
