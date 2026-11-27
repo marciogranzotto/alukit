@@ -951,3 +951,11 @@ anything, and each has a default in place.
   - Each matches the CLI's result (`alukit diff` empty, or byte-identical cut lists), and almost every test failed first.
   - The calls (90–94) are put in numeric order in §14.
   - **Known limits:** the slide arrow shows only for bars along a world axis, and the length label can cover part of a ring.
+- **17:26**: E5 merged (gate PASS, 1,361 tests).
+  - **Joints:** a face joint's stations, pivots, mitres, splices and butt spacers are edited in the inspector, each one undo step.
+  - **Patterns:** edited, and exploded into plain bars.
+  - **Parts:** replaced, moved to a groove, and offset.
+  - **The corner inspector** shows the mitre and splice arrangements.
+  - **Connection actions** are in the right-click menu.
+  - **A cross hole's face** can be named per end (F12's `hole_faces`).
+  - **Core fix found on the way:** every `setConnection` on a joint whose sleeve length is bound to the bore was refused, because the check took `bore` for an unknown param. A field now declares the names it binds (`exprNames`); the failing test came first, and no golden moved.
