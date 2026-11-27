@@ -18,7 +18,9 @@ import { QUANTUM, quantize } from "../quantum.ts";
  * uses and show their `why`. Prices, offers and covering cost lines are the order list's (§5.4,
  * M3b part 3). Project items (§4.8) group by their own kinds after §3.4's: a plate's and a bent
  * angle's mass is computed from its net volume (`calc`), a placeholder's is as entered. Joint
- * recipes (§3.4) are listed apart, in no group: not bought, no mass, no mass warning.
+ * recipes (§3.4) are listed apart, in no group: not bought, no mass, no mass warning. So are the
+ * members marked context (gap X11: a wall, a floor, a bench the frame stands beside), which are
+ * not built or bought; what a connection between context members brings is not listed at all.
  *
  * Each line's mass is rounded once to the 0.001 kg quantum; the total adds the rounded lines.
  */
@@ -77,6 +79,19 @@ export interface BomRecipe {
   sources: string[];
 }
 
+/**
+ * A member marked context (gap X11): drawn and checked against, not built or bought, so in no
+ * group and no total, with no mass. A bar, a placed part, or a butt's through body (its id is the
+ * connection's).
+ */
+export interface BomContext {
+  id: string;
+  kind: "bar" | "part" | "body";
+  item: string;
+  name: string;
+  opt: Readonly<Record<string, string>>;
+}
+
 export interface Bom {
   schema: typeof BOM_SCHEMA;
   /**
@@ -87,6 +102,8 @@ export interface Bom {
   groups: BomGroup[];
   /** Present when the connections use joint recipes; they are in no group and no total. */
   recipes?: BomRecipe[];
+  /** Present when members are marked context (X11): listed, in id order, in no group and no total. */
+  context?: BomContext[];
   mass_kg: number;
   /** Items with no mass: their lines are left out of the totals. */
   mass_unknown: string[];
@@ -144,7 +161,18 @@ export function bom(input: BomInput): Bom {
     a.centre += p.centre;
     a.sources.add(p.source.replace(/\.[fs]\d+$/, ""));
   }
+  // What is context is listed apart, not counted (X11): its members here; the hardware and
+  // recipes of its connections are the context's own, and not listed.
+  const context: { id: string; kind: BomContext["kind"]; item: string; opt: BomContext["opt"] }[] =
+    [];
+  for (const [id, b] of derived.bars) {
+    if (b.context) context.push({ id, kind: "bar", item: b.placed.item.id, opt: b.placed.opt });
+  }
   for (const p of derived.parts.values()) {
+    if (p.placed && p.context) {
+      context.push({ id: p.id, kind: "part", item: p.item, opt: p.opt });
+      continue;
+    }
     const a = add(p.item, p.opt);
     if (p.placed) {
       a.qty += 1;
@@ -156,6 +184,10 @@ export function bom(input: BomInput): Bom {
     }
   }
   for (const h of derived.hardware) {
+    if (h.context) {
+      if (h.body) context.push({ id: h.source, kind: "body", item: h.item, opt: h.opt });
+      continue;
+    }
     const a = add(h.item, h.opt);
     a.qty += h.qty;
     a.sources.add(h.source);
@@ -209,6 +241,7 @@ export function bom(input: BomInput): Bom {
 
   const recipes = new Map<string, BomRecipe>();
   for (const r of derived.recipes) {
+    if (r.context) continue;
     const found = items.item(r.item);
     let e = recipes.get(r.item);
     if (!e) {
@@ -221,12 +254,25 @@ export function bom(input: BomInput): Bom {
   const recipeList = [...recipes.values()]
     .sort((x, y) => compareIds(x.item, y.item))
     .map((r) => ({ ...r, sources: [...r.sources].sort(compareIds) }));
+  const contextList: BomContext[] = context
+    .sort((x, y) => compareIds(x.id, y.id))
+    .map((c) => {
+      const found = items.item(c.item);
+      return {
+        id: c.id,
+        kind: c.kind,
+        item: c.item,
+        name: found.ok ? found.item.name : c.item,
+        opt: Object.fromEntries(Object.entries(c.opt).sort(([x], [y]) => cmp(x, y))),
+      };
+    });
 
   return {
     schema: BOM_SCHEMA,
     ...(input.lock !== undefined ? { lock: input.lock } : {}),
     groups,
     ...(recipeList.length > 0 ? { recipes: recipeList } : {}),
+    ...(contextList.length > 0 ? { context: contextList } : {}),
     mass_kg: mass(groups.reduce((s, g) => s + g.mass_kg, 0)),
     mass_unknown: [...unknown].sort(compareIds),
     diagnostics: d.sorted(),

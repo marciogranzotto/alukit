@@ -501,3 +501,22 @@ registers its own actions and keys from its own files.*
 
 A stream that breaks another's spec makes the smallest selector fix in that spec, in the same
 merge, and names it. A semantic assertion is never weakened.
+
+## Gap X11 changes
+
+*Context ([`../notes/x11.md`](../notes/x11.md)): a bar or a placed part marked `context: true`,
+drawn and checked against but not built or bought. Each adds.*
+
+- **`ViewTheme`** (`src/viewer/theme.ts`) adds `body.context`, context's one tone whatever its
+  item; **`tokens.ts`** holds its dark and light values (S4 may retune them).
+- **The export's palette** (`src/mesh/style.ts`, frozen by D-UX-24): `COLOURS.context`, the GLB's
+  `context, translucent` material; `partTone` answers `"context"` first and `barColour` reads a
+  bar's `context`. No byte of a GLB without context moved (x11, what moved).
+- **The view model** (`src/mesh/model.ts`): `BarJson.context`, `PartJson.context`,
+  `ViewPart.context`, `ViewFastener.context`; `PartShape.context` (`src/mesh/place.ts`).
+- **`ViewerStats`** (`src/viewer/scene.ts`) adds `context`, the bars, parts and fasteners drawn as
+  context. The scene keeps a translucent pair of materials for context, made once, beside the
+  opaque pair.
+- **The inspector** (`src/ui/inspector/context.ts`): `contextOf(model, id)` (whether the entity can
+  be marked, whether it is, and the command) and `contextBatch(model, id, on)`; the Context row
+  (`ContextRow`, in `BarFields.tsx`) on a bar's and a placed part's fields, one step.

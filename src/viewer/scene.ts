@@ -98,6 +98,8 @@ export interface ViewerStats {
   plates: number;
   bentAngles: number;
   placeholders: number;
+  /** Bodies drawn as context (X11), translucent in its tone: bars, parts and fasteners. */
+  context: number;
   /** Holes marked on the plates and bent angles drawn. */
   holes: number;
   fasteners: number;
@@ -369,6 +371,12 @@ function emptyGeometry(): BufferGeometry {
   return g;
 }
 
+/**
+ * A translucent body's material options (a placeholder, a marker, context): both sides drawn and
+ * no depth written, so what stands behind shows through; its opacity is the theme's.
+ */
+const TRANSLUCENT = { transparent: true, depthWrite: false, side: DoubleSide } as const;
+
 /** A body's material: Lambert (cheapest on SwiftShader), pushed back so its edges always win. */
 function bodyMaterial(opts: ConstructorParameters<typeof MeshLambertMaterial>[0] = {}) {
   return new MeshLambertMaterial({
@@ -522,6 +530,10 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   const edgeState = new Map<string, string>();
   const capMaterial = bodyMaterial();
   const sideMaterial = bodyMaterial();
+  // Context (X11): the square bars' and the fasteners' translucent pair, made once and kept, as
+  // the opaque pair is, so a revision links no program for them.
+  const contextCapMaterial = bodyMaterial(TRANSLUCENT);
+  const contextSideMaterial = bodyMaterial(TRANSLUCENT);
   const detailMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true });
   const outlineMaterial = new LineBasicMaterial({ vertexColors: true, transparent: true });
   const xrayMaterial = new LineBasicMaterial({
@@ -545,6 +557,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     plates: 0,
     bentAngles: 0,
     placeholders: 0,
+    context: 0,
     holes: 0,
     fasteners: 0,
     edgeSegments: 0,
@@ -572,6 +585,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
 
   const applyThemeMaterials = () => {
     capMaterial.color.setRGB(...theme.cut);
+    contextCapMaterial.color.setRGB(...theme.cut);
+    for (const m of [contextCapMaterial, contextSideMaterial]) m.opacity = theme.translucent;
     xrayMaterial.color.setHex(theme.selection);
     xrayMaterial.opacity = theme.edge.xray;
   };
@@ -616,7 +631,15 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       const m = (o as { material?: Material | Material[] }).material;
       for (const x of Array.isArray(m) ? m : m ? [m] : []) x.clippingPlanes = planes;
     });
-    for (const m of [capMaterial, sideMaterial, outlineMaterial, detailMaterial, xrayMaterial]) {
+    for (const m of [
+      capMaterial,
+      sideMaterial,
+      contextCapMaterial,
+      contextSideMaterial,
+      outlineMaterial,
+      detailMaterial,
+      xrayMaterial,
+    ]) {
       m.clippingPlanes = planes;
     }
     joints.setClipping(planes);
@@ -723,9 +746,10 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
 
   function build(m: MeshInput): void {
     clear();
-    const groups = new Map<string, { sid: string; bars: [string, BarJson][] }>();
+    const groups = new Map<string, { sid: string; context: boolean; bars: [string, BarJson][] }>();
     let angled = 0;
     let instancedCount = 0;
+    let context = 0;
     const drawable: [string, BarJson, string][] = [];
     for (const [id, bar] of Object.entries(m.bars)) {
       const view = m.display.bars[id];
@@ -733,18 +757,28 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       if (!view || !section) continue;
       drawable.push([id, bar, view.section]);
       unitOf(view.section, section);
+      if (bar.context) context++;
       if (!squareEnds(bar)) continue;
-      const g = groups.get(view.section) ?? { sid: view.section, bars: [] };
+      // Context bars (X11) group apart: they draw with the translucent pair.
+      const key = `${view.section}${bar.context ? " context" : ""}`;
+      const g = groups.get(key) ?? { sid: view.section, context: !!bar.context, bars: [] };
       g.bars.push([id, bar]);
-      groups.set(view.section, g);
+      groups.set(key, g);
     }
+    /** A bar's own colour: its finish's tone, or context's, which colouring by item keeps. */
+    const toneOfBar = (bar: BarJson): Hex =>
+      bar.context ? theme.body.context : theme.body[finishTone(bar)];
 
     // Square bars: one InstancedMesh per section (§8), each instance in its own colour; the
-    // ends (the extrusion's first group) a shade brighter than the sides.
+    // ends (the extrusion's first group) a shade brighter than the sides. Context bars, one
+    // per section too, translucent.
     for (const g of groups.values()) {
       const unit = unitOf(g.sid, m.display.sections[g.sid] as ViewSection);
-      const mesh = new InstancedMesh(unit.geometry, [capMaterial, sideMaterial], g.bars.length);
-      mesh.name = `bars ${g.sid}`;
+      const materials = g.context
+        ? [contextCapMaterial, contextSideMaterial]
+        : [capMaterial, sideMaterial];
+      const mesh = new InstancedMesh(unit.geometry, materials, g.bars.length);
+      mesh.name = `bars ${g.sid}${g.context ? " (context)" : ""}`;
       const ids: string[] = [];
       const items: string[] = [];
       const tones: Hex[] = [];
@@ -756,10 +790,10 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
             m.display.bars[id] as NonNullable<MeshInput["display"]["bars"][string]>,
           ),
         );
-        mesh.setColorAt(i, new Color(theme.body[finishTone(bar)]));
+        mesh.setColorAt(i, new Color(toneOfBar(bar)));
         ids.push(id);
-        items.push(bar.item);
-        tones.push(theme.body[finishTone(bar)]);
+        items.push(bar.context ? "" : bar.item);
+        tones.push(toneOfBar(bar));
       });
       mesh.instanceMatrix.needsUpdate = true;
       mesh.computeBoundingSphere();
@@ -775,14 +809,15 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       const view = m.display.bars[id] as NonNullable<MeshInput["display"]["bars"][string]>;
       const unit = unitOf(sid, m.display.sections[sid] as ViewSection);
       const geometry = angledGeometry(unit.geometry, bar, view);
-      const tone = theme.body[finishTone(bar)];
-      const cap = bodyMaterial();
-      const side = bodyMaterial();
+      const tone = toneOfBar(bar);
+      const look = bar.context ? { ...TRANSLUCENT, opacity: theme.translucent } : {};
+      const cap = bodyMaterial(look);
+      const side = bodyMaterial(look);
       const mesh = new Mesh(geometry, [cap, side]);
       mesh.name = id;
       content.add(mesh);
       owned.push(geometry, cap, side);
-      single.push({ mesh, id, item: bar.item, tone, cap });
+      single.push({ mesh, id, item: bar.context ? "" : bar.item, tone, cap });
       angled++;
     }
 
@@ -792,8 +827,9 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
 
     // Parts, each in its own frame (§3.2): the project's plates and bent angles from their shapes,
     // with their holes marked (§4.8); any other part as a box from its item's bounding box,
-    // translucent and outlined when a placeholder; with no box, a translucent marker. Shapes and
-    // places from src/mesh, as the GLB writer's (§9).
+    // translucent and outlined when a placeholder; with no box, a translucent marker; context
+    // (X11) translucent and outlined in its own tone, whatever it is. Shapes and places from
+    // src/mesh, as the GLB writer's (§9).
     let parts = 0;
     let plates = 0;
     let bentAngles = 0;
@@ -809,10 +845,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       const tone = theme.body[partTone(placed)];
       const material = bodyMaterial({
         color: tone,
-        transparent: translucent,
-        opacity: translucent ? theme.translucent : 1,
-        depthWrite: !translucent,
-        side: translucent ? DoubleSide : FrontSide,
+        ...(translucent ? { ...TRANSLUCENT, opacity: theme.translucent } : { side: FrontSide }),
       });
       const frame = placed.matrix;
       const mesh = new Mesh(geometry, material);
@@ -821,12 +854,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       mesh.matrix.fromArray(frame);
       content.add(mesh);
       owned.push(geometry, material);
-      const entry: Single = { mesh, id, item: p.item, tone };
+      // Colouring by item keeps context's tone: it is no item of the build.
+      const entry: Single = { mesh, id, item: placed.context ? "" : p.item, tone };
       single.push(entry);
       parts++;
 
-      // A shape's sharp edges, and a placeholder's box outlined (§4.8).
-      if (shape || placed.placeholder) {
+      // A shape's sharp edges, and a placeholder's or a context part's box outlined (§4.8, X11);
+      // a context part's outline is the bodies' edge colour, not the placeholder's.
+      if (shape || placed.placeholder || placed.context) {
         const edges = new EdgesGeometry(geometry, PART_EDGE_DEG);
         const lineMaterial = new LineBasicMaterial({ transparent: true });
         const lines = new LineSegments(edges, lineMaterial);
@@ -834,12 +869,13 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         lines.matrixAutoUpdate = false;
         lines.matrix.fromArray(frame);
         lines.raycast = () => {};
-        lines.userData.placeholder = !shape;
+        lines.userData.placeholder = !shape && !placed.context;
         content.add(lines);
         owned.push(edges, lineMaterial);
         entry.edges = lines;
       }
       if (placed.placeholder) placeholders++;
+      if (placed.context) context++;
       if (shape) {
         if (shape.kind === "plate") plates++;
         else bentAngles++;
@@ -877,30 +913,35 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     }
 
     // Fasteners of face connections: rods from the head along the axis; a pick selects the
-    // connection.
+    // connection. A context connection's (X11) apart, translucent in context's tone.
     const fs = m.display.fasteners;
-    if (fs.length > 0) {
+    for (const ctx of [false, true]) {
+      const rods = fs.filter((f) => !!f.context === ctx);
+      if (rods.length === 0) continue;
       const geometry = geometryOf(rodMesh());
-      const material = bodyMaterial();
-      const mesh = new InstancedMesh(geometry, material, fs.length);
-      mesh.name = "fasteners";
+      const material = ctx ? contextSideMaterial : bodyMaterial();
+      const tone = ctx ? theme.body.context : theme.body.fastener;
+      const mesh = new InstancedMesh(geometry, material, rods.length);
+      mesh.name = ctx ? "fasteners (context)" : "fasteners";
       const ids: string[] = [];
-      fs.forEach((f, i) => {
+      rods.forEach((f, i) => {
         mesh.setMatrixAt(i, new Matrix4().fromArray(fastenerMatrix(f)));
-        mesh.setColorAt(i, new Color(theme.body.fastener));
+        mesh.setColorAt(i, new Color(tone));
         ids.push(f.connection);
       });
       mesh.instanceMatrix.needsUpdate = true;
       mesh.computeBoundingSphere();
       content.add(mesh);
-      owned.push(geometry, material, { dispose: () => mesh.dispose() });
+      // The context pair is the scene's, kept across revisions: only the rest goes with it.
+      owned.push(geometry, ...(ctx ? [] : [material]), { dispose: () => mesh.dispose() });
       instanced.push({
         mesh,
         ids,
-        items: fs.map((f) => f.item),
-        tones: ids.map(() => theme.body.fastener),
+        items: rods.map((f) => (ctx ? "" : f.item)),
+        tones: ids.map(() => tone),
         shown: ids.map(() => -1),
       });
+      if (ctx) context += rods.length;
     }
 
     clipMaterials();
@@ -915,6 +956,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       plates,
       bentAngles,
       placeholders,
+      context,
       holes,
       fasteners: fs.length,
       outlineSegments: segs(outline),
