@@ -26,6 +26,7 @@ import {
   jointPreview,
   lastResult,
   measureState,
+  mirrorOptions,
   pickingPlane,
   placeState,
   TOOL_NAMES,
@@ -462,26 +463,53 @@ function ValueField({
  * as the draw tool shows them.
  */
 function GestureBar({ g }: { g: Gesture }) {
+  const how = GESTURE_LOOK[g.kind];
   return (
     <section
       class="command-row command-bar"
       data-testid="command-bar"
-      data-tool={g.kind === "end" ? "drag-end" : "move"}
+      data-tool={g.kind === "end" ? "drag-end" : g.kind}
       aria-label={`${g.title}: command bar`}
     >
       <span class="cb-tool">
-        <Icon name={g.kind === "end" ? "select" : "move"} /> {g.title}
+        <Icon name={how.icon} /> {g.title}
       </span>
       <span class="cb-prompt" data-testid="command-prompt" title={g.prompt} aria-live="polite">
         {g.prompt}
       </span>
-      <ValueField
-        tool="draw"
-        reading={g.reading}
-        placeholder={g.kind === "end" ? "cut length" : "distance"}
-      />
+      <ValueField tool="draw" reading={g.reading} placeholder={how.placeholder} />
+      {g.kind === "mirror" && <MirrorOptions />}
       <Result />
     </section>
+  );
+}
+
+/** Each gesture's icon and what its value field takes (docs/ux/e3-decisions.md). */
+const GESTURE_LOOK: Readonly<
+  Record<Gesture["kind"], { icon: "select" | "move" | "rotate"; placeholder: string }>
+> = {
+  end: { icon: "select", placeholder: "cut length" },
+  move: { icon: "move", placeholder: "distance" },
+  duplicate: { icon: "move", placeholder: "offset, then 4x or /4" },
+  rotate: { icon: "rotate", placeholder: "angle, degrees" },
+  mirror: { icon: "move", placeholder: "where the plane crosses" },
+  align: { icon: "move", placeholder: "pick a face" },
+};
+
+/** Mirror's option (E-UX-8): remove the originals in the same step. */
+function MirrorOptions() {
+  const o = mirrorOptions.value;
+  return (
+    <label class="cb-opt" data-testid="mirror-remove">
+      <input
+        type="checkbox"
+        checked={o.remove}
+        onChange={() => {
+          mirrorOptions.value = { remove: !o.remove };
+        }}
+      />{" "}
+      Remove the originals
+    </label>
   );
 }
 

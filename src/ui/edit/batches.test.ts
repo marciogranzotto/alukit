@@ -3,7 +3,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { scratchFixtures } from "#core/testing.ts";
 import type { Model } from "../model.ts";
 import { hostOf, viewOf } from "../testing.ts";
-import { moveSet } from "../tools/moves.ts";
+import { copyWords, moveSet } from "../tools/moves.ts";
+import { mirrorWords } from "../tools/wire/mirror.ts";
 import {
   alignBatch,
   arrayBatch,
@@ -41,6 +42,7 @@ describe("mirror (E3.2)", () => {
       if (!r.ok) throw new Error(r.why);
       expect(r.created).toEqual(["p2"]);
       expect(r.effects.parts.p2).toMatchObject({ item: "test:BRK-40", bar: "b1", s_mm: 700 });
+      expect(mirrorWords(r).text).toBe("makes p2");
     } finally {
       await h.close();
     }
@@ -58,6 +60,7 @@ describe("mirror (E3.2)", () => {
       if (!r.ok) throw new Error(r.why);
       expect(r.created).toEqual(["p2"]);
       expect(r.effects.removed).toEqual(["p1"]);
+      expect(mirrorWords(r).text).toBe("makes p2 · removes p1");
     } finally {
       await h.close();
     }
@@ -88,6 +91,8 @@ describe("duplicate and array (E3.3)", () => {
       expect(r.created).toEqual(["b13", "c9", "c10"]);
       // Its cut is the top rail's: each end butts on a post, as b9's do.
       expect(r.effects.added.b13).toBe(920);
+      // The preview says so before the step.
+      expect(copyWords(r).text).toBe("makes b13 · joins b1 (c9) · joins b2 (c10) · cut 920");
       expect(r.effects.claimed).toEqual(expect.arrayContaining(["b13.a", "b13.b"]));
       // Nothing wrong: only the frame's own note that its butts name no connector.
       expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);

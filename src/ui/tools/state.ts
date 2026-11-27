@@ -18,6 +18,7 @@ import { extendHook } from "../hook.ts";
 export const TOOLS = [
   "select",
   "move",
+  "rotate",
   "draw",
   "connect",
   "place",
@@ -31,6 +32,7 @@ export type ToolName = (typeof TOOLS)[number];
 export const TOOL_KEYS: Readonly<Record<string, ToolName>> = {
   v: "select",
   d: "move",
+  q: "rotate",
   b: "draw",
   g: "frame",
   c: "connect",
@@ -43,6 +45,7 @@ export const TOOL_KEYS: Readonly<Record<string, ToolName>> = {
 export const TOOL_NAMES: Readonly<Record<ToolName, string>> = {
   select: "Select",
   move: "Move",
+  rotate: "Rotate",
   draw: "Draw bar",
   frame: "Box frame",
   connect: "Connect",
@@ -161,11 +164,12 @@ export const lastResult = signal<
 
 /**
  * A drag gesture on (drag.ts; docs/ux/drag-ends-decisions.md): an end handle dragged, or the
- * selection moved. The command bar shows it whatever the tool, with its value field; the
- * selected bar's label reads `reading` while an end is dragged.
+ * selection moved, copied (`duplicate`: Duplicate and Paste), turned, mirrored or aligned
+ * (docs/ux/e3-decisions.md). The command bar shows it whatever the tool, with its value field;
+ * the selected bar's label reads `reading` while an end is dragged.
  */
 export interface Gesture {
-  kind: "end" | "move";
+  kind: "end" | "move" | "duplicate" | "rotate" | "mirror" | "align";
   /** The command bar's title: "Drag end b3.b". */
   title: string;
   /** What it asks: drag, or type, and Enter. */
@@ -185,6 +189,9 @@ export const gesture = signal<Gesture | undefined>(undefined);
  * the end the typed length moves, which the handles draw larger.
  */
 export const labelEdit = signal<{ bar: string; end: "a" | "b" } | undefined>(undefined);
+
+/** Mirror's option (E-UX-8): remove what is mirrored in the same step. The command bar's box. */
+export const mirrorOptions = signal<{ remove: boolean }>({ remove: false });
 
 /** The draw tool's gesture, for the panel and the test hook. */
 export const drawState = signal<{ start?: DrawPoint; end?: DrawEnd }>({});
@@ -380,6 +387,8 @@ export const toolPrompt = computed<string>(() => {
         : "Click a point to measure from.";
     case "move":
       return "Drag the selection or a bar, or click a base point and then where it goes; type x, y, z to move by that. Alt frees what joins it.";
+    case "rotate":
+      return "Click the centre, or Enter for the selection's centre; then type the angle, or drag a ring. X, Y or Z for the axis.";
     default:
       return "";
   }

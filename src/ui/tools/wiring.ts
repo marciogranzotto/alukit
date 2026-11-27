@@ -1,4 +1,4 @@
-import type { ToolPointer, Viewer } from "../../viewer/scene.ts";
+import type { Grab, ToolPointer, Viewer } from "../../viewer/scene.ts";
 import { findSnap, type SnapTargets, snapTargets } from "../../viewer/snap.ts";
 import { hidden, select } from "../focus.ts";
 import { chord, describeKeys, onKey } from "../keys.ts";
@@ -21,15 +21,19 @@ import {
   typed,
 } from "./state.ts";
 import { parseTyped, type Typed } from "./typed.ts";
+import { createAlign } from "./wire/align.ts";
 import { VALUE_START, type Wire, type WireContext } from "./wire/common.ts";
 import { createConnectTool } from "./wire/connect.ts";
 import { createDrawTool } from "./wire/draw.ts";
+import { copyActions } from "./wire/duplicate.ts";
 import { createEndHandles } from "./wire/ends.ts";
 import { createFrameTool } from "./wire/frame.ts";
 import { createMeasureTool } from "./wire/measure.ts";
+import { createMirror } from "./wire/mirror.ts";
 import { createMoveTool } from "./wire/move.ts";
 import { createPatternTool } from "./wire/pattern.ts";
 import { createPlaceTool } from "./wire/place.ts";
+import { createRotateTool } from "./wire/rotate.ts";
 
 /**
  * The tools' router (design §8, Tools; docs/ux/editing-audit.md E0.1): the active tool gets the
@@ -42,7 +46,7 @@ import { createPlaceTool } from "./wire/place.ts";
  * Keys (D-UX-18): a tool's letter picks it; Esc steps back one level (what is typed, the last
  * pick, the gesture, the tool, then the selection); a digit, a sign, `(`, `[` or `=` starts a
  * value in the command bar, where letters then belong to the value (U20); a drag on (an end
- * handle, Move) takes its keys first.
+ * handle, Move, Rotate, and the menu's Duplicate, Paste, Mirror and Align) takes its keys first.
  */
 
 export interface Tools {
@@ -96,6 +100,29 @@ export function createTools(viewer: Viewer): Tools {
   const ends = createEndHandles(viewer, gestures);
   /** The Move tool (wire/move.ts), on the same drag machinery as the end handles. */
   const mover = createMoveTool(viewer, gestures, { snap: ctx.snapAt, pick: ctx.pickAt });
+  /**
+   * Rotate (wire/rotate.ts), and the menu's Duplicate, Copy and Paste, Mirror and Align, in the
+   * order a menu lists them within their groups.
+   */
+  const rotator = createRotateTool(viewer, gestures, { snap: ctx.snapAt, pick: ctx.pickAt });
+  const offEdits = [
+    copyActions(mover, () => pointer),
+    createMirror(viewer, gestures, { snap: ctx.snapAt }),
+    createAlign(viewer, gestures),
+  ];
+  /**
+   * Select's press is the end handles' (and a gesture's on, such as a Duplicate started from
+   * the menu); its pointer is remembered, where a paste starts.
+   */
+  const selectGrab: Grab = {
+    press: (e) => ends.grab.press(e),
+    move(e, held) {
+      pointer = e;
+      ends.grab.move(e, held);
+    },
+    release: (e) => ends.grab.release(e),
+    busy: () => ends.grab.busy(),
+  };
   const draw = createDrawTool(ctx);
   const frame = createFrameTool(ctx);
   const connect = createConnectTool(ctx);
@@ -106,6 +133,7 @@ export function createTools(viewer: Viewer): Tools {
   const wires: Readonly<Record<ToolName, Wire | undefined>> = {
     select: undefined,
     move: { handler: mover.handler },
+    rotate: { handler: rotator.handler, enter: rotator.enter },
     draw,
     frame,
     connect,
@@ -143,7 +171,15 @@ export function createTools(viewer: Viewer): Tools {
   const offTool = activeTool.subscribe((t) => {
     gestures.cancel();
     // A press is a drag's before the camera's: the end handles' in Select.
-    viewer.setGrab(t === "select" ? ends.grab : t === "move" ? mover.grab : undefined);
+    viewer.setGrab(
+      t === "select"
+        ? selectGrab
+        : t === "move"
+          ? mover.grab
+          : t === "rotate"
+            ? rotator.grab
+            : undefined,
+    );
     drawState.value = {};
     typed.value = "";
     for (const w of [draw, frame]) w.reset?.();
@@ -228,6 +264,8 @@ export function createTools(viewer: Viewer): Tools {
       offTyped();
       for (const w of [draw, frame, connect, place, pattern, measure]) w.dispose?.();
       ends.dispose();
+      for (const off of offEdits) off();
+      rotator.dispose();
       mover.dispose();
       gestures.dispose();
       viewer.setGrab(undefined);
