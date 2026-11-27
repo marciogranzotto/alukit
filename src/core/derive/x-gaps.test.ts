@@ -1,5 +1,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { referrers } from "../commands/refs.ts";
+import { rewriteEntity } from "../commands/rewrite.ts";
 import { openProject } from "../project/open.ts";
 import { FIXTURES, mergePatch } from "../testing.ts";
 import { derive } from "./derive.ts";
@@ -19,6 +21,126 @@ const said = (d: ReturnType<typeof derive>, code: string, severity?: string) =>
   d.diagnostics
     .filter((x) => x.code === code && (severity === undefined || x.severity === severity))
     .map((x) => [x.severity, x.entity, x.message]);
+
+describe("a butt's stack (X2)", () => {
+  const of = async (patch: unknown, code: string) =>
+    said((await project("G41", patch)).d, code, "error");
+
+  it("refuses a spacer with a stack, once, and a connector's own spacer", async () => {
+    expect(await of({ connections: { c1: { spacer_mm: 8 } } }, "connection")).toEqual([
+      [
+        "error",
+        "c1",
+        "stack: give spacer_mm or a stack, not both: the stack's bars are the spacer",
+      ],
+    ]);
+  });
+
+  it("says how a stack bar fails to lie on the one before", async () => {
+    expect(await of({ bars: { b3: { a: [260, 0, 26], b: [340, 0, 26] } } }, "connection")).toEqual([
+      [
+        "error",
+        "c1",
+        "stack: stack[0] b3 does not lie on b1's face +y: its face -y is 2.00 mm off it along its normal",
+      ],
+    ]);
+    // Tilted 4.3°, its faces are not square to the rail's face where the post crosses it.
+    const tilted = await of({ bars: { b3: { a: [260, 0, 24], b: [340, 0, 30] } } }, "connection");
+    expect(tilted).toEqual([
+      [
+        "error",
+        "c1",
+        "stack: stack[0] b3 does not lie flat on b1's face +y: its faces are not square to the face's normal where b2's centre line crosses it",
+      ],
+    ]);
+    expect(await of({ connections: { c1: { stack: ["b1"] } } }, "connection")).toEqual([
+      [
+        "error",
+        "c1",
+        "stack: stack[0] b1 is the through bar, a butting bar or already in the stack",
+      ],
+    ]);
+  });
+
+  it("drills no stack bar the hole misses, and says so", async () => {
+    expect(await of({ bars: { b3: { a: [400, 0, 24], b: [480, 0, 24] } } }, "connection")).toEqual([
+      [
+        "error",
+        "c1",
+        "connector requires[1]: the Ø9.00 hole in b1 meets the stack's b3 off its face +y: no place for its hole",
+      ],
+    ]);
+  });
+
+  it("names the stack bar a screw does not hold, and why", async () => {
+    const tube = await of(
+      {
+        bars: {
+          b2: { a: [300, 0, 80] },
+          b3: { item: "test-x:TUBE-60x3", a: [260, 0, 50], b: [340, 0, 50] },
+        },
+      },
+      "fit",
+    );
+    expect(tube).toEqual([
+      [
+        "error",
+        "c1",
+        "test-x:J1: the stack's b3 is held only by a screw through it into the butting end, and none holds it: b3 is hollow, and a screw through both its walls needs a sleeve in its bore",
+      ],
+    ]);
+    const hole = await of({ connections: { c1: { connector: "test-x:J1-HOLE" } } }, "fit");
+    expect(hole).toEqual([
+      [
+        "error",
+        "c1",
+        "test-x:J1-HOLE: the stack's b3 is held only by a screw through it into the butting end, and none holds it: its hole in b1 is at no place where it taps the butting end, so no screw into the butting end passes it",
+      ],
+    ]);
+  });
+
+  it("drills the stack for a screw into the through bar's end taps, at their clearance", async () => {
+    const { d } = await project("G41", {
+      bars: {
+        b2: { item: "test:TS40", a: [608, 0, 0], b: [1200, 0, 0] },
+        b3: { a: [604, 0, -40], b: [604, 0, 40], up: "+x" },
+      },
+      connections: { c1: { through: "b1.b", connector: "test-stud:END-2AX" } },
+    });
+    // Two Ø9 holes for its through-holes at x ∓10, and two Ø9 (M8's medium clearance) for its
+    // end taps at y ∓10: across the plate, and along it from its a at z = -40.
+    expect(d.bars.get("b3")?.ops).toEqual([
+      { op: "hole", face: "+y", from: "a", at: 40, across: 10, d: 9, by: "c1" },
+      { op: "hole", face: "+y", from: "a", at: 40, across: -10, d: 9, by: "c1" },
+      { op: "hole", face: "+y", from: "a", at: 30, d: 9, by: "c1" },
+      { op: "hole", face: "+y", from: "a", at: 50, d: 9, by: "c1" },
+    ]);
+  });
+
+  it("copies a stack with its pattern", async () => {
+    const { d } = await project("G41", {
+      patterns: {
+        pt1: { template: ["b2", "b3", "c1"], along: "b1", pitch_mm: 200, count: 2 },
+      },
+    });
+    expect(said(d, "connection")).toEqual([]);
+    expect(d.bars.get("b3@1")?.ops).toEqual([
+      { op: "hole", face: "+y", from: "a", at: 40, d: 9, by: "c1@1" },
+    ]);
+    expect(d.butts.get("c1@1")?.ends[0]?.on).toBe("b3@1 +y");
+  });
+
+  it("is a reference the edits see and rewrite", async () => {
+    const { raw } = await project("G41");
+    const doc = raw as Record<string, unknown>;
+    expect(referrers(doc, "b3")).toEqual([
+      { from: "c1", field: "stack/0", to: "b3", how: "whole" },
+    ]);
+    const c1 = (doc.connections as Record<string, unknown>).c1;
+    const moved = rewriteEntity("connections", "c1", c1, { id: (x) => (x === "b3" ? "b9" : x) });
+    expect((moved as { stack: string[] }).stack).toEqual(["b9"]);
+  });
+});
 
 describe("a plain bar held by a screw in a drilled hole (X3)", () => {
   const fitOf = async (patch: unknown) => said((await project("G40", patch)).d, "fit");

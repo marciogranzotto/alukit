@@ -7,7 +7,14 @@ import { type GenOut, generateFaces } from "./fastenings.ts";
 import { connectorHardware } from "./hardware.ts";
 import { placeParts } from "./parts.ts";
 import { layoutRails } from "./rails.ts";
-import type { DerivedPart, FaceResult, HardwareUse, PlacedRun, StockPiece } from "./types.ts";
+import type {
+  DerivedPart,
+  FaceResult,
+  HardwareUse,
+  PlacedRun,
+  StackLayer,
+  StockPiece,
+} from "./types.ts";
 
 /**
  * Stage 4, attach (design §5.1): on the trimmed bars of stage 3,
@@ -35,12 +42,13 @@ export function attach(
   ctx: Ctx,
   bars: ReadonlyMap<string, DerivedBar>,
   runs: ReadonlyMap<string, PlacedRun>,
+  stacks: ReadonlyMap<string, ReadonlyMap<string, readonly StackLayer[]>> = new Map(),
 ): Attached {
   layoutRails(ctx, bars);
   const parts = placeParts(ctx, bars, runs);
   const out: GenOut = { fastenings: new Map(), pieces: [], hardware: [], recipes: [] };
   generateFaces(ctx, bars, runs, parts, out);
-  connectorHardware(ctx, bars, out);
+  connectorHardware(ctx, bars, out, stacks);
   duplicateOps(ctx, bars);
   coreTaps(ctx, bars);
   return {

@@ -3,14 +3,14 @@ import type { ConnectorItem } from "#catalog/schema/items.ts";
 import { compareIds } from "../ids.ts";
 import { fullRef } from "../items.ts";
 import type { Connection, Face } from "../project/schema.ts";
-import { threadDiameter } from "../threads.ts";
+import { clearanceHole, threadDiameter } from "../threads.ts";
 import { TOL } from "../tolerances.ts";
 import { add, addScaled, angleDeg, dot, neg, norm, scale, sub, type V3 } from "../vec.ts";
 import type { Ctx } from "./context.ts";
 import type { DerivedBar, EndHoleOp, HoleOp } from "./derive.ts";
 import { type GenOut, stockOptions } from "./fastenings.ts";
 import { boxCentre, faceLocal, facePlane, onBar, resolveStation } from "./place.ts";
-import type { Copy, HardwareUse, PlacedBar, StockPiece } from "./types.ts";
+import type { Copy, HardwareUse, PlacedBar, StackLayer, StockPiece } from "./types.ts";
 
 /**
  * Hardware and machining from connectors (design §3.4, §5.1). Each connection counts its
@@ -45,6 +45,11 @@ interface Roles {
   connector?: string;
   /** A butt's spacer, for where the butting bar meets the through bar's face. */
   spacer: number;
+  /**
+   * A butt's stack (after the alternative frame's acceptance, X2): its bars, and at each butting
+   * end where stage 3 laid it out, its layers from the face out.
+   */
+  stack?: { bars: DerivedBar[]; at: ReadonlyMap<string, readonly StackLayer[]> };
   /** A butt through a body: the body, counted with the connection (§4.5). */
   body?: HardwareUse;
 }
@@ -86,13 +91,26 @@ export function connectorHardware(
   ctx: Ctx,
   bars: ReadonlyMap<string, DerivedBar>,
   out: GenOut,
+  stacks: ReadonlyMap<string, ReadonlyMap<string, readonly StackLayer[]>> = new Map(),
 ): void {
   const joints = new Map<string, Joint>();
   for (const id of [...ctx.conns.keys()].sort(compareIds)) {
     const ent = ctx.conns.get(id);
     if (!ent) continue;
     const roles = rolesOf(ctx, id, ent.spec, ent.copy, bars);
-    if (roles) joints.set(id, { spec: ent.spec, ...(ent.copy ? { copy: ent.copy } : {}), roles });
+    if (!roles) continue;
+    // A butt's stack (X2), at each butting end where stage 3 laid it out.
+    const st = stacks.get(id);
+    if (st && ent.spec.type === "butt" && ent.spec.stack) {
+      roles.stack = {
+        bars: ent.spec.stack.flatMap((s) => {
+          const b = bars.get(s);
+          return b ? [b] : [];
+        }),
+        at: st,
+      };
+    }
+    joints.set(id, { spec: ent.spec, ...(ent.copy ? { copy: ent.copy } : {}), roles });
   }
   const held = heldBy(ctx, joints);
   for (const [id, j] of joints) {
@@ -515,6 +533,23 @@ class ConnectorGen {
         refs: [b.placed.id],
       });
     }
+    // A stack's bars (X2) are clamped between the through bar and the butting end, by a screw
+    // that passes them; their system does not hold them. Judged, as the through bar is, only when
+    // some fastener set can apply.
+    if (!anyFitted) return;
+    const T = through?.placed.id ?? "the through body";
+    for (const S of this.roles.stack?.bars ?? []) {
+      const screw = screwThrough(this.ctx, item, home, sets, S, T);
+      if (screw?.holds) continue;
+      const why = screw
+        ? screw.why
+        : `it requires no through-hole in ${T}, so no screw from ${T}'s far side passes the stack`;
+      this.error(
+        "fit",
+        `${itemId}: the stack's ${S.placed.id} is held only by a screw through it into the butting end, and none holds it: ${why}`,
+        { field: "stack", refs: [S.placed.id] },
+      );
+    }
   }
 
   private mounts(sets: readonly ChosenSet[], home: string): void {
@@ -648,6 +683,21 @@ class ConnectorGen {
           );
           continue;
         }
+        // A stack (X2) is drilled for what passes along the joint: a through-hole's screw, or a
+        // screw into an end tap. v1 does not know where an access hole's tool or a counterbore's
+        // head goes through a stack.
+        const stacked = roles.stack !== undefined && roles.stack.at.size > 0;
+        if (stacked && (req.op === "access-hole" || req.op === "counterbore")) {
+          this.error(
+            "connection",
+            `${field}: a ${req.op} in the through bar under a stack: v1 drills a stack only for a through-hole or an end tap, which pass along the joint`,
+            { field: "stack" },
+          );
+          continue;
+        }
+        const clear = d ?? (req.thread ? clearanceHole(req.thread) : undefined);
+        const what = (p: Pos) =>
+          `the ${req.op === "end-tap" ? `tap ${req.thread}` : d !== undefined ? `Ø${mm(d)} hole` : `tap ${req.thread}`} in ${through.bar.placed.id}${p ? ` at ${posText(p)}` : ""}`;
         if (req.op === "end-tap") {
           if (!through.end) {
             this.error(
@@ -661,6 +711,8 @@ class ConnectorGen {
           }
           // Unplaced, it stays at the end's centre (acceptance-gaps decision 14); placed, it
           // stands where each position on the butting bar meets the end face.
+          const T = through.bar.placed;
+          const inward = through.end === "a" ? T.frame.t : neg(T.frame.t);
           if (!placed) {
             through.bar.ops.push({
               op: "end-tap",
@@ -669,18 +721,18 @@ class ConnectorGen {
               ...(depth !== undefined ? { depth } : {}),
               by: id,
             });
+            // At the end face's centre, along the axis: the screw into it passes the stack.
+            const e = through.bar.ends[through.end];
+            const { C, t } = centreLine(through.bar);
+            const Q = addScaled(C, t, dot(sub(e.point, C), e.normal) / dot(t, e.normal));
+            for (const b of roles.butting)
+              this.stackHoles(b, Q, inward, clear, what(undefined), field);
             continue;
           }
           for (const b of roles.butting) {
             for (const p of at) {
-              const off = this.endPlace(
-                through.bar,
-                through.end,
-                b.bar,
-                b.end,
-                this.jointPoint(b.bar, b.end, p),
-                p,
-              );
+              const Q = this.jointPoint(b.bar, b.end, p);
+              const off = this.endPlace(through.bar, through.end, b.bar, b.end, Q, p);
               if (!off) continue;
               through.bar.ops.push({
                 op: "end-tap",
@@ -690,6 +742,7 @@ class ConnectorGen {
                 ...(depth !== undefined ? { depth } : {}),
                 by: id,
               });
+              this.stackHoles(b, Q, inward, clear, what(p), field);
             }
           }
           continue;
@@ -719,16 +772,23 @@ class ConnectorGen {
           const tilted: { at: Pos; angle: number; face: Face }[] = [];
           for (const p of at) {
             if (through.end) {
-              const op = this.endHole(through.bar, through.end, b.bar, b.end, hole, p, {
+              const r = this.endHole(through.bar, through.end, b.bar, b.end, hole, p, {
                 screw: intoTap(p),
                 field,
               });
-              if (op) through.bar.ops.push(op);
+              if (!r) continue;
+              through.bar.ops.push(r.op);
+              this.stackHoles(b, r.Q, r.u, clear, what(p), field);
               continue;
             }
             const r = this.jointHole(through.bar, b.bar, b.end, hole, p, off, intoTap(p));
             if (r && "tilted" in r) tilted.push({ at: p, angle: r.tilted, face: r.face });
-            else if (r) through.bar.ops.push(r);
+            else if (r) {
+              through.bar.ops.push(r);
+              // Square to the face the end bears on, through the joint point: the stack's axis.
+              const Q = this.jointPoint(b.bar, b.end, p);
+              this.stackHoles(b, Q, b.bar.ends[b.end].normal, clear, what(p), field);
+            }
           }
           if (off.length > 0) {
             this.error(
@@ -806,7 +866,88 @@ class ConnectorGen {
       add(scale(bar.frame.x, cx + (p?.[0] ?? 0)), scale(bar.frame.y, cy + (p?.[1] ?? 0))),
     );
     const lambda = dot(sub(e.point, C), e.normal) / dot(bar.frame.t, e.normal);
-    return addScaled(addScaled(C, bar.frame.t, lambda), e.normal, this.roles.spacer);
+    return addScaled(addScaled(C, bar.frame.t, lambda), e.normal, this.lift(butting, end));
+  }
+
+  /** A butting end's stand-off from the through bar's face: the spacer, or its stack's depth (X2). */
+  private lift(butting: DerivedBar, end: "a" | "b"): number {
+    const layers = this.stackAt(butting, end);
+    return this.roles.spacer + (layers[layers.length - 1]?.to ?? 0);
+  }
+
+  private stackAt(butting: DerivedBar, end: "a" | "b"): readonly StackLayer[] {
+    return this.roles.stack?.at.get(`${butting.placed.id}.${end}`) ?? [];
+  }
+
+  /**
+   * The holes in a butt's stack (after the alternative frame's acceptance, X2) for one hole the
+   * connector makes in the through bar: each stack bar between the face and the butting end is
+   * drilled through with `d` where the hole's axis (through `Q` on the through bar's face, along
+   * `u` into it) crosses it, as the screw passes it. A hole in a bar's side is drilled square to its
+   * face, so an axis off square to a stack bar's face by more than tol.ang has no hole there, and
+   * one that meets the bar's face off it (across it, or past its cut ends) has no place: each a
+   * `connection` error naming that bar.
+   */
+  private stackHoles(
+    b: { bar: DerivedBar; end: "a" | "b" },
+    Q: V3,
+    u: V3,
+    d: number | undefined,
+    what: string,
+    field: string,
+  ): void {
+    const layers = this.stackAt(b.bar, b.end);
+    if (layers.length === 0) return;
+    if (d === undefined) {
+      this.error("connection", `${field}: ${what} gives no clearance to drill the stack with`, {
+        field: "connector",
+      });
+      return;
+    }
+    for (const layer of layers) {
+      const S = this.roles.stack?.bars.find((x) => x.placed.id === layer.bar);
+      if (!S) continue;
+      const P = S.placed;
+      const face = layer.outer as Face;
+      const pl = facePlane(P, face);
+      const tilt = angleDeg(u, neg(pl.n));
+      if (tilt > TOL.ang) {
+        this.error(
+          "connection",
+          `${field}: ${what} runs ${deg(tilt)}° off square to the stack's ${P.id}, face ${face}; a hole in a bar's side is drilled square to its face, so it cannot be made there`,
+          { field: "connector", refs: [P.id] },
+        );
+        continue;
+      }
+      const X = addScaled(Q, u, dot(sub(pl.p, Q), pl.n) / dot(u, pl.n));
+      const s = dot(sub(X, P.A), P.frame.t);
+      const fl = faceLocal(P.box, face);
+      const v = face === "+x" || face === "-x" ? P.frame.y : P.frame.x;
+      const across = dot(sub(X, onBar(P, s, fl.at[0], fl.at[1])), v);
+      const half =
+        face === "+x" || face === "-x" ? (P.box.y1 - P.box.y0) / 2 : (P.box.x1 - P.box.x0) / 2;
+      if (
+        Math.abs(across) > half - TOL.len ||
+        s < S.lengths.sa + TOL.len ||
+        s > S.lengths.sb - TOL.len
+      ) {
+        this.error(
+          "connection",
+          `${field}: ${what} meets the stack's ${P.id} off its face ${face}: no place for its hole`,
+          { field: "connector", refs: [P.id] },
+        );
+        continue;
+      }
+      S.ops.push({
+        op: "hole",
+        face,
+        from: "a",
+        at: s,
+        ...(Math.abs(across) > TOL.len / 100 ? { across } : {}),
+        d,
+        by: this.id,
+      });
+    }
   }
 
   /**
@@ -856,7 +997,7 @@ class ConnectorGen {
     fields: Pick<HoleOp, "d" | "thread" | "depth">,
     p: Pos,
     how: { screw: boolean; field: string },
-  ): EndHoleOp | undefined {
+  ): { op: EndHoleOp; Q: V3; u: V3 } | undefined {
     const T = through.placed;
     const face = through.ends[throughEnd];
     const other = throughEnd === "a" ? "b" : "a";
@@ -920,7 +1061,7 @@ class ConnectorGen {
       );
     }
     const exit = path.exit;
-    return {
+    const op: EndHoleOp = {
       op: "end-hole",
       from: throughEnd,
       ...(place.centre ? {} : { off: place.off }),
@@ -930,6 +1071,7 @@ class ConnectorGen {
       ...fields,
       by: this.id,
     };
+    return { op, Q, u };
   }
 
   /**
@@ -1062,8 +1204,10 @@ function buttingTaps(item: ConnectorItem): (readonly [number, number])[] {
  * 4. and the bar is not hollow: a screw through an RHS's or a tube's two walls would crush them,
  *    which is what a sleeve in its bore is for (A1).
  *
- * `why` says which of these fails, for the `fit` error; undefined when the connector requires no
- * hole in the through bar at all, so the A1 error stands as it was.
+ * A bar of a butt's stack (X2) is held the same way: the same screw passes it, clamping it between
+ * the through bar and the butting end, so 1–3 are read of the through bar's hole (`through`) and 4
+ * of the stack bar. `why` says which condition fails, for the `fit` error; undefined when the
+ * connector requires no hole in the through bar at all, so the A1 error stands as it was.
  */
 function screwThrough(
   ctx: Ctx,
@@ -1071,17 +1215,17 @@ function screwThrough(
   home: string,
   sets: readonly ChosenSet[],
   bar: DerivedBar,
+  through: string = bar.placed.id,
 ): { holds: true } | { holds: false; why: string } | undefined {
-  const id = bar.placed.id;
+  const id = through;
   const holes = (item.requires ?? []).filter(
     (r) => r.op === "through-hole" && (r.on === "through" || r.on === "each"),
   );
   if (holes.length === 0) return undefined;
-  const hollow = bar.placed.item.shape === "rhs" || bar.placed.item.shape === "tube";
-  if (hollow) {
+  if (isHollow(bar)) {
     return {
       holds: false,
-      why: `${id} is hollow, and a screw through both its walls needs a sleeve in its bore`,
+      why: `${bar.placed.id} is hollow, and a screw through both its walls needs a sleeve in its bore`,
     };
   }
   const taps = buttingTaps(item);
@@ -1124,6 +1268,8 @@ function screwThrough(
   }
   return { holds: false, why: [...new Set(reasons)].join("; ") };
 }
+
+const isHollow = (b: DerivedBar) => b.placed.item.shape === "rhs" || b.placed.item.shape === "tube";
 
 /** A splice's studs (its parts that are fasteners of subtype `stud`, by qty), at least one. */
 function spliceStuds(ctx: Ctx, sp: NonNullable<ConnectorItem["splice"]>, home: string): number {

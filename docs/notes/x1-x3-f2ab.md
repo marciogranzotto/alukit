@@ -92,3 +92,55 @@ with its reason (`x-gaps.test.ts`).
 
 On the reproduction (**verified**: derived with this code), the J1 through the plain 80 x 80 block
 derives with no `fit` error.
+
+## X2: a butt's stack
+
+**The case.** A post's end screwed down through an 8 mm end plate into a rail: the J1 screw comes up
+through the rail, through the plate, into a bush in the post's core. **The cause** (**read**,
+`ends.ts` and `hardware.ts` before this change): a butt bore on one face, the through bar's,
+lifted only by `spacer_mm`. A spacer is a thickness, not a bar, so the plate written as the spacer
+got no hole (X2a), and the plate written as the through bar left the rail under it undrilled, with
+a `fit` error on the plate (X2b).
+
+13. **A list of bars on the butt**, `stack`, from the face out. Not a `face` connection's layers:
+    the stack sets where the end bears, so stage 3 must read it, and a face connection is resolved
+    in stage 4, after the cuts. Not parts: a part is placed in stage 4 too (call 47). A plate is a
+    bar of flat stock, as the record writes it.
+14. **Laid out in stage 3** (`stackOn`), on the butting bar's centre line, at each butting end: each
+    bar's two crossed faces square to the face's normal within `tol.ang`, its near face within
+    `tol.len` of the face below. The depth lifts the end plane; the end's seat (F2) is measured on
+    the last bar's far face. The stack bar's extent along its own axis is not read here (its ends
+    may not be resolved yet): a hole that lands past its cut ends is stage 4's error, and the seat's
+    overhang warns as for any face.
+15. **No second spacer.** `spacer_mm` with a stack, or a connector with its own `spacer_mm`, is a
+    `connection` error, said once per butt: v1 places no connector, so it cannot say whether its
+    spacer or the stack lies nearer the face.
+16. **The holes follow the through bar's.** Each hole the connector makes in the through bar (a
+    `through-hole`, or an end tap whose screw comes from the butting side) is drilled through each
+    stack bar where its axis crosses it: the hole's diameter, or the thread's ISO 273 medium
+    clearance. For a side hole the axis is the face's normal through the joint point; for an end
+    hole, its own axis (the screw's, when it pairs with a butting tap). A side hole is drilled square
+    to its face, so an axis off square is an error, as F2's call 41 has it; so is one off the bar.
+17. **What v1 does not drill.** An access hole or a counterbore in the through bar under a stack
+    is a `connection` error: v1 does not know whether the tool or the head passes the stack.
+18. **Held by the screw that clamps it**, X3's rule with the through bar's hole (conditions 1–3)
+    and the stack bar's own shape (4): the screw from the through bar's far side passes it into the
+    butting end. Its system does not hold it: nothing of a T-slot connector reaches a plate between.
+    A connector that drills nothing in the through bar, or whose screw comes from the butting side,
+    leaves the stack bar a `fit` error naming it (call 47).
+19. **References.** `stack` entries are whole references (`refs.ts`): the joint is another without
+    one. Patterns remap them; edits rewrite them.
+
+**G41** (**verified**: `by_hand.py`): an 80 x 8 plate on a 40x40 rail, a 40x40 post with an M16 core
+on it, J1 with `stack: ["b3"]`: the post's end at z 28, cut 572, seated on the plate (1600 mm²);
+Ø9 through the rail at 300 and the plate at 40. Two plates: cut 564, a hole in each. Through the
+rail's end with the plate standing on it: the end hole along the axis, the plate's at 40. A spacer
+as well, a plate 2 mm off, a plate the post misses: a `connection` error; a tube, a hole at no tap:
+a `fit` error naming the plate. `x-gaps.test.ts` adds the words, a tilted plate, the through bar in
+its own stack, a through end-tap's clearance (Ø9 for M8), a pattern copy, and the references.
+
+On the reproductions (**verified**: derived with this code): X2a with `stack` in place of
+`spacer_mm` drills the plate Ø9 and cuts the post 552, with no error. X2b as written (the plate as
+the through bar) now passes `fit` by X3, but the rail under the plate is still not drilled, and the
+screw's head would sit between the plate and the rail: the head's seat on the plate's far face is
+F2b's to check (below). The right model of X2b is X2a's, with the plate in the stack.

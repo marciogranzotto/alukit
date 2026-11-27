@@ -159,7 +159,8 @@ function connection(id: string, c: O, rw: Rewriter): O {
         };
       }
       const held = typeof c.held_by === "string" && rw.id ? { held_by: rw.id(c.held_by) } : {};
-      return { ...c, through, ends: ends(c.ends, rw), ...held };
+      const stack = Array.isArray(c.stack) ? { stack: ids(c.stack, rw) } : {};
+      return { ...c, through, ends: ends(c.ends, rw), ...held, ...stack };
     }
     case "miter":
     case "splice":

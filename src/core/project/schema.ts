@@ -233,6 +233,13 @@ export const Butt = z.strictObject({
     .describe("a bar, a bar's end, or a body at a point or pose"),
   ends: z.array(EndRef).min(1),
   spacer_mm: Expr.optional().describe("along the through face's outward normal"),
+  stack: z
+    .array(BarId)
+    .min(1)
+    .optional()
+    .describe(
+      "bars between the face the butt bears on and the butting ends, from that face out (an end plate, a packer): each lies on the one before, the ends bear on the last, and the connector's screws pass each, drilled as the through bar is",
+    ),
   through_end: ThroughEnd.optional(),
   held_by: ConnId.optional().describe(
     "a butt through the same bar whose through-fastener holds these ends too: c<number>",

@@ -200,7 +200,7 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
   const butts = buttSeats(ctx, bars, s3.seats);
 
   // Stage 4: rail holes, parts, face contacts and fastenings, generated machining, hardware.
-  const gen = attach(ctx, bars, runs);
+  const gen = attach(ctx, bars, runs, s3.stacks);
 
   return {
     doc: ctx.doc,

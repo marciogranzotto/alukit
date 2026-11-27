@@ -1,0 +1,337 @@
+{
+  "case": "G41",
+  "rule": "a butt's stack: bars between the face the butt bears on and the butting end, each lying on the one before; the end bears on the last, lifted by the stack's depth; each is drilled where the hole the connector makes in the through bar crosses it, and held by the screw that passes it (§4.5, §3.4)",
+  "design": "A 40x40 post, its core tapped M16, on an 80 x 8 plate on a 40x40 rail; J1 through the rail with the plate in the stack: the post's end at the plate's top face, z 28, its cut 572; Ø9 through the rail at 300 and through the plate at 40; the end bears on the plate's +y face. Two plates: the end at z 36, a hole in each. Through the rail's end with a plate standing on it: the end hole along the rail's axis and the plate's hole at 40. A spacer as well, a plate 2 mm off the rail, a plate the post misses, a tube for the plate, or a connector whose hole is at no tap: an error naming the plate where it is the plate's",
+  "expect": {
+    "ops": {
+      "b1": [
+        {
+          "op": "hole",
+          "face": "+y",
+          "from": "a",
+          "at": 300,
+          "d": 9,
+          "by": "c1"
+        }
+      ],
+      "b2": [
+        {
+          "op": "end-tap",
+          "from": "a",
+          "thread": "M16",
+          "by": "c1"
+        }
+      ],
+      "b3": [
+        {
+          "op": "hole",
+          "face": "+y",
+          "from": "a",
+          "at": 40,
+          "d": 9,
+          "by": "c1"
+        }
+      ]
+    },
+    "bars": {
+      "b2": {
+        "cut_mm": 572
+      }
+    },
+    "butts": {
+      "c1": [
+        {
+          "end": "b2.a",
+          "on": "b3 +y",
+          "area_mm2": 1600,
+          "overhang_mm": 0,
+          "overhang_mm2": 0,
+          "overlap_mm": 0
+        }
+      ]
+    },
+    "hardware": {
+      "test-x:BUSH-16-8": 1,
+      "test-x:SCR-M8x100": 1
+    },
+    "recipes": {
+      "test-x:J1": 1
+    },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "two plates",
+      "patch": {
+        "bars": {
+          "b2": {
+            "a": [300, 0, 36]
+          },
+          "b4": {
+            "item": "test-x:FB-80x8",
+            "a": [270, 0, 32],
+            "b": [330, 0, 32]
+          }
+        },
+        "connections": {
+          "c1": {
+            "stack": ["b3", "b4"]
+          }
+        }
+      },
+      "expect": {
+        "ops": {
+          "b1": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 300,
+              "d": 9,
+              "by": "c1"
+            }
+          ],
+          "b3": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 40,
+              "d": 9,
+              "by": "c1"
+            }
+          ],
+          "b4": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 30,
+              "d": 9,
+              "by": "c1"
+            }
+          ]
+        },
+        "bars": {
+          "b2": {
+            "cut_mm": 564
+          }
+        },
+        "butts": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "on": "b4 +y",
+              "area_mm2": 1600,
+              "overhang_mm": 0,
+              "overhang_mm2": 0,
+              "overlap_mm": 0
+            }
+          ]
+        },
+        "recipes": {
+          "test-x:J1": 1
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "through the rail's end",
+      "patch": {
+        "bars": {
+          "b2": {
+            "a": [608, 0, 0],
+            "b": [1200, 0, 0]
+          },
+          "b3": {
+            "a": [604, 0, -40],
+            "b": [604, 0, 40],
+            "up": "+x"
+          }
+        },
+        "connections": {
+          "c1": {
+            "through": "b1.b"
+          }
+        }
+      },
+      "expect": {
+        "ops": {
+          "b1": [
+            {
+              "op": "end-hole",
+              "from": "b",
+              "d": 9,
+              "by": "c1"
+            }
+          ],
+          "b2": [
+            {
+              "op": "end-tap",
+              "from": "a",
+              "thread": "M16",
+              "by": "c1"
+            }
+          ],
+          "b3": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 40,
+              "d": 9,
+              "by": "c1"
+            }
+          ]
+        },
+        "bars": {
+          "b2": {
+            "cut_mm": 592
+          }
+        },
+        "recipes": {
+          "test-x:J1": 1
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "a spacer as well",
+      "patch": {
+        "connections": {
+          "c1": {
+            "spacer_mm": 8
+          }
+        }
+      },
+      "expect": {
+        "ops": {
+          "b3": []
+        },
+        "recipes": {
+          "test-x:J1": 1
+        },
+        "errors": [
+          {
+            "code": "connection",
+            "entity": "c1",
+            "refs": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "a plate 2 mm off the rail",
+      "patch": {
+        "bars": {
+          "b3": {
+            "a": [260, 0, 26],
+            "b": [340, 0, 26]
+          }
+        }
+      },
+      "expect": {
+        "ops": {
+          "b3": []
+        },
+        "recipes": {
+          "test-x:J1": 1
+        },
+        "errors": [
+          {
+            "code": "connection",
+            "entity": "c1",
+            "refs": ["b3"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a plate the post misses",
+      "patch": {
+        "bars": {
+          "b3": {
+            "a": [400, 0, 24],
+            "b": [480, 0, 24]
+          }
+        }
+      },
+      "expect": {
+        "ops": {
+          "b3": []
+        },
+        "recipes": {
+          "test-x:J1": 1
+        },
+        "errors": [
+          {
+            "code": "connection",
+            "entity": "c1",
+            "refs": ["b3"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a tube for the plate",
+      "patch": {
+        "bars": {
+          "b2": {
+            "a": [300, 0, 80]
+          },
+          "b3": {
+            "item": "test-x:TUBE-60x3",
+            "a": [260, 0, 50],
+            "b": [340, 0, 50]
+          }
+        }
+      },
+      "expect": {
+        "recipes": {
+          "test-x:J1": 1
+        },
+        "errors": [
+          {
+            "code": "fit",
+            "entity": "c1",
+            "refs": ["b3"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a hole at no tap",
+      "patch": {
+        "connections": {
+          "c1": {
+            "connector": "test-x:J1-HOLE"
+          }
+        }
+      },
+      "expect": {
+        "ops": {
+          "b3": [
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 40,
+              "d": 9,
+              "by": "c1"
+            }
+          ]
+        },
+        "recipes": {
+          "test-x:J1-HOLE": 1
+        },
+        "errors": [
+          {
+            "code": "fit",
+            "entity": "c1",
+            "refs": ["b3"]
+          }
+        ]
+      }
+    }
+  ]
+}

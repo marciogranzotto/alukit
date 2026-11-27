@@ -267,13 +267,18 @@ golden case worked by an independent hand script
   layer, where it grips; behind a solid last layer it goes through. Its grip, the material it
   passes, must lie in the item's `grip_min_mm` to `grip_max_mm`, else a `fit` error. Draft 2.3
   had only `bolt`, which drilled ISO 273 holes through both walls, and `screw`, which tapped the
-  near wall (x1 1–6).
+  near wall (x1 1–6). Call 45.
 - §3.4: **a plain bar held by a screw in a drilled hole** (X3; G40). Fit by role holds a solid
   through bar a fourth way: a `through-hole` through it, at a place where the connector taps the
   butting end, passed by a screw or bolt of its fastener set. A blind hole, a hole with no tap
   at its place, one too small for the screw, a set with no headed fastener, or an RHS or tube
   still fails, the error saying which (x1 7–12). The `fit` errors that drilled through bars
-  already had gain that clause (no value moves).
+  already had gain that clause (no value moves). Call 46.
+- §4.5: **a butt's stack** (X2; G41). `stack` lists the bars between the face a butt bears on and
+  the butting end (an end plate, a packer). Stage 3 checks each lies flat on the one before and
+  lifts the end plane by their depth; the end's seat is on the last. Stage 4 drills each where the
+  through bar's holes' axes cross it, and fit holds each by the screw that clamps it (x1 13–19).
+  Draft 2.3 could say an end plate only as `spacer_mm`, which drilled it nowhere. Call 47.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -955,7 +960,7 @@ default (G20).
 
 | Type | Takes | End planes | Valid when (otherwise an error) |
 |---|---|---|---|
-| `butt` | `through`: a bar; a bar's end, `"b7.b"` (*2.1*); or `{ "body": <item>, "at": <point or pose> }`; `ends`: the butting ends; `connector`, `qty`, `spacer_mm`; `held_by` (*2.3*, below) | each butting end: the first face of the through prism that the butting bar's centre line crosses, travelling from the bar's other end toward this one. Through an end: that end's end face, its normal reversed (G17). Then moved by `spacer_mm` (from the connector, or given) along the through face's outward normal, toward the butting bar: a spacer is a layer of that thickness between the faces (*2.1*). A butt needs no node: the plane follows the through bar | the centre line crosses a face, not within `tol.len` of an edge. Through an end: it crosses the end face inside that bar's infinite prism, not within `tol.len` of a side face, and that end's provider is a placement provider |
+| `butt` | `through`: a bar; a bar's end, `"b7.b"` (*2.1*); or `{ "body": <item>, "at": <point or pose> }`; `ends`: the butting ends; `connector`, `qty`, `spacer_mm`; `held_by` (*2.3*, below); `stack` (*2.3*, below) | each butting end: the first face of the through prism that the butting bar's centre line crosses, travelling from the bar's other end toward this one. Through an end: that end's end face, its normal reversed (G17). Then moved by `spacer_mm` (from the connector, or given) along the through face's outward normal, toward the butting bar: a spacer is a layer of that thickness between the faces (*2.1*). With a `stack`, by its bars' depth instead, and the end bears on the last of them (*2.3*). A butt needs no node: the plane follows the through bar | the centre line crosses a face, not within `tol.len` of an edge. Through an end: it crosses the end face inside that bar's infinite prism, not within `tol.len` of a side face, and that end's provider is a placement provider |
 | ↳ the through bar's own end | `through_end`: `cover` (default), `node`, `none`; claimed automatically when a through end's design point coincides with a butting end's (a corner), or named: `{ "end": "b", "mode": "cover" }`. Not with an end as `through` | `cover`: the farthest face, along the through bar's axis, of the butting bars' prisms that its centre line crosses (flush outer corner). `node`: square at its design point | `cover` that crosses no prism falls back to `node` with a warning |
 | `miter` | two ends | both on the bisector plane through the crossing point of the two centre lines; a miter is itself the declaration of `cut: "angle"` on both (*2.3*) | the centre lines cross within `tol.len`; same section, and the two placed sections mirror each other across the plane within `tol.len` |
 | `splice` | two ends, end to end; `connector` (a stud in tapped cores, or union plates), `gap_mm` (default 0) | square planes at the shared design point, `gap_mm` apart | collinear within `tol.ang` and `tol.len`; same item and placement |
@@ -994,6 +999,23 @@ the catalog's, and the stud's length check is v1.1 with the others (call 25); th
 the distance between the two butting end faces. One butt with two coaxial ends and a stud end on
 each is what it says: two studs and two sleeves, and the hole through the bar made twice, a
 `machining` error (§5.5).
+
+**A butt's stack** (*2.3*, after the alternative frame's acceptance; gap X2, G41). An end plate
+or a packer between the face a butt bears on and the butting end is a bar of the butt's `stack`,
+listed from that face out: `"stack": ["b3"]`. Stage 3 lays each out where the butting bar's centre
+line crosses it: its two faces square to the face's normal (within `tol.ang`), the first lying on
+the face and each on the one before (within `tol.len`). The end then bears on the last one's far
+face, so the stack's depth lifts the end plane as a spacer would, and the end's seat is measured on
+that face. A stack is the spacer: one with `spacer_mm`, or with a connector that has its own, is a
+`connection` error, since v1 places no connector and cannot say which lies nearer the face. Stage
+4 drills each stack bar, through, where the axis of each hole the connector makes in the through
+bar crosses it (a `through-hole`'s diameter, or its thread's ISO 273 medium clearance, as for an
+end tap's screw), square to its face: an axis off square, or one that meets the bar off its face
+or past its cut ends, is a `connection` error naming it. An access hole or a counterbore in the
+through bar under a stack is a `connection` error in v1. A stack bar is held only by the screw
+that clamps it (§3.4, the fourth way, read of the through bar's hole), and a hollow one not at
+all: else a `fit` error naming it. A stack holds bars only; a part as a layer (it is placed in
+stage 4, after the cuts it would set) is call 45. `stack` entries are whole references (§6).
 
 **A butt through a body** (*2.1*): the body is any item with a bounding box (a connector, a
 placeholder, a generic or a plate), at a point or at a pose `{ "pos", "rot_deg" }` as parts take
@@ -1249,6 +1271,7 @@ length at R$ 126.50/m in 10 mm steps, 40–3000 mm, and in stock bars of 3000 an
 | G38 | 40 x 40 square bars: beams b1 (0,0,0)→(2000,0,0) and b2 (0,0,1040)→(2000,0,1040), their faces 1000 apart; brace b3 from `{on: {bar: b1, at_mm: 500}}` to `{on: {bar: b2, at_mm: 1020}}`, `cut: "angle"` at both ends; post b4 from b1 at 1600 to b2 at 1600; knee brace b5 from b1 at 1200 to `{on: {bar: b4, at_mm: 400}}`, both ends angled; `butt`s through b1, b2 and b4; cut to length, kerf 3 | a piece is ordered, billed and nested at its span (gap X4, *2.3*) | b3 long point, centre line and short point 1118.03 (parallel cuts at 26.57°), span 1138.03 = 1118.03 + 40 · tan 26.57°, ordered 1138, billed 1140, R$ 144.21; b5 549.12, 509.12, 469.12, span 549.12 (a trapezoid), billed 550; b1, b2 2000.00 and b4 1000.00, square; total R$ 846.29, BOM 6687.15. b3's end b on the plane through (1010,0,1020) with normal (1,0,3), leaning as end a does but not parallel: long point 1125.18, span 1130.89. b2 at z = 2720 (b3 to 1860 along it): long point 2996.33, inside the offer's 3000, span 3016.33, a `length` error. From stock bars: 2000 + 2000 + 1138.03 + 549.12 + 3 × 3 = 5696.15 in a 6000, the post in a 3000, R$ 930.00 |
 | G39 | RHS 200x100x4.75 b1 (0,0,0)→(1000,0,0); flat 120x12 b2 (100,0,106)→(350,0,106) on its top wall; `face` [b2, b1], `blind`, a blind M8 (`hole_mm` 14, grip 3 to 22), `at_mm: [50, 200]` | a blind fastener (*2.3*, gap X1) | Ø14 through b2 at 50 and 200; Ø14 4.75 deep in b1's top wall at 150 and 300, none in its bottom wall; grip 16.75; the head (Ø20) 100 % on b2. A 25 mm plate: grip 29.75, a `fit` error. On a solid 8 mm flat: Ø14 through it, grip 20.00. A fastener with no `hole_mm`: a `face` error, no hole |
 | G40 | plain 80 x 80 block b1 (0,0,0)→(200,0,0), no system; 40x40 post b2 (100,0,40)→(100,0,540), its core for M16; `butt` through b1 with J1: an M16 `end-tap` in the post, a Ø9 `through-hole` in b1, a bush and an M8 screw | a plain bar held by a screw in a drilled hole (*2.3*, gap X3) | no error: Ø9 through b1 at 100, M16 in b2's end. Through b1's end b: an end hole along its axis, no error. A 20 deep hole, a hole with no tap at its place, a Ø6 hole, a stud for the screw, or an RHS for the block: a `fit` error on c1 naming b1 |
+| G41 | 40x40 rail b1 (0,0,0)→(600,0,0); plate 80 x 8 b3 (260,0,24)→(340,0,24) on its top face; 40x40 post b2 (300,0,28)→(300,0,600), its core for M16; `butt` through b1 with J1, `stack: ["b3"]` | a butt's stack (*2.3*, gap X2) | b2's end at the plate's top, cut 572, seated on b3 +y (1600 mm², no overhang); Ø9 through b1 at 300 and through b3 at 40. Two plates (b4 on b3): cut 564, Ø9 in b4 at 30, seated on b4. Through b1's end b with the plate standing on it: the end hole along the axis, b3's at 40, cut 592. A spacer as well, a plate 2 mm off, a plate the post misses: a `connection` error. A tube for the plate, a hole at no tap: a `fit` error naming b3 |
 
 ### 4.7 Parts, rails and patterns (D14)
 
@@ -2397,6 +2420,20 @@ compared number moves: the check is right, and the question is the record's.
 44. *New in 2.3, after acceptance run 4, open.* The stack's first washer is under the head and the
     next under the nut; a part with no bearing diameter in its item is not checked (an info), with
     no fallback to the ISO tables, since derive reads only the lock (§4.5).
+45. *New in 2.3, after the alternative frame's acceptance, open.* A blind fastener's hole is its
+    maker's `hole_mm`, never a clearance table's: with none, a `face` error. It grips the near wall
+    of a hollow last layer and the whole of a solid one, and its grip range is checked when the
+    item states one (§4.5).
+46. *New in 2.3, after the alternative frame's acceptance, open.* A solid through bar, and a bar
+    of a butt's stack, are held by a screw through them when the connector requires a
+    `through-hole` with no depth at a place where it taps the butting end, and a screw or bolt of a
+    chosen fastener set is thinner than that hole. Which fastener passes which hole is not read: any
+    headed one of the chosen sets counts (§3.4).
+47. *New in 2.3, after the alternative frame's acceptance, open.* A butt's stack holds bars only:
+    a part is placed in stage 4, after the cuts a stack sets. A stack bar is held only by a screw
+    from the through bar's far side, so a screw from the butting side into a tap in the through bar
+    leaves it a `fit` error, and an access hole or a counterbore under a stack is a `connection`
+    error (§4.5).
 
 ## 15. Review 1 resolution
 
