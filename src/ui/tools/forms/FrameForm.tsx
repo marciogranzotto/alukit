@@ -109,6 +109,7 @@ export function FrameForm({ onDone }: { onDone?: () => void }) {
     <label title={title}>
       {label}{" "}
       <input
+        class="frame-size"
         data-testid={`frame-${k}`}
         inputMode="decimal"
         placeholder="mm"
