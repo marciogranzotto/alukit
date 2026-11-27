@@ -787,3 +787,13 @@ anything, and each has a default in place.
 - **07:36**: Both merged with the integration fixes; gate PASS (1,049 tests), and `live.spec` passes under load. Pushed `c9dc0c5`; the S2, S3 and baseline worktrees are removed.
 - **07:38**: S5 launched: the command bar, place on click, keys, inspector editing with Delete and its cascade, the joint preview (a dry run on snap or after a pause), and the box-frame tool on `addFrame`.
 - **08:02**: The reference project's next heads arrived. The decided frame's run 7 and the alternative frame's run 4 launched, with the quick connector written natively. The CLI runs from a frozen worktree at `5b9c70b`.
+- **08:31**: The alternative frame's acceptance run 4 (internal; CLI at `5b9c70b`).
+  - All four numeric tests pass on both variants, and gaps X7 and X8 are confirmed closed on the real frame.
+  - It fails on a new gap, **X9**: the quick connector's cross hole is drilled from the face nearest its core even when another member covers that face (8 of 36), though each core has a clear face. `check` is silent, and a requirement cannot name the face.
+  - **X10**, a check gap: the bearing under the lips is measured on the outer face rather than on the lips' underside, so AluKit misses its own 50 % warning.
+- **08:37**: The decided frame's run 7 (internal): **pass**, all four tests, with the quick connector written natively for the first time. It found the same face gap (6 of 36) and the bearing gap.
+  - It also found **F9**: two profiles carry another profile's groove in the catalog, where the vendor's drawings differ.
+- **08:39**: Gap batch X9 / F8 / F9 launched (worktree):
+  - a clear face chosen for each cross hole, a face that can be named, and covered faces reported;
+  - bearing clipped to the lips' underside;
+  - each profile's own groove from its own drawing, printed dimensions first, else a stated estimate.
