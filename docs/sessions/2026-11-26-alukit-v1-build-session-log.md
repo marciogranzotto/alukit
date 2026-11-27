@@ -234,6 +234,11 @@ anything, and each has a default in place.
   - Only blocks and errors outline bars in red.
   - "Nothing" is offered as a joint only while the project has no default connector.
   - Open for later: specific problem titles in core (m7, which would change the CLI's `problems` output), ghost bars for a pattern (m9).
+- **3D editing audit, the two owner calls (`docs/ux/editing-audit.md` §11)**, both on their defaults after no answer:
+  - variant scope (`only_in` / `not_in`) stays CLI-only this round;
+  - butt connectors are not drawn in 3D until v1.1, so joint markers stay the sign of a joint.
+
+  Also the audit's decisions E-UX-1 to E-UX-24.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. Since 05:29 it exempts the licence texts shipped with bundled assets
   (`**/OFL.txt`, `**/LICENSE.txt`, `**/LICENSE.md`), since IBM Plex's licence must ship with the
@@ -882,3 +887,17 @@ anything, and each has a default in place.
 - **12:31–12:34**: Marcio found the app has no way to move an item, and asked that the 3D view get **all the UI/UX needed to design and edit everything**.
   - A Move tool joined the end-handle work, sharing its drag machinery.
   - An editing audit was launched, the same method as the redesign: inventory what the model can do against what the app offers, research CAD tools and extrusion-frame configurators, a gap matrix, buildable streams, then a designer review on real editing tasks (build a table, widen it, move a shelf, change the legs' profile, add a brace, undo it all).
+- **12:46–13:02**: The re-check fixes N1–N7 merged (`66c6f7b`, gate PASS 1,135).
+  - Mutants of N2, N5, N6 and N7, whose tests were written after their code, are all caught (N6's thumbnail by its e2e test).
+  - `CLAUDE.md` added for the project.
+- **13:10**: Gap batch F11 / F12 merged (`cf91d0a`, gate PASS 1,160; failing tests first, 12 of 13 failing on the base).
+  - **F11:** a bar or part may arrive `after_assembly`; a face only such members cover is a warning (the connector can't be re-tightened once they're in place), not an error.
+  - **F12:** a connection names its cross holes' faces (`hole_faces`), overriding the recipe.
+  - G50, calls 63–64; nothing moved across 175 cases.
+- **13:11**: The 3D editing audit merged (`docs/ux/editing-audit.md`).
+  - Of the model's 38 commands, 13 are fully reachable in the app, 8 partly, 17 only from the CLI. In the view, dragging only orbits the camera, and right-click, double-click, copy and paste do nothing.
+  - **62 missing capabilities:** 12 must, 29 should, 21 could. 33 of the 41 must and should items are UI work over commands the core already has.
+  - **Four defects.**
+  - **Streams:** E0 contracts (an action registry and context menu, face picking, gizmo pieces, view state, splitting the tools' wiring), E1 core and CLI, E2 selection, visibility and menus, E3 transform and copy tools, E4 bars and ends, E5 joints, patterns and parts.
+  - 15 timed acceptance scenarios for the designer review.
+- **13:12**: The audit's `transform` command (move and rotate) went to the agent building the Move tool, so one command exists, not two. E1's other core tasks started. E0 waits for the end handles and Move tool to merge, since all three rework the tools' wiring and gizmos.
