@@ -578,3 +578,15 @@ anything, and each has a default in place.
   - Which e2e test failed in the first run is unknown: the gate script threw its output away. It
     now keeps every step's full log in a fresh folder and prints the failing lines and the load.
   - Gate PASS (744 tests).
+- **02:52–02:56**: UX reviews A (task flows and IA) and B (heuristics and first run) merged; both
+  touched only `docs/ux/`. They agree on the worst problems, found independently:
+  - nothing drawn can be edited or deleted in the app;
+  - auto-connect silently changes drawn lengths, and corners are invisible;
+  - the README's first frame starts blocked (a finish default that isn't sold);
+  - the order's blocked state hides in its tab;
+  - problems aren't shown in 3D;
+  - agent edits arrive unattributed;
+  - catalog search ranks a caster plate first for "40x40".
+- **02:57**: The reference project's fix round arrived (new heads for both frames). Acceptance run 5
+  on the decided frame and run 2 on the alternative launched in the main checkout; F2's merge is
+  held so the code doesn't change under them.
