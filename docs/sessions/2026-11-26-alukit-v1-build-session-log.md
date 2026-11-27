@@ -46,7 +46,7 @@ in the gitignored `internal/session-notes.md`.*
 | M4c: close the design-vs-built feature gaps | **done**, merged (20:53), pushed | variant switcher, export button, clipping plane, Open items / Params / Decisions tabs, pivot and face in the connect tool, `catalog search` / `import` |
 | Full acceptance (§13), internal | **ran** (20:40): the four numeric tests pass; overall **fail** on two model gaps | Cut list: 214 pieces, largest difference 0.05 mm. Mass: within 0.09 % once the record's own errors are set aside. Cost: every vendor line to the cent on a frozen lock. Counts: pass. Every exception is an error in the record. Fails on A1 and A3, below. |
 | Gap A3: face contact on real section faces | running (Opus, worktree), launched 20:50 | golden G29 |
-| Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | running (Opus, worktree), launched 20:50 | goldens G30+ |
+| Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
 | M2b rest of Forseti | **done** (17:43), merged, pushed | All 1,196 orderable SKUs map to offers (1,208 offers, 1,034 items: 497 generic, 235 fasteners, 151 accessories, 100 connectors, 31 bars, 12 panels, 8 carriages). All 27 profile stems have sections (8 exact, 19 parametric). New connectors are marked as having no mounting model yet. Gate: 322 tests. Calls: [`docs/notes/m2b-decisions.md`](../notes/m2b-decisions.md). |
@@ -84,6 +84,9 @@ in the gitignored `internal/session-notes.md`.*
     auto-connect off plus the connect tool.
   - **#13:** the work plane defaults to ground XY, where §8 suggests a view-facing plane.
   - **#29:** `snapshot` always renders in a fresh headless page, never the open tab.
+- **Sleeve clearance default (A7).** Holes a sleeve passes take ISO 273 medium for its OD: Ø17.5 for
+  16 mm. The reference shop cut Ø18, which `clearance_mm: 2` reproduces. Between table sizes the
+  next size up is used, an inferred rule.
 - **The local pre-push hook** (`.git/hooks/pre-push`, not committed) blocks pushes that contain
   internal markers. It lives only in this clone; a fresh clone doesn't have it.
 
@@ -301,3 +304,20 @@ in the gitignored `internal/session-notes.md`.*
   - Design-vs-built entries 3, 4, 5 and 12 are closed; the rest stay as recorded deviations.
   - Calls in `docs/notes/m4c-decisions.md`. Notably, edits made while viewing a variant go to the
     base document.
+- **21:27**: Gaps A1, A2, A4–A7 fixed (8 commits; each failing test written first).
+  - **A1:** fit is judged by role. The butting bar by its system; the through bar by its system,
+    or by its bore when the fastener set puts a sleeve in it. G30.
+  - **A2:** connectors may be `recipe: true`, with no body, mass or offer; only what they bring is
+    bought.
+  - **A4:** a new `end-hole` op, into a through bar's end face along its axis. G31.
+  - **A5:** cost lines take `only_in` / `not_in`, and `diff` shows the change.
+  - **A6:** `services_on` takes a list.
+  - **A7:** sleeve holes get ISO 273 medium clearance, with a `clearance_mm` override. G32. One unit
+    test's values moved, 18 → 20 mm; no golden did.
+- **21:31**: Merged, without conflicts. The first gate run failed on two lock tests timing out at
+  5 s, with the machine's load average at 50.
+  - Measured alone they take 1.3–1.7 s, so the code was not slower.
+  - The cause was structural: each test derived every fixture project inside one test, so its time
+    grew with the fixture set, and G30–G32 pushed it over under load.
+  - Fixed by splitting them into one test per fixture (separate commit), not by raising the
+    timeout. Gate PASS, 651 tests.
