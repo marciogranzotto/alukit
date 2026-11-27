@@ -155,7 +155,13 @@ function normalCovers(c: Covers): Covers {
   return {
     ...(c.supplier !== undefined ? { supplier: c.supplier } : {}),
     ...(c.services !== undefined ? { services: c.services } : {}),
-    ...(c.services_on !== undefined ? { services_on: { supplier: c.services_on.supplier } } : {}),
+    ...(c.services_on !== undefined
+      ? {
+          services_on: Array.isArray(c.services_on)
+            ? c.services_on.map((s) => ({ supplier: s.supplier }))
+            : { supplier: c.services_on.supplier },
+        }
+      : {}),
     ...(c.items !== undefined ? { items: [...c.items] } : {}),
   };
 }

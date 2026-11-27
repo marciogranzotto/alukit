@@ -12,7 +12,7 @@ import type { Diagnostics } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
 import type { ItemSource, OfferInfo } from "../items.ts";
 import { PROJECT_ITEM } from "../project/parse.ts";
-import type { CostLine } from "../project/schema.ts";
+import { type CostLine, servicesOnSuppliers } from "../project/schema.ts";
 import { projectItems } from "../project-items/source.ts";
 import { cheapestCover } from "./cover.ts";
 import { amount, type Basis, basisPrice, fieldMoney, times } from "./price.ts";
@@ -133,7 +133,7 @@ export function orderLines(ctx: LineContext): Work[] {
     if (!cov) continue;
     for (const it of cov.items ?? []) push(itemCover, it, c);
     if (cov.services && cov.supplier) push(servicesBy, cov.supplier, c);
-    if (cov.services_on) push(servicesOn, cov.services_on.supplier, c);
+    for (const s of servicesOnSuppliers(cov)) push(servicesOn, s, c);
   }
   /** The cost line that covers something, with an error naming both when two do. */
   /**

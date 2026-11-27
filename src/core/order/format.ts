@@ -129,7 +129,11 @@ export function coversText(c: CostOut): string {
   if (!c.covers) return "";
   return [
     ...(c.covers.services ? [`${c.covers.supplier}'s machining`] : []),
-    ...(c.covers.services_on ? [`machining on ${c.covers.services_on.supplier}'s bars`] : []),
+    ...(c.covers.services_on
+      ? [
+          `machining on ${(Array.isArray(c.covers.services_on) ? c.covers.services_on : [c.covers.services_on]).map((s) => `${s.supplier}'s`).join(" and ")} bars`,
+        ]
+      : []),
     ...(c.covers.items ?? []),
   ].join(", ");
 }

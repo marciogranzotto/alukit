@@ -622,16 +622,31 @@ export const CostKind = z.enum([
   "other",
 ]);
 
+/** The bars of one supplier, whose generated machining a cost line covers (§4.11). */
+const ServicesOn = z.strictObject({ supplier: SupplierId });
+
 /**
  * What a cost line prices as a whole (§4.11): the machining a supplier sells on its own bars
  * (`supplier` with `services: true`), the machining generated on bars bought from a supplier,
- * whoever does it (`services_on`), or the BOM lines of some items.
+ * whoever does it (`services_on`: one supplier's bars, or a list, for one job on several
+ * suppliers' bars; acceptance gap A6), or the BOM lines of some items.
  */
 export const Covers = z
   .strictObject({
     supplier: SupplierId.optional(),
     services: z.literal(true).optional(),
-    services_on: z.strictObject({ supplier: SupplierId }).optional(),
+    services_on: z
+      .union([
+        ServicesOn,
+        z
+          .array(ServicesOn)
+          .min(1)
+          .refine((l) => new Set(l.map((s) => s.supplier)).size === l.length, {
+            message: "services_on names each supplier once",
+          }),
+      ])
+      .optional()
+      .describe("{ supplier }, or a list of them: the machining on those suppliers' bars"),
     items: z.array(ItemRef).min(1).optional(),
   })
   .refine((c) => (c.supplier === undefined) === (c.services === undefined), {
@@ -641,6 +656,12 @@ export const Covers = z
     message: "covers names services, services_on or items",
   });
 export type Covers = z.infer<typeof Covers>;
+
+/** The suppliers whose bars' machining a cover names, in the order written. */
+export function servicesOnSuppliers(c: Covers): string[] {
+  if (c.services_on === undefined) return [];
+  return (Array.isArray(c.services_on) ? c.services_on : [c.services_on]).map((s) => s.supplier);
+}
 
 const MinorInt = z.int().nonnegative();
 
