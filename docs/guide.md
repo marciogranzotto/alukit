@@ -481,7 +481,7 @@ is hidden.
   every corner built the same way. `alukit arrangements <dir> --at x,y,z` gives the same answer.
 - **A pattern.** For four slats across the shelf: draw one (`B`, `[200, 0, 250]`, `Enter`, the
   section's dot `+y` so its top is flush with the rails', `[200, 600, 250]`, `Enter`), select it,
-  press `X`, type `b9` as the bar to repeat along (or click it), pitch `150`, count `4`, **Apply**.
+  press `X`, type `b9` as the bar to repeat along (or click it), pitch `150`, count `4`, **Create**.
   To make it five, select the pattern (`pt1` in the outline) and type `5` in its **Count**. Its
   pitch (`W / 8` keeps following W), offsets, skips (`3, 5`) and along edit the same way, and
   **Explode** turns the copies into plain bars, selected.
