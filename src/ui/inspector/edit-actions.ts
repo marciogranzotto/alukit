@@ -1,6 +1,7 @@
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { type Action, type ActionContext, registerAction } from "../actions/registry.ts";
+import { cornerKey, cornersOf } from "../corners.ts";
 import { select } from "../focus.ts";
 import type { Model } from "../model.ts";
 import { busy, type CommandOutcome, sendCommands } from "../store.ts";
@@ -13,8 +14,9 @@ import { connectionType, copyOf, isObject, patternOf, refKind, written } from ".
  * The connection, pattern and part actions (docs/ux/editing-audit.md E5.6, E-UX-1): Edit a
  * connection and Change its connector, which take the inspector to that field; Explode a pattern,
  * one step that selects what it made; Replace a part, which opens the part's Replace form.
- * Delete is the inspector's own action and already takes any of them. Registered while the
- * inspector is shown, as its other actions are. Owner: E5.
+ * Delete is the inspector's own action and already takes any of them. A joint marker's menu offers
+ * its joint's, when one joint is there. Registered while the inspector is shown, as its other
+ * actions are. Owner: E5.
  */
 
 /** What an action asked the inspector to open for an entity, until the inspector takes it. */
@@ -54,10 +56,19 @@ function canEdit(): true | string {
   return true;
 }
 
-/** The connection the context is about (a pattern copy's, as itself), or undefined. */
+/**
+ * The connection the context is about (a pattern copy's, as itself), or undefined: one selected,
+ * or the one joint at a corner whose marker the menu was opened on. A joint marker is a joint's
+ * sign in the view, and most connections have no body of their own to point at.
+ */
 function oneConnection(c: ActionContext): string | undefined {
   const id = one(c);
   if (!id) return undefined;
+  const key = cornerKey(id);
+  if (key !== undefined) {
+    const at = cornersOf(c.m).find((k) => k.key === key);
+    return at?.connections.length === 1 ? at.connections[0] : undefined;
+  }
   const own = copyOf(id)?.template ?? id;
   return refKind(c.m, own) === "connection" ? id : undefined;
 }
@@ -66,6 +77,14 @@ function oneConnection(c: ActionContext): string | undefined {
 function notACopy(id: string): true | string {
   const copy = copyOf(id);
   return copy ? `${id} is a pattern copy: change ${copy.template}, its template` : true;
+}
+
+/** Asks the inspector for a connection's field, selecting the connection first (from a corner). */
+function askConnection(c: ActionContext, what: "edit" | "connector"): void {
+  const id = oneConnection(c);
+  if (!id) return;
+  if (!c.selection.has(id)) select([id], "replace");
+  ask(id, what);
 }
 
 const EDIT_CONNECTION: Action = {
@@ -79,10 +98,7 @@ const EDIT_CONNECTION: Action = {
     const copy = notACopy(id);
     return copy === true ? canEdit() : copy;
   },
-  run(c) {
-    const id = oneConnection(c);
-    if (id) ask(id, "edit");
-  },
+  run: (c) => askConnection(c, "edit"),
 };
 
 /** The connection types a connector is chosen for: a face joint names fasteners instead. */
@@ -102,10 +118,7 @@ const CHANGE_CONNECTOR: Action = {
     const copy = notACopy(id);
     return copy === true ? canEdit() : copy;
   },
-  run(c) {
-    const id = oneConnection(c);
-    if (id) ask(id, "connector");
-  },
+  run: (c) => askConnection(c, "connector"),
 };
 
 /**

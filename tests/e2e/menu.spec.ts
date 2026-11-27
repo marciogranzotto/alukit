@@ -102,3 +102,56 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
   expect(await page.evaluate(() => window.__alukit?.rev())).toBe(0);
   expect(await docOf(served.dir)).toEqual(before);
 });
+
+test("a joint marker's menu offers its joint's Edit and Change connector, which take the inspector to the field (E5.6)", async ({
+  page,
+}) => {
+  served = await serve("base-frame/empty");
+  // A ground rectangle drawn and joined as the draw tool joins it: one butt at each corner.
+  const bars = [
+    { cmd: "addBar", args: { a: [0, 0, 0], b: [1000, 0, 0] } },
+    { cmd: "addBar", args: { a: [1000, 0, 0], b: [1000, 600, 0] } },
+    { cmd: "addBar", args: { a: [1000, 600, 0], b: [0, 600, 0] } },
+    { cmd: "addBar", args: { a: [0, 600, 0], b: [0, 0, 0] } },
+  ];
+  const joins = [
+    [0, 0, 0],
+    [1000, 0, 0],
+    [1000, 600, 0],
+    [0, 600, 0],
+  ].map((at) => ({ cmd: "autoConnect", args: { at } }));
+  expect((await cli(["do", served.dir, JSON.stringify(bars)])).code).toBe(0);
+  expect((await cli(["do", served.dir, JSON.stringify(joins)])).code).toBe(0);
+  await openTab(page, served, 2);
+  const before = await docOf(served.dir);
+  const corner = await page.evaluate(() =>
+    window.__alukit?.corners().find((c) => c.key === "1000,600,0"),
+  );
+  if (!corner) throw new Error("no corner at (1000, 600, 0)");
+  const joint = corner.connections[0] as string;
+
+  const menu = await contextMenu(page, corner.at as V3);
+  const hook = await page.evaluate(() => window.__alukit?.menu());
+  const mine = new Set(["edit-connection", "change-connector"]);
+  expect(
+    hook?.entries.filter((e) => mine.has(e.id)).map((e) => [e.id, e.title, e.enabled]),
+  ).toEqual([
+    ["edit-connection", `Edit ${joint}…`, true],
+    ["change-connector", "Change connector…", true],
+  ]);
+  await menu.getByRole("menuitem", { name: /^Change connector/ }).click();
+  await expect(menu).toHaveCount(0);
+  // The joint is selected, and its Connector field has the focus.
+  expect(await page.evaluate(() => window.__alukit?.selection())).toEqual([joint]);
+  await expect(page.getByTestId("properties").getByTestId("field-connector")).toBeFocused();
+
+  // Edit, from the menu of the joint itself, takes the focus to its first field.
+  await contextMenu(page, corner.at as V3);
+  await page
+    .getByTestId("context-menu")
+    .getByRole("menuitem", { name: /^Edit / })
+    .click();
+  await expect(page.getByTestId("properties").getByTestId("field-through")).toBeFocused();
+  expect(await page.evaluate(() => window.__alukit?.rev())).toBe(2);
+  expect(await docOf(served.dir)).toEqual(before);
+});
