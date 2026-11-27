@@ -809,7 +809,7 @@ its own sugar.
 | `transform.spec`, `copy.spec` | E3 | E3.1–E3.7 |
 | `ends.spec`; `edit.spec` (extended) | E4 | E4.1–E4.7 |
 | `connections-edit.spec`, `pattern-edit.spec` | E5 | E5.1–E5.5 |
-| `editing.spec` (new) | the integration pass | §12's A1–A13, scripted, each ending in an `alukit diff` or cut-list comparison against the CLI |
+| `editing.spec` (new) | the integration pass | §12's A1–A15, scripted, each ending in an `alukit diff` or cut-list comparison against the CLI (*as built: A1–A15, A2 and A14 one test per part; [integration-editing.md](integration-editing.md)*) |
 
 ## 8. Sequencing
 
@@ -891,6 +891,11 @@ its own sugar.
    v1.1; joint markers stay the 3D sign of a joint.*
 
 ## 12. Acceptance scenarios for the designer review
+
+*Scripted by the integration pass as `tests/e2e/editing.spec.ts`, one test per scenario, each
+from a state the CLI builds; the results, the clicks, keys, steps and times against these targets,
+and what they found (A2 (ii) and A6 cannot be done as built) are in
+[integration-editing.md](integration-editing.md).*
 
 **How the review runs:**
 

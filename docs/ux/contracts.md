@@ -430,53 +430,49 @@ tool"). Each adds.*
   `axisMeetsLine`, which `moveEnd` and `transform` share. **CLI**: `src/cli/move.ts` (`alukit
   move`, `alukit rotate`); `add.ts` exports `vec3` and `numbers3` for it.
 
-## Editing round: E2 changes
+## Editing round: E0
 
-*Stream E2 of the [editing audit](editing-audit.md) ([e2-decisions.md](e2-decisions.md), cited as
-"e2"). Owner of everything below: E2, unless a line names another; other streams add to it only.*
+*Stream E0 of the [editing audit](editing-audit.md) (§7.2) built the shared interfaces the editing
+streams E1 to E5 build on ([e0-decisions.md](e0-decisions.md)). Each adds, except the moves
+marked **moved**. After E0, only an interface's owner changes it, and only by adding; a stream
+registers its own actions and keys from its own files.*
 
-- **Actions** E2 registers: `select-all` (`mod+a`), `select-similar`, `select-tagged`,
-  `select-connected`, `select-assembly` (group `select`; `src/ui/actions/select.ts`,
-  `selectActions()`, registered by the outline); `hide` (`h`), `isolate` (`shift+h`), `show-all`
-  (`alt+h`) (group `view`; `src/ui/viewport/actions.ts`); `menu` (`shift+f10`, `contextmenu`; never
-  an entry of a menu; `src/ui/shell/ContextMenu.tsx`, registered by `connectMenu()`).
-- **`keyMatches(keys, e)`** (`src/ui/actions/registry.ts`, E0's): with Alt held, a key that is not
-  a plain letter or digit is read from `e.code` (`KeyH`, `Digit1`), so `alt+h` matches Option+H on
-  a Mac, which types ˙ (e2 15).
-- **`selectable(m)`**: the ids Ctrl+A selects, the document's bars and placed parts the view draws
-  and does not hide, in id order (e2 7). **`queryIds(selector)`**: the ids `alukit query` selects,
-  asked of the server.
-- **`GET /api/query?select=<selector>&variant=<v>`** (`src/server/server.ts`, E1's file): `200 {
-  ok: true, rev, selector, ids }`, or `400 { ok: false, message }` with the selector's error (e2 5).
-- **`select(doc, "like:<id> by tag")`** (`src/core/query.ts`, E1's): `similarTo(…, "tag")`; `by
-  item` is the default (e2 6).
-- **`<ActionButtons m />`** (`src/ui/actions/ActionButtons.tsx`): the registry's `edit` and
-  `transform` actions for the selection as buttons, greyed with their `when`; the inspector's
-  selection header shows it in place of `DeleteButton`, which is gone (e2 3, 4).
-- **`outlineMenu(e, ids)`** (`ContextMenu.tsx`): opens the menu about `ids` at the pointer, from
-  `"outline"`, selecting them first unless they are all selected (e2 2). **`membersOf(group)`**
-  (`src/ui/outline/rows.ts`): a group's rows, its subgroups' first (e2 8).
-- **`src/ui/focus.ts`** (E0's): `drawnBodies(m)`, `bodiesOf(m, refs)` (what draws the refs, as
-  `resolveTargets` says), `hide(m, refs)`, `isolate(m, refs)`, `showAll()`, `hiddenCount(m, h)`.
-  `isolate` writes the rest into `hidden` and the refs into `isolated` (e2 12, 13).
-- **`src/ui/viewport/size.ts`**: `sizeOf(m, refs?)` (the bounding box of what draws the refs, or of
-  every body), `extentOf`, `sizeNumber`, `sizeText` (`1000 × 600 × 750 mm`), `altHeld`,
-  `connectSizeBox()` (e2 16, 17). **`src/ui/viewport/navigation.ts`**: `navigation` (`"mouse" |
-  "trackpad"`, kept as `alukit.navigation`), `setNavigation`, `connectNavigation()` (e2 18).
-- **`Viewer`** (`src/viewer/scene.ts`): `setHidden(ids)` hides by visibility (e2 11);
-  `setDimensions({ box, words } | undefined)`, the size box, labels `size-w`, `size-d`, `size-h`;
-  `setNavigation(n)`; `camera().moving` turns false when camera-controls sleeps, after an instant
-  move too (e2 22). `CornerMarker.bars?`: the corner's bars, so a corner whose bars are all hidden
-  is not drawn. A box drawn right to left gets the class `crossing`.
-- **`src/viewer/pick.ts`**: `boxTakes(points, rect, "window" | "crossing")`, `convexHull(points)`,
-  `ScreenRect` (e2 10).
-- **`src/viewer/labels.ts`** (S3's): `placeInside(el, at, view, avoid?)`, `nudgeInside(box, view,
-  gap)`, `clearOf(box, view, avoid, gap)`, `EDGE_GAP_PX`; `Labels` takes an `avoid` provider. The
-  labels and the anchored overlays place inside the view and clear of the gizmo (e2 21, 23).
-- **`src/viewer/gizmo.ts`** (E3's): `gizmoFootprint(spec, project, mmPerPx)`, where on the screen a
-  press is the gizmo's; **`Viewer.gizmoFootprint()`**, the shown gizmo's, on the page (e2 23).
-- **`src/ui/catalog/state.ts`**: `keepPalette()` starts the palette and arms `defaults.bar` whenever
-  the palette has no bar and the default changes; `startPalette` is gone (e2 20).
+### The interfaces
+
+| Interface | File | Owner | What it is |
+|---|---|---|---|
+| The tools' router | `src/ui/tools/wiring.ts` | E3 | `createTools`, `connectTools`, `toolFieldKey`, as before; it routes the pointer, the gesture and tool keys and the command bar's field to the active tool's `Wire`, and nothing else |
+| A tool's wiring | `src/ui/tools/wire/common.ts` | E3 | `WireContext` (the viewer, `targets`, `rayAt`, `snapAt`, `pickAt`, `show`, `pointer`, `track`, `refresh`, `used`, `typedNow`, `params`), `Wire` (`handler`, `preview?`, `back?`, `enter?`, `key?`, `takesValue?`, `flip?`, `reset?`, `switched?`, `dispose?`), and the shared helpers (`markerOf`, `typedPoint`, `noteResult`, `refuse`, `VALUE_START`) |
+| **Moved:** the tools | `src/ui/tools/wire/{draw,frame,connect,place,pattern,measure,move,ends}.ts` | see the table below | One module per tool, each `create…Tool(ctx)`. **Moved:** `tools/handles.ts` is `wire/ends.ts` (`createEndHandles`, `endNote`, `endGhost`, `endWords`, the hook's `handles()` and `gesture()`), `tools/mover.ts` is `wire/move.ts` (`createMoveTool(viewer, gestures, { snap, pick })`, `MoveDeps` gaining `pick`). `NO_DIRECTION` is `wire/draw.ts`'s |
+| Actions | `src/ui/actions/registry.ts` | E2 | `ActionContext` (`m`, `selection`, `hit?`, `ref?`, `from`), `Action` (`id`, `title`, `group`, `keys?`, `scope?`, `help?`, `applies?`, `when`, `run`), `ActionGroup`, `registerAction(a)` (binds its keys through keys.ts; a key another action holds in the scope throws; the same id replaces), `actionsFor(c)`, `runAction(id, c)` (true, or why not), `titleOf`, `keyMatches`, `keyCaps`, `parseKey`, `GROUP_HELP`, `helpSections` (what the help lists), `actions` |
+| The seeded actions | `src/ui/inspector/actions.ts`; `src/ui/viewport/actions.ts` | E4; E2 | `inspectorActions()`: `delete` (Delete, Backspace), `join-end`, `replace`, with `joinEnd(c)`, `replaceAsked`, `replaceKey`, `useReplaceAsked`; `viewActions()`: `fit` (F) and `show`. Each returns its undo |
+| Key help rows | `src/ui/keys.ts` | E2 | `KeyHelpRow.or`, other keys that do the same. `keyHelp` holds the described sections; the help shows `helpSections` |
+| The context menu | `src/ui/shell/ContextMenu.tsx` | E2 | `menu`, `openMenu(ctx, at)`, `closeMenu()`, `connectMenu()` (the view's right-click, in Select), `menuEntries(ctx)`, `menuTitle(ctx)`, `MenuEntry`, `ContextMenu`. Styles in `shell.css` (`.context-menu…`) |
+| The pick | `src/viewer/scene.ts`; `src/viewer/pick.ts` | E2 | `Hit` (`id`, `p`, `normal`, `face?`, `station?`); `pickAt(x, y, skip?)` gives one; `onContextMenu(cb)` (a right-click within 4 px; returns the undo); `setHidden(ids)` (since E2.4 it hides by visibility: E2's section). `barHit(ray, bar)` and `hitOn(bars, id, ray, p, normal)`, pure |
+| Snaps | `src/viewer/snap.ts` | E3 | `SnapOptions.skip` (ids of bars, parts, nodes) replaces the unused `skipBars`; `SnapPoint.of`, the entity a point belongs to |
+| View state | `src/ui/focus.ts` | E2 | `hidden`, `isolated` signals; the tools pass `hidden` as their picks' and snaps' skip |
+| The gizmo | `src/viewer/gizmo.ts`; `src/viewer/scene.ts` | E3 | `GizmoPart`, `GizmoHandle` (`key`, `at`, `axis?`, `locked?`), `GizmoSpec` (axes `{ at, parts }`, or `{ handles, hot? }`), `GizmoDrag`, `Gizmo` (the scene's, built once; the viewer links its programs, hidden parts too, before its first frame), `gizmoPartAt`, `handleAt`, `gizmoDrag`, `mmPerPx`, `GIZMO_PX`, `GRAB_PX`. Viewer: `setGizmo(spec)`, `gizmo()`, `onGizmoDrag(cb)`. **Moved:** `Viewer.setHandles` and `HandlesState` are gone; the end handles show `{ handles }` |
+| Batches | `src/ui/edit/batches.ts` | E3 (each builder's body: the stream its task names) | `transformBatch` (**moved**: `tools/moves.ts`'s `moveCommands`), `endBatch` (**moved**: `tools/ends.ts`'s `endCommands`), and `duplicateBatch` (E3.3), `mirrorBatch` (E3.2), `arrayBatch` (E3.3), `splitBatch` (E4.3), `alignBatch` (E3.6), each "not available yet" until built; `Batch`, `Vec` |
+| The test hook | `focus.ts`, `ContextMenu.tsx`, `viewport/Viewport.tsx` | the module that adds each | `selection()`, `hidden()`; `menu()` (the open menu's title and entries); `gizmo()`; `frames().modelFrame` (`RenderStats.modelFrame`, `src/viewer/scene.ts`: the frame that first drew the model given last, 0 until one has); `frames().badgeFrame` (the same for the problem badges given last, which follow the problems by their own request). The e2e helper `waitDrawn(page, rev)` waits for both the hand-over (`drawnRev`) and `modelFrame` |
+| E2E helpers | `tests/e2e/helpers.ts` | any stream adds | `contextMenu(page, at)`, `selectByIds(page, ids)`, `docOf(dir)` |
+
+### Who owns which files (the audit's §7.4, with what the round added)
+
+| Path | Owner |
+|---|---|
+| `src/core/**`, `src/cli/**`, `src/server/**`, `src/ui/client/**`, `skills/alukit/SKILL.md` (regenerated), new fixtures | **E1** |
+| `src/ui/actions/**` (`registry.ts`, `select.ts`, `ActionButtons.tsx`), `src/ui/shell/ContextMenu.tsx`, `src/ui/focus.ts`, `src/ui/outline/**`, `src/ui/catalog/state.ts` (D1), `src/viewer/scene.ts`, `src/viewer/pick.ts`, `src/ui/viewport/{ViewControls,actions,size,navigation}.ts(x)`, `src/ui/shell/StatusBar.tsx`, `src/ui/shell/Help.tsx`, `src/ui/keys.ts` | **E2** |
+| `src/ui/tools/wiring.ts`, `src/ui/tools/wire/{common,draw,frame,measure,move,rotate,mirror,duplicate,align}.ts`, `src/ui/tools/{drag,preview,moves}.ts`, `src/ui/tools/state.ts`, `src/ui/tools/CommandBar.tsx`, `src/ui/edit/**` (`batches.ts`, `geometry.ts`), `src/viewer/gizmo.ts`, `src/viewer/snap.ts` | **E3** |
+| `src/ui/inspector/{BarFields,length,words,replace,actions}.ts(x)`, E4's new `inspector/{Ends,endEdits,Holes,holes,NodeFields,node,ManyFields,many,ActionRow,barActions}.ts(x)`, `src/ui/common/AnchorDots.tsx`, `src/ui/tools/wire/ends.ts`, `src/ui/tools/{ends,LengthEdit}.ts(x)` | **E4** |
+| `src/ui/inspector/{OtherFields,CornerInspector,arrangements}.ts(x)`, E5's new `inspector/{FaceEdit,PatternFields,PartReplace,rows,connection,pattern,edit-actions}.ts(x)`, `src/ui/tools/ToolForm.tsx`, `src/ui/tools/forms/FaceForm.tsx`, `src/ui/tools/commands.ts` (D5), `src/ui/tools/wire/{connect,place,pattern}.ts`; in `src/ui/common/ConnectorSelect.tsx`, its `joins` | **E5** |
+| `src/ui/inspector/Inspector.tsx` | E4 (E5 adds its rows through `PartFields` and `ConnectionFields`) |
+| `tests/e2e/menu.spec.ts` | E2 (E0 wrote its first test) |
+| `src/ui/inspector/context.ts` and the Context row | gap X11 (its own section, below) |
+| `tests/e2e/editing.spec.ts` | the integration pass (below) |
+| `docs/design.md` (§6, §8), the decision notes | the coordinator folds them in; each stream writes `docs/ux/eN-decisions.md` |
+
+A stream that breaks another's spec makes the smallest selector fix in that spec, in the same
+merge, and names it. A semantic assertion is never weakened.
 
 ## Editing round: E1 changes
 
@@ -509,6 +505,54 @@ everything below: E1; other streams add to it only.*
   origin }` for a placed part or `{ item, qty }` for a counted one, by id; always present, `{}` when
   none. `explodePattern`'s `info.copies` maps each copy (`b26@2`) to the entity it became (e1 16,
   17).
+
+## Editing round: E2 changes
+
+*Stream E2 of the [editing audit](editing-audit.md) ([e2-decisions.md](e2-decisions.md), cited as
+"e2"). Owner of everything below: E2, unless a line names another; other streams add to it only.*
+
+- **Actions** E2 registers: `select-all` (`mod+a`), `select-similar`, `select-tagged`,
+  `select-connected`, `select-assembly` (group `select`; `src/ui/actions/select.ts`,
+  `selectActions()`, registered by the outline); `hide` (`h`), `isolate` (`shift+h`), `show-all`
+  (`alt+h`) (group `view`; `src/ui/viewport/actions.ts`); `menu` (`shift+f10`, `contextmenu`; never
+  an entry of a menu; `src/ui/shell/ContextMenu.tsx`, registered by `connectMenu()`).
+- **`keyMatches(keys, e)`** (`src/ui/actions/registry.ts`, which E0 made and E2 owns): with Alt held, a key that is not
+  a plain letter or digit is read from `e.code` (`KeyH`, `Digit1`), so `alt+h` matches Option+H on
+  a Mac, which types ˙ (e2 15).
+- **`selectable(m)`**: the ids Ctrl+A selects, the document's bars and placed parts the view draws
+  and does not hide, in id order (e2 7). **`queryIds(selector)`**: the ids `alukit query` selects,
+  asked of the server.
+- **`GET /api/query?select=<selector>&variant=<v>`** (`src/server/server.ts`, E1's file): `200 {
+  ok: true, rev, selector, ids }`, or `400 { ok: false, message }` with the selector's error (e2 5).
+- **`select(doc, "like:<id> by tag")`** (`src/core/query.ts`, E1's): `similarTo(…, "tag")`; `by
+  item` is the default (e2 6).
+- **`<ActionButtons m />`** (`src/ui/actions/ActionButtons.tsx`): the registry's `edit` and
+  `transform` actions for the selection as buttons, greyed with their `when`; the inspector's
+  selection header shows it in place of `DeleteButton`, which is gone (e2 3, 4).
+- **`outlineMenu(e, ids)`** (`ContextMenu.tsx`): opens the menu about `ids` at the pointer, from
+  `"outline"`, selecting them first unless they are all selected (e2 2). **`membersOf(group)`**
+  (`src/ui/outline/rows.ts`): a group's rows, its subgroups' first (e2 8).
+- **`src/ui/focus.ts`** (the view state E0 made, E2's): `drawnBodies(m)`, `bodiesOf(m, refs)` (what draws the refs, as
+  `resolveTargets` says), `hide(m, refs)`, `isolate(m, refs)`, `showAll()`, `hiddenCount(m, h)`.
+  `isolate` writes the rest into `hidden` and the refs into `isolated` (e2 12, 13).
+- **`src/ui/viewport/size.ts`**: `sizeOf(m, refs?)` (the bounding box of what draws the refs, or of
+  every body), `extentOf`, `sizeNumber`, `sizeText` (`1000 × 600 × 750 mm`), `altHeld`,
+  `connectSizeBox()` (e2 16, 17). **`src/ui/viewport/navigation.ts`**: `navigation` (`"mouse" |
+  "trackpad"`, kept as `alukit.navigation`), `setNavigation`, `connectNavigation()` (e2 18).
+- **`Viewer`** (`src/viewer/scene.ts`): `setHidden(ids)` hides by visibility (e2 11);
+  `setDimensions({ box, words } | undefined)`, the size box, labels `size-w`, `size-d`, `size-h`;
+  `setNavigation(n)`; `camera().moving` turns false when camera-controls sleeps, after an instant
+  move too (e2 22). `CornerMarker.bars?`: the corner's bars, so a corner whose bars are all hidden
+  is not drawn. A box drawn right to left gets the class `crossing`.
+- **`src/viewer/pick.ts`**: `boxTakes(points, rect, "window" | "crossing")`, `convexHull(points)`,
+  `ScreenRect` (e2 10).
+- **`src/viewer/labels.ts`** (S3's): `placeInside(el, at, view, avoid?)`, `nudgeInside(box, view,
+  gap)`, `clearOf(box, view, avoid, gap)`, `EDGE_GAP_PX`; `Labels` takes an `avoid` provider. The
+  labels and the anchored overlays place inside the view and clear of the gizmo (e2 21, 23).
+- **`src/viewer/gizmo.ts`** (E3's): `gizmoFootprint(spec, project, mmPerPx)`, where on the screen a
+  press is the gizmo's; **`Viewer.gizmoFootprint()`**, the shown gizmo's, on the page (e2 23).
+- **`src/ui/catalog/state.ts`**: `keepPalette()` starts the palette and arms `defaults.bar` whenever
+  the palette has no bar and the default changes; `startPalette` is gone (e2 20).
 
 ## Editing round: E3 changes
 
@@ -603,67 +647,6 @@ marked with another owner, whose files E4 changed by the smallest addition.*
 - **Styles** (`src/ui/styles/inspector.css`): `.end-edit`, `.end-pick`, `.insp-actions`,
   `.split-form`.
 
-## Editing round: E0
-
-*Stream E0 of the [editing audit](editing-audit.md) (§7.2) built the shared interfaces the editing
-streams E1 to E5 build on ([e0-decisions.md](e0-decisions.md)). Each adds, except the moves
-marked **moved**. After E0, only an interface's owner changes it, and only by adding; a stream
-registers its own actions and keys from its own files.*
-
-### The interfaces
-
-| Interface | File | Owner | What it is |
-|---|---|---|---|
-| The tools' router | `src/ui/tools/wiring.ts` | E3 | `createTools`, `connectTools`, `toolFieldKey`, as before; it routes the pointer, the gesture and tool keys and the command bar's field to the active tool's `Wire`, and nothing else |
-| A tool's wiring | `src/ui/tools/wire/common.ts` | E3 | `WireContext` (the viewer, `targets`, `rayAt`, `snapAt`, `pickAt`, `show`, `pointer`, `track`, `refresh`, `used`, `typedNow`, `params`), `Wire` (`handler`, `preview?`, `back?`, `enter?`, `key?`, `takesValue?`, `flip?`, `reset?`, `switched?`, `dispose?`), and the shared helpers (`markerOf`, `typedPoint`, `noteResult`, `refuse`, `VALUE_START`) |
-| **Moved:** the tools | `src/ui/tools/wire/{draw,frame,connect,place,pattern,measure,move,ends}.ts` | see the table below | One module per tool, each `create…Tool(ctx)`. **Moved:** `tools/handles.ts` is `wire/ends.ts` (`createEndHandles`, `endNote`, `endGhost`, `endWords`, the hook's `handles()` and `gesture()`), `tools/mover.ts` is `wire/move.ts` (`createMoveTool(viewer, gestures, { snap, pick })`, `MoveDeps` gaining `pick`). `NO_DIRECTION` is `wire/draw.ts`'s |
-| Actions | `src/ui/actions/registry.ts` | E2 | `ActionContext` (`m`, `selection`, `hit?`, `ref?`, `from`), `Action` (`id`, `title`, `group`, `keys?`, `scope?`, `help?`, `applies?`, `when`, `run`), `ActionGroup`, `registerAction(a)` (binds its keys through keys.ts; a key another action holds in the scope throws; the same id replaces), `actionsFor(c)`, `runAction(id, c)` (true, or why not), `titleOf`, `keyMatches`, `keyCaps`, `parseKey`, `GROUP_HELP`, `helpSections` (what the help lists), `actions` |
-| The seeded actions | `src/ui/inspector/actions.ts`; `src/ui/viewport/actions.ts` | E4; E2 | `inspectorActions()`: `delete` (Delete, Backspace), `join-end`, `replace`, with `joinEnd(c)`, `replaceAsked`, `replaceKey`, `useReplaceAsked`; `viewActions()`: `fit` (F) and `show`. Each returns its undo |
-| Key help rows | `src/ui/keys.ts` | E2 | `KeyHelpRow.or`, other keys that do the same. `keyHelp` holds the described sections; the help shows `helpSections` |
-| The context menu | `src/ui/shell/ContextMenu.tsx` | E2 | `menu`, `openMenu(ctx, at)`, `closeMenu()`, `connectMenu()` (the view's right-click, in Select), `menuEntries(ctx)`, `menuTitle(ctx)`, `MenuEntry`, `ContextMenu`. Styles in `shell.css` (`.context-menu…`) |
-| The pick | `src/viewer/scene.ts`; `src/viewer/pick.ts` | E2 | `Hit` (`id`, `p`, `normal`, `face?`, `station?`); `pickAt(x, y, skip?)` gives one; `onContextMenu(cb)` (a right-click within 4 px; returns the undo); `setHidden(ids)` (a no-op until E2.4). `barHit(ray, bar)` and `hitOn(bars, id, ray, p, normal)`, pure |
-| Snaps | `src/viewer/snap.ts` | E3 | `SnapOptions.skip` (ids of bars, parts, nodes) replaces the unused `skipBars`; `SnapPoint.of`, the entity a point belongs to |
-| View state | `src/ui/focus.ts` | E2 | `hidden`, `isolated` signals; the tools pass `hidden` as their picks' and snaps' skip |
-| The gizmo | `src/viewer/gizmo.ts`; `src/viewer/scene.ts` | E3 | `GizmoPart`, `GizmoHandle` (`key`, `at`, `axis?`, `locked?`), `GizmoSpec` (axes `{ at, parts }`, or `{ handles, hot? }`), `GizmoDrag`, `Gizmo` (the scene's, built once; the viewer links its programs, hidden parts too, before its first frame), `gizmoPartAt`, `handleAt`, `gizmoDrag`, `mmPerPx`, `GIZMO_PX`, `GRAB_PX`. Viewer: `setGizmo(spec)`, `gizmo()`, `onGizmoDrag(cb)`. **Moved:** `Viewer.setHandles` and `HandlesState` are gone; the end handles show `{ handles }` |
-| Batches | `src/ui/edit/batches.ts` | E3 (each builder's body: the stream its task names) | `transformBatch` (**moved**: `tools/moves.ts`'s `moveCommands`), `endBatch` (**moved**: `tools/ends.ts`'s `endCommands`), and `duplicateBatch` (E3.3), `mirrorBatch` (E3.2), `arrayBatch` (E3.3), `splitBatch` (E4.3), `alignBatch` (E3.6), each "not available yet" until built; `Batch`, `Vec` |
-| The test hook | `focus.ts`, `ContextMenu.tsx`, `viewport/Viewport.tsx` | the module that adds each | `selection()`, `hidden()`; `menu()` (the open menu's title and entries); `gizmo()`; `frames().modelFrame` (`RenderStats.modelFrame`, `src/viewer/scene.ts`: the frame that first drew the model given last, 0 until one has); `frames().badgeFrame` (the same for the problem badges given last, which follow the problems by their own request). The e2e helper `waitDrawn(page, rev)` waits for both the hand-over (`drawnRev`) and `modelFrame` |
-| E2E helpers | `tests/e2e/helpers.ts` | any stream adds | `contextMenu(page, at)`, `selectByIds(page, ids)`, `docOf(dir)` |
-
-### Who owns which files (the audit's §7.4, with what E0 added)
-
-| Path | Owner |
-|---|---|
-| `src/core/**`, `src/cli/**`, `src/server/**`, `src/ui/client/**`, `skills/alukit/SKILL.md` (regenerated), new fixtures | **E1** |
-| `src/ui/actions/**`, `src/ui/shell/ContextMenu.tsx`, `src/ui/focus.ts`, `src/ui/outline/**`, `src/ui/catalog/state.ts` (D1), `src/viewer/scene.ts`, `src/viewer/pick.ts`, `src/ui/viewport/ViewControls.tsx`, `src/ui/viewport/actions.ts`, `src/ui/shell/StatusBar.tsx`, `src/ui/shell/Help.tsx`, `src/ui/keys.ts` | **E2** |
-| `src/ui/tools/wiring.ts`, `src/ui/tools/wire/{common,draw,frame,measure,move,rotate,mirror,duplicate,align}.ts`, `src/ui/tools/{drag,preview,moves}.ts`, `src/ui/tools/state.ts`, `src/ui/tools/CommandBar.tsx`, `src/ui/edit/**`, `src/viewer/gizmo.ts`, `src/viewer/snap.ts` | **E3** |
-| `src/ui/inspector/{BarFields,length,words,replace,actions}.ts(x)`, new `inspector/{Ends,Holes,NodeFields,ManyFields}.tsx`, `src/ui/tools/wire/ends.ts`, `src/ui/tools/{ends,LengthEdit}.ts(x)` | **E4** |
-| `src/ui/inspector/{OtherFields,CornerInspector,arrangements}.ts(x)`, new `inspector/{FaceEdit,PatternFields}.tsx`, `src/ui/tools/ToolForm.tsx`, `src/ui/tools/commands.ts` (D5), `src/ui/tools/wire/{connect,place,pattern}.ts` | **E5** |
-| `src/ui/inspector/Inspector.tsx` | E4 (E5 adds its rows through `PartFields` and `ConnectionFields`) |
-| `tests/e2e/menu.spec.ts` | E2 (E0 wrote its first test) |
-| `docs/design.md` (§6, §8), the decision notes | the coordinator folds them in; each stream writes `docs/ux/eN-decisions.md` |
-
-A stream that breaks another's spec makes the smallest selector fix in that spec, in the same
-merge, and names it. A semantic assertion is never weakened.
-
-## Gap X11 changes
-
-*Context ([`../notes/x11.md`](../notes/x11.md)): a bar or a placed part marked `context: true`,
-drawn and checked against but not built or bought. Each adds.*
-
-- **`ViewTheme`** (`src/viewer/theme.ts`) adds `body.context`, context's one tone whatever its
-  item; **`tokens.ts`** holds its dark and light values (S4 may retune them).
-- **The export's palette** (`src/mesh/style.ts`, frozen by D-UX-24): `COLOURS.context`, the GLB's
-  `context, translucent` material; `partTone` answers `"context"` first and `barColour` reads a
-  bar's `context`. No byte of a GLB without context moved (x11, what moved).
-- **The view model** (`src/mesh/model.ts`): `BarJson.context`, `PartJson.context`,
-  `ViewPart.context`, `ViewFastener.context`; `PartShape.context` (`src/mesh/place.ts`).
-- **`ViewerStats`** (`src/viewer/scene.ts`) adds `context`, the bars, parts and fasteners drawn as
-  context. The scene keeps a translucent pair of materials for context, made once, beside the
-  opaque pair.
-- **The inspector** (`src/ui/inspector/context.ts`): `contextOf(model, id)` (whether the entity can
-  be marked, whether it is, and the command) and `contextBatch(model, id, on)`; the Context row
-  (`ContextRow`, in `BarFields.tsx`) on a bar's and a placed part's fields, one step.
-
 ## Editing round: E5 changes
 
 *Stream E5 of the [editing audit](editing-audit.md) ([e5-decisions.md](e5-decisions.md)). Owner of
@@ -702,3 +685,37 @@ everything below: E5, except where a line names another owner; other streams add
 - **`inspector.css`** (S5's, added to): a field table's value cell takes the room its label
   leaves (`table.kv.fields td`), so a long select no longer widens the table past the panel; the
   face form's rules (`.face-edit`) (e5 31).
+
+## Editing round: integration
+
+*The integration pass of the editing round ([integration-editing.md](integration-editing.md)):
+the sections above are in stream order, E0 first. Each interface is named once, in the section
+of the stream that made it, with its owner; where a stream added to another's interface, its
+line names the owner (E3's `gizmoFootprint` in E2's section, E4's `splitBatch` body in E3's
+`batches.ts`, E3's change to E4's `wire/ends.ts`). The file table is E0's, with what the later
+streams added.*
+
+- **E2E helpers** (`tests/e2e/helpers.ts`, any stream adds): `serveNew(args, prepare?)` runs
+  `prepare` on the new project's folder before the server starts, so a test opens at revision 0
+  on a state the CLI built.
+- **`tests/e2e/editing.spec.ts`** (the integration pass): the audit's §12 scenarios, each ending
+  in a comparison with the CLI; it adds no interface.
+
+## Gap X11 changes
+
+*Context ([`../notes/x11.md`](../notes/x11.md)): a bar or a placed part marked `context: true`,
+drawn and checked against but not built or bought. Each adds.*
+
+- **`ViewTheme`** (`src/viewer/theme.ts`) adds `body.context`, context's one tone whatever its
+  item; **`tokens.ts`** holds its dark and light values (S4 may retune them).
+- **The export's palette** (`src/mesh/style.ts`, frozen by D-UX-24): `COLOURS.context`, the GLB's
+  `context, translucent` material; `partTone` answers `"context"` first and `barColour` reads a
+  bar's `context`. No byte of a GLB without context moved (x11, what moved).
+- **The view model** (`src/mesh/model.ts`): `BarJson.context`, `PartJson.context`,
+  `ViewPart.context`, `ViewFastener.context`; `PartShape.context` (`src/mesh/place.ts`).
+- **`ViewerStats`** (`src/viewer/scene.ts`) adds `context`, the bars, parts and fasteners drawn as
+  context. The scene keeps a translucent pair of materials for context, made once, beside the
+  opaque pair.
+- **The inspector** (`src/ui/inspector/context.ts`): `contextOf(model, id)` (whether the entity can
+  be marked, whether it is, and the command) and `contextBatch(model, id, on)`; the Context row
+  (`ContextRow`, in `BarFields.tsx`) on a bar's and a placed part's fields, one step.

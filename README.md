@@ -55,6 +55,23 @@ If the catalogs you named sell no profile, the card says so, and **Add one in Pr
 lists the built-in catalogs with an **Add** button each. Press `?` for every key; see the
 [guide](docs/guide.md) for the layout and the tools.
 
+Everything you make stays editable in the 3D view, each change one step that `Ctrl/Cmd+Z` takes
+back and that the CLI would make with the same commands:
+
+- **Select** by click, a box (left to right: what is inside; right to left: what it touches), a
+  tag's heading in the outline, `Ctrl/Cmd+A`, or the menu's similar, tagged and connected; **hide**
+  (`H`), **isolate** (`Shift+H`) and **show all** (`Alt+H`); the selection's size in the status bar.
+- **Right-click** anything (or `Shift+F10`) for a menu of what you can do to it, with the keys.
+- **Move** (`D`) and **Rotate** (`Q`) by dragging or by typed values, joined ends following;
+  **Duplicate** (`Ctrl/Cmd+D`, with `4x` or `/4` for more), **Copy** and **Paste**, **Mirror** and
+  **Align to a face** from the menu.
+- **Bars**: drag an end, or type a length (`=W` binds a param, from either end or the middle); set
+  each end's cut, extension and where it stops; offset, anchor and roll; **split**, **reverse**,
+  and **holes** on a face; fields shared by several bars at once.
+- **Joints, patterns and parts**: every connection's fields, a face joint's bolts and stations, a
+  corner's butt, mitre or splice; a live pattern's pitch and count, or explode it; replace a part,
+  move it along its bar or into a groove.
+
 Read what you drew from a terminal, while the server runs or not:
 
 ```sh
@@ -156,7 +173,7 @@ shot.png` (headless Chromium through Playwright; `pnpm exec playwright install c
 
 | Document | What |
 |---|---|
-| [`docs/guide.md`](docs/guide.md) | the user guide: the project folder, the document, drawing, reading the outputs, locks, revisions |
+| [`docs/guide.md`](docs/guide.md) | the user guide: the project folder, the document, drawing and editing in 3D, reading the outputs, locks, revisions |
 | [`docs/design.md`](docs/design.md) | the v1 design: catalogs, the project format, the solver, the agent interface, the viewer |
 | [`docs/notes/`](docs/notes/README.md) | the decisions made while building each milestone, and [where the build differs from the design](docs/notes/design-vs-built.md) |
 | [`BRAINSTORM.md`](BRAINSTORM.md) | the early decisions, the ideas, the roadmap |
