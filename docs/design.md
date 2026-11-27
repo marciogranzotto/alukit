@@ -1,16 +1,138 @@
 # AluKit: design (v1)
 
-*Draft 2.2, 2026-11-26. Built from the decisions D1–D16 in [`BRAINSTORM.md`](../BRAINSTORM.md),
+*Draft 2.3, 2026-11-26. Built from the decisions D1–D16 in [`BRAINSTORM.md`](../BRAINSTORM.md),
 the Forseti survey [`research/forseti-inventory.md`](research/forseti-inventory.md), review 1
 [`reviews/design-review-1.md`](reviews/design-review-1.md), the lessons and wishlist from the
 reference project (an internal lab rack), and the M1.5 paper model of that project's frame
-([`reviews/m1.5-paper-model-findings.md`](reviews/m1.5-paper-model-findings.md)). Building has
-started: M0 is done and M1 is being built from §3. Everything here is open to veto: section 14
-lists the calls made without asking, section 15 maps every review finding to where it is
-resolved, and section 16 does the same for the paper model's gaps.*
+([`reviews/m1.5-paper-model-findings.md`](reviews/m1.5-paper-model-findings.md)). v1 is built
+(§12), and this draft describes it as built, from the decision notes in
+[`notes/`](notes/README.md). Everything here is open to veto: section 14 lists the calls made
+without asking, section 15 maps every review finding to where it is resolved, and section 16 does
+the same for the paper model's gaps.*
 
 *Provenance labels: **verified** (run or checked against a source, with how), **read** (from the
 named document), **inferred** (reasoning, not checked).*
+
+## Draft 2.3 — what changed (2026-11-26)
+
+v1 is built: M0–M6, then M4c and the gaps the acceptance found (§12). Draft 2.3 folds in the
+decision notes and the 21 entries of [`notes/design-vs-built.md`](notes/design-vs-built.md) (cited
+below as dvb), so that the design again describes the system as built. A recorded deviation that
+proved the better choice is now the rule; a feature v1 does not have is stated as a **v1 limit**,
+with the version that takes it up. Calls left for the owner's review are marked *open* (§14,
+call 6 and calls 31–34). Changed text is marked *2.3*. The build was not changed for this draft.
+Notes are cited by name and decision number ("m4a 13" is decision 13 of
+[`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
+
+**§2 Conventions**
+
+- Four unit suffixes for the stiffness, straightness and twist fields §3.4 names; canonical
+  numbers snap to their grid only within `tol.snap`; every file is strict JSON with a `schema`; a
+  direct edit is taken in as written (m1 3, 6, 7; m3b-doc 3; m4a 9; dvb 9).
+
+**§3 Catalogs**
+
+- §3.1: a stale override is an error and is not applied; a project's item reference always names
+  its catalog. `services.json` is a v1 limit (m1 16, 19; m3a 6; m3b-order 13; dvb 14).
+- §3.2: `clone_of` on any kind; one SKU in several stock lengths is one offer per length, keyed
+  `<SKU>.<length>`, naming its `sku` (m1 22; m2a 8).
+- §3.3: a groove chamber that narrows toward its floor, `taper_from_mm` and `bottom_mm` (m2a 10).
+- §3.4: **fit by role** (gap A1) and **joint recipes**, `recipe: true` (A2); where `requires`
+  machines, with the **end hole** into a through bar's end (A4); a fastener set counts per mount
+  hole; fasteners gain `subtype`, `fits` and `dims`; a panel's mass follows from its thickness
+  (acceptance-gaps A1, A2, A4; m1 26, 27; m2a 6a, 9; m3b-gen 28, 29; dvb 18, 19).
+- §3.5: the `tslot` generator as built; no `channel` or `beam` generator yet, a v1 limit; arcs
+  flattened at 0.5° (m1 34–36; a3-face-contact).
+
+**§4 Projects**
+
+- §4.3: a station with no face takes `off_mm` in local x and y (m3a 13).
+- §4.5: **the faces of a layer**, bounding and inner, with stations, the fastener's walk through
+  the material, the grip and the holes on them (gap A3; G29); a hole a sleeve passes **clears**
+  it, by ISO 273 medium for its outside diameter or by `clearance_mm` (A7; G32); a butt's
+  connector, counted per end and not placed, a v1 limit; a placeholder as a through body (gap
+  G-B; G28); a miter declares its own angled cut; "end far from its face" is measured along the
+  face's normal; the holes of `screw`, `tnut` and rail layers; the draw tool's auto-connect
+  (a3-face-contact; acceptance-gaps A1, A4, A7; m3a 19, 23; m3b-gen 21–27; m4a 35; m4b 5, 6; m6,
+  gap G-B; dvb 20).
+- §4.6: golden cases G28 (M6) and G29–G32 (the acceptance gaps), their values copied from each
+  fixture's `expected.json` (m6; a3-face-contact; acceptance-gaps).
+- §4.8: a bent angle's legs, inside radius and required K-factor (open, call 33), one 90° bend in
+  v1; project items hold numbers, default to supplier `local`, and take the hole and price rules
+  as built (m6 1–15; dvb 17).
+- §4.9: `cost(high)`, not `cost("high")`, since the language has no strings; accessors are for
+  checks only; `bbox()` holds bars only, a v1 limit; margins per operator (m3a 7, 8; m3b-doc 34,
+  37, 39; dvb 13).
+- §4.10: cost lines take `only_in` and `not_in` (A5); `only_in` leaves an entity out of the
+  document derived with no variant; what a swap replaces and what it leaves (acceptance-gaps A5;
+  m5 3–6; dvb 15, 21).
+- §4.11: a cost line's fields as built, its provenance `est` by default; `services_on` takes a
+  list (A6); machining in v1 is priced only by a covering cost line (acceptance-gaps A5, A6;
+  m3b-order 13–15, 17, 25, 32; dvb 14, 21).
+- §4.13: when the lock is created and what `lock update` keeps; a revision holds every variant and
+  its `as_of`, and is saved through the server when one runs; diff sides (m3b-doc 9–11; m4c 5, 6;
+  m5 9–17).
+
+**§5 The derived model**
+
+- §5.1: stage 4 adds inner-face contact, end holes and sleeve clearances; stage 5 the machining
+  sheet (acceptance-gaps; a3-face-contact; m6 18).
+- §5.2: CI runs on Linux; the macOS run is the merge gate's (the repository's CI configuration).
+- §5.3: kerf and trim defaults; end holes listed from their end; identity by where machining
+  physically is; a rail's holes as one record (m3a 33; m3b-gen 5, 6, 32; acceptance-gaps A4).
+- §5.4: a bar's mass from its centre-line length; joint recipes listed apart; the **machining
+  sheet**; a v1 limit: only the order and the costs state the lock's hash (m3b-gen 35, 36;
+  acceptance-gaps A2; m6 18–22; m3b-doc 40; m3b-order).
+- §5.5: fit by role; the order's date, `as_of`; a placeholder holds its own group; the cover does
+  not avoid an out-of-stock offer (m3b-doc 41; m3b-order 5, 10; m6 16; dvb 16).
+
+**§6 Commands**
+
+- Merge patches for `set*`; what a cascade removes and what it refuses; `autoConnect`'s `optional`;
+  the shape of a refusal (m3b-doc 12–14, 17; m4a 1; m4b 5).
+
+**§7 Agent interface**
+
+- §7.1: what "valid" means; `serve` refuses invalid files and holds the edit lock while it runs;
+  the order of a step; the source tags; `undo`, `redo` and `log` need a server; `?variant=` and
+  `?as_of=` on the API (m4a 5–17, 25, 41; m4c 1–6; dvb 8–10).
+- §7.2: `Host` and `Origin` on static files too; `Sec-Fetch-Site`, the security headers and the
+  one token-free path, `/api/health` (m4a 18–22; dvb 11).
+- §7.3: `machining`, `redo`, `revision list` and `show`, `catalog schema`; the syntax of
+  `derive --select`; `catalog search` and `import` (m4c 20–25; m6 18; dvb 12). `snapshot` in a
+  fresh page stays the rule (open, call 34; m4b 29).
+- §7.5: the skill's worked example runs as a test (m5 30–32).
+
+**§8 Viewer and UI**
+
+- The work plane defaults to the ground (open, call 32); snap targets add each bar's design line
+  and the parts' datums and face centres; picking raycasts the bodies, snapping stays analytic; a
+  Machining tab; the read-only banner is its own bar; the variant switch, the revision, export,
+  the section plane, the catalog browser and the tabs as built; Connect builds pivots and fastened
+  joints. v1 limits: editing an existing connection, dragging a node or an end, placeholder
+  hatching, `W` on a part's face (m4a 34–38, 42; m4b 7–19, 25–28, 38–40; m4c 7–19; m6 28, 32;
+  dvb 2–7).
+
+**§9 Exports, §10 Stack, §11 Forseti**
+
+- §9: the GLB's root node, its hole children and extras; the machining sheet; which outputs carry
+  the lock's hash (m5 22–27, 40; m6 18).
+- §10: `serve` does not rebuild `dist/`, a v1 limit; the API in Vite's dev server; the pins as M0
+  kept them, with vite's release-age exclusion still open (m4a 43, 44; the
+  [build session log](sessions/2026-11-26-alukit-v1-build-session-log.md)).
+- §11: 27 profile stems, not 25; connectors beyond the first families have no mounting model yet;
+  two HIWIN editions disagree on MP and MY, open until loads (m2b 7, 14; std-hiwin-verification;
+  the build session log).
+
+**§12–§14**
+
+- §12: every milestone is done; M4c and the gaps' work are rows of their own; M5's recorded manual
+  run is not in the repository, its worked example runs as a test instead; the fixture list
+  (every note).
+- §13: the acceptance run of 2026-11-26 (tests 1–4 passed; failed overall on A1 and A3, with A2
+  and A4–A7; all fixed); the re-run's verdict is pending (the build session log;
+  acceptance-gaps; a3-face-contact).
+- §14: calls 31–35, four of them open, and call 6 marked open.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -124,9 +246,10 @@ closed here; §16 maps each one to its section or to a v1 exclusion.
 
 - **Units.** The suffix names the unit, from a fixed list: `_mm`, `_m`, `_mm2`, `_mm3`, `_mm4`,
   `_N`, `_kN`, `_Nmm`, `_Nm`, `_MPa`, `_kg`, `_kg_per_m`, `_kg_per_m3`, `_deg`, `_per_K`, `_J`,
-  `_km`, `_minor`. The loader converts to base units (mm, N, N·mm, MPa, kg, degrees), so a value
-  is stored as its source prints it (a torque in N·m stays `torque_Nm`). An unknown suffix is a
-  schema error (review m7).
+  `_km`, `_minor`, and (*2.3*) `_N_per_mm`, `_Nmm_per_rad`, `_mm_per_m`, `_deg_per_m` for the
+  stiffness, straightness and twist fields §3.4 names. The loader converts to base units (mm, N,
+  N·mm, MPa, kg, degrees), so a value is stored as its source prints it (a torque in N·m stays
+  `torque_Nm`). An unknown suffix is a schema error (review m7).
 - **Money** is an integer in minor units (`_minor`, review n6) plus a currency code: on the
   catalog for offers, on the project for totals (§4.11).
 - **World frame.** Right-handed and Z up, like the Fusion design frame. Conversion to three.js
@@ -146,9 +269,15 @@ closed here; §16 maps each one to its section or to a v1 exclusion.
 - **Canonical form** (review m13, M4). UTF-8, LF, two-space indent, final newline. Keys in schema
   order; entity maps sorted by id order, one entity per line; numbers as ECMAScript's shortest
   round-trip form ([Number::toString](https://tc39.es/ecma262/#sec-numeric-types-number-tostring)),
-  never `-0`, never non-finite. The server and the CLI always write canonical form; `alukit fmt`
-  rewrites a file into it. A hand edit in any form is accepted and canonicalised on the next
-  write.
+  never `-0`, never non-finite. Numbers on `_mm` and `_deg` fields and point coordinates snap to
+  0.01, and `_kg` to 0.001, only when they lie within `tol.snap` of that grid (*2.3*):
+  `1199.9999999999998` is written `1200`, `12.345` stays. The server and the CLI always write
+  canonical form; `alukit fmt` rewrites a file into it. A hand edit in any form is accepted, taken
+  in as written (*2.3*: rewriting a file just saved would make the editor reload it), and
+  canonicalised by the next step that writes the file (§7.1).
+- **Strict JSON** (*2.3*). Every file AluKit reads is parsed strictly: a duplicate key is an error
+  naming its line, since `JSON.parse` keeps the last of two keys silently. Every file carries a
+  `schema` (`alukit.project/1`, `alukit.catalog/1`, …), which migrations read.
 - **Valued fields.** A bare number inherits its item's default provenance. An object adds
   per-field provenance:
 
@@ -183,13 +312,17 @@ catalogs/<id>/catalog.json      id, vendor, currency, materials, groove types, s
 catalogs/<id>/offers.json       offers: SKU, packs, kits, options, prices with read dates (importer output)
 catalogs/<id>/sections/*.json   section definitions, one file per section (3.5)
 catalogs/<id>/families/*.json   per-family modelling written by agents (mounting, fastener sets, ratings)
-catalogs/<id>/services.json     machining services and their prices, entered by hand with page refs
+catalogs/<id>/services.json     machining services and prices, by hand with page refs (not in v1)
 catalogs/<id>/overrides.json    corrections and accepted mismatches, each with provenance
 importers/<id>/                 the importer that regenerates catalog.json, offers.json and sections/
 ```
 
 Items and offers are separate files because prices change at every read and items rarely do;
 diffs then stay readable.
+
+**v1 limit** (*2.3*): `services.json` is not built. It needs a schema and a place in the lock
+(§4.13), which v1 does not define, so in v1 machining is priced only by a cost line that covers it
+(§4.11). v1.1 or later.
 
 **Merge order** (review M10). An item is assembled field by field, by item id, from three layers:
 
@@ -200,14 +333,16 @@ diffs then stay readable.
 | 3. `overrides.json` | a person or an agent, with provenance | replace a field: `{ "item", "field", "expect", "value", "why", provenance }`, or accept a mismatch: `{ "item", "field", "accept": true, "why" }` |
 
 `expect` is the value the override replaces. `alukit catalog check` reports an override whose
-`expect` no longer matches layer 1 or 2 (the vendor fixed it, or the importer changed), so a stale
-correction never overrides silently. The loaded item carries a `corrected` history computed from
-the overrides; nobody writes it by hand.
+`expect` no longer matches layer 1 or 2 (the vendor fixed it, or the importer changed). Such a
+stale override is an error and is not applied (*2.3*), so a stale correction never overrides
+silently: a person decides. The loaded item carries a `corrected` history computed from the
+overrides; nobody writes it by hand.
 
 **Catalog ids** (review m13). A catalog declares its id in `catalog.json`. A project names its
 catalogs by built-in id or by path; two catalogs claiming one id is an error naming both paths.
 An offer may offer an item from another catalog by its full id, so a local steel supplier's
-quotes can point at shared items.
+quotes can point at shared items. Inside a catalog a bare id resolves in that catalog; a project's
+item reference always names its catalog, `forseti:PF40-01`, since a project reads several (*2.3*).
 
 **Built-in catalogs in this repo:**
 
@@ -239,6 +374,7 @@ sold. The BOM counts items; the order list chooses offers (§5.4).
 | `mesh` | optional GLB for drawing; otherwise a parametric mesh from the kind |
 | `options` | named by meaning: `{ "finish": ["anodised", "black"], "hand": ["left", "right"] }` |
 | `ratings` | the typed ratings bag (§3.4) |
+| `clone_of` | an item in a reference catalog that this one rebadges (review m8), on any kind (*2.3*: rails are rebadged too, not only carriages); one level only |
 | `prov` | the item's default provenance |
 
 **A part item's own frame** (*2.1*): +z points away from the face the part mounts on, and +x runs
@@ -249,7 +385,7 @@ lands on a station.
 
 | Field | Notes |
 |---|---|
-| `item`, `sku`, `supplier` | `supplier` defaults to the catalog's vendor |
+| `item`, `sku`, `supplier` | `supplier` defaults to the catalog's vendor. An offer is keyed by its SKU; when one SKU is sold in several stock lengths, each length is an offer keyed `<SKU>.<length>` that names the SKU it orders in `sku` (*2.3*) |
 | `options` | the option values this SKU sells: `{ "finish": "black" }` |
 | `pack` | units of the item per offer (default 1), or |
 | `kit` | contents: `[{ "item", "qty", "options" }]`; the first entry is the kit's main item |
@@ -286,7 +422,10 @@ The `-c7` tail of a Forseti SKU is not a finish; `-pp` is (*read: survey §1*).
 - **Material**: `E_MPa`, `G_MPa`, `nu`, `density_kg_per_m3`, `Rp02_MPa`, `Rm_MPa`, `alpha_per_K`
   (thermal expansion, for aluminium bolted to steel; review m7), alloy and temper.
 - **Groove type**: `opening_mm`, `lip_mm`, `depth_mm`, `undercut_mm`, and `class` (`standard` or
-  `light`). item rates its T-nuts in standard grooves only.
+  `light`). item rates its T-nuts in standard grooves only. A chamber that narrows toward its
+  floor gives `taper_from_mm` and `bottom_mm`, both or neither (*2.3*): it keeps the undercut's
+  width to `taper_from_mm`, then narrows to `bottom_mm` at `depth_mm` (a 40-series chamber run
+  square to its full depth would cross its neighbours' at a 40x40's corners).
 - **System**: an interface family that decides what fits. A T-slot system is a series plus a
   groove type (`forseti:s40-c8`); a rail system is a rail size family (`forseti:rail-hg20`).
 
@@ -297,12 +436,38 @@ Fields marked † are needed only by later phases (D5), but the schema has them 
 | Kind | Fields beyond the envelope |
 |---|---|
 | **bar** | `shape`: `tslot`, `tube`, `rhs`, `rod`, `threaded-rod`, `flat`, `angle`, `channel`, `beam` or `rail`. `section` (a section id, §3.5); `system` (T-slot and rail bars); published `area_mm2`, `Ix_mm4`, `Iy_mm4`, `J_mm4`†, `Wx_mm3`†, `Wy_mm3`†; `core` (bore, tap size); tolerances† (straightness, twist; DIN EN 12020-2 / ABNT NBR 8116); `thread` (threaded rod); `rail` { `pitch_mm`, `E_min_mm`, `E_max_mm`, hole spec } (rails) |
-| **connector** | `subtype` (bracket, plate, end-connector, cube, gusset, hinge, splice); `fits` [systems]; `frame` (the connector's own axes, which give the rating directions their meaning; review m7); `mounts` [{ plane, holes, `fasteners` keyed by system: `{ "forseti:s40-c8": [{ item, qty }], "forseti:s45-c10": [ … ] }` }] (review B3); a fastener set may list a sleeve cut from bar stock, `{ "item", "inside": "through", "len_mm": "bore" \| <number> }`, set in the through bar's bore on the mount hole's axis (*2.1*, §4.5); `requires` [machining on the joined bars, e.g. an end tap M8 plus an access hole]; `spacer_mm`; `body` (a cube's box); `pivot` { `height_mm`, `end_mm`, `range_deg` } (hinges); `splice` { the stud or plates, the tap it needs } |
-| **fastener** | `thread`, `length_mm`, `head` (DIN/ISO), `class`, `material`, `torque_Nm`; T-nuts add `groove` and `insertion` (`drop-in` or `slide-in`) |
-| **carriage** | `rail_system`; dimensions; the datum `run` (*2.1*): the point that sits on the rail's running-face centre line (§4.7); `clone_of` { item in a reference catalog } when the vendor rebadges |
-| **accessory** | feet, casters, handles: `thread`, dimensions |
-| **panel** | sheet stock: `thickness_mm`, `material`; sheet sizes are offers |
-| **generic** | name, mass, bounding box, offers, an optional mesh. Orderable. Everything that fits no other kind: electronics, tools, finished goods, cable chain, ball screws, bearings, pulleys, belts, couplings (about 200 of Forseti's 495 products; *read: review B3*) |
+| **connector** | `subtype` (bracket, plate, end-connector, cube, gusset, hinge, splice); `fits` [systems]; `frame` (the connector's own axes, which give the rating directions their meaning; review m7); `mounts` [{ plane, holes, `fasteners` keyed by system: `{ "forseti:s40-c8": [{ item, qty }], "forseti:s45-c10": [ … ] }` }] (review B3); a fastener set may list a sleeve cut from bar stock, `{ "item", "inside": "through", "len_mm": "bore" \| <number> }`, set in the through bar's bore on the mount hole's axis (*2.1*, §4.5); a fastener set is used once per hole of its mount, so its `qty` counts per hole (*2.3*); `requires` [machining on the joined bars, e.g. an end tap M8 plus an access hole: `{ op, on, thread?, d_mm?, depth_mm?, from_end_mm? }`, `on` naming the butting bar, the through bar or each]; `spacer_mm`; `body` (a cube's box); `pivot` { `height_mm`, `end_mm`, `range_deg` } (hinges); `splice` { the stud or plates, the tap it needs }; `recipe: true` for a joint recipe (*2.3*, below) |
+| **fastener** | `subtype` (screw, bolt, nut, washer, t-nut, hammer-screw, insert, stud, …; *2.3*), `thread`, `length_mm`, `head` (DIN/ISO), `class`, `material`, `torque_Nm`, `dims` (published dimensions under the standard's letters; *2.3*); T-nuts and hammer screws add `fits` (the systems whose grooves they fit; *2.3*), `groove` and `insertion` (`drop-in` or `slide-in`) |
+| **carriage** | `rail_system`; `dims`; the datum `run` (*2.1*): the point that sits on the rail's running-face centre line (§4.7); usually `clone_of` an item in a reference catalog (§3.2) |
+| **accessory** | feet, casters, handles: a free-text `subtype`, `thread`, `fits`, `dims` |
+| **panel** | sheet stock: `thickness_mm`, `material`; sheet sizes are offers. No mass field: its mass follows from its thickness and its material (*2.3*) |
+| **generic** | name, a `category`, mass, bounding box, `dims`, offers, an optional mesh. Orderable. Everything that fits no other kind: electronics, tools, finished goods, cable chain, ball screws, bearings, pulleys, belts, couplings (about 200 of Forseti's 495 products; *read: review B3*) |
+
+**Fit is judged by role** (*2.3*; acceptance gap A1). A butting bar is held at its end by its
+system, which the connector's `fits` must name. The through bar is held by its system, or **by its
+bore**: the fastener set chosen for a mount sets a sleeve in it (`inside: "through"`), and the
+sleeve then needs the through bar hollow (`tube` or `rhs`). Each mount's set is the one keyed by
+a system of a joined bar that `fits` names, the through bar's first. A bar held neither way is a
+`fit` error naming it. `fits` stays the one authority on systems: a set keyed by a system outside
+it is not a way to fit (`catalog check` warns on it), and a `requires` hole in the through bar does
+not hold it (a T-slot bracket that drills its through bar still holds it by its groove). Draft
+2.1's rule, that every joined bar carry a system `fits` names, let no connector with a mount
+sleeve derive cleanly, since a tube or an RHS has no system (G30).
+
+**Joint recipes** (*2.3*; gap A2). A connector with `"recipe": true` is a joint with no body of
+its own: studs in tapped cores, a screw into a core, a bush and a sleeve. It has no `mass_kg`,
+`bbox_mm`, `datums`, `body` or `mesh` (the schema refuses them), and no offer or kit sells it
+(`catalog check` refuses one). It keeps `fits`, `mounts`, `requires` and `splice`: its fastener
+sets, sleeves, splice parts and machining are generated and billed as any connector's; the recipe
+itself is not bought (§5.4). It cannot be a part or a butt's through body, having no box.
+
+**Where `requires` machines** (*2.3*). Once per butting end. An end tap goes in the butting end, an
+access hole on the butting bar's `+y` face `from_end_mm` in from that end. A hole on the through
+bar goes where the butting bar's centre line, moved by the spacer, meets the face it butts into;
+for a butt through the through bar's **end** (§4.5), into that end face along its axis, at that
+point: an **end hole**, listed with its offset from the section's centre (gap A4; G31). A hole
+with no `depth_mm` goes through. A hole that falls off the end face is a `connection` error. An
+end tap a connector asks of the through bar's end stays at its centre.
 
 **The ratings bag** (review m7, m16). Instead of fixed schemas for drive, damper and anchor, which
 nothing reads in v1, every item has `ratings`: a map whose keys come from one vocabulary file in
@@ -345,10 +510,17 @@ A section file holds one section, in mm, about its nominal centre (local x = wid
 | `parametric` | built by a generator from published dimensions | yes | steel shapes: yes (`props_ok: true`); a T-slot envelope: **no** (`props_ok: false`) |
 | `box` | the bounding box only | as a box | no |
 
-**Generators**: `tslot` (overall size, groove opening, depth and lip, core bore, wall), `rhs`
-(with corner radii), `tube` (round), `rod`, `threaded-rod` (nominal for drawing, stress area for
-properties), `flat`, `angle` (rolled, with root and toe radii), `channel`, `rail` (envelope from
-published dimensions). A local steel catalog then needs no outline files.
+**Generators**: `tslot` (overall size, the groove from its groove type, one groove centred per
+face by default, a list of core `bores`), `rhs` (with corner radii), `tube` (round), `rod`,
+`threaded-rod` (nominal for drawing, stress area for properties), `flat`, `angle` (rolled, with
+root and toe radii), `rail` (envelope from published dimensions). A local steel catalog then needs
+no outline files. Arcs are flattened at a fixed 0.5° step, which keeps the error relative: 0.0025 %
+of a circle's I at any radius, where a fixed chord tolerance grows as the radius shrinks (*2.3*;
+*measured by M1*).
+
+**v1 limit** (*2.3*): the `tslot` envelope is its box less its slots, with no `wall` parameter,
+and there is no `channel` or `beam` generator yet: such a section is `exact`, `traced` or `box`
+until one is added (v1.1 or later).
 
 **Cut lengths use only the bounding box** (§4.5), which a T-slot's published overall size gives
 exactly. So every profile can join the cut list as soon as it has a `parametric` section; fidelity
@@ -474,7 +646,8 @@ A **station** is `{ "bar", "at_mm", "from", "face" | "groove", "off_mm" }`:
   the groove's centre line; `off_mm` [u, v] then moves it across the face and along its normal.
 - **The signs of `off_mm`** (*2.1*): u runs along local +x on the `±y` faces and along local +y
   on the `±x` faces; v runs along the face's outward normal. A groove takes its face's u and v.
-  `stations.across_mm` (§4.5) uses the same u.
+  `stations.across_mm` (§4.5) uses the same u. A station with no face or groove is on the design
+  line, and its `off_mm` is [local x, local y] (*2.3*).
 
 **Runs** (*2.1*). `"runs": { "r1": ["b6", "b7", "b8"] }` names collinear bars joined end to end by
 `splice` connections, listed in order and all pointing the same way (each `a → b` along the run),
@@ -565,7 +738,8 @@ swept along the bar's axis line, **unbounded in both directions**. It has side f
 end caps, so a point at the very end of a design line is still inside it. A bar's **centre line**
 is the axis through its placed bounding box's centre, not its design line: an eccentrically
 anchored bar's centre line is offset from the design line (G3). It is the **bounding box**, not
-the outline: an RHS's corner radius or a T-slot's groove never moves a cut.
+the outline: an RHS's corner radius or a T-slot's groove never moves a cut. (Contact between a
+`face` connection's layers reads the outline's inner faces as well: *2.3*, below.)
 
 **Placement and end providers** (*2.1*). Most planes depend only on placements, never on another
 bar's cut. A bar bearing on another bar's end, or flush with it, needs one bounded exception:
@@ -587,10 +761,10 @@ default (G20).
 |---|---|---|---|
 | `butt` | `through`: a bar; a bar's end, `"b7.b"` (*2.1*); or `{ "body": <item>, "at": <point or pose> }`; `ends`: the butting ends; `connector`, `qty`, `spacer_mm` | each butting end: the first face of the through prism that the butting bar's centre line crosses, travelling from the bar's other end toward this one. Through an end: that end's end face, its normal reversed (G17). Then moved by `spacer_mm` (from the connector, or given) along the through face's outward normal, toward the butting bar: a spacer is a layer of that thickness between the faces (*2.1*). A butt needs no node: the plane follows the through bar | the centre line crosses a face, not within `tol.len` of an edge. Through an end: it crosses the end face inside that bar's infinite prism, not within `tol.len` of a side face, and that end's provider is a placement provider |
 | ↳ the through bar's own end | `through_end`: `cover` (default), `node`, `none`; claimed automatically when a through end's design point coincides with a butting end's (a corner), or named: `{ "end": "b", "mode": "cover" }`. Not with an end as `through` | `cover`: the farthest face, along the through bar's axis, of the butting bars' prisms that its centre line crosses (flush outer corner). `node`: square at its design point | `cover` that crosses no prism falls back to `node` with a warning |
-| `miter` | two ends | both on the bisector plane through the crossing point of the two centre lines | the centre lines cross within `tol.len`; same section, and the two placed sections mirror each other across the plane within `tol.len` |
+| `miter` | two ends | both on the bisector plane through the crossing point of the two centre lines; a miter is itself the declaration of `cut: "angle"` on both (*2.3*) | the centre lines cross within `tol.len`; same section, and the two placed sections mirror each other across the plane within `tol.len` |
 | `splice` | two ends, end to end; `connector` (a stud in tapped cores, or union plates), `gap_mm` (default 0) | square planes at the shared design point, `gap_mm` apart | collinear within `tol.ang` and `tol.len`; same item and placement |
 | `pivot` | `base`: a station on a face; `axis`: `along` or `across` the base bar; `connector` (with `pivot`); `ends`: the bars it carries | pivot point P = base point + `pivot.height_mm` along the face normal. Each carried end is cut square at `pivot.end_mm` from P. **Static**: the angle follows from the geometry; nothing moves (motion is v3) | each carried end's design point is `{ "pivot": <this connection> }`; the angle is inside `pivot.range_deg` (a check) |
-| `face` | `bars`: two or more layers, ordered head to nut: bars, runs, or parts holding a plate (*2.1*); `gaps_mm` (one per adjacent pair, default 0); `faces` (optional: the facing pairs are found); `fastening`: `none` (resting), `bolt` (through every layer), `tnut`, `screw` (tapped into the last layer); `fastener`; `stack`; `stations`; `tap_depth_mm` | **none**: a face connection never changes a cut | each adjacent pair's faces are antiparallel within `tol.ang` and coplanar within `tol.len`, or apart by that pair's `gaps_mm`, and they overlap |
+| `face` | `bars`: two or more layers, ordered head to nut: bars, runs, or parts holding a plate (*2.1*); `gaps_mm` (one per adjacent pair, default 0); `faces` (optional: the facing pairs are found); `fastening`: `none` (resting), `bolt` (through every layer), `tnut`, `screw` (tapped into the last layer); `fastener`; `stack`; `stations`; `tap_depth_mm` | **none**: a face connection never changes a cut | each adjacent pair has faces (bounding or inner, below; *2.3*) that are antiparallel within `tol.ang` and coplanar within `tol.len`, or apart by that pair's `gaps_mm`, and that overlap |
 
 `tee` and `cube` from draft 1 are both `butt` (review n5): a tee is a butt onto a span, a cube a
 butt into a body. A **lap** is a `face` connection. A bar **resting on** another is a `face` with
@@ -598,19 +772,46 @@ butt into a body. A **lap** is a `face` connection. A bar **resting on** another
 on its `-y` face. Face connections check contact; they do not move bars, since v1 has no
 constraint solver.
 
+**A butt's connector** (*2.3*). A butt counts its `connector` once per butting end, times `qty`;
+`defaults.butt` supplies it when the connection names none. Its fastener sets, sleeves and
+`requires` machining are generated with it, and it must fit the joined bars by role (§3.4).
+**v1 limit**: a butt's connector is counted, not placed, so it is not drawn, its mount's frame is
+not known, and a mount sleeve has no position along the joint's axis: it is cut to its length and
+drills no wall (v1.1 or later, with a rule that places it).
+
 **A butt through a body** (*2.1*): the body is any item with a bounding box (a connector, a
 placeholder, a generic or a plate), at a point or at a pose `{ "pos", "rot_deg" }` as parts take
 (§4.7). Its box's faces act as the through prism's (G5). The body is drawn and counted with the
-connection; it is not also a part.
+connection; it is not also a part. A project placeholder serves (*2.3*; gap G-B): its `bbox_mm`
+is read as a catalog cube's, from its `mount` datum when it has one, so bars bearing on a motor
+not yet chosen follow its box (G28). An item with no box is an `item` error, and the ends stay at
+their design points.
 
 **Bearing on an end** (*2.1*). A strut that bears at an angle on a block's end face names that end
-as `through` (G17). A **shoe mitred square to a strut** (*2.2*) is cut on
+as `through` (G17). A connector's hole in the through bar is then an end hole, into that end face
+along its axis (*2.3*; §3.4, G31). A **shoe mitred square to a strut** (*2.2*) is cut on
 `ends.<x>.plane: { "point": <point>, "normal": "<strut>" }` with `cut: "angle"`, and the strut's
 end butts through the shoe's end, with an end plate as `spacer_mm`: the shoe's cut follows the
 strut's angle and the strut's length follows the shoe (G27). The reverse, the shoe's end
 butting through the strut's end, suits a strut whose length is the input. A flat bar whose ends
 are flush with a beam's cut ends takes `ends.<x>.plane: { "of": … }` (G18), so it follows when
 the beam's cut changes.
+
+**The faces of a layer** (*2.3*; gap A3). A bar's faces are its four **bounding faces**, the sides
+of its placed bounding box, which §4.3 names, and its **inner faces**: the straight runs of its
+section's outline (the outer ring) that lie off the outline's own sides, such as an angle's
+inside leg faces or a channel's inner flange and web faces. On a side where the section declares a
+groove, the outline's excursions from that side and back (the grooves, any marks rolled into it)
+are part of that face, so a T-slot's grooved face is its bounding plane; an excursion from an
+ungrooved side (a channel's open side) stays open. "On a side" uses the outline's own extremes,
+within `tol.len`, since an outline drawn on a stroke's centre line sits a little inside its
+nominal box. Holes are not faces: a tube's bore and a T-slot's core are nothing a layer bears on.
+A part's faces are its box's six. Contact is tried on the bounding faces first, in a fixed order,
+then on pairs with an inner face, so every pair that met before 2.3 meets on the same faces. Draft
+2.2 never said which faces; the build had read only the box's sides, so a block on an angle's
+inner leg could not be a layer, and a bolt through the leg's outer face ran through the angle's
+whole box (G29). `faces` names bounding faces only; derive reports an inner face by the side it
+faces and its plane's section coordinate (`+x@-31.75`), or an oblique one by its normal.
 
 **A multi-layer joint** (*2.1*) is one `face` connection. A bolt through strap, packer, beam,
 packer, strap lists all five in `bars`, so a packer cut to length is both a bar on the cut list and
@@ -622,7 +823,13 @@ contact, or for its declared gap (G25).
 parallel to the rail within `tol.ang`; or a pattern (§4.7). `across_mm: [u…]` (*2.1*) adds
 offsets across the first layer's face, in §4.3's u, and puts one fastener at every pair of an
 `at_mm` and an `across_mm`: `{ "at_mm": [100, 300], "across_mm": [-15, 15] }` is four fasteners.
-When a layer is a run, each station's layer is the piece that holds it.
+When a layer is a run, each station's layer is the piece that holds it. A station sits on the
+first layer's face toward the second (*2.3*). On an inner face it lies on the face's plane level
+with the box's centre (the foot of the perpendicular from the box's centre line), and
+`across_mm` moves it along §4.3's u as on the bounding faces parallel to it; it must lie on the
+face, within `tol.len`. Level with the box, not the face's own middle, because the middle depends
+on root and toe radii that are often estimated, and a leg's two faces then share one hole line.
+A station that misses a layer is an error.
 
 **Fasteners and stacks.** At each station sits one `fastener`: a catalog fastener, or a piece cut
 from bar stock (*2.1*), `{ "bar": "std:DIN975-M10", "len_mm": <expr> }`. A cut piece goes on the
@@ -639,28 +846,64 @@ It sits on the fastener's axis, from the inner face of the hollow layer's wall o
 In `len_mm`, `bore` is that layer's inside depth along the fastener's axis, after swaps, so this
 sleeve crosses the bore and the head-side wall and stands 2.5 mm proud of it. The sleeve goes on
 the cut list. `inside` must name one of the connection's hollow layers (`tube` or `rhs`). A
-connector's `mounts` may list sleeves the same way (§3.4).
+stack sleeve may add `clearance_mm` (*2.3*), an expression, for the holes it passes (below). A
+connector's `mounts` may list sleeves the same way (§3.4). The stack's items count once per
+station; a fastener and each sleeve cut from stock are pieces `<connection>.f<k>` and
+`<connection>.s<n>`, numbered in station order (*2.3*).
+
+**The fastener's walk** (*2.3*; gap A3). The fastener enters each layer by its contact face with
+the layer before and leaves by its contact face with the layer after. The first layer's head side
+and the last layer's nut side are the nearest face **across the layer's material** that faces out
+along the axis and holds it: the far side of an angle's leg or a channel's flange, and, for a
+box-like section, its opposite side. Every face the axis passes must hold it. So a bolt
+through an angle's leg passes the leg, not the angle's box.
 
 **Generated holes** (*2.1*, §5.1). A `bolt` gets a clearance hole (ISO 273, medium series) in
-every layer it passes, both walls of a hollow one; where a sleeve passes a wall, that wall's hole
-takes the sleeve's outside diameter instead. A `screw` gets a tapped hole of its thread in the last
-layer at each station: through that layer (its near wall, if hollow), or to `tap_depth_mm`.
+every layer it passes, both walls of a hollow one. A `screw` gets the same clearance in every
+layer but the last (*2.3*), and a tapped hole of its thread in the last layer at each station:
+through that layer (its near wall, if hollow), or to `tap_depth_mm`. A `tnut` drills nothing in
+the last layer; its station must land on a groove of the facing face, and its T-nut must fit that
+groove by `fits` or by groove type (*2.3*). Grooves lie on bounding faces only, so a `tnut` whose
+last layer meets the stack at an inner face is a `fit` error. A rail layer is not drilled where
+the station is one of its own holes (*2.3*). A solid layer's hole is listed from a bounding face
+(§4.4 names four): the face the fastener enters by, else the face it leaves by, else a bounding
+face parallel to either across open air (an I-beam's web); it takes `depth_mm` when more of the
+section stands on its axis than the layer the fastener passes, as a channel's other flange does
+(*2.3*, G29). A counterbore needs its own end's face; when none fits, a `face` error.
 
-Derive reports the **grip** at each station: the depth of every layer along the fastener's axis (a
-hollow layer counts its whole outside depth) plus the declared gaps. For a `tnut` the last layer
-counts only to the lip of the groove its T-nut enters; for a `screw` the tapped last layer does not
-count. The stack is listed beside the grip. Adding the washers and checking the fastener's length
-are v1.1 (review m15, call 25).
+**A hole a sleeve passes** clears the sleeve (*2.3*; gap A7): ISO 273 medium for a shank of the
+sleeve's outside diameter, the series the bolts of the joint take; between two of the table's
+diameters, the next one up (17.2 → 20; *inferred*: the next row never clears less than the
+standard does for the smaller shank); past its 150 mm, no default, and an error asks for
+`clearance_mm`. With `clearance_mm` the hole is the outside diameter plus that; 0 restores the
+line-to-line hole, and a negative one is an error. A layer the sleeve enters part way is
+counterbored to the same diameter, as deep as it enters. Draft 2.1 drilled the outside diameter
+exactly, a line-to-line fit no shop drills (G32). The default is call 31; a shop that drills its
+own allowance (2 mm on 16, Ø18, where ISO 273 medium gives 17.5) writes `clearance_mm: 2`.
+
+Derive reports the **grip** at each station: the depth of every layer along the fastener's axis,
+between the faces of its walk (a hollow layer counts its whole outside depth), plus the declared
+gaps. For a `tnut` the last layer counts only to the lip of the groove its T-nut enters; for a
+`screw` the tapped last layer does not count. It also reports the fastener's **length through the
+layers** (*2.3*), from the face its head bears on to the last layer's far face, which for a bolt
+equals the grip and is where a length check would start. The stack is listed beside the grip.
+Adding the washers and checking the fastener's length are v1.1 (review m15, call 25).
 
 **Reported per bar:** `cut_mm` (the long-point length: what is ordered and sawn), `centre_mm`
 (along the bounding-box centre line), and per end the move from its design point, the angle
 between the plane's normal and the axis, and for a compound cut its mitre and bevel components.
 An end that moved further than the through prism's depth plus the spacer warns "end far from its
-face", which catches a node left behind by an edit.
+face", which catches a node left behind by an edit. The distance is the design point's from the
+plane along the face's normal (*2.3*), since an angled brace moves a long way along its own axis
+without being far from its face.
 
 **Default connection.** When the draw tool closes on a point, `autoConnect` adds a `butt` with the
 project's default connector. The through bar is the one that passes through the point; else a
-vertical; else the lowest id. Its end, if any, covers. All of it can be changed.
+vertical; else the lowest id. Its end, if any, covers. Ends some connection already claims are
+left alone. All of it can be changed. In the draw tool it is a check box, on by default, and it
+does nothing where nothing butts (*2.3*). Because a vertical wins, a rail drawn onto a post's top
+butts into the post; a frame whose posts stand under its rails is drawn with it off and joined
+with Connect. Whether the rule should change for that case is open (call 6).
 
 ### 4.6 Golden cases (review B1)
 
@@ -668,7 +911,10 @@ Each row is a small document in `tests/fixtures/golden-ends/` with its expected 
 done when all pass to 0.01 mm (§12). 40x40 sections, centre anchors, square cuts and lengths in mm
 unless stated. Values were worked by hand and re-computed with a script (verified 2026-11-26;
 G17–G26 for draft 2.1 the same way, with G6 recomputed by the same script as a control; G27 for
-draft 2.2 by `golden-ends/G27/by_hand.py`).
+draft 2.2 by `golden-ends/G27/by_hand.py`). G28–G32 (*2.3*) came with the build (M6 and the
+acceptance gaps); each fixture's `by_hand.py` works every number with plain arithmetic and imports
+nothing from AluKit, and the values below are copied from each fixture's `expected.json`. No value
+of G1–G27 changed in the build (*verified*: the golden tests).
 
 | # | Setup | Rule exercised | Expected |
 |---|---|---|---|
@@ -694,12 +940,16 @@ draft 2.2 by `golden-ends/G27/by_hand.py`).
 | G20 | G18 plus b3 (1500,0,40)→(1000,0,40), `butt` through `b2.b` | a chain of end providers | error naming the butt and b2.b's `of`; b3 500.00, at its design point (it would be 530.00) |
 | G21 | b2 a = `{on: {bar: b1, at_mm: 500}}` on b1 (0,0,0)→(1000,0,0), b = `{len_mm: 80, dir: "+z", from: "a.cut"}`; `butt` through b1 | a free end counted from the cut | b2 80.00; without `from`, 60.00 |
 | G27 | beam b1 (0,0,0)→(1000,0,0); shoe b2 from `{on: {bar: b1, at_mm: 540, face: "+y"}}` to n1 = (540,0,80), `butt` through b1, end b `plane: {point: n1, normal: "b3"}`, `cut: "angle"`; strut b3 (0,0,800)→(600,0,0), `butt` through `b2.b` | a strut bearing on a shoe mitred square to it (*2.2*) | shoe long point 75.00, centre line 60.00, short point 45.00; 36.87°. Strut 900.00, square. With `spacer_mm: 8`: 892.00. With n1 at z = 100: shoe 95.00, 80.00, 65.00; strut 884.00. Strut redrawn (140,0,380)→(620,0,20): shoe 86.67, 60.00, 33.33; 53.13°; strut 500.00. With the normal typed as (3, 0, −4), that redraw is an `angled-end` error on b3.b (16.26°) and the strut is 600.00 |
+| G28 | placeholder `motor`, box (−100,0,0)–(100,120,80); `butt` through `{body: "project:motor", at: {pos: (600,0,0), rot_deg: (0,0,90)}}`, ends b1.b, b2.b, b3.b; b1 (0,30,40)→(600,30,40), b2 (540,400,40)→(540,0,40), b3 (560,30,300)→(560,30,0) | bars bearing on a placeholder's box, at a pose (gap G-B, *2.3*) | b1 480.00, b2 300.00, b3 220.00. At the point (600,0,0), unturned: 500.00, 280.00, 220.00. With a `mount` datum at (0,40,0): 520.00, 300.00, 220.00. Moved to (600,0,−20): b3 240.00. A project item with no box: an `item` error on c1, each end at its design point (600.00, 400.00, 300.00) |
 
 The frame table in §4.4 is the golden set for orientation.
 
 **Generation and cost cases** (*2.1*). M3b's oracle (§12), in `tests/fixtures/golden-gen/`. The
 synthetic rail has pitch 60, E 20–50 and one stock length, 1500, whose `factory_E_mm` is 30 (its
-centred layout); kerf 3, no end trim.
+centred layout); kerf 3, no end trim. G29–G32 (*2.3*) use their own synthetic catalogs
+(`test-open`: the `std` angle's generator parameters, a sharp-cornered channel and an M12 bolt;
+`test-joint`: bush ends, a joint recipe, end connectors), so they do not move with the built-in
+catalogs.
 
 | # | Setup | Rule exercised | Expected |
 |---|---|---|---|
@@ -708,6 +958,10 @@ centred layout); kerf 3, no end trim.
 | G24 | run r1 = [rail1 (0,0,0)→(470,0,0) `factory: "b"`, rail2 (470,0,0)→(940,0,0) `factory: "a"`], spliced; `rail_holes: {along: r1, every: 2, plus: ["first", "last", "joint"]}`; a part at `{bar: r1, at_mm: 480}` | stations from a selection of holes across a joint; a station on a run (§4.3, §4.7) | 10 stations, at x = 20, 140, 260, 380, 440, 500, 620, 740, 860, 920; the part on rail2, 10 from its a. At `at_mm: 470`: error (on the joint) |
 | G25 | a `bolt` through five layers, head to nut: flat 50x10, flat 50x20, RHS 100x50x4 across its 50, flat 50x20, flat 50x10, `gaps_mm: [0, 0, 0, 0.5]`; fastener `{bar: <M10 threaded rod>, len_mm: 140}`; stack: washer, nut, washer, nut; sleeve `{item: <tube 18x2>, inside: <the RHS>, len_mm: "bore"}`; stations `{at_mm: [100, 300], across_mm: [-15, 15]}` | a multi-layer joint; a fastener and a sleeve cut from bar stock; stations across a face (§4.5) | 4 fasteners; grip 110.50; cut list 4 × 140.00 rod and 4 × 42.00 sleeve; 8 washers and 8 nuts; 24 holes of Ø11 (4 in each of the four solid layers, 8 in the RHS's two walls) |
 | G26 | `price_bands: [{supplier: S, low_pct: -10, high_pct: 25}]`; two lines of S at likely R$ 156.86 and R$ 10.05; a third line of S, 2 units of an offer priced `regular_minor: {v: 5000, low: 4500, high: 6000}` (R$ 50.00, 45.00 to 60.00) | a band on minor units, rounded once, half away from zero; an offer's own range wins (§4.11) | 156.86: low 141.17, high 196.08 (19,607.5 minor units rounds up). 10.05: low 9.05 (904.5 rounds up; round-half-even would give 9.04), high 12.56. Third line: low 90.00, likely 100.00, high 120.00 |
+| G29 | angle L76.2x6.35 (root 9.525, toe 4.76) b1 (0,0,0)→(300,0,0), anchor `heel`; a 40x40 b2 (0,26.35,50)→(300,26.35,50) on the upright leg's inner face; `face` [b1, b2], `bolt` M12, `at_mm: [100]` | a layer on an inner face; the walk through the material (gap A3, *2.3*) | in contact on the leg's inner face (`+x@-31.75`); station (100, 6.35, 38.10); grip 46.35, and 46.35 through the layers; one Ø13.5 hole in each, the leg's from its outer face. On the outer face (b2 at y = −20): grip 46.35, where the angle's box gave 116.20. 0.1 mm off the inner face: a `face` error; with `gaps_mm: [0.1]`, 46.45. `across_mm: [11.9]`: station (100, 6.35, 50.00). On a channel 100x50x6x8's bottom flange, the block at (3, −22), `across_mm: [3]`: station (100, 3, −42), grip 48.00, the flange's hole 8 deep |
+| G30 | RHS 100x50x4 (no system) b1 (0,0,0)→(1000,0,0); 40x40 b2 (500,0,0)→(500,600,0); `butt` through b1 with a bush end whose mount's set, for the 40x40's system, is a bush and a sleeve `{item: tube 18x2, inside: "through", len_mm: "bore"}` | fit by role; a joint recipe (gaps A1, A2, *2.3*) | no error; b2 575.00; one sleeve 42.00; one bush and one bush end. Two butting ends, one from −Y: two of each. Through a T-slot bar: a `fit` error on the through bar, b2 580.00. A T-slot bracket with no sleeve, or an end connector with no mounts, on the RHS: a `fit` error on b1. The bush end on a flat bar of no system: a `fit` error on the flat bar only, and no bush and no sleeve. A sleeve of a fixed length: cut as given (40.00); through a T-slot bar, a `fit` error on it. A recipe with the same mount: the same bush and sleeve, no connector counted, the recipe listed once |
+| G31 | block b1 (0,0,0)→(120,0,0); brace b2 (1720,1210,0)→(120,10,0), `cut: "angle"` at b, 10 off the block's centre line; `butt` through `b1.b` with a connector that `requires` a Ø9 hole `on: "through"` | a hole into the end a butt bears on (gap A4, *2.3*) | b1 120.00 with an `end-hole` Ø9 at end b, 10.00 off its centre in x, through, listed "Ø9.00 hole in end a along the axis, at x -10.00, y 0.00 from the centre, through"; b2 long point 2015.00. With `spacer_mm: 8`: the hole 16.00 off centre; b2 2005.00 (centre line 1990.00). A tapped M8 20 deep: the same place, "tap M8 in end a along the axis, … 20.00 deep" |
+| G32 | G25's joint with the sleeve's `len_mm: "bore + sec(b3).t_mm"`, so it passes the RHS's head-side wall | a hole a sleeve passes clears it (gap A7, *2.3*) | 4 × 46.00 sleeve; the head-side wall's 4 holes Ø20 (ISO 273 medium for 18), the other 20 Ø11. With `clearance_mm: 1`: Ø19; with 0: Ø18. A 50 mm sleeve also enters the flat below the RHS 4 mm: its 4 holes there Ø11 with a counterbore Ø20 × 4 |
 
 ### 4.7 Parts, rails and patterns (D14)
 
@@ -778,13 +1032,35 @@ G22–G24 (§4.6) are the worked cases.
 | Kind | Fields |
 |---|---|
 | `plate` | `material` (a catalog material), `thickness_mm`, `outline`, `holes` |
-| `bent-angle` | two legs, thickness, bend radius, holes per leg |
-| `generic` | as the catalog kind, with its own `offers` or a price |
-| `placeholder` | name, mass, bounding box, an estimated price. Drawn translucent and hatched; blocks its own order line (§5.5) |
+| `bent-angle` | two legs, `legs_mm`, each measured to the outside of the other; thickness; the inside `bend_radius_mm`; `k_factor`, required, 0 < K ≤ 0.5 (*2.3*); holes per leg. One 90° bend in v1 |
+| `generic` | as the catalog kind, with a price and a supplier (*2.3*: packs and offers belong in a project-local catalog) |
+| `placeholder` | name, mass, bounding box, an estimated price. Drawn translucent (hatching is a v1 limit, §8); holds its own order group (§5.5) |
 
-Holes have `d_mm`, or `thread` and `depth_mm`, plus optional `csk` { `d_mm`, `angle_deg` } or
-`cbore` { `d_mm`, `depth_mm` } (review B2). A plate's price is a valued field or an open item. A
-rolled steel angle is not a bent angle: it is a `bar` from `std`.
+A project item holds **numbers, not expressions** (*2.3*): it is item data, resolved before derive
+like a catalog item's, so a parametric plate is a catalog item. Plates and bent angles default to
+supplier `local` (made in house), a group of its own in the order; placeholders and generic items
+with no supplier go to the unsourced group (*2.3*). A material is a catalog material
+(`<catalog>:<id>`), which the lock pins. Each item is validated alone, and a bad one hides no other.
+
+A bent angle's developed length is (a − (R + T)) + (b − (R + T)) + BA, with legs a and b, thickness
+T, inside radius R and the bend allowance of its 90° bend, BA = (π / 2) · (R + K · T)
+([bending](https://en.wikipedia.org/wiki/Bending_(metalworking)), "Calculations").
+The K-factor has no default because published values run 0.3–0.5 by material, radius and tooling,
+and the shop that bends the part knows its own; whether to add a per-material default is open
+(call 33).
+
+Holes have `d_mm` (through, or blind with `depth_mm`), or `thread` (tapped at its tap drill,
+major diameter less the pitch, ISO 261 coarse unless the thread writes it, or at `d_mm` when given;
+a thread with no known pitch must give `d_mm`), plus optional `csk` { `d_mm`, `angle_deg` } or
+`cbore` { `d_mm`, `depth_mm` } (review B2), never both and neither on a threaded hole (*2.3*).
+`face` is `front` (default: a plate's face away from its mounting face, a leg's inside face) or
+`back`. A hole a shop could not make is an error: its widest radius outside the outline, two holes
+overlapping, a countersink or counterbore no wider than its drill, a counterbore or blind hole too
+deep, a hole on a leg off its flat or in the bend zone. A project item's price, `price_minor`, is
+a valued field in the project's currency, one order line of units under its supplier with no
+price band; a bare number is an estimate (`est-price` applies), no price is a `missing-price`,
+and an open item may hold it until it is priced (*2.3*). A rolled steel angle is not a bent
+angle: it is a `bar` from `std`.
 
 Bars and connectors that exist in one project only (a pad strip, a fastening recipe) go in a
 **project-local catalog** named by path (§3.1), not in `items`: they need sections, systems and
@@ -800,8 +1076,19 @@ A small, safe language; no JS `eval`.
 - Functions: `min max abs round floor ceil sqrt hypot`; `sin cos tan asin acos atan atan2` **in
   degrees**, the file convention.
 - Accessors read the derived model: `len(b3)` (design length), `cut(b3)`, `pos(n3).z`,
-  `dist(n1, n2)`, `bbox().z`, `mass()`, `cost()` and `cost("high")`, `count(tag:leg)`. `.x`, `.y`,
-  `.z` read a vector's component.
+  `dist(n1, n2)`, `bbox().z`, `mass()`, `cost()`, `count(tag:leg)`. `.x`, `.y`, `.z` read a
+  vector's component. They are for checks only (*2.3*): a param, a coordinate or a length that
+  used one would need derive to iterate, so it is an `expr` error.
+- `mass()` is the BOM's total in kg. `cost()` is the order's likely total in the project
+  currency's major unit (minor units / 100, as the outputs print it), and `cost(low)`,
+  `cost(likely)`, `cost(high)` its bounds (*2.3*: the language has no strings, so a bound is a bare
+  name, not draft 2's `cost("high")`). A total that leaves something out (an item with no mass, a
+  line with no price, a cost line with no rate) makes the check one that cannot be evaluated, an
+  error naming what is missing, never a pass on a partial sum.
+- `bbox()` is the extent of the bar bodies, each swept between its end planes. **v1 limit**
+  (*2.3*): parts are not in it yet (v1.1).
+- `^` is right-associative and binds tighter than unary minus (`-2^2` is −4); comparisons do not
+  chain; `if` evaluates one branch (*2.3*).
 - `sec(b3)` reads the bar's section, after swaps (*2.1*): `sec(b3).t_mm` and the other parameters
   of its generator by name (`h_mm`, `b_mm`, `d_mm`, …), and `width_mm` and `height_mm` of its
   bounding box for any section. An unknown name is an error naming the section. It reads item data,
@@ -811,19 +1098,33 @@ A small, safe language; no JS `eval`.
   `ceil` and `round`, comparison within `tol.snap`).
 
 A **check** is `{ "value", "op", "limit", "text", "severity" }`. It reports its **margin**
-(`limit − value` for `<=`), as the reference project's asserts with floors do. A plain boolean
-`expr` is allowed too, without a margin. `severity` is `error` (the default), `warn` or `info`.
+(`limit − value` for `<` and `<=`, `value − limit` for `>` and `>=`, −|value − limit| for `==`;
+none for `!=`), as the reference project's asserts with floors do. A plain boolean `expr` is
+allowed too, without a margin. `severity` is `error` (the default), `warn` or `info`. A check that
+cannot be evaluated is an error; a failing one reports at its own severity.
 
 ### 4.10 Variants (review m9)
 
 A variant overrides params, swaps items (`"swap": { "forseti:PF45-02": "std:RHS-100x50x3" }`) and
-includes entities by `only_in: ["steel"]` or `not_in`. `variants.default` names the variant
-opened by default, so the base document never has to be a frame nobody builds: entities that
-exist only in one option are scoped to it. `alukit diff --variant a --variant b` compares any two.
+includes entities **and cost lines** (*2.3*; gap A5) by `only_in: ["steel"]` or `not_in`.
+`variants.default` names the variant opened by default, so the base document never has to be a
+frame nobody builds: entities that exist only in one option are scoped to it. `only_in` puts an
+entity in the variants it lists and in no other, so not in the document derived with no variant
+(*2.3*); a name not in `variants.list` is an error. A variant is applied first, in stage 1 (§5.1),
+so every output and check reads the same variant. `alukit diff --variant a --variant b` compares
+any two.
 
 - A connection naming a bar its variant omits drops that end, with an info diagnostic; with no
-  ends left it is dropped.
-- A point on an omitted bar is an error in that variant: scope it too.
+  ends left, or with its through bar or pivot base out, it is dropped.
+- A point, a part or a pattern on an omitted bar is an error in that variant: scope it too.
+- A cost line left out of a variant leaves that variant's order, costs, totals and contingency;
+  an open item's scope that named it loses it, with an info (*2.3*). Open items, checks and price
+  bands take no scope.
+- A swap replaces an item wherever the frame names one, in the entities and in `defaults`
+  (*2.3*). `order`, `costs` (and their `covers.items`) and `price_bands` keep naming what they
+  name: a buying choice is about a specific item, and one made for the old item would be wrong
+  for the new. A swapped bar or part keeps only the options its new item has, with an info for
+  each option dropped; a swap whose source item nothing names warns.
 - A swap that changes a section's size moves nothing: placements re-derive from anchors (flush
   faces stay flush), and cut lengths follow.
 - A swap also changes what `sec()` reads (§4.9), so lengths written from a section (a sleeve cut
@@ -838,19 +1139,29 @@ exist only in one option are scoped to it. `alukit diff --variant a --variant b`
 - **`price_basis`**: `regular` (default), `sale` or `lowest`. The order list states the basis and
   the oldest read date.
 - **`costs`**: lines that are not parts: `{ "id", "label", "kind", "supplier"?, "low_minor",
-  "likely_minor", "high_minor", "currency"?, provenance, "blocks"? }`, with `kind` one of
-  `machining`, `fabrication`, `labour`, `freight`, `lifting`, `contingency`, `other`. A
-  contingency may be `{ "pct": 10, "of": "subtotal" }`; its `pct` applies to each of the low,
-  likely and high subtotals.
+  "likely_minor", "high_minor", "currency"?, provenance, "blocks"?, "covers"?, "only_in"?,
+  "not_in"? }`, with `kind` one of `machining`, `fabrication`, `labour`, `freight`, `lifting`,
+  `contingency`, `other`. Provenance defaults to `est`: an amount nobody sourced is an estimate
+  (*2.3*). `only_in` and `not_in` scope a line to variants as they scope an entity (§4.10;
+  *2.3*). A contingency may be `{ "pct": 10, "of": "subtotal" }`; its `pct` applies to each of the
+  low, likely and high subtotals. A line with `blocks: "order"` holds its supplier's order, or
+  all of it, as an open item does (§5.5).
 - **`covers`**: a cost line may price generated work or BOM lines as a whole. Covered lines keep
-  their quantities, show the cost line instead of a price, and leave the `missing-price` rule
-  (§5.5). A line or a service covered by two cost lines is an error naming both.
+  their quantities, move to the cost line's supplier, show the cost line instead of a price, and
+  leave the `missing-price` rule (§5.5). A line or a service covered by two cost lines is an error
+  naming both.
   - `{ "supplier": "forseti", "services": true }`: the machining that supplier sells, generated
     on its bars.
-  - `{ "services_on": { "supplier": "<id>" } }` (*2.1*): the machining generated on bars bought
-    from that supplier, whoever does it (a fabricator drilling a stockist's steel).
+  - `{ "services_on": { "supplier": "<id>" } }` (*2.1*), or a list of such, each supplier once
+    (*2.3*; gap A6): the machining generated on bars bought from those suppliers, whoever does it
+    (a fabricator drilling a stockist's steel, or one job on two suppliers' bars). The order words
+    it "machining on a's and b's bars"; the single form stays valid.
   - `{ "items": ["<item id>", …] }` (*2.1*): those items' BOM lines (pad strips cut from a bar and
     priced as one job).
+- **Machining in v1** (*2.3*): with no `services.json` (§3.1), a service a supplier does on its own
+  cut pieces (taps, holes, angled cuts) that no cost line covers is a `missing-price` on that
+  supplier. Machining on whole stock bars is listed as the buyer's (you or a shop do it) and blocks
+  nothing; a `services_on` cover names who does it.
 - **`price_bands`** (*2.1*) give catalog-priced lines their low and high:
 
   ```json
@@ -888,25 +1199,41 @@ a content hash, plus each catalog's id and hash.
 - **Derive reads the lock, never the live catalogs.** The same commit then derives the same
   numbers on any machine with the same AluKit version.
 - A save adds items the document newly references, taken from the live catalogs; it never
-  changes an entry already there.
+  changes an entry already there. A missing lock is created by the first command that derives,
+  and a missing entry added, each with a notice (*2.3*). A new project's lock holds only what its
+  document uses, never whole catalogs.
 - `alukit lock update [--item <id>]` refreshes entries from the live catalogs and prints a
   semantic diff: which fields and prices changed, and how the totals move. A catalog correction
-  reaches a project this way, visibly (principle 2). `alukit check` reports, as info, how many
-  items differ from the live catalogs. `--frozen` makes a missing entry an error (for CI).
+  reaches a project this way, visibly (principle 2). It keeps, and reports, an entry the live
+  catalogs no longer have, so a catalog deletion never silently changes what derives, and refuses
+  to write while the catalogs have errors (*2.3*). `alukit check` reports, as info, how many
+  items differ from the live catalogs. `--frozen` makes a missing entry an error (for CI), and
+  opens no catalog.
 
 **Revisions.** `alukit revision save "Rev 1.2"` writes `revisions/rev-1.2.json` holding the
-document, its lock, the **stored outputs** (cut list, BOM, order list, totals, check results) and
-a stamp: AluKit version, Node version, schema version, the content hash of document + lock +
-tool version, and the project's git commit and dirty flag as a hint.
+document, its lock, the **stored outputs** (cut list, BOM, machining sheet, order list, totals,
+check results) and a stamp: AluKit version, Node version, schema version, the content hash of
+document + lock + tool version, and the project's git commit and dirty flag as a hint. The dirty
+flag looks at `alukit.json` and `alukit.lock.json` only, so a revision or an export written into
+the folder never changes the next stamp (*2.3*).
 
+- One file holds the outputs of **every** variant in the list (*2.3*): a revision is what was
+  published, and a variant is part of it.
+- The order's date, `as_of` (§5.5), is stored, and every replay uses it, so a replay months later
+  does not drift because prices went stale (*2.3*).
+- A revision is never overwritten. With a server running, the save goes through its queue (§7.1),
+  after any direct edit it has not yet taken in (*2.3*).
 - Opening a revision shows the stored outputs: what was published, whatever the tool does now.
-- `alukit revision verify <name>` re-derives with the current tool and reports any drift.
+- `alukit revision verify <name>` re-derives with the current tool, from the stored document and
+  lock and no catalog, and reports any drift, a broken hash, and a tool-version difference as a
+  note.
 - Old schema versions are read through migrations kept forever; stored outputs are never
   migrated.
 
 **Diffs** between git refs (`alukit diff git:<ref>:<path> git:<ref>:<path>`) derive each side
 with the lock from its own commit. A price that changed between them shows up as a lock change
-and as its effect on the outputs.
+and as its effect on the outputs. A side may also be a folder, a revision file or `rev:<name>`,
+which gives its stored outputs (*2.3*).
 
 ## 5. The derived model
 
@@ -921,11 +1248,14 @@ and as its effect on the outputs.
 3. **Ends.** One plane per end in two sweeps, placement providers then end providers (§4.5); the
    modifiers, cut lengths and angles.
 4. **Attach.** Parts and part patterns (which may use cut ends and rail holes); face contacts on
-   the trimmed bars; stations from rail-hole selections and across offsets; fastener and sleeve
-   pieces cut from bar stock; generated machining (connector `requires`, access holes, rail holes,
-   splice taps, and, new in 2.1, clearance holes for `bolt` layers and tapped holes for `screw`
-   fastenings, §4.5) and hardware sets keyed by system; fastening stacks and their grip.
-5. **Collect.** Cut list, BOM, order list (offers, packs, kits), costs and totals (§5.3, §5.4).
+   the trimmed bars, on bounding and inner faces (*2.3*); stations from rail-hole selections and
+   across offsets; fastener and sleeve pieces cut from bar stock; generated machining (connector
+   `requires`, access holes, end holes into a through bar's end (*2.3*), rail holes, splice taps,
+   and, new in 2.1, clearance holes for `bolt` layers and tapped holes for `screw` fastenings,
+   with a sleeve's holes clearing it (*2.3*), §4.5) and hardware sets keyed by system, with fit
+   judged by role (§3.4); fastening stacks, their walk and their grip.
+5. **Collect.** Cut list, BOM (joint recipes apart), machining sheet, order list (offers, packs,
+   kits), costs and totals (§5.3, §5.4).
 6. **Check.** Built-in and project checks, then the order rules (§5.5).
 
 **Nothing throws on content** (review m10). An unknown reference, a cycle, an invalid connection
@@ -949,7 +1279,8 @@ files** (JSON, CSV, Markdown, GLB) on any machine. Snapshots are excluded.
 | Money | Integer minor units: each line rounded once, then integers added |
 | Searches | No time limits anywhere. Nesting is a heuristic with fixed tie-breaks; the pack cover is exact and bounded by the quantity (§5.4) |
 
-CI runs the fixtures on Linux and macOS and compares bytes against the golden files.
+CI runs the fixtures on Linux and compares bytes against the golden files; the merge gate runs the
+same suite on macOS (*2.3*: one CI platform in v1, where draft 2 named two).
 
 ### 5.3 Cut list (review M7, m14)
 
@@ -963,7 +1294,9 @@ are listed per bar item and option, in one of two modes from the chosen offer's 
   and R$ 156.86 in 10 mm steps (124 steps). Pieces outside `min_mm`–`max_mm` fail a check that
   suggests a `splice`.
 - **`stock`** (whole bars, cut by you or a shop). Pieces are nested into the item's stock
-  lengths, allowing `kerf_mm` per cut and `trim_mm` at each bar end:
+  lengths, allowing `kerf_mm` per cut and `trim_mm` at each bar end (from `order.<item>`, else
+  `defaults.cutting`, else a kerf of 3 and no trim; lengths in whole hundredths of a millimetre,
+  so a fit never drifts; *2.3*):
   [first-fit decreasing](https://en.wikipedia.org/wiki/First-fit-decreasing_bin_packing) for each
   stock length, then each bar is moved down to the cheapest stock length that still holds its
   pieces, and the cheapest result wins (ties: fewer bars, then the longer offcut). The result
@@ -979,14 +1312,26 @@ quantum, same end cuts and the same machining. A piece and its end-for-end flip 
 piece; the canonical orientation is the one whose sorted machining list compares first.
 
 Every piece lists its machining **from a named end**, measured along the axis from that end's long
-point: "tap M8 at end a; Ø7 access hole 20 mm from end a on face +y". Rails also list E at each
-end.
+point: "tap M8 at end a; Ø7 access hole 20 mm from end a on face +y; Ø9 hole in end b along the
+axis, 10 off its centre" (an end hole, *2.3*, whose x turns over when the piece is turned end for
+end). Identity compares machining by where it physically is, whichever end or side it is named
+from (*2.3*). Rails also list E at each end: a rail's holes are one record on the piece, its hole
+count, pitch and E at each end, E measured along the box's centre line from each end face (*2.3*).
 
 ### 5.4 BOM and order list (review B3, M7)
 
 - **BOM**: every item and option with its quantity (bars: count and total length), grouped by
-  kind, with mass (§3.5's authority rule) and price. Unplaced lines (§4.7) show their `why`; a
-  line covered by a cost line (§4.11) names it instead of a price.
+  kind, with mass (§3.5's authority rule; a bar's is its centre-line length times its mass per
+  metre, each line rounded once; *2.3*) and price. Unplaced lines (§4.7) show their `why`; a line
+  covered by a cost line (§4.11) names it instead of a price. An item with no mass is a `mass`
+  warning, listed and left out of the totals.
+- **Joint recipes** (§3.4; *2.3*) are listed apart, with their uses and connections, in no group
+  and no total, with no mass; the order buys only what they bring.
+- **Machining sheet** (*2.3*; M6): `alukit machining` lists every plate and bent angle the BOM
+  counts, with its supplier, material, thickness, datum, outline or legs, blank and bend, and each
+  hole from the datum and on the blank; bars are cross-referenced by their cut-list lines, whose
+  machining the cut list already gives. Markdown or JSON; a flat CSV would repeat the part on
+  every row.
 - **Order list**, per supplier. Offers are chosen in this order:
   1. an explicit choice in the project's `order` map;
   2. otherwise the **cheapest cover**: for packs, the combination of pack sizes with the lowest
@@ -998,8 +1343,12 @@ end.
 - Each line: SKU, name, options, quantity and unit (packs, bars, pieces), unit price on the
   project's basis, low/likely/high total (low and high from the offer's own range, else from a
   price band, §4.11), cut pieces and machining services. Services are priced
-  from the supplier's `services.json`, or by a cost line that covers them.
-- Every output states the lock hash, the price basis and the oldest price read date.
+  from the supplier's `services.json`, or by a cost line that covers them; in v1 only by a cost
+  line (§3.1, §4.11).
+- Every output states the lock hash, the price basis and the oldest price read date. **v1 limit**
+  (*2.3*): the order list and the costs state the lock's sha256 in every format, and the GLB
+  carries the full stamp (§9); the cut list, the BOM and the machining sheet do not state the lock
+  yet (v1.1).
 - Output as Markdown, CSV or JSON.
 
 ### 5.5 Checks and what blocks the order (review M8)
@@ -1009,7 +1358,7 @@ end.
 | Schema and references | invalid documents, missing items, cycles; two equally specific price bands; a line covered twice (§4.11) | error |
 | Ends and connections | the validation column of §4.5, two providers, an undeclared angled cut, a chain of end providers, a station on a run's joint, a run not spliced in order | error |
 | Unconnected ends | a point shared by two or more bar ends with no connection | warn |
-| Fit | a connector or T-nut that does not fit the bar's system; a `face` with no contact | error |
+| Fit | a connector that holds a joined bar in neither way it may (§3.4, by role; *2.3*); a T-nut that does not fit its groove; a carriage on another rail system; a `face` with no contact | error |
 | Lengths | cut length ≤ 0, outside the offer's range, a cut angle outside the supplier's service range | error |
 | Rails | end distance E outside the rail's range; a factory end that is not square | error |
 | Rails | a stock rail with no factory end named (§4.7) | warn |
@@ -1024,16 +1373,26 @@ end.
 |---|---|---|
 | `check-error` | block | the suppliers of the entities the check names; all suppliers for a check that names none |
 | `open-item` | block | its `scope`, or all |
-| `placeholder` | block | its own line, under "unsourced" |
+| `placeholder` | block | the group that holds its line: "unsourced", or the supplier it names (*2.3*) |
 | `missing-price` (incl. no exchange rate) | block | that supplier |
 | `est-price` | block | that supplier |
 | `out-of-stock` (as read) | block | that supplier |
 | `option-not-sold` ("not sold in this finish") | block | that supplier |
-| `stale-price` (older than 30 days) | warn | that supplier |
+| `stale-price` (older than 30 days before the order's date) | warn | that supplier |
 
 The order list reports **READY** or **BLOCKED** per supplier, with every reason. `alukit order`
 exits non-zero when any supplier is blocked, so an agent cannot hand over a blocked list by
-skipping `alukit check`.
+skipping `alukit check`; `order` and `costs` run `alukit check`'s model checks before the rules,
+so a failing check holds the order through `check-error`.
+
+- **The order's date** (*2.3*): `as_of` (`--as-of`, default today) is what `stale-price` measures
+  from, so the same project gives the same order on any day it is replayed with that date.
+- **A placeholder** (*2.3*) holds only its own group, not every supplier, and an unpriced one adds
+  no `missing-price` besides: draft 2's "its own line, under unsourced" missed a placeholder
+  bought from a named supplier.
+- **The cover does not avoid an out-of-stock offer**: the cheapest wins, and `out-of-stock` blocks
+  until the project chooses another offer or switches the rule, since silently buying a dearer
+  one would hide the cost (*2.3*).
 
 ## 6. Commands (the one edit path)
 
@@ -1056,9 +1415,20 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
 | Lock | `lockUpdate` (a step in the log like any other) |
 
 - `removeEntity` **refuses** when anything refers to the entity and lists the referrers;
-  `cascade: true` removes them too and returns what it removed (review m10).
+  `cascade: true` removes them too and returns what it removed (review m10). A cascade removes a
+  referrer, or drops the entity from a list that can lose a member down to its minimum (a run
+  keeps two bars, a butt one end, a face two layers); it never rewrites a param, a default or an
+  `order` choice, and refuses a pattern copy (skip or explode it instead) (*2.3*). Every
+  reference counts, a plane's `normal` naming a bar included (*2.2*).
+- The `set*` commands take an [RFC 7396](https://www.rfc-editor.org/rfc/rfc7396) merge patch:
+  `null` removes a field (*2.3*). A command validates what it creates or changes, not the rest of
+  the document, so an error elsewhere never blocks the edit that fixes it; `alukit check` judges
+  the whole.
+- `autoConnect` takes `optional: true`, doing nothing where nothing butts, so the draw tool sends
+  one per end without repeating §4.5's rule (*2.3*).
 - Every answer returns the new revision, the ids each command created, and diagnostics that name
-  entities (review m2).
+  entities (review m2). A refusal is `{ code, message, entity?, field?, refs? }`; a command never
+  throws.
 
 Agents work at this level of meaning, so they never compute cut lengths by hand.
 
@@ -1079,16 +1449,37 @@ Agents work at this level of meaning, so they never compute cut lengths by hand.
 - **A tab holds no unsaved state.** A drag is a local preview, committed as one command on
   release.
 - **The undo log is the server's**: one line for all sources, each step tagged (`ui`,
-  `cli:<name>`, `agent:<name>`, `file`). Undo pops the latest step, whoever made it, and names it;
-  `alukit log` shows what happened and what was undone. The log lives as long as the server
-  process; git keeps the rest.
-- **A direct file edit** is read by the watcher (the server's own writes are recognised by hash).
-  If valid, it enters the log as one `file` step. If not, the project goes **read-only**: every
-  client shows why, commands are refused, until the file is valid again or someone chooses
-  "restore last good".
+  `cli:<name>`, `agent:<name>`, `file`). A client may send `ui`, `cli`, `cli:<name>` or
+  `agent:<name>`; `file` is the watcher's alone (*2.3*). Undo pops the latest step, whoever made
+  it, and names it; redo applies again the last one taken back; `alukit log` shows what happened
+  and what was undone. The log lives as long as the server process; git keeps the rest, so
+  `undo`, `redo` and `log` need a running server and say so without one (*2.3*).
+- **A step** is applied, its files written (lock, then document, only those whose canonical text
+  changed), then committed to the history and broadcast (*2.3*). A failed write leaves no step
+  and makes the project read-only with the error. Every change in the queue first reads the files
+  itself, so a direct edit the watcher has not reported yet becomes a step before it and is never
+  written over.
+- **A direct file edit** is read by the watcher (`fs.watch` plus a 1 s stat poll; the server's own
+  writes are recognised by hash). If valid, it enters the log as one `file` step, taken in as
+  written (§2); an edit equal to the current state's canonical text is no step (*2.3*). If not, the
+  project goes **read-only**: every client shows why, commands are refused, until the file is
+  valid again or someone chooses "restore last good". **Valid** means strict JSON (§2) that
+  validates against the document's schema, and a lock, if present, against the lock's (*2.3*); a
+  dangling reference or a bar that does not derive is a diagnostic, not invalidity (principle 8).
+- **`alukit serve` refuses to start on invalid files** and lists the problems, since there is no
+  last good state to restore (*2.3*). While it runs, the server holds `.alukit/edit.lock`, so no
+  headless process can write between its read and its write.
 - **With no server running**, the CLI runs the same core in-process under `.alukit/edit.lock`,
-  created exclusively and holding a pid and a start time, so a crashed holder is detected.
-- The CLI finds a server through `.alukit/owner.json` (port, pid, start time, token).
+  created exclusively and holding a pid and a start time, so a crashed holder is detected. A held
+  lock refuses at once, naming its holder (*2.3*).
+- The CLI finds a server through `.alukit/owner.json` (port, pid, start time, token), and trusts
+  it only when its process is alive and the server answers for this folder with that token
+  (*2.3*).
+- **Every derived answer takes `?variant=<name>`** as the CLI takes `--variant` (*2.3*): the
+  model, the outputs, the checks and the GLB export, so the same variant gives the same bytes from
+  either. `GET /api/order` and `/api/costs` take `?as_of=` as the CLI takes `--as-of`, and answer
+  what `alukit order` and `alukit costs --format json` print, byte for byte. Revisions are listed,
+  saved and verified through the server (§4.13).
 
 Two paths keep a tab and the file in step, the event stream and the watcher; draft 1 had four
 (review m16).
@@ -1108,7 +1499,15 @@ had this class of bug ([GHSA-vg6x-rcgg-rjx6](https://github.com/vitejs/vite/secu
   wire format. Browsers allow 6 HTTP/1.1 connections per host; one server and port per project
   keeps that harmless.
 - **`Host`** must be `127.0.0.1:<port>` or `localhost:<port>`. **`Origin`**, when present, must
-  be the server's own. Bodies must be `application/json`. No CORS headers are sent.
+  be the server's own. Both are checked on every request, static files included, so a rebinding
+  page gets nothing, not even the app (*2.3*). Bodies must be `application/json`. No CORS headers
+  are sent.
+- **Defence in depth** (*2.3*). The token is compared in constant time. `Sec-Fetch-Site`, when
+  present on `/api`, must be `same-origin` or `none` (a `no-cors` request carries no `Origin`).
+  Every answer carries a CSP (own scripts and connections only, `frame-ancestors 'none'`),
+  `X-Frame-Options: DENY`, `nosniff` and `Referrer-Policy: no-referrer`; API answers are
+  `no-store`. `GET /api/health` is the one `/api` path without the token: a liveness probe, it
+  answers `{ "ok": true }` and nothing about the project.
 - **Paths**: every path in a request resolves (with symlinks) inside the project folder, or is
   refused. The server writes only inside the project; for an output elsewhere, the CLI receives
   the bytes and writes them itself.
@@ -1123,24 +1522,25 @@ source in the log.
 | `alukit new <dir>` | creates a project, its lock, and a `.gitignore` line for `.alukit/` |
 | `alukit serve <dir>` | runs the project's server and opens the tab |
 | `alukit check <dir> [--frozen]` | validates, derives and runs the checks; non-zero exit on an error |
-| `alukit cutlist` / `bom` / `order` / `costs <dir> [--variant v] [--format md\|csv\|json]` | the outputs; `order` exits non-zero when blocked |
-| `alukit derive <dir> --json [--select <paths>]` | the derived model, for report builders (`alukit.derived/1`, with its own JSON Schema) |
+| `alukit cutlist` / `bom` / `machining` / `order` / `costs <dir> [--variant v] [--format md\|csv\|json]` | the outputs; `machining` (*2.3*) has no CSV; `order` and `costs` take `--as-of YYYY-MM-DD` (*2.3*); `order` exits non-zero when blocked |
+| `alukit derive <dir> --json [--select <paths>]` | the derived model, for report builders (`alukit.derived/1`, with its own JSON Schema). `--select` (*2.3*) takes dotted paths, `*` for every member, commas to merge (`bars.*.cut_mm,params`), and keeps the model's shape; a path the model lacks is an error |
 | `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context |
 | `alukit do <dir> -f batch.json` (or `-f -` for stdin) | edits from a file or stdin, one process per batch; inline JSON also works |
 | `alukit add bar --item … --a n1 --b 0,0,900`, … | sugar over `do` |
-| `alukit log` / `alukit undo` | the server's log; undo the latest step |
-| `alukit lock update <dir> [--item id]` | §4.13 |
-| `alukit fmt <dir>` | canonical form |
-| `alukit diff <a> <b>` | files, `git:<ref>:<path>`, revisions or variants; each side with its own lock |
-| `alukit revision save "<name>"` / `revision verify <name>` | §4.13 |
+| `alukit log` / `alukit undo` / `alukit redo` | the server's log; undo the latest step; redo the last one undone (*2.3*: all three need a running server) |
+| `alukit lock update <dir> [--item id] [--dry-run]` | §4.13 |
+| `alukit fmt <dir> [--check]` | canonical form |
+| `alukit diff <a> <b>` | files, `git:<ref>:<path>`, revisions (`rev:<name>`) or variants; each side with its own lock |
+| `alukit revision save "<name>"` / `list` / `show <name>` / `verify <name>` | §4.13 |
 | `alukit snapshot <dir> --view iso [--size 1600x1000] -o shot.png` | lets an agent see what it built |
 | `alukit export glb <dir> -o x.glb` | §9 |
-| `alukit catalog search\|show\|check\|import <…>` | catalog work |
+| `alukit catalog search\|show\|check\|schema\|import <…>` | catalog work. `search` (*2.3*) ranks as the app's browser does and prints 20 items unless `--limit` (200 at most); `schema` prints a catalog file's JSON Schema; `import forseti` runs the Python importer on a shop snapshot and the catalogue PDF, says what is missing instead of half-running, and reads the network only with `--fetch` |
 | `alukit skill install` | links the skill into `~/.claude/skills/` |
 
 **Snapshots** always render in headless Chromium through Playwright, from a fresh page on the
 project's server (an ephemeral one if none runs), at a named view. One code path, and it never
-depends on the user's camera, selection or a hidden tab.
+depends on the user's camera, selection or a hidden tab. (The build follows this; rendering in an
+open tab instead was considered and is an open call, call 34.)
 
 ### 7.4 Schemas (review m3)
 
@@ -1154,7 +1554,9 @@ for report builders.
 ### 7.5 Skill
 
 `skills/alukit/SKILL.md` documents the format, the commands and the conventions. Its command
-reference is **generated from the command schemas**, so it cannot go stale. It says that a
+reference is **generated from the command schemas**, so it cannot go stale, and its worked example
+(a work table from the `forseti` catalog, ending with a snapshot) runs as a test, every command as
+written (*2.3*). It says that a
 project's own bars and connectors (a pad strip, a fastening recipe) go in a project-local catalog
 by path (§3.1, §4.8). `alukit skill install`
 links it into `~/.claude/skills/`, so it works from any repo, including the ones where projects
@@ -1166,32 +1568,73 @@ live. An MCP server comes only if the CLI proves insufficient (review m2).
 
 | Area | Holds |
 |---|---|
-| Top bar | project, variant, undo and redo (naming the step), revision, the read-only banner, export |
+| Top bar | project, variant, undo and redo (naming the step), revision, export. The read-only banner is a bar of its own under it (*2.3*) |
 | Left | catalog browser (vendor › kind › family, search, item cards with a section thumbnail, fidelity and key data; options and offers) and the project tree (bars, connections, parts, patterns; by tag or kind) |
-| Centre | the 3D viewport: perspective or orthographic, standard views (top, front, side, iso), a section clipping plane, grid |
+| Centre | the 3D viewport: perspective or orthographic, standard views (iso, top, front, side, left, back, bottom), a section clipping plane, grid |
 | Right | properties of the selection. Every number has a provenance popover; derived values (cut length, end angles, mass, price) are read-only |
-| Bottom drawer | Cut list · BOM · Order (status per supplier) · Costs · Checks · Open items · Params · Decisions · Log |
+| Bottom drawer | Cut list · Machining (*2.3*) · BOM · Order (status per supplier) · Costs · Checks · Open items · Params · Decisions · Log |
+
+As built (*2.3*):
+
+- **The variant switch** shows only when the document has variants, its first entry the default
+  (or "as written"). Every view derives the variant shown: the model, the drawer's outputs, the
+  export. Edits still go to the document as written, since a variant is a derivation of it (§4.10);
+  a point drawn on a variant's geometry is stored as the numbers it snapped to.
+- **The revision** reads its name when a saved revision's content hash equals the current state's,
+  else "unsaved"; its panel saves one and verifies any (§4.13). **Export** writes the GLB of the
+  variant shown, the CLI's bytes.
+- **The section plane** is square to X, Y or Z, moved by a slider across the model's extent, and
+  hides one side. It is a view setting, like the camera: no step, and picks and snaps ignore what
+  it hides.
+- **The catalog browser** shows the catalogs the document names (and items the lock pins that no
+  named catalog holds), and the project's own items under the vendor `project`, read only. A
+  family is a bar's system or shape, a part's subtype, a carriage's rail system, a generic item's
+  category.
+- **The drawer's tabs** settle on the revision the scene shows; Order, Costs and Machining fetch
+  when shown, keeping an older answer dimmed until the new one arrives, and say what the CLI says.
+  Open items, Params and Decisions edit through one command batch each, so undo takes an edit back
+  as one step.
+- **v1 limits** (v1.1): the properties panel does not edit an existing connection, and dragging an
+  existing node or bar end is not built (gestures are clicks; §7.1's rule for a drag stands).
 
 ### Tools
 
 - **Select**: click or box select, or by tag.
 - **Draw bar** (any bar item: profile, tube, rod, rail):
   1. Click a snap point.
-  2. The line follows the axis, inferred X, Y or Z. Shift frees it within the **work plane**:
-     by default the plane through the start point facing the view's dominant axis; `W` sets it to
-     a picked face (review m11).
-  3. Type a length and press Enter.
+  2. The line follows the axis, inferred X, Y or Z: the world axis through the start whose screen
+     image passes nearest the pointer. Shift frees it within the **work plane** (review m11).
+     *2.3*: the work plane is the ground (world XY) by default, moved to the start point; `W`
+     then a click on a bar sets it to that face's plane, and `W` again returns to the ground.
+     Draft 2's default, the plane through the start point facing the view's dominant axis,
+     changes as the camera turns, which made the drawn point unpredictable. Which default to keep
+     is open (call 32). `W` takes a bar's face only in v1, not a part's (v1.1).
+  3. Type a length and press Enter. Once digits are typed nothing pulls the line toward a snap
+     (*2.3*).
   4. R rolls the section; A cycles the anchor. The item comes from the palette.
+  5. The gesture commits as one batch (*2.3*): `addBar`, then, with auto-connect on, an
+     `autoConnect` with `optional: true` at each end (§4.5, §6). Points are written as the document would: a node by id, another bar's end as it
+     is written (params kept), a point on a line as a station, anything else as coordinates.
 - **Connect**: pick a through bar and butting ends (`butt`), two ends (`miter`, `splice`), a
-  face and the ends it carries (`pivot`), or two faces (`face`).
-- **Place part**: on a face or groove, at a distance typed from a named end.
-- **Pattern**: select the template, pick the bar, type pitch and count.
-- **Measure**.
+  face and the ends it carries (`pivot`), or two or more layers, head to nut (`face`, resting or
+  fastened, with every field §4.5 gives it; *2.3*). A pivot is one batch with the `setBar` of
+  each carried end. The panel shows a missing field before anything is sent, the command's
+  refusal, and derive's new diagnostics on the new connection.
+- **Place part**: on a face or groove, at a distance typed from either end, with a roll in
+  quarter turns. A part at a world pose is placed by command in v1.
+- **Pattern**: select the template, pick the bar (or type a bar or run), type pitch and count. A
+  pattern by a direction or by offsets is written by command in v1.
+- **Measure**: two snapped points, the distance and its components.
 
-Snap targets are nodes, bar ends, stations on face and groove centre lines, face centres and the
-grid (10 mm by default). Snapping is analytic, from the derived model, not a raycast against
-meshes. The camera is [camera-controls](https://github.com/yomotsu/camera-controls), with
-orthographic views and fit to selection.
+Snap targets are nodes, bar ends, stations on face and groove centre lines and on each bar's
+**design line** (*2.3*: a station with no face lies on it, §4.3), face centres, every placed
+part's datums and face centres (*2.3*), and the grid (10 mm by default). A point wins over a line
+within a few pixels; targets drawn over each other go to the one nearer the eye. Snapping is
+analytic, from the derived model, not a raycast against meshes. **Picking** an entity (select,
+Connect's ends, a pattern's `along`, `W`'s face) does raycast the drawn bodies (*2.3*): it names
+an entity, it does not place a point. The camera is
+[camera-controls](https://github.com/yomotsu/camera-controls), with orthographic views and fit to
+selection; fitting keeps the view's direction, since `fitToBox` turns it to the nearest axis.
 
 ### Rendering
 
@@ -1201,10 +1644,15 @@ orthographic views and fit to selection.
   the axis to the end plane, which is exact and cheap.
 - Edges are one merged line buffer for all bars, rebuilt per derive; `EdgesGeometry` cannot be
   instanced (review m11).
-- Holes are markers, not booleans, in v1. Hardware uses simple parametric meshes, or a GLB per
-  item where one exists.
+- Holes are markers, not booleans, in v1: a rod of the drill's diameter through the material,
+  with a wider one for a countersink or counterbore. Hardware uses simple parametric meshes, or a
+  GLB per item where one exists. A face connection's fasteners are drawn on their axes; a butt's
+  connectors are not, since derive counts them without placing them (§4.5).
 - Placeholders render translucent and hatched; `parametric` and `box` sections show their
-  fidelity on hover.
+  fidelity on hover. **v1 limit** (*2.3*): placeholders are translucent and outlined, without
+  hatching, which waits for a texture (v1.1).
+- The scene renders on demand (a camera move, a model, a selection, a resize), and fits the
+  camera to the first model only (*2.3*).
 - Meshes are built by `src/mesh/`, which the viewer and the GLB writer share (§9).
 
 ### Targets
@@ -1221,13 +1669,19 @@ orthographic views and fit to selection.
   [binary glTF](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-gltf-layout)
   directly: positions, normals, indices and flat materials, no textures. It is small, runs in the
   CLI, and its bytes are deterministic, so GLB joins the determinism claim.
-  - Z-up mm converts to Y-up m at the root. The export scene has one node per bar or part, named
-    `<id> <label|item>`, sharing one mesh per distinct geometry. It is not the render scene.
-  - `extras`: id, item, SKU, options, cut length.
+  - Z-up mm converts to Y-up m at the root: one root node, named after the project, turns −90°
+    about X and scales by 0.001, so every node under it reads in the model's millimetres (*2.3*).
+    The export scene has one node per bar, part or fastener, named `<id> <label|item>`, sharing
+    one mesh per distinct geometry; a project plate's or bent angle's holes are its node's
+    children, `<part>.<hole> <rod>` (*2.3*). It is not the render scene. What does not derive is
+    not in the file.
+  - `extras`: kind, id, item, SKU, options, cut length; a fastener's connection (*2.3*).
   - `asset.extras` stamp: AluKit version, the content hash of document + lock + tool version,
     revision, variant, and the git commit and dirty flag as a second field (review M5). This
     answers the "published page traced to no commit" lesson.
-- **Cut list, BOM, order list and costs** as Markdown, CSV or JSON, with the same stamp.
+- **Cut list, BOM, machining sheet (*2.3*), order list and costs** as Markdown, CSV or JSON (the
+  machining sheet without CSV), with the same stamp; in v1 only the order list and the costs carry
+  the lock's hash (§5.4).
 - **`derive --json`**, the full derived model for external report builders.
 
 STEP, DXF flats and a self-contained report come in v2 (D6).
@@ -1237,6 +1691,7 @@ STEP, DXF flats and a self-contained report come in v2 (D6).
 ```
 src/core/      schema (Zod), expressions, commands, derive, frames, ends, connections, patterns,
                cut list, nesting, BOM, offers, costs, checks, diff, canonical form, section properties
+               (2.3: also the lock, revisions, project items and the machining sheet)
 src/catalog/   loading, the merge, the ratings vocabulary, section generators, computed-vs-published, search
 src/mesh/      meshes from the derived model (three geometry classes only; Node-safe)
 src/export/    the GLB writer, Markdown and CSV
@@ -1247,7 +1702,7 @@ src/cli/       the alukit CLI
 catalogs/      forseti/, std/, ref-hiwin/
 importers/     forseti/ (Python + PyMuPDF; the PDF vector extraction proven in the survey)
 skills/alukit/ SKILL.md (command reference generated)
-tests/fixtures/ catalogs/test/, golden-ends/, golden-gen/, cart/ (12)
+tests/fixtures/ catalogs/test*/, golden-ends/, golden-gen/, cart/ (12), order/, base-frame/
 tests/e2e/     Playwright (unit tests sit next to the code)
 docs/
 ```
@@ -1256,8 +1711,11 @@ docs/
 nothing that reaches `.tsx`.
 
 **`alukit serve`** serves the built app (`dist/`, rebuilt by the CLI when its source hash
-changes) from `node:http`. The same server module mounts in Vite's dev server while AluKit itself
-is developed. Review 1 suggested Vite in middleware mode as the only server; that would put
+changes) from `node:http`. **v1 limit** (*2.3*): `serve` does not rebuild `dist/`; it refuses to
+start without a build and says to run `pnpm build` (v1.1). The same server module mounts in Vite's
+dev server while AluKit itself is developed (`ALUKIT_PROJECT=<dir> pnpm dev`, *2.3*), with the
+same session, token and checks in front of every request, Vite's own included, and Vite's CORS
+middleware off. Review 1 suggested Vite in middleware mode as the only server; that would put
 Vite's HMR socket into every user's runtime, a second surface to secure, so it is not adopted
 (call 17).
 
@@ -1280,7 +1738,10 @@ Vite's HMR socket into every user's runtime, a second surface to secure, so it i
 
 - **Exact pins and a lockfile** (review n2, §9 of review 1). `save-exact=true`, `pnpm-lock.yaml`
   committed, installs with `--frozen-lockfile`. vite 8.4.0 is one day old at pinning; M0's smoke
-  test decides, and a package that fails drops to its previous release.
+  test decides, and a package that fails drops to its previous release. *2.3*: M0 kept every pin
+  on Node 26.13.1 and pnpm 12.23.0. pnpm 12's minimum-release-age rule refused vite 8.4.0, so
+  `pnpm-workspace.yaml` excludes it from that rule, an exclusion to drop once 8.4.0 is old enough
+  (open).
 - **Node 26 LTS** (D15), pinned in `.nvmrc` and switched with [nvm](https://github.com/nvm-sh/nvm);
   `engines.node` is set to match at M0. On Node 26.13.1 (`process.release.lts` is set), a `.ts`
   file runs without a flag or a warning (*verified 2026-11-26*). Vite 8.4.0
@@ -1319,8 +1780,9 @@ Vite's HMR socket into every user's runtime, a second surface to secure, so it i
      the shop, so its rule is confirmed at import (*read: survey §1*).
 2. **PDF tables.** Map pages to families and parse A, Ix, Iy and kg/m per profile; material
    6063-T5, E 69,000 MPa (p. 6).
-3. **Sections**, for all 25 profile stems (review M6). The **reference project's profiles go
-   first** (M2a), the rest in M2b.
+3. **Sections**, for every profile stem (review M6): 27, 8 `exact` and 19 `parametric`, where
+   draft 2 counted 25 (*2.3*; M2b). The **reference project's profiles go first** (M2a), the rest
+   in M2b.
    - **`exact`** from the PDF's vector paths: 8 of about 20 catalogue profiles (p. 11, 14, 15, 16
      ×2, 18, 19, 21; *verified by review 1*). Six agree within 1 %; the 40x40 leve and the 20x60
      are 3–4 % off and enter as accepted mismatches until checked by hand (*read: survey §4*).
@@ -1338,14 +1800,20 @@ Vite's HMR socket into every user's runtime, a second surface to secure, so it i
      `requires`, pivot and splice geometry, fits, ratings) with provenance.
    - A second agent reviews it independently (a lesson from the reference project).
    - The parts the reference project uses go first, then the rest.
+   - **v1 state** (*2.3*): the first families are modelled and reviewed once. The other
+     connectors carry the systems they fit, read from their names, and say in their provenance
+     that they have no mounting model yet: no frame, mounts or fastener sets. The rest is later
+     layer-2 work.
 5. **Services.** The machining services guide (56 pages, outside the API: mitre 1–60°, threads,
    connector holes, access holes, parallel holes) goes into `services.json` by hand, with page
-   references.
+   references. Not in v1 (*2.3*; §3.1): v1 prices machining by covering cost lines.
 6. **Overrides** with `expect`: the 40x80's strong-axis inertia (printed 6.55 for 65.5 cm⁴, a
    lost digit; *corrected 2026-11-26 by M2a: the labels are not swapped*) and the 40x40 fechado's mass; other inconsistencies as accepted mismatches with notes
    (*read: survey §7*).
 7. **Clone ratings.** HIWIN HG values for the HGR/HGH rails and carriages go once into
-   `catalogs/ref-hiwin/`; Forseti's items point at them with `clone_of` (review m8).
+   `catalogs/ref-hiwin/`; Forseti's items point at them with `clone_of` (review m8). Two HIWIN
+   editions print different moment ratings (MP, MY); the catalog keeps the cited edition's, with a
+   note that the other's are lower. Which to use is open until loads are checked (v2).
 8. **`alukit catalog check forseti`** produces the computed-vs-published report.
 
 ## 12. v1 milestones (review M9)
@@ -1358,9 +1826,17 @@ needs:
   a threaded rod and a tube sold in stock lengths, a rail sold in stock lengths with
   `factory_E_mm` and its carriage with a `run` datum, a bracket with per-system fastener sets and
   a sleeve, a hinge with pivot geometry, a splice stud, fasteners sold in packs and in a kit,
-  regular and sale prices, and an offer priced as a quoted range).
-- `golden-ends/`: the end cases of §4.6 (G1–G21).
-- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26).
+  regular and sale prices, and an offer priced as a quoted range). *2.3*: beside it, one small
+  synthetic catalog per milestone that needed items `test/` does not hold, so no milestone moved
+  another's oracle: `ref-test/` (clone ratings), `test-geo/` (M3a), `test-gen/` (M3b),
+  `test-order/` and `test-order-eu/` (the order rules), `test-joint/` and `test-open/` (the
+  acceptance gaps).
+- `golden-ends/`: the end cases of §4.6 (G1–G21; G27 and G28 since 2.2 and 2.3).
+- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26; G29–G32 since 2.3).
+- `order/` (*2.3*): two suppliers, both READY as written, for the order rules: each test patches
+  one condition in, so each rule has a case that blocks and one that does not.
+- `base-frame/` (*2.3*): the cart's base frame built by the CLI from an empty project, the oracle
+  M4b's mouse script draws against.
 - `cart/`: a small synthetic cart with the reference project's classes of construction, and none
   of its specifics: T-slot bars with eccentric anchors and a rolled 40x80, a steel beam, a strut
   bearing on another bar's end, a flat bar flush with a beam's cut ends, a rail run from stock
@@ -1370,21 +1846,27 @@ needs:
   packers, a plate with threaded and countersunk holes, a placeholder, unplaced lines, a price
   band, and cost lines. Its expected outputs are worked by hand.
 
+**State** (*2.3*): every milestone below is done, all on 2026-11-26. Each milestone's calls are in
+its note in [`notes/`](notes/README.md); where the build differs from what a row asked for, the row
+says so.
+
 | M | Delivers | Done when |
 |---|---|---|
-| M0 | Scaffold: Vite + TS + Preact + three, Biome, Vitest, Playwright; the CLI entry; the server skeleton; Node 26 and pnpm verified | from a clean clone on Node 26: `pnpm install --frozen-lockfile`, `pnpm test` and `pnpm build` pass; `node src/cli/main.ts --version` runs without a flag or a warning; Playwright sees a non-blank canvas. A failure on 26 is recorded and the pin moves to 24 LTS |
-| M1 | Catalog schema (envelope, items and offers, kinds, ratings vocabulary), merge layers, sections with fidelity, generators, section properties, `catalog check`. Draft 2.1's four catalog additions (offer ranges, `factory_E_mm`, part `datums`, sleeves in `mounts`; see the changelog) follow as a small follow-up | the 40x40 básico's exact outline gives 553.5 ± 0.1 mm² and Ix, Iy 9.13 ± 0.01 cm⁴; each generator matches its closed-form A and I within 0.1 %; a test override with a stale `expect` is reported; a family file that changes an importer field fails |
+| M0 | Scaffold: Vite + TS + Preact + three, Biome, Vitest, Playwright; the CLI entry; the server skeleton; Node 26 and pnpm verified | from a clean clone on Node 26: `pnpm install --frozen-lockfile`, `pnpm test` and `pnpm build` pass; `node src/cli/main.ts --version` runs without a flag or a warning; Playwright sees a non-blank canvas. A failure on 26 is recorded and the pin moves to 24 LTS. **Done**: every check passed from a fresh clone on Node 26.13.1 and pnpm 12.23.0; the pin stays on 26 |
+| M1 | Catalog schema (envelope, items and offers, kinds, ratings vocabulary), merge layers, sections with fidelity, generators, section properties, `catalog check`. Draft 2.1's four catalog additions (offer ranges, `factory_E_mm`, part `datums`, sleeves in `mounts`; see the changelog) follow as a small follow-up | the 40x40 básico's exact outline gives 553.5 ± 0.1 mm² and Ix, Iy 9.13 ± 0.01 cm⁴; each generator matches its closed-form A and I within 0.1 %; a test override with a stale `expect` is reported; a family file that changes an importer field fails. **Done**: 553.53 mm², Ix 9.1287 and Iy 9.1307 cm⁴; the worst generator 0.0025 % from its closed form; the four 2.1 additions followed in M2a ([m1](notes/m1-decisions.md), [m2a](notes/m2a-decisions.md)) |
 | **M1.5** | **Paper model**: the reference frame's document written against the draft schema, by a throwaway converter from its existing model. Both are kept in this repo's gitignored `internal/` folder, not in the reference project's repo (decision A1 of the build session log; they may move there later) | every body of the reference frame is in the converted document or on a written gap list, and each gap is closed by a schema change in this design or an explicit v1 exclusion. One or two days. **Done 2026-11-26**: every body is in the document; the 20 gaps are closed by draft 2.1 (§16; [findings](reviews/m1.5-paper-model-findings.md)) |
-| M2a | Forseti items the reference project uses, the `std` steel and fastener items it needs, `ref-hiwin/` | each item has a section with a declared fidelity and offers with regular and sale prices and read dates; the 8 exact outlines pass `catalog check` within 1 % or are accepted mismatches |
-| M3a | Points, frames, placement, end planes in two sweeps and connections, runs, cut list | the end cases G1–G21 (§4.6) and the frame table (§4.4) pass to 0.01 mm; the cart's cut list equals its hand-worked table |
-| M3b | Generation (machining, hardware by system, rail holes and their selections, fasteners and sleeves cut from stock, patterns), BOM, offers and the order list with its rules, costs, price bands and totals, checks, commands with undo, CLI, lock file, canonical form | G22–G26 (§4.6) pass; the cart's order list and totals equal golden files byte for byte, on Linux and macOS; 37 screws pick the cheapest pack cover; each order rule has a test that blocks and one that does not |
-| Slice | **Early acceptance**: the reference frame's T-slot cut list (run in its own repo) | every T-slot piece within 0.5 mm of the record's drawn length, compared as §13 test 1 says, or on a written exceptions list with its reason |
-| M4a | Viewer: rendering, selection, properties, the server owning the document, event stream, watcher, security | in Playwright: a CLI command appears in two open tabs within 1 s at the same revision; an invalid direct edit makes both read-only with the error; requests without the token, or with a foreign `Origin` or `Host`, get 403 |
-| M4b | Draw tool with snapping and work plane, connect, place part, pattern, catalog browser | a Playwright script draws the cart's base frame with the mouse, and its derived cut list and BOM equal those of the CLI-built fixture |
-| M2b | The rest of Forseti's catalog, beside M4 | every one of the 1,196 orderable SKUs maps to an offer (a test against the importer's raw dump); every profile stem has a section with a declared fidelity |
-| M5 | Variants with `only_in`, diff, revisions with stored outputs, the GLB writer, `snapshot`, the skill | a diff across two commits with a lock price change reports it; `revision verify` shows zero drift on an untouched revision; two GLB exports are byte-identical and load in three's `GLTFLoader` with the expected node names and `extras`; an agent with only the skill rebuilds the cart's frame from a text description and `alukit check` passes (a recorded manual run) |
-| M6 | Custom plates and bent angles with hole features; generic items and placeholders | the cart plate's threaded, countersunk and counterbored holes appear on its machining sheet; the placeholder blocks only its own line in the golden order file |
-| **Acceptance** | §13 | §13 |
+| M2a | Forseti items the reference project uses, the `std` steel and fastener items it needs, `ref-hiwin/` | each item has a section with a declared fidelity and offers with regular and sale prices and read dates; the 8 exact outlines pass `catalog check` within 1 % or are accepted mismatches. **Done**, with `catalog check` passing on all three catalogs; every `std` and `ref-hiwin` number then compared with a public source ([verification](notes/std-hiwin-verification.md)) |
+| M3a | Points, frames, placement, end planes in two sweeps and connections, runs, cut list | the end cases G1–G21 (§4.6) and the frame table (§4.4) pass to 0.01 mm; the cart's cut list equals its hand-worked table. **Done**: no golden value was wrong ([m3a](notes/m3a-decisions.md)) |
+| M3b | Generation (machining, hardware by system, rail holes and their selections, fasteners and sleeves cut from stock, patterns), BOM, offers and the order list with its rules, costs, price bands and totals, checks, commands with undo, CLI, lock file, canonical form | G22–G26 (§4.6) pass; the cart's order list and totals equal golden files byte for byte, on Linux and macOS; 37 screws pick the cheapest pack cover; each order rule has a test that blocks and one that does not. **Done**, in three parts ([generation](notes/m3b-gen-decisions.md), [the edit path](notes/m3b-doc-decisions.md), [the order](notes/m3b-order-decisions.md)); Linux in CI, macOS in the merge gate (§5.2) |
+| Slice | **Early acceptance**: the reference frame's T-slot cut list (run in its own repo) | every T-slot piece within 0.5 mm of the record's drawn length, compared as §13 test 1 says, or on a written exceptions list with its reason. **Passed**: the largest difference 0.04 mm. Two pieces needed stand-ins, for gaps G-A and G-B, since closed by G27 (draft 2.2) and G28 |
+| M4a | Viewer: rendering, selection, properties, the server owning the document, event stream, watcher, security | in Playwright: a CLI command appears in two open tabs within 1 s at the same revision; an invalid direct edit makes both read-only with the error; requests without the token, or with a foreign `Origin` or `Host`, get 403. **Done**: the edit showed 4 to 31 ms after the CLI exited ([m4a](notes/m4a-decisions.md)) |
+| M4b | Draw tool with snapping and work plane, connect, place part, pattern, catalog browser | a Playwright script draws the cart's base frame with the mouse, and its derived cut list and BOM equal those of the CLI-built fixture. **Done**: byte for byte; `snapshot` came with it ([m4b](notes/m4b-decisions.md)) |
+| M2b | The rest of Forseti's catalog, beside M4 | every one of the 1,196 orderable SKUs maps to an offer (a test against the importer's raw dump); every profile stem has a section with a declared fidelity. **Done**: 1,196 of 1,196, checked against a committed SKU list everywhere and against the raw dump when it is present; 27 stems ([m2b](notes/m2b-decisions.md)) |
+| M5 | Variants with `only_in`, diff, revisions with stored outputs, the GLB writer, `snapshot`, the skill | a diff across two commits with a lock price change reports it; `revision verify` shows zero drift on an untouched revision; two GLB exports are byte-identical and load in three's `GLTFLoader` with the expected node names and `extras`; an agent with only the skill rebuilds the cart's frame from a text description and `alukit check` passes (a recorded manual run). **Done**, with one difference: the skill's worked example, a work table from the `forseti` catalog, runs as a test, every command as written; a recorded manual run of an agent rebuilding the cart is not in the repository ([m5](notes/m5-decisions.md)) |
+| M6 | Custom plates and bent angles with hole features; generic items and placeholders | the cart plate's threaded, countersunk and counterbored holes appear on its machining sheet; the placeholder blocks only its own line in the golden order file. **Done**; the placeholder holds its own group (§5.5, *2.3*), and G28 closes gap G-B ([m6](notes/m6-decisions.md)) |
+| M4c (*2.3*) | The v1 gaps between this design and the build: the variant switch, export and revisions in the top bar, the section plane, the Open items, Params and Decisions tabs, pivots and fastened face joints in Connect, `catalog search` and `catalog import`, `derive --select` | each missing feature of the design-vs-built record ([`notes/design-vs-built.md`](notes/design-vs-built.md), entries 3, 4, 5, 12) is built and tested, and no golden value moves. **Done** ([m4c](notes/m4c-decisions.md)) |
+| Gaps (*2.3*) | The model gaps the acceptance found (§13): fit by role (A1), joint recipes (A2), face contact on a section's inner faces (A3), end holes (A4), cost lines in variants (A5), `services_on` lists (A6), a sleeve's hole clearance (A7) | each is closed at its root, with a failing test written first; G29–G32 (§4.6) pass against independent hand scripts; G1–G28 and the cart's outputs do not move. **Done** ([acceptance gaps](notes/acceptance-gaps.md), [A3](notes/a3-face-contact.md)) |
+| **Acceptance** | §13 | §13. Tests 1–4 passed; the re-run after the gaps is pending |
 
 ## 13. Acceptance (review B2, M9)
 
@@ -1420,6 +1902,15 @@ acceptance starts. The tests then are:
 Acceptance **fails** if any exception is caused by a gap in AluKit's model. An exception may only
 be an error in the record or a deliberate scope exclusion from the table above.
 
+**Run, 2026-11-26** (*2.3*; the details stay with the reference project). Tests 1–4 **passed**:
+every bar within 0.05 mm of the record's drawn length; the mass within 1 %; every vendor line to
+the cent on a lock frozen at the record's price date; pack and kit counts equal. Every exception
+was an error in the record. Acceptance still **failed** by the rule above, on gaps in AluKit's
+model: A1 (a connector whose mount holds a sleeve could fit no bar) and A3 (a block on an angle's
+inner leg could not be a layer), with smaller gaps A2 and A4–A7. All seven are fixed at their
+root (§3.4, §4.5, §4.10, §4.11), with golden cases G29–G32 (§4.6). **The re-run with the new
+constructs: verdict pending.**
+
 ## 14. Calls made without asking (veto any)
 
 1. Z-up mm world (the Fusion frame); conversion only in the scene and GLB.
@@ -1429,7 +1920,9 @@ be an error in the record or a deliberate scope exclusion from the table above.
    state and is gitignored.
 5. A small safe expression language, not JavaScript; trig in degrees.
 6. The default connection is a butt with an angle bracket (no machining). The through bar is the
-   one passing through the point, else a vertical, else the lowest id; its end covers.
+   one passing through the point, else a vertical, else the lowest id; its end covers. *2.3,
+   open*: drawing a rail onto a post's top then butts the rail into the post, so a frame whose
+   posts stand under its rails is drawn with auto-connect off (§4.5).
 7. Importers may be Python (PyMuPDF is the right tool for PDF vectors); the tool itself is
    TypeScript.
 8. The SSE wire format read with `fetch`, not websockets; localhost only. The token is
@@ -1470,6 +1963,14 @@ be an error in the record or a deliberate scope exclusion from the table above.
     (§4.11).
 30. *New in 2.1.* Equivalent rolls are never normalised by canonical form; writers pick the
     smallest (§4.4).
+31. *New in 2.3, open.* A hole a sleeve passes takes ISO 273 medium for the sleeve's outside
+    diameter, the next row up between rows (an inferred rule); `clearance_mm` overrides it (§4.5).
+32. *New in 2.3, open.* The draw tool's work plane defaults to the ground, not to a plane that
+    faces the view (§8).
+33. *New in 2.3, open.* A bent angle's K-factor is required, with no default (§4.8).
+34. *New in 2.3, open.* `alukit snapshot` always renders in a fresh headless page, never in an open
+    tab (§7.3).
+35. *New in 2.3.* Edits made while a variant is shown go to the document as written (§8).
 
 ## 15. Review 1 resolution
 

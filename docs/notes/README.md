@@ -2,8 +2,9 @@
 
 Each note records the calls made while building one milestone, where [`design.md`](../design.md)
 was silent or ambiguous, with the reason for each. They are numbered per note; other documents
-cite them as "m4a decision 13". Where the build differs from the design, see
-[`design-vs-built.md`](design-vs-built.md).
+cite them as "m4a decision 13". Where the build differed from draft 2.2 of the design, see
+[`design-vs-built.md`](design-vs-built.md); design draft 2.3 folds in those entries and the notes'
+decisions that change what the design says, so the notes now hold the detail and the reasons.
 
 | Note | Covers |
 |---|---|
