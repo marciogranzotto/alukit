@@ -265,8 +265,15 @@ golden case worked by an independent hand script
 - §3.4, §4.5, §5.5: **a blind fastener** (X1; G39). `fastening: "blind"` drills the hole the
   fastener's maker states (`hole_mm`) in every layer and only the near wall of a hollow last
   layer, where it grips; behind a solid last layer it goes through. Its grip, the material it
-  passes, must lie in the item's `grip_min_mm` to `grip_max_mm`, else a `fit` error. Draft 2.3 had only `bolt`, which
-  drilled ISO 273 holes through both walls, and `screw`, which tapped the near wall (x1 1–6).
+  passes, must lie in the item's `grip_min_mm` to `grip_max_mm`, else a `fit` error. Draft 2.3
+  had only `bolt`, which drilled ISO 273 holes through both walls, and `screw`, which tapped the
+  near wall (x1 1–6).
+- §3.4: **a plain bar held by a screw in a drilled hole** (X3; G40). Fit by role holds a solid
+  through bar a fourth way: a `through-hole` through it, at a place where the connector taps the
+  butting end, passed by a screw or bolt of its fastener set. A blind hole, a hole with no tap
+  at its place, one too small for the screw, a set with no headed fastener, or an RHS or tube
+  still fails, the error saying which (x1 7–12). The `fit` errors that drilled through bars
+  already had gain that clause (no value moves).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -582,10 +589,17 @@ system, which the connector's `fits` must name. The through bar is held by its s
 bore**: the fastener set chosen for a mount sets a sleeve in it (`inside: "through"`), and the
 sleeve then needs the through bar hollow (`tube` or `rhs`). Each mount's set is the one keyed by a
 system of a joined bar that `fits` names, the through bar's first. A butt `held_by` another holds
-its through bar a third way, by that butt's through-fastener (*2.3*; gap A9; §4.5). A bar held no
-way is a `fit` error naming it. `fits` stays the one authority on systems: a set keyed by a system
+its through bar a third way, by that butt's through-fastener (*2.3*; gap A9; §4.5). A solid
+through bar is held a fourth way, **by a screw through it** into the butting end (*2.3*, after
+the alternative frame's acceptance; gap X3, G40): the connector requires a `through-hole` in it
+with a `d_mm` and no depth, so the head bears on its far side; at a position where it also taps
+the butting end, so the hole is that screw's clearance (call 40's pairing); a chosen fastener set
+holds a `screw` or `bolt` whose thread's nominal diameter is less than the hole's; and the bar is
+not an RHS or a tube, whose walls a screw would crush without a sleeve in its bore. A bar held no
+way is a `fit` error naming it, and for a through bar saying which of these fails. `fits` stays the one authority on systems: a set keyed by a system
 outside it is not a way to fit (`catalog check` warns on it), and a `requires` hole in the through
-bar does not hold it (a T-slot bracket that drills its through bar still holds it by its groove).
+bar does not hold it by itself (a T-slot bracket that drills its through bar still holds it by its
+groove): only a screw through it into the butting end does.
 Draft 2.1's rule, that every joined bar carry a system `fits` names, let no connector with a mount
 sleeve derive cleanly, since a tube or an RHS has no system (G30).
 
@@ -1234,6 +1248,7 @@ length at R$ 126.50/m in 10 mm steps, 40–3000 mm, and in stock bars of 3000 an
 | G37 | 40x40 b1 (0,0,0)→(400,0,0), its top on the c8 groove (opening 8.2); flat 50x10 b2 under it; `face` [b1, b2], `screw` M8 (head dk 13), `at_mm: [200]` | a head seats on material (*2.3*, after acceptance run 4) | the head on the lips over its Ø9 hole: 45.87 %, a `fit` warning. A washer (d2 16) under it: 53.74 %. An M4 head (dk 7): on nothing, a `fit` error. On the flat bar's face: 100 %. Bolted through two 40x40s with a hex head and a nut (s 13): each 45.87 %, two warnings; with two washers, one under each, 53.74 % |
 | G38 | 40 x 40 square bars: beams b1 (0,0,0)→(2000,0,0) and b2 (0,0,1040)→(2000,0,1040), their faces 1000 apart; brace b3 from `{on: {bar: b1, at_mm: 500}}` to `{on: {bar: b2, at_mm: 1020}}`, `cut: "angle"` at both ends; post b4 from b1 at 1600 to b2 at 1600; knee brace b5 from b1 at 1200 to `{on: {bar: b4, at_mm: 400}}`, both ends angled; `butt`s through b1, b2 and b4; cut to length, kerf 3 | a piece is ordered, billed and nested at its span (gap X4, *2.3*) | b3 long point, centre line and short point 1118.03 (parallel cuts at 26.57°), span 1138.03 = 1118.03 + 40 · tan 26.57°, ordered 1138, billed 1140, R$ 144.21; b5 549.12, 509.12, 469.12, span 549.12 (a trapezoid), billed 550; b1, b2 2000.00 and b4 1000.00, square; total R$ 846.29, BOM 6687.15. b3's end b on the plane through (1010,0,1020) with normal (1,0,3), leaning as end a does but not parallel: long point 1125.18, span 1130.89. b2 at z = 2720 (b3 to 1860 along it): long point 2996.33, inside the offer's 3000, span 3016.33, a `length` error. From stock bars: 2000 + 2000 + 1138.03 + 549.12 + 3 × 3 = 5696.15 in a 6000, the post in a 3000, R$ 930.00 |
 | G39 | RHS 200x100x4.75 b1 (0,0,0)→(1000,0,0); flat 120x12 b2 (100,0,106)→(350,0,106) on its top wall; `face` [b2, b1], `blind`, a blind M8 (`hole_mm` 14, grip 3 to 22), `at_mm: [50, 200]` | a blind fastener (*2.3*, gap X1) | Ø14 through b2 at 50 and 200; Ø14 4.75 deep in b1's top wall at 150 and 300, none in its bottom wall; grip 16.75; the head (Ø20) 100 % on b2. A 25 mm plate: grip 29.75, a `fit` error. On a solid 8 mm flat: Ø14 through it, grip 20.00. A fastener with no `hole_mm`: a `face` error, no hole |
+| G40 | plain 80 x 80 block b1 (0,0,0)→(200,0,0), no system; 40x40 post b2 (100,0,40)→(100,0,540), its core for M16; `butt` through b1 with J1: an M16 `end-tap` in the post, a Ø9 `through-hole` in b1, a bush and an M8 screw | a plain bar held by a screw in a drilled hole (*2.3*, gap X3) | no error: Ø9 through b1 at 100, M16 in b2's end. Through b1's end b: an end hole along its axis, no error. A 20 deep hole, a hole with no tap at its place, a Ø6 hole, a stud for the screw, or an RHS for the block: a `fit` error on c1 naming b1 |
 
 ### 4.7 Parts, rails and patterns (D14)
 

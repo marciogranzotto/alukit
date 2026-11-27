@@ -52,3 +52,43 @@ wall, 3 deep, grip 15), the sleeve and the bar-stock refusals, and the words.
 On the reproduction (**verified**: its document derived with this code, its HB08 given `hole_mm`
 14 and a grip of 3 to 22), `fastening: "blind"` gives Ø14 through the plate and Ø14 4.75 deep in
 the RHS's top wall only; `bolt` still drills both walls and `screw` still taps, as those kinds say.
+
+## X3: a plain bar held by a screw in a drilled hole
+
+**The case.** A post's end screwed down through a plain aluminium block: an M8 through a Ø9 hole
+in the block into a reducing bush in the post's core. **The cause** (**read**, `hardware.ts`
+before this change): fit by role (acceptance-gaps A1, A9) held a through bar by its system, by a
+sleeve in its bore, or by another butt's through-fastener (`held_by`). A block of no system has
+none of these, so the joint was a `fit` error that blocked the order, though the screw holds it.
+A1 decision 2 had kept a `requires` hole from holding a bar, rightly: a T-slot bracket that drills
+its through bar holds it by its groove, and counting the hole would pass that bracket on an RHS.
+What holds the block is not the hole but the screw through it into the butting end.
+
+7. **The rule** (`screwThrough`): a fourth way to hold a butt's through bar. The connector
+   requires a `through-hole` in it (`on` through or each) with a `d_mm` and no `depth_mm`, so the
+   hole runs through and the head bears on the far side.
+8. **The screw's hole**: at a position where the connector also taps the butting end (`end-tap`
+   on butting or each, F2's pairing, call 40). A hole with no tap at its place is a hole for
+   something else (an access hole, a bracket's bolt), and holds nothing.
+9. **A headed fastener that passes it**: a chosen fastener set (for the butting bar's system)
+   holds a `screw` or a `bolt` whose thread's nominal diameter is less than the hole's by more
+   than `tol.len`. A stud has no head to bear; a hole the shank does not pass is no clearance.
+   v1 does not tie the screw to a particular mount hole: any headed fastener of a chosen set
+   counts, as the sets count once per hole (§3.4).
+10. **Not hollow.** An RHS or a tube is held by a screw only with a sleeve in its bore (A1's way);
+    a screw through both its walls would crush them. So J1 through an RHS still fails.
+11. **The words.** A through bar held no way gets A1's error plus ", nor does a screw through it
+    hold it: <why>", the first condition that fails for each through-hole; a connector that
+    requires no through-hole keeps A1's words exactly. G30's mountless end connector on an RHS
+    (it requires a through-hole) now says the RHS is hollow (**verified**: every fixture scanned).
+12. **The holes are not a condition of success**: whether the hole is made (on the face, in the
+    block) is the machining's own check, with its own error; fit reads what the connector says.
+
+**G40** (**verified**: `by_hand.py`): a 40x40 post with an M16 core on an 80 x 80 block, J1 (an M16
+end tap, a Ø9 through-hole, a bush and an M8 socket screw): no error, Ø9 through the block at 100,
+the tap in the post. Through the block's end: an end hole along its axis, no error. A 20 deep
+hole, a hole with no tap at its place, a Ø6 hole, a stud, an RHS: a `fit` error naming b1, each
+with its reason (`x-gaps.test.ts`).
+
+On the reproduction (**verified**: derived with this code), the J1 through the plain 80 x 80 block
+derives with no `fit` error.

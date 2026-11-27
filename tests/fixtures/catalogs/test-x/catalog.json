@@ -54,6 +54,123 @@
       "grip_max_mm": 22,
       "dims": { "dw_mm": 20 }
     },
+    "BUSH-16-8": {
+      "kind": "fastener",
+      "subtype": "insert",
+      "name": "Reducing bush M16 outside, M8 inside (synthetic)",
+      "thread": "M8"
+    },
+    "SCR-M8x100": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M8x100 (synthetic, ISO 4762's head)",
+      "thread": "M8",
+      "length_mm": 100,
+      "head": "ISO 4762",
+      "dims": { "dk_mm": 13, "k_mm": 8 }
+    },
+    "STUD-M8": {
+      "kind": "fastener",
+      "subtype": "stud",
+      "name": "Stud M8x100 (synthetic)",
+      "thread": "M8",
+      "length_mm": 100
+    },
+    "J1": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "A screw through the receiving bar into a bush in the butting bar's core (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "test:s40-c8": [{ "item": "BUSH-16-8", "qty": 1 }, { "item": "SCR-M8x100", "qty": 1 }]
+          }
+        }
+      ],
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "through-hole", "on": "through", "d_mm": 9 }
+      ]
+    },
+    "J1-BLIND": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J1 with a blind hole in the receiving bar (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "test:s40-c8": [{ "item": "BUSH-16-8", "qty": 1 }, { "item": "SCR-M8x100", "qty": 1 }]
+          }
+        }
+      ],
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "through-hole", "on": "through", "d_mm": 9, "depth_mm": 20 }
+      ]
+    },
+    "J1-HOLE": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J1's hole in the receiving bar with no tap in the butting bar (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": { "test:s40-c8": [{ "item": "SCR-M8x100", "qty": 1 }] }
+        }
+      ],
+      "requires": [{ "op": "through-hole", "on": "through", "d_mm": 9 }]
+    },
+    "J1-PILOT": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J1 with a Ø6 hole in the receiving bar, too small for its M8 (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "test:s40-c8": [{ "item": "BUSH-16-8", "qty": 1 }, { "item": "SCR-M8x100", "qty": 1 }]
+          }
+        }
+      ],
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "through-hole", "on": "through", "d_mm": 6 }
+      ]
+    },
+    "J1-STUD": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "J1 with a stud for its screw, no head (synthetic)",
+      "fits": ["test:s40-c8"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "test:s40-c8": [{ "item": "BUSH-16-8", "qty": 1 }, { "item": "STUD-M8", "qty": 1 }]
+          }
+        }
+      ],
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "through-hole", "on": "through", "d_mm": 9 }
+      ]
+    },
     "BLIND-M8-NH": {
       "kind": "fastener",
       "subtype": "bolt",

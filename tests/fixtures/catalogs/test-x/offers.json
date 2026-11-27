@@ -35,6 +35,18 @@
       "item": "BLIND-M8",
       "price": { "regular_minor": 1800, "per": "unit", "read": "2026-11-27", "src": "src" }
     },
+    "BUSH-16-8": {
+      "item": "BUSH-16-8",
+      "price": { "regular_minor": 450, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "SCR-M8x100": {
+      "item": "SCR-M8x100",
+      "price": { "regular_minor": 300, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
+    "STUD-M8": {
+      "item": "STUD-M8",
+      "price": { "regular_minor": 250, "per": "unit", "read": "2026-11-27", "src": "src" }
+    },
     "BLIND-M8-NH": {
       "item": "BLIND-M8-NH",
       "price": { "regular_minor": 1800, "per": "unit", "read": "2026-11-27", "src": "src" }

@@ -381,7 +381,7 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
 const dirs = subdirs(join(FIXTURES, "golden-gen"));
 
 describe("golden generation cases (design §4.6)", () => {
-  it("has one fixture per case G22–G26 and G29–G39", () => {
+  it("has one fixture per case G22–G26 and G29–G40", () => {
     expect(dirs.map((d) => basename(d))).toEqual([
       "G22",
       "G23",
@@ -399,6 +399,7 @@ describe("golden generation cases (design §4.6)", () => {
       "G37",
       "G38",
       "G39",
+      "G40",
     ]);
   });
 

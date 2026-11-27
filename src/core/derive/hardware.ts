@@ -453,7 +453,7 @@ class ConnectorGen {
     const home = found.id.slice(0, found.id.indexOf(":"));
     const fits = item.fits.map((s) => fullRef(s, home));
     const sets = this.spec.type === "face" ? [] : this.chosenSets(item, home);
-    this.fit(found.id, fits, sets);
+    this.fit(found.id, item, home, fits, sets);
     if (this.spec.type === "face") return;
     this.mounts(sets, home);
     this.requires(item);
@@ -478,9 +478,17 @@ class ConnectorGen {
    * or by another butt's through-fastener (`held_by`). A bar held no way is a `fit` error naming
    * it. The through bar is judged only when some joined bar has a system the connector fits: with
    * none, no fastener set can apply, every butting bar has failed, and that is the error to fix.
-   * A `held_by` that fails has its own error, so the through bar is not judged again.
+   * A `held_by` that fails has its own error, so the through bar is not judged again. A solid
+   * through bar is also held by a screw through it into the butting end (`screwThrough`; after
+   * the alternative frame's acceptance, X3).
    */
-  private fit(itemId: string, fits: readonly string[], sets: readonly ChosenSet[]): void {
+  private fit(
+    itemId: string,
+    item: ConnectorItem,
+    home: string,
+    fits: readonly string[],
+    sets: readonly ChosenSet[],
+  ): void {
     const through = this.roles.through?.bar;
     const sleeved = sets.some((s) => s.entries.some((e) => "inside" in e));
     const fitted = (b: DerivedBar) => {
@@ -496,8 +504,12 @@ class ConnectorGen {
       if (isThrough && sleeved) continue; // held by its bore; the sleeve checks it is hollow
       if (isThrough && this.held) continue; // held by another butt's through-fastener
       if (isThrough && !anyFitted) continue;
+      const screw = isThrough ? screwThrough(this.ctx, item, home, sets, b) : undefined;
+      if (screw?.holds) continue; // held by a screw through a drilled hole in it
       const what = sys ? `a ${sys}` : `${b.placed.item.id}, of no system`;
-      const how = isThrough ? ", and no fastener set of the connector sets a sleeve in it" : "";
+      const how = isThrough
+        ? `, and no fastener set of the connector sets a sleeve in it${screw ? `, nor does a screw through it hold it: ${screw.why}` : ""}`
+        : "";
       this.error("fit", `${itemId} fits ${fits.join(", ")}; ${b.placed.id} is ${what}${how}`, {
         field: "connector",
         refs: [b.placed.id],
@@ -577,26 +589,11 @@ class ConnectorGen {
     item: ConnectorItem,
     req: NonNullable<ConnectorItem["requires"]>[number],
   ): Pos[] {
-    if (req.at_mm) return req.at_mm.map((p) => [p[0], p[1]] as const);
-    if (req.at_holes !== undefined) {
-      const holes = item.mounts?.[req.at_holes]?.holes ?? [];
-      if (holes.length > 0) return holes.map((h) => [h.at_mm[0], h.at_mm[1]] as const);
-    }
-    return [undefined];
+    return requirementPositions(item, req);
   }
 
-  /**
-   * Where the connector taps the butting end: every end tap it asks of the butting bar (`on`
-   * butting or each), at its positions, the centre where it gives none. A hole the connector
-   * makes in the through bar at one of these places is the clearance for a screw into that tap.
-   */
   private buttingTaps(item: ConnectorItem): (readonly [number, number])[] {
-    const out: (readonly [number, number])[] = [];
-    for (const req of item.requires ?? []) {
-      if (req.op !== "end-tap" || (req.on !== "butting" && req.on !== "each")) continue;
-      for (const p of this.positions(item, req)) out.push(p ?? [0, 0]);
-    }
-    return out;
+    return buttingTaps(item);
   }
 
   private requires(item: ConnectorItem): void {
@@ -1018,6 +1015,114 @@ class ConnectorGen {
       this.endTaps(bar, end, at, sp.tap, depth, "connector splice");
     }
   }
+}
+
+/**
+ * A requirement's positions (acceptance gap A8): its `at_mm`, or the x and y of the holes of the
+ * mount `at_holes` names, in the butting bar's section from its box centre. A requirement with
+ * none makes one op at the centre or at the joint point, as before: `[undefined]`.
+ */
+function requirementPositions(
+  item: ConnectorItem,
+  req: NonNullable<ConnectorItem["requires"]>[number],
+): Pos[] {
+  if (req.at_mm) return req.at_mm.map((p) => [p[0], p[1]] as const);
+  if (req.at_holes !== undefined) {
+    const holes = item.mounts?.[req.at_holes]?.holes ?? [];
+    if (holes.length > 0) return holes.map((h) => [h.at_mm[0], h.at_mm[1]] as const);
+  }
+  return [undefined];
+}
+
+/**
+ * Where the connector taps the butting end: every end tap it asks of the butting bar (`on`
+ * butting or each), at its positions, the centre where it gives none. A hole the connector
+ * makes in the through bar at one of these places is the clearance for a screw into that tap
+ * (after acceptance run 4, call 40).
+ */
+function buttingTaps(item: ConnectorItem): (readonly [number, number])[] {
+  const out: (readonly [number, number])[] = [];
+  for (const req of item.requires ?? []) {
+    if (req.op !== "end-tap" || (req.on !== "butting" && req.on !== "each")) continue;
+    for (const p of requirementPositions(item, req)) out.push(p ?? [0, 0]);
+  }
+  return out;
+}
+
+/**
+ * A solid bar held by a screw through it (after the alternative frame's acceptance, X3): a fourth
+ * way to hold a butt's through bar, beside its system, its bore and `held_by`. It holds when
+ *
+ * 1. the connector requires a `through-hole` in it (`on` through or each) with a `d_mm` and no
+ *    `depth_mm`, so the hole runs through the bar and the head bears on its far side;
+ * 2. at a position where it also taps the butting end (`buttingTaps`, call 40), so the hole is the
+ *    clearance for a screw into that tap;
+ * 3. a chosen fastener set holds a headed fastener (a `screw` or a `bolt`) whose thread's
+ *    nominal diameter is less than that hole's, so its shank passes the hole and its head does not;
+ * 4. and the bar is not hollow: a screw through an RHS's or a tube's two walls would crush them,
+ *    which is what a sleeve in its bore is for (A1).
+ *
+ * `why` says which of these fails, for the `fit` error; undefined when the connector requires no
+ * hole in the through bar at all, so the A1 error stands as it was.
+ */
+function screwThrough(
+  ctx: Ctx,
+  item: ConnectorItem,
+  home: string,
+  sets: readonly ChosenSet[],
+  bar: DerivedBar,
+): { holds: true } | { holds: false; why: string } | undefined {
+  const id = bar.placed.id;
+  const holes = (item.requires ?? []).filter(
+    (r) => r.op === "through-hole" && (r.on === "through" || r.on === "each"),
+  );
+  if (holes.length === 0) return undefined;
+  const hollow = bar.placed.item.shape === "rhs" || bar.placed.item.shape === "tube";
+  if (hollow) {
+    return {
+      holds: false,
+      why: `${id} is hollow, and a screw through both its walls needs a sleeve in its bore`,
+    };
+  }
+  const taps = buttingTaps(item);
+  const headed: { id: string; d: number }[] = [];
+  for (const s of sets) {
+    for (const e of s.entries) {
+      if ("inside" in e) continue;
+      const found = ctx.items.item(fullRef(e.item, home));
+      if (!found.ok || found.item.kind !== "fastener") continue;
+      if (found.item.subtype !== "screw" && found.item.subtype !== "bolt") continue;
+      const d = found.item.thread ? threadDiameter(found.item.thread) : undefined;
+      if (d !== undefined) headed.push({ id: found.id, d });
+    }
+  }
+  const reasons: string[] = [];
+  for (const r of holes) {
+    if (r.depth_mm !== undefined || r.d_mm === undefined) {
+      reasons.push(
+        `its hole in ${id} is ${r.d_mm === undefined ? "tapped" : "blind"}, so no head bears on ${id}'s far side`,
+      );
+      continue;
+    }
+    const d = num(r.d_mm);
+    const at = requirementPositions(item, r);
+    if (!at.some((p) => taps.some((q) => samePlace(q, p)))) {
+      reasons.push(
+        `its hole in ${id} is at no place where it taps the butting end, so no screw into the butting end passes it`,
+      );
+      continue;
+    }
+    if (!headed.some((f) => f.d < d - TOL.len)) {
+      reasons.push(
+        headed.length === 0
+          ? `its fastener sets hold no screw or bolt to pass its Ø${mm(d)} hole in ${id}`
+          : `no screw or bolt of its fastener sets passes its Ø${mm(d)} hole in ${id} (${headed.map((f) => `${f.id}, Ø${mm(f.d)}`).join("; ")})`,
+      );
+      continue;
+    }
+    return { holds: true };
+  }
+  return { holds: false, why: [...new Set(reasons)].join("; ") };
 }
 
 /** A splice's studs (its parts that are fasteners of subtype `stud`, by qty), at least one. */

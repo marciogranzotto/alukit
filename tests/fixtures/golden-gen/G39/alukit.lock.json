@@ -3,7 +3,7 @@
   "catalogs": {
     "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
     "test-stud": { "hash": "sha256:37e5b1a53f0c4b3a6b03d02f45b3be497dbf929fabf23d852339df53ad10f7f0", "name": "Stud joint test catalog (synthetic)", "vendor": "test-stud-vendor", "currency": "BRL" },
-    "test-x": { "hash": "sha256:e34964c1baafe5d5d1990305bbe54f3ab5701a9c4b69e4981066f152daf0f03e", "name": "Joint gaps test catalog (synthetic)", "vendor": "test-x-vendor", "currency": "BRL" }
+    "test-x": { "hash": "sha256:720b2b08b3f55cf4ce77265da1dc03e511604ca6911a5bce30f6f2c3cc70758a", "name": "Joint gaps test catalog (synthetic)", "vendor": "test-x-vendor", "currency": "BRL" }
   },
   "items": {
     "test-stud:RHS-200x100x4.75": { "hash": "sha256:3c220c9cd0905e2e6d4773f47717dcce989594a12be515e792a1f6ebb1d6f153", "item": { "kind": "bar", "name": "RHS 200x100x4.75 (synthetic)", "material": "test:s235", "prov": { "src": "est", "note": "synthetic test data for through studs and joints in several cores, not a vendor's" }, "shape": "rhs", "section": "RHS-200x100x4.75" } },

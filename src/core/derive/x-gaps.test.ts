@@ -20,6 +20,58 @@ const said = (d: ReturnType<typeof derive>, code: string, severity?: string) =>
     .filter((x) => x.code === code && (severity === undefined || x.severity === severity))
     .map((x) => [x.severity, x.entity, x.message]);
 
+describe("a plain bar held by a screw in a drilled hole (X3)", () => {
+  const fitOf = async (patch: unknown) => said((await project("G40", patch)).d, "fit");
+  const base =
+    "fits test:s40-c8; b1 is test-x:BLOCK-80, of no system, and no fastener set of the connector sets a sleeve in it, nor does a screw through it hold it";
+
+  it("holds the block, and says which condition a wrong connector fails", async () => {
+    expect(await fitOf({})).toEqual([]);
+    const conn = (c: string) => ({ connections: { c1: { connector: `test-x:${c}` } } });
+    expect(await fitOf(conn("J1-BLIND"))).toEqual([
+      [
+        "error",
+        "c1",
+        `test-x:J1-BLIND ${base}: its hole in b1 is blind, so no head bears on b1's far side`,
+      ],
+    ]);
+    expect(await fitOf(conn("J1-HOLE"))).toEqual([
+      [
+        "error",
+        "c1",
+        `test-x:J1-HOLE ${base}: its hole in b1 is at no place where it taps the butting end, so no screw into the butting end passes it`,
+      ],
+    ]);
+    expect(await fitOf(conn("J1-PILOT"))).toEqual([
+      [
+        "error",
+        "c1",
+        `test-x:J1-PILOT ${base}: no screw or bolt of its fastener sets passes its Ø6.00 hole in b1 (test-x:SCR-M8x100, Ø8.00)`,
+      ],
+    ]);
+    expect(await fitOf(conn("J1-STUD"))).toEqual([
+      [
+        "error",
+        "c1",
+        `test-x:J1-STUD ${base}: its fastener sets hold no screw or bolt to pass its Ø9.00 hole in b1`,
+      ],
+    ]);
+  });
+
+  it("does not hold a hollow bar, whose walls a sleeve must keep apart", async () => {
+    const rhs = await fitOf({
+      bars: { b1: { item: "test-stud:RHS-200x100x4.75", a: [0, 0, -60], b: [200, 0, -60] } },
+    });
+    expect(rhs).toEqual([
+      [
+        "error",
+        "c1",
+        "test-x:J1 fits test:s40-c8; b1 is test-stud:RHS-200x100x4.75, of no system, and no fastener set of the connector sets a sleeve in it, nor does a screw through it hold it: b1 is hollow, and a screw through both its walls needs a sleeve in its bore",
+      ],
+    ]);
+  });
+});
+
 describe("a blind fastener (X1)", () => {
   it("says which stations grip outside its maker's range", async () => {
     const { d } = await project("G39", {
