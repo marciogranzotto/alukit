@@ -95,6 +95,24 @@
           }
         }
       ]
+    },
+    "END-AX": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "End screw along the through bar (synthetic)",
+      "fits": ["test:s40-c8"],
+      "material": "test:s235",
+      "mass_kg": 0.03,
+      "requires": [{ "op": "through-hole", "on": "through", "d_mm": 9 }]
+    },
+    "END-AX-T": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "End screw tapped into the through bar (synthetic)",
+      "fits": ["test:s40-c8"],
+      "material": "test:s235",
+      "mass_kg": 0.03,
+      "requires": [{ "op": "through-hole", "on": "through", "thread": "M8", "depth_mm": 20 }]
     }
   }
 }

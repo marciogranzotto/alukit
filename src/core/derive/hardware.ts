@@ -6,7 +6,7 @@ import type { Connection, Face } from "../project/schema.ts";
 import { TOL } from "../tolerances.ts";
 import { add, addScaled, angleDeg, dot, neg, scale, sub, type V3 } from "../vec.ts";
 import type { Ctx } from "./context.ts";
-import type { DerivedBar, HoleOp } from "./derive.ts";
+import type { DerivedBar, EndHoleOp, HoleOp } from "./derive.ts";
 import { type GenOut, stockOptions } from "./fastenings.ts";
 import { boxCentre, faceLocal, facePlane, onBar, resolveStation } from "./place.ts";
 import type { Copy, StockPiece } from "./types.ts";
@@ -21,7 +21,8 @@ import type { Copy, StockPiece } from "./types.ts";
  *   connector in v1, so which bar a mount bears on is not known); a sleeve in a set is cut from
  *   bar stock to the through bar's bore along the joint's normal;
  * - its `requires`, once per butting end: an end tap in the butting end, holes `from_end_mm`
- *   from it on its `+y` face, or holes in the through bar where the butting bar meets it;
+ *   from it on its `+y` face, or holes in the through bar where the butting bar meets it: in the
+ *   face it meets, or, for a butt through the through bar's end, into that end along its axis;
  * - a splice's parts, and its tap in both spliced ends.
  *
  * Fit is judged by role: a butting bar by its system, the through bar by its system or by the
@@ -413,22 +414,64 @@ class ConnectorGen {
           });
           continue;
         }
-        if (through.end) {
-          this.error(
-            "connection",
-            `${field}: a hole in the through bar needs a butt through its side`,
-            {
-              field: "connector",
-            },
-          );
-          continue;
-        }
         for (const b of roles.butting) {
-          const op = this.jointHole(through.bar, b.bar, b.end, hole);
+          const op = through.end
+            ? this.endHole(through.bar, through.end, b.bar, b.end, hole)
+            : this.jointHole(through.bar, b.bar, b.end, hole);
           if (op) through.bar.ops.push(op);
         }
       }
     }
+  }
+
+  /**
+   * Where a butting bar meets the through bar: its centre line's crossing with its end plane,
+   * moved by the spacer along the end's normal onto the through bar's face (decision 29).
+   */
+  private jointPoint(butting: DerivedBar, end: "a" | "b"): V3 {
+    const e = butting.ends[end];
+    const bar = butting.placed;
+    const [cx, cy] = boxCentre(bar.box);
+    const C = add(bar.A, add(scale(bar.frame.x, cx), scale(bar.frame.y, cy)));
+    const lambda = dot(sub(e.point, C), e.normal) / dot(bar.frame.t, e.normal);
+    return addScaled(addScaled(C, bar.frame.t, lambda), e.normal, this.roles.spacer);
+  }
+
+  /**
+   * A hole in the through bar's end face, for a butt that bears on that end (G17; acceptance gap
+   * A4): along the through bar's axis, where the butting bar meets the end face, given as its
+   * offset from the section's box centre. It must fall on the end face.
+   */
+  private endHole(
+    through: DerivedBar,
+    throughEnd: "a" | "b",
+    butting: DerivedBar,
+    end: "a" | "b",
+    fields: Pick<HoleOp, "d" | "thread" | "depth">,
+  ): EndHoleOp | undefined {
+    const T = through.placed;
+    const Q = this.jointPoint(butting, end);
+    const [cx, cy] = boxCentre(T.box);
+    const x = dot(sub(Q, T.A), T.frame.x) - cx;
+    const y = dot(sub(Q, T.A), T.frame.y) - cy;
+    const hx = (T.box.x1 - T.box.x0) / 2;
+    const hy = (T.box.y1 - T.box.y0) / 2;
+    if (Math.abs(x) > hx - TOL.len || Math.abs(y) > hy - TOL.len) {
+      this.error(
+        "connection",
+        `${butting.placed.id}.${end} meets ${T.id}.${throughEnd} off its end face: no place for the hole`,
+        { refs: [T.id] },
+      );
+      return undefined;
+    }
+    const zero = (v: number) => Math.abs(v) <= TOL.len / 100;
+    return {
+      op: "end-hole",
+      from: throughEnd,
+      ...(zero(x) && zero(y) ? {} : { off: [zero(x) ? 0 : x, zero(y) ? 0 : y] as const }),
+      ...fields,
+      by: this.id,
+    };
   }
 
   /** A hole in the through bar where a butting bar's centre line meets its face. */
@@ -439,11 +482,7 @@ class ConnectorGen {
     fields: Pick<HoleOp, "d" | "thread" | "depth">,
   ): HoleOp | undefined {
     const e = butting.ends[end];
-    const bar = butting.placed;
-    const [cx, cy] = boxCentre(bar.box);
-    const C = add(bar.A, add(scale(bar.frame.x, cx), scale(bar.frame.y, cy)));
-    const lambda = dot(sub(e.point, C), e.normal) / dot(bar.frame.t, e.normal);
-    const Q = addScaled(addScaled(C, bar.frame.t, lambda), e.normal, this.roles.spacer);
+    const Q = this.jointPoint(butting, end);
     const T = through.placed;
     const face = (["+x", "-x", "+y", "-y"] as const).find(
       (f) => angleDeg(facePlane(T, f).n, neg(e.normal)) <= TOL.ang,

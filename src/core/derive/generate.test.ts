@@ -388,6 +388,42 @@ describe("the BOM's formats (§5.4)", () => {
   });
 });
 
+describe("a hole into the end a butt bears on (§3.4, acceptance gap A4)", () => {
+  async function g31(patch: unknown) {
+    const p = await openProject(join(FIXTURES, "golden-gen", "G31"));
+    return { d: derive(mergePatch(p.raw, patch), p.items), items: p.items };
+  }
+
+  it("refuses a hole that the spacer carries off the end face", async () => {
+    // A 40 mm spacer: the brace's centre line meets the spacer's face (x = 160) at y = 40, which
+    // is off the block's 40 x 40 end face (|y| ≤ 20).
+    const { d } = await g31({ connections: { c1: { spacer_mm: 40 } } });
+    expect(diags(d)).toEqual([["connection", "c1"]]);
+    expect(ops(d, "b1")).toEqual([]);
+  });
+
+  it("groups two blocks whose holes are the same once turned end for end", async () => {
+    // b1's hole is at its end b, 10 toward world +Y (its local x). Turned end for end that is end
+    // a, x -10. b3 runs along +X centred on y = 10 and takes a brace on its end a at y = 0: its
+    // hole is at end a, local x 0 - 10 = -10. The same piece.
+    const { d, items: its } = await g31({
+      bars: {
+        b3: { a: [-1000, 10, 0], b: [-880, 10, 0], label: "block, its end a toward the brace" },
+        b4: { a: [-2600, 1200, 0], b: [-1000, 0, 0], ends: { b: { cut: "angle" } } },
+      },
+      connections: {
+        c2: { type: "butt", through: "b3.a", ends: ["b4.b"], connector: "test-joint:END-AX" },
+      },
+    });
+    expect(diags(d)).toEqual([]);
+    const cl = cutList({ derived: d, items: its });
+    const blocks = cl.groups[0]?.lines.filter((l) => l.cut_mm === 120);
+    expect(blocks?.map((l) => [l.count, l.sources, l.machining])).toEqual([
+      [2, ["b1", "b3"], [{ op: "end-hole", from: "a", off_mm: [-10, 0], d_mm: 9 }]],
+    ]);
+  });
+});
+
 describe("joint recipes (§3.4, acceptance gap A2)", () => {
   // G30's bush joint: a T-slot bar butting into an RHS of no system, held by a bush in its core
   // and a sleeve in the RHS's bore, with a Ø9 hole through the RHS. The joint has no body.

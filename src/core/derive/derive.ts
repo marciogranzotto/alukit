@@ -62,7 +62,24 @@ export interface EndTapOp {
   by: string;
 }
 
-export type ResolvedOp = HoleOp | EndTapOp;
+/**
+ * A hole into a bar's end face, along its axis (acceptance gap A4): one a connector `requires` in
+ * the through bar of a butt that bears on that end (§4.5, G17). It stands where the butting bar's
+ * centre line, moved by the spacer, meets the end face: `off` from the section's box centre, in
+ * the section's x and y. Drilled `d` or tapped `thread`; `depth` along the axis, else through.
+ */
+export interface EndHoleOp {
+  op: "end-hole";
+  from: "a" | "b";
+  /** In the section's x and y, from its box centre; absent at the centre. */
+  off?: readonly [number, number];
+  d?: number;
+  thread?: string;
+  depth?: number;
+  by: string;
+}
+
+export type ResolvedOp = HoleOp | EndTapOp | EndHoleOp;
 
 export interface DerivedBar {
   placed: PlacedBar;

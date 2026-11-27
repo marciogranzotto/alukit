@@ -1,0 +1,16 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G31",
+  "catalogs": ["../../catalogs/test", "../../catalogs/test-geo", "../../catalogs/test-joint"],
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } },
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [120, 0, 0], "label": "block" },
+    "b2": { "a": [1720, 1210, 0], "b": [120, 10, 0], "ends": { "b": { "cut": "angle" } }, "label": "brace, 10 off the block's centre line" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1.b", "ends": ["b2.b"], "connector": "test-joint:END-AX" }
+  }
+}

@@ -82,6 +82,17 @@ function opJson(o: ResolvedOp) {
       by: o.by,
     };
   }
+  if (o.op === "end-hole") {
+    return {
+      op: o.op,
+      from: o.from,
+      ...(o.off ? { off_mm: [len(o.off[0]), len(o.off[1])] } : {}),
+      ...(o.d !== undefined ? { d_mm: len(o.d) } : {}),
+      ...(o.thread ? { thread: o.thread } : {}),
+      ...(o.depth !== undefined ? { depth_mm: len(o.depth) } : {}),
+      by: o.by,
+    };
+  }
   const across = o.across === undefined ? 0 : len(o.across);
   return {
     op: o.op,

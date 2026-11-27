@@ -22,6 +22,13 @@ export function machiningText(m: Machining): string {
   const depth = m.depth_mm === undefined ? "" : `, ${mm(m.depth_mm)} deep`;
   if (m.op === "end-tap") return `tap ${m.thread} in end ${m.from}${depth}`;
   const what = m.thread ? `tap ${m.thread}` : `Ø${m.d_mm === undefined ? "?" : mm(m.d_mm)} hole`;
+  if (m.op === "end-hole") {
+    const at = m.off_mm
+      ? `at x ${mm(m.off_mm[0])}, y ${mm(m.off_mm[1])} from the centre`
+      : "at the centre";
+    const how = m.depth_mm === undefined ? "through" : `${mm(m.depth_mm)} deep`;
+    return `${what} in end ${m.from} along the axis, ${at}, ${how}`;
+  }
   const across = m.across_mm === undefined ? "" : `, ${mm(m.across_mm)} across`;
   const cbore = m.cbore ? `, counterbore Ø${mm(m.cbore.d_mm)} × ${mm(m.cbore.depth_mm)}` : "";
   const csk = m.csk ? `, countersink Ø${mm(m.csk.d_mm)} at ${m.csk.angle_deg.toFixed(2)}°` : "";
