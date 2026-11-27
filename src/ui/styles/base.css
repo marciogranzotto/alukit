@@ -19,6 +19,36 @@ button {
   color: inherit;
 }
 
+/* A visible focus on everything the keyboard reaches (WCAG 2.4.7, 2.4.11); the ring is 5.7 to
+   7.3 : 1 on the panels in both themes. A pointer click shows none. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* Text for assistive technology only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Numbers align by digit: tabular figures wherever a number is a figure */
+.num,
+.n {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A number's trailing .00, dimmed: the precision stays and the figure reads first */
+.dim {
+  color: var(--text-3);
+}
+
 code {
   font: var(--fs-mono) / var(--lh-mono) var(--font-mono);
   word-break: break-all;
