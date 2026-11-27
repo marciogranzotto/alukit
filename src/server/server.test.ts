@@ -741,6 +741,32 @@ describe("the CLI through a running server (§7.1, §7.3)", () => {
     expect([session.undo.text, session.redo.text]).toEqual(["add point n2", "add bar b4"]);
   });
 
+  it("logs each step's commands in canonical form, which `alukit do` replays (A15)", async () => {
+    const r = await serve();
+    await capture(["add", "point", r.dir, "--at", "4,5,6"]);
+    await capture(["do", r.dir, '{"args":{"at":[1,2,3],"label":"x"},"cmd":"addNode"}']);
+    await capture(["undo", r.dir]);
+    const log = JSON.parse((await capture(["log", r.dir, "--json"])).out) as {
+      entries: { what: string; commands?: unknown[] }[];
+    };
+    expect(log.entries.map((e) => e.commands)).toEqual([
+      [{ cmd: "addNode", args: { at: [4, 5, 6] } }],
+      [{ cmd: "addNode", args: { at: [1, 2, 3], label: "x" } }],
+      undefined,
+    ]);
+    // Replayed with `alukit do`, one step per entry, on a copy of the project as it began.
+    const copy = await fixture();
+    for (const e of log.entries.slice(0, 2)) {
+      const d = await capture(["do", copy.dir, JSON.stringify(e.commands)]);
+      expect(d.code, d.err).toBe(0);
+    }
+    const diff = JSON.parse((await capture(["diff", copy.dir, r.dir, "--format", "json"])).out);
+    expect(diff.entities).not.toEqual([]);
+    await capture(["redo", r.dir]);
+    const same = JSON.parse((await capture(["diff", copy.dir, r.dir, "--format", "json"])).out);
+    expect(same).toMatchObject({ same: true, entities: [] });
+  });
+
   it("is refused while the project is read-only, naming why", async () => {
     const f = await fixture();
     const r = await serve(f);

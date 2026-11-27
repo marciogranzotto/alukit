@@ -36,9 +36,9 @@ const q6 = (x: number) => {
 
 /**
  * Move (E-UX-3; docs/ux/drag-ends-decisions.md, "The Move tool"): one `transform`, then an
- * `autoConnect` at each end of the bars it moves (the first 12), as drawing a bar sends one per
- * end, so an end that lands on a bar joins it by the corner rule. `detach` frees what joins the
- * selection to the rest (Alt).
+ * `autoConnect` at each end it moves (the first 24: both ends of each bar moved whole, then the
+ * ends a crossing box stretches), as drawing a bar sends one per end, so an end that lands on a
+ * bar joins it by the corner rule. `detach` frees what joins the selection to the rest (Alt).
  */
 export function transformBatch(
   set: MoveSet,
@@ -46,12 +46,11 @@ export function transformBatch(
   detach: boolean,
   prefer: string | undefined,
 ): Cmd[] {
-  const join = set.bars.slice(0, 12).flatMap((b) =>
-    (["a", "b"] as const).map((e) => ({
-      cmd: "autoConnect",
-      args: { end: `${b}.${e}`, optional: true, ...(prefer ? { prefer } : {}) },
-    })),
-  );
+  const moved = [...set.bars.flatMap((b) => [`${b}.a`, `${b}.b`]), ...(set.ends ?? [])];
+  const join = moved.slice(0, 24).map((end) => ({
+    cmd: "autoConnect",
+    args: { end, optional: true, ...(prefer ? { prefer } : {}) },
+  }));
   return [
     {
       cmd: "transform",

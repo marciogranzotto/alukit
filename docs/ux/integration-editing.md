@@ -70,17 +70,22 @@ the window's corners swapped (left to right) pass it (**measured**, a probe not 
 
 ## What the scenarios found
 
+*Since closed* (the editing polish, [polish-editing-decisions.md](polish-editing-decisions.md),
+cited as "pe"; design's "Editing polish, core"): gaps 1 and 2 and defects 4 and 6. A2 (ii), A6 and A14 (A6)
+pass, each ending in its CLI comparison; A3 runs by D, ↑, 150, Enter, and A15 replays
+`alukit log --json` itself. The entries below are as the integration found them, each marked.
+
 Gaps (the app cannot do it as built; listed in design §8, "What the editing round left for
 later"):
 
-1. **No stretch (A2 (ii)).** Move moves whole entities (`transform`, §6). A crossing box over the
+1. **Closed: a crossing box then Move stretches** (pe 1–7). **No stretch (A2 (ii)).** Move moves whole entities (`transform`, §6). A crossing box over the
    frame's right side takes the right posts and side rails and also the front and back rails that
    reach into it, which then move whole: their left ends land 60 mm off the left posts, six
    `end-far` warnings, and the cut list is not the 1100-wide frame's (**measured**). A window
    (left to right) takes only b2, b4, b8, b12 and b16, the rails butted on them follow, and the cut
    list is the 1100-wide frame's, byte for byte (**measured**). The audit assumed a crossing would
    stretch (its row 1); the guide teaches the window.
-2. **Mirror does not re-home a station part (A6).** `mirror` keeps a part on its bar's station, so
+2. **Closed: `mirror` lands on the bar at the image** (pe 8–11). **Mirror does not re-home a station part (A6).** `mirror` keeps a part on its bar's station, so
    a bracket on b1 mirrored across x = 500 is refused unless b1 is mirrored with it ("p1/on: b1 is
    not mirrored and the plane does not map it onto itself; include it", **measured** with
    `alukit do --dry-run`), and with b1 it copies the leg. Placing the second bracket on b2 works.
@@ -98,7 +103,7 @@ Defects and friction (the scenario passed by another path; for the designer revi
    covers the corner's centre: a press on `-x+y` goes to `+y` (**measured**: Playwright refuses
    the click, naming the dot that takes it). The anchor's list beside the dots works. Both are
    E4's (`ManyFields.tsx`, `AnchorDots.tsx`).
-4. **Move's arrow locks wait for a move (A3, A2 (ii)).** `→ ← ↑` are the move gesture's keys
+4. **Closed: the arrow locks start the move, wherever the focus is** (pe 14, 15). **Move's arrow locks wait for a move (A3, A2 (ii)).** `→ ← ↑` are the move gesture's keys
    (`wire/move.ts`), so they act once a drag or a first digit has started it; while a selection
    only waits, they go to what has the focus, the outline's head or row after selecting there
    (it opens, closes or moves) (**measured**: D, ↑, 150 left the move asking for a direction).
@@ -106,7 +111,7 @@ Defects and friction (the scenario passed by another path; for the designer revi
    (`0, 0, 150`) works, and the guide gives it.
 5. **A1 takes 10 clicks** (§12: ≤ 8): the shelf and "as params" are under More options, and the
    joint is a select (two). Its keys and time are within the target.
-6. **The log carries no arguments (A15).** `alukit log` keeps each step's command names (`what`)
+6. **Closed: the log keeps each step's commands** (pe 12, 13). **The log carries no arguments (A15).** `alukit log` keeps each step's command names (`what`)
    and words (`text`), so "replay the log's commands" cannot be done from it; the test replays the
    commands the app posted, read off its requests, one `alukit do` per step, and checks that the
    log names the same commands (call 107).

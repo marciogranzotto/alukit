@@ -607,9 +607,10 @@ export class ProjectHost {
     // first: otherwise this step's write would replace it unseen.
     await this.takeInFiles();
     const rev0 = this.rev;
-    const between = this.log().filter(
-      (e) => req.baseRev !== undefined && e.rev > req.baseRev && e.rev <= rev0,
-    );
+    // The revisions in between and their sources (§7.1); their commands are the log's alone.
+    const between = this.log()
+      .filter((e) => req.baseRev !== undefined && e.rev > req.baseRev && e.rev <= rev0)
+      .map(({ commands: _, ...e }) => e);
     if (this.statusValue.readOnly) {
       return { ok: false, kind: "read-only", status: this.statusValue, rev: rev0 };
     }

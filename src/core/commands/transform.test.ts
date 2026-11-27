@@ -271,3 +271,146 @@ describe("transform: turning", () => {
     expect(bars(n.state).b3).toEqual({ a: [500, 600, 0], b: [650, 340.19, 0] });
   });
 });
+
+describe("transform: an end alone stretches its bar (the editing polish, gap 1)", () => {
+  /** tests/fixtures/brace: posts b1–b4, base rails b5–b8, top rails b9–b12, butts c1–c8. */
+  const frame = () => stateOf(join(FIXTURES, "brace"));
+  const cuts = (s: State) =>
+    Object.fromEntries([...derived(s).bars].map(([id, b]) => [id, b.lengths.cut]));
+
+  it("moves a lone end, the other end staying: the bar stretches, in words", () => {
+    const r = run(braced(), move(["b3.b"], [0, -100, 0]));
+    expect(bars(r.state).b3).toEqual({ a: [500, 600, 0], b: [500, 200, 0] });
+    expect(r.text).toBe("move b3.b by [0, -100, 0], stretching b3");
+    expect(r.results[0]?.info).toEqual({
+      moved: ["b3"],
+      followed: [],
+      freed: [],
+      kept: [],
+      stretched: ["b3.b"],
+    });
+    // Off its axis, as STRETCH moves an endpoint: the bar turns about its other end.
+    const t = run(braced(), move(["b3.b"], [100, 0, 0]));
+    expect(bars(t.state).b3).toEqual({ a: [500, 600, 0], b: [600, 300, 0] });
+    canonical(t.state);
+  });
+
+  it("keeps a param an end reads: W moved by 100 is W + 100", () => {
+    const s = withDoc(braced(), {
+      params: { W: "500" },
+      bars: { ...(g01().doc.bars as object), b3: { a: ["W", 600, 0], b: ["W", 300, 0] } },
+    });
+    const r = run(s, move(["b3.a"], [100, 0, 0]));
+    expect(bars(r.state).b3).toEqual({ a: ["W + 100", 600, 0], b: ["W", 300, 0] });
+    expect(r.text).toBe("move b3.a by [100, 0, 0], stretching b3, keeping b3.a x: W + 100");
+  });
+
+  it("a crossing box over a frame's side: what it holds moves, the ends it holds stretch", () => {
+    const right = ["b2", "b4", "b8", "b12"];
+    const ends = ["b5.b", "b6.b", "b9.b", "b10.b"];
+    const stretch = run(frame(), move([...right, ...ends], [100, 0, 0]));
+    // The same document as a window over the side, whose joined rails follow; no joint changes.
+    const window = run(frame(), move(right, [100, 0, 0]));
+    expect(stretch.state.doc).toEqual(window.state.doc);
+    expect(stretch.state.doc.connections).toEqual(frame().doc.connections);
+    expect(bars(stretch.state).b5).toMatchObject({ a: [0, 0, 0], b: [1100, 0, 0] });
+    const before = cuts(frame());
+    const after = cuts(stretch.state);
+    for (const id of ["b5", "b6", "b9", "b10"]) expect(after[id]).toBe((before[id] ?? 0) + 100);
+    for (const id of ["b1", "b2", "b3", "b4", "b7", "b8", "b11", "b12"])
+      expect(after[id]).toBe(before[id]);
+    expect(diagnostics(stretch.state)).toEqual(diagnostics(frame()));
+    expect(stretch.text).toBe(
+      "move b2, b4, b8 and 5 more by [100, 0, 0], stretching b5, b6, b9 and b10",
+    );
+    // Moved whole instead, the front and back rails leave the left posts: the warnings the
+    // integration measured (end-far), which the stretch does not make.
+    const whole = run(frame(), move([...right, "b5", "b6", "b9", "b10"], [100, 0, 0]));
+    expect(diagnostics(whole.state)).not.toEqual(diagnostics(frame()));
+  });
+
+  it("an end that butts on a bar that stays: follow refuses, naming the joint; detach frees it", () => {
+    const [e] = refused(g01(), move(["b2.a"], [0, 0, 100]));
+    expect(e?.code).toBe("geometry");
+    expect(e?.message).toContain('give joined: "detach"');
+    const d = run(g01(), move(["b2.a"], [0, 0, 100], "detach"));
+    expect(bars(d.state).b2).toEqual({ a: [1000, 0, 100], b: [1000, 600, 0] });
+    expect(d.state.doc.connections).toEqual({});
+    expect(d.text).toBe("move b2.a by [0, 0, 100], stretching b2, freed from c1");
+  });
+
+  it("a through bar stretched along its axis keeps what butts on it; across, it carries it", () => {
+    // Along: b1 grows to 1100, b2 still butts on it where it did.
+    const along = run(g01(), move(["b1.b"], [100, 0, 0]));
+    expect(bars(along.state)).toEqual({
+      b1: { a: [0, 0, 0], b: [1100, 0, 0] },
+      b2: { a: [1000, 0, 0], b: [1000, 600, 0] },
+    });
+    expect(diagnostics(along.state)).toEqual(diagnostics(g01()));
+    // Across: b1's line rises at x = 1000, which b2's axis misses; follow refuses, naming c1,
+    // and detach frees b2 from it.
+    const [e] = refused(g01(), move(["b1.b"], [0, 0, 50]));
+    expect(e?.message).toContain("b2.a butts on b1 (c1) and cannot follow it along b2");
+    const d = run(g01(), move(["b1.b"], [0, 0, 50], "detach"));
+    expect(d.state.doc.connections).toEqual({});
+    expect(bars(d.state).b2).toEqual(bars(g01()).b2);
+  });
+
+  it("an end at a node takes the node with it, as a moved bar does", () => {
+    const s = withDoc(g01(), {
+      nodes: { n1: [1000, 0, 0] },
+      bars: { b1: { a: [0, 0, 0], b: "n1" }, b2: { a: "n1", b: [1000, 600, 0] } },
+      connections: {},
+    });
+    const r = run(s, move(["b1.b"], [0, 0, 100]));
+    expect(r.state.doc.nodes).toEqual({ n1: [1000, 0, 100] });
+    expect(r.results[0]?.info).toMatchObject({ followed: ["b2.a"], stretched: ["b1.b"] });
+    const d = run(s, move(["b1.b"], [0, 0, 100], "detach"));
+    expect(d.state.doc.nodes).toEqual({ n1: [1000, 0, 0] });
+    expect(bars(d.state).b1).toEqual({ a: [0, 0, 0], b: [1000, 0, 100] });
+  });
+
+  it("a free length: along its direction it changes; across, it is refused", () => {
+    const s = withDoc(braced(), {
+      bars: {
+        ...(g01().doc.bars as object),
+        b3: { a: [500, 600, 0], b: { len_mm: 300, dir: "-y" } },
+      },
+    });
+    expect(bars(run(s, move(["b3.b"], [0, -100, 0])).state).b3).toEqual({
+      a: [500, 600, 0],
+      b: { len_mm: 400, dir: "-y" },
+    });
+    // End a moved along it: end b stays, so the length takes up the move.
+    expect(bars(run(s, move(["b3.a"], [0, -100, 0])).state).b3).toEqual({
+      a: [500, 500, 0],
+      b: { len_mm: 200, dir: "-y" },
+    });
+    const [e] = refused(s, move(["b3.b"], [100, 0, 0]));
+    expect(e?.message).toBe(
+      "b3.b is a free length along -y from end a, which the move does not run along: move b3 whole, or along -y",
+    );
+    const [f] = refused(s, move(["b3.a"], [100, 0, 0]));
+    expect(f?.message).toBe(
+      "b3's end b is a free length along -y from end a, which the move does not run along: move b3 whole, or along -y",
+    );
+  });
+
+  it("an end named with its bar, or both ends, is the bar moved whole", () => {
+    const whole = run(braced(), move(["b3"], [100, 0, 0]));
+    expect(run(braced(), move(["b3", "b3.a"], [100, 0, 0])).state.doc).toEqual(whole.state.doc);
+    const both = run(braced(), move(["b3.a", "b3.b"], [100, 0, 0]));
+    expect(both.state.doc).toEqual(whole.state.doc);
+    expect(both.results[0]?.info).toEqual(whole.results[0]?.info);
+  });
+
+  it("refuses an end of a bar that is not there, and an end under a turn", () => {
+    const [e] = refused(g01(), move(["b9.a"], [10, 0, 0]));
+    expect(e).toMatchObject({ code: "missing", entity: "b9" });
+    const [f] = refused(braced(), turn(["b3.b"], "z", 90, [500, 600, 0]));
+    expect(f?.code).toBe("args");
+    expect(f?.message).toBe(
+      "b3.b is an end: a turn moves whole entities; turn b3, or move the end by an offset",
+    );
+  });
+});

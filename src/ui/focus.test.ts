@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { clearShow, hover, select, selection, show, shown } from "./focus.ts";
+import { clearShow, crossedEnds, hover, select, selection, show, shown } from "./focus.ts";
 import { hookFields } from "./hook.ts";
 import { model } from "./store.ts";
 import { SMALL } from "./testing.ts";
@@ -23,6 +23,38 @@ describe("select", () => {
     expect([...selection.value]).toEqual(["b1", "b3", "b4"]);
     select([], "replace");
     expect(selection.value.size).toBe(0);
+  });
+
+  it("keeps what a crossing box held in part, for the selection it made only", () => {
+    // A crossing box: b2 and b8 held whole, b5 and b9 crossed with their end b inside.
+    const crossed = new Map<string, ("a" | "b")[]>([
+      ["b5", ["b"]],
+      ["b9", ["b"]],
+    ]);
+    select(["b2", "b5", "b8", "b9"], "replace", crossed);
+    expect(crossedEnds()).toEqual(crossed);
+    // Another box added: b9 held whole now, b6 crossed at end b; b2 stays whole.
+    select(
+      ["b2", "b6", "b9"],
+      "add",
+      new Map<string, ("a" | "b")[]>([
+        ["b6", ["b"]],
+        ["b2", ["a"]],
+      ]),
+    );
+    expect(crossedEnds()).toEqual(
+      new Map([
+        ["b5", ["b"]],
+        ["b6", ["b"]],
+      ]),
+    );
+    // A window box adds nothing held in part; a click leaves the boxes' record behind.
+    select(["b4"], "add", new Map());
+    expect(crossedEnds()?.size).toBe(2);
+    select(["b4"], "toggle");
+    expect(crossedEnds()).toBeUndefined();
+    select(["b1"], "replace", new Map());
+    expect(crossedEnds()).toBeUndefined();
   });
 
   it("is the selection store.ts re-exports", async () => {

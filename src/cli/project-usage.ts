@@ -66,7 +66,8 @@ export const USAGE = {
   move: [
     "alukit move <dir> --ids <id,id,...> --by <dx,dy,dz> [--detach] [--dry-run] [--json] [--as <name>]",
     "    move nodes, bars, runs, parts or a pattern's template by an offset, as sugar over `do`",
-    "    (`transform`); joined ends follow, or --detach frees them; expressions keep their params",
+    "    (`transform`); joined ends follow, or --detach frees them; expressions keep their params;",
+    "    a bar end (b5.b) moves alone, its bar stretching while the other end stays",
   ],
   rotate: [
     "alukit rotate <dir> --ids <id,id,...> --axis x|y|z --deg <deg> --about <x,y,z> [--detach] [--dry-run] [--json] [--as <name>]",

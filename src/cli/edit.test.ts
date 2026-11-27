@@ -270,6 +270,78 @@ describe("alukit do", () => {
     ).toContain("--axis w: give x, y or z");
   });
 
+  it("stretches a frame with alukit move: the bars a crossing holds, and the ends it holds", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "brace");
+    const ids = "b2,b4,b8,b12,b5.b,b6.b,b9.b,b10.b";
+    const dry = await capture([
+      "move",
+      dir,
+      "--ids",
+      ids,
+      "--by",
+      "100,0,0",
+      "--dry-run",
+      "--json",
+    ]);
+    expect(dry.code, dry.err).toBe(0);
+    const answer = JSON.parse(dry.out);
+    expect(answer.results[0].info).toMatchObject({
+      followed: [],
+      stretched: ["b5.b", "b6.b", "b9.b", "b10.b"],
+    });
+    expect(answer.effects.cuts.b5).toEqual([920, 1020]);
+    const r = await capture(["move", dir, "--ids", ids, "--by", "100,0,0"]);
+    expect(r.code, r.err).toBe(0);
+    const doc = JSON.parse(read(join(dir, "alukit.json")));
+    expect(doc.bars.b5).toMatchObject({ a: [0, 0, 0], b: [1100, 0, 0] });
+    expect(doc.bars.b2).toMatchObject({ a: [1100, 0, 0], b: [1100, 0, 750] });
+    expect((await capture(["fmt", "--check", dir])).code).toBe(0);
+    // An end under a turn is refused, in the core's words.
+    const t = await capture([
+      "rotate",
+      dir,
+      "--ids",
+      "b5.b",
+      "--axis",
+      "z",
+      "--deg",
+      "90",
+      "--about",
+      "0,0,0",
+    ]);
+    expect(t.code).toBe(1);
+    expect(t.err).toContain("b5.b is an end: a turn moves whole entities");
+  });
+
+  it("mirrors a bracket on one post onto the post at its image with alukit do mirror", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "brace");
+    const place = await capture([
+      "do",
+      dir,
+      '{"cmd":"addPart","args":{"item":"test:BRK-40","on":{"bar":"b1","face":"+x","at_mm":300}}}',
+    ]);
+    expect(place.code, place.err).toBe(0);
+    const mirror = '{"cmd":"mirror","args":{"ids":["p1"],"plane":{"axis":"x","at_mm":500}}}';
+    const dry = JSON.parse((await capture(["do", dir, mirror, "--dry-run", "--json"])).out);
+    expect(dry.effects.parts.p2).toMatchObject({ item: "test:BRK-40", bar: "b2", s_mm: 300 });
+    const r = await capture(["do", dir, mirror]);
+    expect(r.code, r.err).toBe(0);
+    expect(JSON.parse(read(join(dir, "alukit.json"))).parts.p2).toEqual({
+      item: "test:BRK-40",
+      on: { bar: "b2", face: "-x", at_mm: 300 },
+    });
+    // Across x = 400 no post stands at b1's image: refused, saying so.
+    const no = await capture([
+      "do",
+      dir,
+      '{"cmd":"mirror","args":{"ids":["p1"],"plane":{"axis":"x","at_mm":400}}}',
+    ]);
+    expect(no.code).toBe(1);
+    expect(no.err).toContain("b1 is not mirrored, and no bar stands at its image across x = 400");
+  });
+
   it("reads a batch from a file and from standard input; --as tags the source", async () => {
     const { root, dir } = await g01();
     const file = join(root, "batch.json");

@@ -162,7 +162,7 @@ export function Viewport({
     );
     offs.push(theme.subscribe((t) => v.setTheme(viewTheme(t))));
     if (!snapshot) {
-      v.onSelect((ids, mode) => select(ids, mode));
+      v.onSelect((ids, mode, crossed) => select(ids, mode, crossed));
       v.onHover((id) => {
         if (id !== undefined) hover.value = { ids: [id], from: "view" };
         else if (hover.peek()?.from === "view") hover.value = undefined;

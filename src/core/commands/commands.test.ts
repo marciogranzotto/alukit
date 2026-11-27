@@ -769,6 +769,101 @@ describe("mirror", () => {
     ).toMatchObject([{ code: "geometry", refs: ["n1"] }]);
   });
 
+  describe("onto the bar standing at the image (the editing polish, gap 2)", () => {
+    /** tests/fixtures/brace (posts b1–b4, base b5–b8, top b9–b12) and its batch's state. */
+    const frame = () => stateOf(join(FIXTURES, "brace"));
+    const run = (s: State, ...commands: object[]) => {
+      const r = applyBatch(s, commands, { ...ENV, live });
+      if (!r.ok) throw new Error(`refused: ${JSON.stringify(r.failed)}`);
+      for (const c of commands) exercised.add((c as { cmd: string }).cmd);
+      return r;
+    };
+    /** A bracket on the front-left post's inner face, 300 up (scenario A6). */
+    const bracketed = () =>
+      run(frame(), {
+        cmd: "addPart",
+        args: { item: "test:BRK-40", on: { bar: "b1", face: "+x", at_mm: 300 } },
+      }).state;
+    const parts = (s: State) => s.doc.parts as Record<string, Record<string, unknown>>;
+
+    it("re-homes a part on a bar outside the set onto the bar at that bar's image", () => {
+      const s = bracketed();
+      const r = run(s, { cmd: "mirror", args: { ids: ["p1"], plane: { axis: "x", at_mm: 500 } } });
+      expect(r.results[0]?.created).toEqual(["p2"]);
+      // b1's image across x = 500 is b2, the front-right post: the bracket lands on its inner
+      // face (-x), 300 up, and b1 stays as it is.
+      expect(parts(r.state).p2).toEqual({
+        item: "test:BRK-40",
+        on: { bar: "b2", face: "-x", at_mm: 300 },
+      });
+      expect(r.results[0]?.info).toMatchObject({ copies: { p1: "p2" }, onto: { b1: "b2" } });
+      const d = derived(r.state);
+      const p1 = d.parts.get("p1");
+      const p2 = d.parts.get("p2");
+      expect(p2).toMatchObject({ placed: true, bar: "b2", s: 300 });
+      // The image of the bracket: its landing point and origin reflected across x = 500.
+      const r2 = (p: readonly number[]) => p.map((x) => Math.round(x * 100) / 100 + 0);
+      const image = (p: readonly number[]) => r2([1000 - (p[0] as number), p[1] ?? 0, p[2] ?? 0]);
+      if (!p1?.placed || !p2?.placed) throw new Error("not placed");
+      expect(r2(p2.point)).toEqual(image(p1.point));
+      expect(r2(p2.origin)).toEqual(image(p1.origin));
+      expect(errorsOf(d)).toEqual(errorsOf(derived(s)));
+    });
+
+    it("puts a part mirrored with its bar on the bar's copy", () => {
+      const r = run(bracketed(), {
+        cmd: "mirror",
+        args: { ids: ["b1", "p1"], plane: { axis: "x", at_mm: 500 } },
+      });
+      expect(r.results[0]?.created).toEqual(["b13", "p2"]);
+      expect(parts(r.state).p2).toEqual({
+        item: "test:BRK-40",
+        on: { bar: "b13", face: "-x", at_mm: 300 },
+      });
+      expect(r.results[0]?.info).not.toHaveProperty("onto");
+    });
+
+    it("re-homes a brace's end and its butt the same way, whatever refers to the bar", () => {
+      const s = run(
+        frame(),
+        { cmd: "addBar", args: { a: { on: { bar: "b1", at_mm: 300 } }, b: [500, 0, 600] } },
+        { cmd: "addConnection", args: { type: "butt", through: "b1", ends: ["b13.a"] } },
+      ).state;
+      const r = run(s, {
+        cmd: "mirror",
+        args: { ids: ["b13", "c9"], plane: { axis: "x", at_mm: 500 } },
+      });
+      const bars = r.state.doc.bars as Record<string, Record<string, unknown>>;
+      expect(bars.b14).toEqual({ a: { on: { bar: "b2", at_mm: 300 } }, b: [500, 0, 600] });
+      expect((r.state.doc.connections as Record<string, unknown>).c10).toEqual({
+        type: "butt",
+        through: "b2",
+        ends: ["b14.a"],
+      });
+      const g0 = geometry(derived(r.state));
+      expect(g0.b14).toMatchObject({ A: [1000, 0, 300], B: [500, 0, 600], cut: g0.b13?.cut });
+    });
+
+    it("keeps the refusal where no bar stands at the image, and says so", () => {
+      const s = bracketed();
+      const [e] = no(s, { cmd: "mirror", args: { ids: ["p1"], plane: { axis: "x", at_mm: 400 } } });
+      expect(e).toMatchObject({ code: "geometry", refs: ["b1"] });
+      expect(e?.message).toBe(
+        "p1/on: b1 is not mirrored, and no bar stands at its image across x = 400; include b1",
+      );
+      // A bar on the image's line that is not its mirror image (another anchor) is no home.
+      const moved = run(s, { cmd: "setBar", args: { id: "b2", set: { anchor: "-x-y" } } }).state;
+      const [f] = no(moved, {
+        cmd: "mirror",
+        args: { ids: ["p1"], plane: { axis: "x", at_mm: 500 } },
+      });
+      expect(f).toMatchObject({ code: "geometry", refs: ["b1", "b2"] });
+      expect(f?.message).toBe(
+        "p1/on: b1 is not mirrored, and b2 stands on its image's line but is not its mirror image (another section or placement); include b1",
+      );
+    });
+  });
+
   it("mirrors a part at a world pose: position reflected, rotation turned over", () => {
     const env = { ...ENV, live };
     const r = applyBatch(
@@ -955,7 +1050,13 @@ describe("addFrame (BE-6)", () => {
     const r = h.apply([{ cmd: "addFrame", args: { size: [1000, 600, 800] } }], ENV, "ui");
     expect(r.ok).toBe(true);
     expect(h.log()).toEqual([
-      { rev: 1, source: "ui", what: "addFrame", text: "add a box frame of 12 bars and 8 butts" },
+      {
+        rev: 1,
+        source: "ui",
+        what: "addFrame",
+        text: "add a box frame of 12 bars and 8 butts",
+        commands: [{ cmd: "addFrame", args: { size: [1000, 600, 800] } }],
+      },
     ]);
     const p = h.apply(
       [{ cmd: "addFrame", args: { size: [1000, 600, 800], at: [2000, 0, 0], params: true } }],
@@ -1508,6 +1609,59 @@ describe("batches and history (§6)", () => {
     expect(step([{ cmd: "setProject", args: { name: "Cart 2", price_basis: "sale" } }])?.text).toBe(
       "change the project's name and price basis",
     );
+  });
+
+  it("keeps each step's commands in canonical form, so the log alone replays the session", () => {
+    const h = new History(cart());
+    const apply = (commands: object[], source: string) => {
+      const r = h.apply(commands, ENV, source);
+      if (!r.ok) throw new Error(JSON.stringify(r.failed));
+    };
+    // Arguments sent in any key order; the log keeps them as each command's schema reads them.
+    apply(
+      [
+        { cmd: "addBar", args: { b: [0, -20, 600], a: [0, -20, 0] } },
+        { args: { optional: true, end: "b35.b" }, cmd: "autoConnect" },
+      ],
+      "ui",
+    );
+    apply([{ cmd: "setParam", args: { value: 1300, name: "W" } }], "agent:a");
+    h.undo("ui");
+    h.redo("cli");
+    apply([{ cmd: "label", args: { label: "Front rail", id: "b1" } }], "ui");
+    h.undo("ui");
+    h.record({ ...h.current, doc: { ...h.current.doc, name: "by hand" } }, "file");
+    const log = h.log();
+    expect(JSON.stringify(log[0]?.commands)).toBe(
+      JSON.stringify([
+        { cmd: "addBar", args: { a: [0, -20, 0], b: [0, -20, 600] } },
+        { cmd: "autoConnect", args: { end: "b35.b", optional: true } },
+      ]),
+    );
+    expect(log[1]?.commands).toEqual([{ cmd: "setParam", args: { name: "W", value: 1300 } }]);
+    // An undo, a redo and a file edit carry no commands: an undo names the step it took back.
+    expect(log.map((e) => e.commands === undefined)).toEqual([
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+    ]);
+    expect(log[2]).toMatchObject({ what: "undo setParam", of: 2 });
+
+    // The log replayed (a step's commands, an undo, a redo) gives the same document, up to the
+    // file edit, which no command makes.
+    const r = new History(cart());
+    for (const e of log.slice(0, 6)) {
+      if (e.commands) {
+        const x = r.apply(e.commands, ENV, e.source);
+        expect(x.ok, e.what).toBe(true);
+      } else if (e.what.startsWith("undo ")) expect(r.undo().ok).toBe(true);
+      else if (e.what.startsWith("redo ")) expect(r.redo().ok).toBe(true);
+    }
+    expect(projectText(r.current.doc)).toBe(projectText(h.undoStep?.before.doc ?? {}));
   });
 
   it("undo and redo restore the document and the lock byte for byte", () => {

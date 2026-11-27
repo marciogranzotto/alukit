@@ -71,6 +71,14 @@ export interface Gestures {
   cancel(): void;
   /** Draws the gesture again where the pointer was last: after an option it reads changed. */
   refresh(): void;
+  /**
+   * A tool's keys that start its gesture while a selection waits for one (Rotate's X, Y and Z,
+   * Move's arrow locks): asked in the keys' capture phase with the focus on an element, as a live
+   * gesture's keys are, so a key a focused row takes for itself (the outline's arrows) starts the
+   * gesture instead; with the focus on the page, the tool's own `onKey` handler, the same function,
+   * takes it. True from the handler when it started one. Returns the undo.
+   */
+  starting(handler: (e: KeyboardEvent) => boolean): () => void;
   dispose(): void;
 }
 
@@ -123,14 +131,18 @@ export function createGestures(_viewer: Viewer): Gestures {
    * back to the row, would otherwise lose its arrows and Enter to the row, which takes them for
    * itself before the window hears them. Asked in the capture phase, only with the focus on an
    * element (with it on the page, the window's keys route as always), and never in a text field,
-   * a dialog or a menu, whose keys are theirs.
+   * a dialog or a menu, whose keys are theirs. With no gesture on, the keys that start one while
+   * a selection waits are asked the same way (`starting`; docs/ux/polish-editing-decisions.md).
    */
+  const starters = new Set<(e: KeyboardEvent) => boolean>();
   const capture = (e: KeyboardEvent) => {
-    if (!spec || chord(e) || typingIn(e.target)) return;
+    if (chord(e) || typingIn(e.target)) return;
+    if (!spec && starters.size === 0) return;
     const t = e.target as HTMLElement | null;
     if (!t || typeof t.closest !== "function" || t === document.body) return;
     if (t.closest('[role="dialog"], [role="menu"]')) return;
-    if (api.key(e)) {
+    const took = spec ? api.key(e) : [...starters].some((h) => h(e));
+    if (took) {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -214,7 +226,14 @@ export function createGestures(_viewer: Viewer): Gestures {
     refresh() {
       spec?.update(last);
     },
+    starting(handler) {
+      starters.add(handler);
+      return () => {
+        starters.delete(handler);
+      };
+    },
     dispose() {
+      starters.clear();
       offTyped();
       if (typeof window !== "undefined") window.removeEventListener("keydown", capture, true);
       if (spec) end();

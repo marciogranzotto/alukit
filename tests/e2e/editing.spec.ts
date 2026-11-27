@@ -338,19 +338,17 @@ test("A2 (i): widen it by 100 by editing W", async ({ page }) => {
   expect(await cutList(served.dir)).toBe(await frameCutList(1100, true));
 });
 
-test.fixme("A2 (ii): on a frame without params, cross-select the right side and move it +100 along X", async ({
+test("A2 (ii): on a frame without params, cross-select the right side and move it +100 along X", async ({
   page,
 }) => {
-  // As built, Move moves whole entities; it does not stretch. A box drawn right to left over the
-  // right side also takes the front and back rails that reach into it, so they move whole: their
-  // left ends land 60 mm off the left posts (six `end-far` warnings) and the cut list is not the
-  // 1100-wide frame's (measured: this test, run). A window (left to right) takes only the right
-  // posts and side rails, b2, b4, b8, b12 and b16, and the rails butted on them follow,
-  // stretching: with the same steps that cut list is the 1100-wide frame's, byte for byte
-  // (measured, the window's corners swapped). A stretch for a crossing box is not built. The
-  // offset is typed: Move's arrow locks act once a move is on, not while a selection waits.
+  // A box drawn right to left over the right side is a crossing: it holds the right posts and
+  // side rails whole, b2, b4, b8, b12 and b16, and crosses the front and back rails, b5, b6, b9,
+  // b10, b13 and b14, with their ends b inside it. Move then stretches those (the editing
+  // polish's gap 1, AutoCAD's STRETCH): the bars held whole move, the ends inside move, the
+  // ends outside stay, so the frame widens.
   test.setTimeout(120_000);
   served = await serveFrame([], FRAME_NUMBERS);
+  const sent = sentSteps(page);
   await openTab(page, served, 0);
   const u = new User(page);
   await u.click(page.getByTestId("projection"));
@@ -365,13 +363,40 @@ test.fixme("A2 (ii): on a frame without params, cross-select the right side and 
   await page.mouse.up();
   await page.keyboard.up("Shift");
   u.clicks++;
+  // Move, the X lock, 100, Enter (§12's keys).
   await u.press("d");
-  await u.type("100, 0, 0");
+  await u.press("ArrowRight");
+  await u.type("100");
+  await expect(page.getByTestId("command-result")).toContainText("[100, 0, 0]");
   await u.press("Enter");
   await waitDrawn(page, 1);
   u.done();
   u.report("A2 (ii)", 1);
   expect(await cutList(served.dir)).toBe(await frameCutList(1100, false));
+  // One step: a transform of what the box held whole and the ends it held.
+  const STRETCH = [
+    "b12",
+    "b16",
+    "b2",
+    "b4",
+    "b8",
+    "b10.b",
+    "b13.b",
+    "b14.b",
+    "b5.b",
+    "b6.b",
+    "b9.b",
+  ];
+  expect(sent).toHaveLength(1);
+  const step = sent[0] as { cmd: string; args: { ids?: string[] } }[];
+  expect(step[0]?.cmd).toBe("transform");
+  expect(step[0]?.args.ids).toEqual(STRETCH);
+  // The project `alukit move` makes of the same ids.
+  await sameAsCli(served.dir, async (dir) => {
+    await doAll(dir, FRAME_NUMBERS);
+    const r = await cli(["move", dir, "--ids", STRETCH.join(","), "--by", "100,0,0"]);
+    expect(r.code, r.err).toBe(0);
+  });
 });
 
 test("A3: move the shelf up 150", async ({ page }) => {
@@ -381,13 +406,15 @@ test("A3: move the shelf up 150", async ({ page }) => {
   const before = await derived(served.dir);
   const diagnosed = await diagnosticsOf(served.dir);
   const u = new User(page);
-  // The shelf ring by its tag's head in the outline, then Move (D), the offset typed, Enter. Not
-  // ↑ then 150: Move's arrow locks act once a move is on, and before it ↑ went to the outline's
-  // head (measured: the lock was not set, and the move asked for a direction).
+  // The shelf ring by its tag's head in the outline, then Move (D), ↑, 150, Enter (§12's keys):
+  // the arrow lock starts the move while the selection waits, with the focus still on the
+  // outline's head, which no longer takes it (the editing polish's defect 4).
   await selectTag(u, page, "shelf");
   await expect.poll(() => selection(page)).toEqual(SHELF);
   await u.press("d");
-  await u.type("0, 0, 150");
+  await expect(page.getByTestId("tree").locator(":focus")).toHaveCount(1);
+  await u.press("ArrowUp");
+  await u.type("150");
   await expect(page.getByTestId("command-result")).toContainText("[0, 0, 150]");
   await u.press("Enter");
   await waitDrawn(page, 1);
@@ -508,18 +535,11 @@ test("A5: a diagonal brace in the back plane, 100 above the bottom-left corner t
   }
 });
 
-test.fixme("A6: an angle bracket on the front-left leg's inner face at 300, mirrored to the front-right leg", async ({
-  page,
-}) => {
-  // Placing it works (the Place tool, 300 typed, a click on b1's face +x). Mirroring it does not:
-  // `mirror` keeps a part on its bar's station, so a bracket on b1 mirrored across x = 500 is
-  // refused unless b1 is mirrored with it ("p1/on: b1 is not mirrored and the plane does not map
-  // it onto itself; include it"), and with b1 it makes a copy of the leg, not a bracket on b2. A
-  // mirror that re-homes a station part onto the bar at its image is not built.
-  test.setTimeout(120_000);
-  served = await serveFrame();
-  await openTab(page, served, 0);
-  const u = new User(page);
+/** A6's mirror as the CLI sends it: the bracket across x = 500 (W / 2). */
+const MIRROR = [{ cmd: "mirror", args: { ids: ["p1"], plane: { axis: "x", at_mm: 500 } } }];
+
+/** A6's bracket placed as a person does: the catalog's card, Use for placing, 300, b1's face. */
+async function placeBracket(u: User, page: Page): Promise<void> {
   await u.click(page.getByTestId("left-catalog"));
   await u.fill(page.getByTestId("catalog-search"), "CT38-06");
   await u.click(page.locator('.card[data-id="forseti:CT38-06"]'));
@@ -527,17 +547,49 @@ test.fixme("A6: an angle bracket on the front-left leg's inner face at 300, mirr
   await u.type("300");
   await u.clickAt(await screen(page, [40, 20, 120]));
   await waitDrawn(page, 1);
-  await selectByIds(page, ["p1"]);
-  const s = await screen(page, [500, 300, 0]);
-  await u.clickAt(s, { button: "right" });
-  await u.click(page.getByTestId("context-menu").getByRole("menuitem", { name: /^Mirror/ }));
-  await u.type("=W / 2");
-  await u.press("Enter");
-  await waitDrawn(page, 2);
+}
+
+/** The bracket on b2's inner face at 300, and the project the CLI makes of the same steps. */
+async function expectMirrored(sent: unknown[][]): Promise<void> {
+  const dir = served?.dir as string;
+  // `alukit derive` lands it on b2 at 300; the document names the face, b2's inner one (-x).
+  expect((await derived(dir)).parts.p2).toMatchObject({ bar: "b2", s_mm: 300 });
+  const parts = (await docOf(dir)).parts as Record<string, { on?: unknown }>;
+  expect(parts.p2?.on).toEqual({ bar: "b2", face: "-x", at_mm: 300 });
+  // The placement is A9's bracket; the mirror, one step, is `alukit do mirror`'s.
+  expect(sent).toEqual([BRACKET, MIRROR]);
+  await sameAsCli(dir, (d) => doAll(d, FRAME, BRACKET, MIRROR));
+}
+
+test("A6: an angle bracket on the front-left leg's inner face at 300, mirrored to the front-right leg", async ({
+  page,
+}) => {
+  // The bracket sits on b1, which is not mirrored; b1's image across x = 500 is b2, the
+  // front-right leg, so the copy lands on b2's inner face at 300 (the editing polish's gap 2).
+  test.setTimeout(120_000);
+  served = await serveFrame();
+  const sent = sentSteps(page);
+  await openTab(page, served, 0);
+  const u = new User(page);
+  await placeBracket(u, page);
   u.done();
-  u.report("A6", 2);
-  const parts = (await derived(served.dir)).parts;
-  expect(parts.p2).toMatchObject({ bar: "b2", face: "-x", s_mm: 300 });
+  u.report("A6, place", 1);
+  // The mirror, timed alone (§12: ≤ 20 s for the mirror): Esc leaves the Place tool (the menu's
+  // Mirror… works in Select or Move, and says so), then the menu's Mirror…, W / 2, Enter.
+  const v = new User(page);
+  await v.press("Escape");
+  await expect(page.getByTestId("tool-select")).toHaveAttribute("aria-pressed", "true");
+  await selectByIds(page, ["p1"]);
+  await v.clickAt(await screen(page, [500, 300, 0]), { button: "right" });
+  await v.click(page.getByTestId("context-menu").getByRole("menuitem", { name: /^Mirror/ }));
+  await v.type("=W / 2");
+  await expect(page.getByTestId("joint-preview")).toContainText("makes p2");
+  await v.press("Enter");
+  await waitDrawn(page, 2);
+  v.done();
+  v.report("A6, mirror", 1);
+  expect(await lastStepWords(served.dir)).toBe("mirror p1, making p2 on b2");
+  await expectMirrored(sent);
 });
 
 test("A7: duplicate the top front rail 300 down, joined to the legs", async ({ page }) => {
@@ -884,10 +936,30 @@ test("A14 (A3 by mouse): the shelf up 150 with the pointer and a typed value", a
   });
 });
 
-test.fixme("A14 (A6 by mouse): the bracket placed and mirrored with the pointer", async () => {
-  // Waits on A6: the mirror of a part on one leg onto the other is refused by the core (A6's
-  // reason). Placing it by the pointer works: the catalog's card, Use for placing, a click on the
-  // face with the distance typed.
+test("A14 (A6 by mouse): the bracket placed and mirrored with the pointer", async ({ page }) => {
+  test.setTimeout(120_000);
+  served = await serveFrame();
+  const sent = sentSteps(page);
+  await openTab(page, served, 0);
+  const u = new User(page);
+  // Placed by the pointer, the distance typed (allowed): A6's placement.
+  await placeBracket(u, page);
+  u.done();
+  u.report("A14 (A6 by mouse), place", 1);
+  // The mirror: Select on the rail (Mirror… works in Select or Move), a right-click on the
+  // bracket's outline row selects it and opens the menu; Mirror…, the plane's place typed
+  // (allowed), a click in the view commits it.
+  const v = new User(page);
+  await v.click(page.getByTestId("tool-select"));
+  await v.click(page.getByTestId("tree").locator('[data-id="p1"]').first(), { button: "right" });
+  await v.click(page.getByTestId("context-menu").getByRole("menuitem", { name: /^Mirror/ }));
+  await v.type("500");
+  await expect(page.getByTestId("joint-preview")).toContainText("makes p2");
+  await v.clickAt(await screen(page, [500, 300, 0]));
+  await waitDrawn(page, 2);
+  v.done();
+  v.report("A14 (A6 by mouse), mirror", 1);
+  await expectMirrored(sent);
 });
 
 test("A14 (A10 by mouse): the back top rail deleted from the menu, undone from the top bar", async ({
@@ -964,13 +1036,13 @@ test("A15: agent parity: the session's commands replayed with alukit do give the
   await page.keyboard.press("Delete");
   await page.getByTestId("delete-dialog").getByTestId("delete-confirm").click();
   await waitDrawn(page, 5);
-  // `alukit log` names each step's commands but not their arguments, so what is replayed is what
-  // the app sent, read off its requests: one `alukit do` per step.
+  // `alukit log --json` keeps each step's commands (the editing polish's defect 6): the session
+  // is replayed from the log alone, one `alukit do` per step, and they are what the app sent.
   const log = JSON.parse((await cli(["log", served.dir, "--json"])).out) as {
-    entries: { what: string }[];
+    entries: { what: string; commands?: unknown[] }[];
   };
-  expect(log.entries.map((e) => e.what)).toEqual(
-    sent.map((b) => (b as { cmd: string }[]).map((c) => c.cmd).join(", ")),
-  );
-  await sameAsCli(served.dir, (dir) => doAll(dir, ...sent));
+  const steps = log.entries.map((e) => e.commands ?? []);
+  expect(steps).toHaveLength(5);
+  expect(steps).toEqual(sent);
+  await sameAsCli(served.dir, (dir) => doAll(dir, ...steps));
 });

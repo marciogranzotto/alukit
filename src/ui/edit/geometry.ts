@@ -33,6 +33,8 @@ export interface Members {
   bars: readonly string[];
   parts: readonly string[];
   nodes: readonly string[];
+  /** Bar ends that move alone, their bars stretching (`b5.b`, a crossing box's). */
+  ends?: readonly string[];
 }
 
 /** A selection's ids sorted by kind, as the model knows them; pattern copies and others left out. */
@@ -63,6 +65,11 @@ function pointsOf(m: Model, set: Members): V3[] {
   for (const p of set.parts) {
     const at = m.derived.parts[p]?.point ?? m.derived.parts[p]?.origin;
     if (at) pts.push(at);
+  }
+  for (const ref of set.ends ?? []) {
+    const [id, e] = ref.split(".");
+    const bar = id ? m.derived.bars[id] : undefined;
+    if (bar) pts.push(e === "a" ? bar.a : bar.b);
   }
   return pts;
 }
@@ -149,6 +156,37 @@ export function ghostsOf(m: Model, bars: readonly string[], map: WorldMap, max =
       len: norm(sub(b.ends.b.point, a)),
       shift: view.shift,
     });
+  }
+  return out;
+}
+
+/**
+ * Bars stretched by a move of some of their ends (`b5.b`, a crossing box's), drawn where the
+ * move would put them: the moved end's face by the offset, the other where it is, the section
+ * kept as square to the new axis as it can be (its x axis with the new axis taken out). Local,
+ * as every preview is (E-UX-20); the dry run says what the core makes of it.
+ */
+export function stretchedGhosts(m: Model, ends: readonly string[], d: V3, max = 48): GhostBar[] {
+  const by = new Map<string, Set<string>>();
+  for (const ref of ends) {
+    const [id, e] = ref.split(".") as [string, string];
+    by.set(id, (by.get(id) ?? new Set()).add(e));
+  }
+  const out: GhostBar[] = [];
+  for (const [id, es] of [...by].slice(0, max)) {
+    const b = m.derived.bars[id];
+    const view = m.display.bars[id];
+    const section = view ? m.display.sections[view.section] : undefined;
+    if (!b || !view || !section) continue;
+    const a = es.has("a") ? add(b.ends.a.point, d) : b.ends.a.point;
+    const z = es.has("b") ? add(b.ends.b.point, d) : b.ends.b.point;
+    const length = norm(sub(z, a));
+    if (length < 1e-9) continue;
+    const t = scale(sub(z, a), 1 / length);
+    const x0 = sub(b.frame.x, scale(t, dot(b.frame.x, t)));
+    const x = norm(x0) > 1e-9 ? scale(x0, 1 / norm(x0)) : b.frame.y;
+    const y: V3 = [t[1] * x[2] - t[2] * x[1], t[2] * x[0] - t[0] * x[2], t[0] * x[1] - t[1] * x[0]];
+    out.push({ section, x, y, t, a, len: length, shift: view.shift });
   }
   return out;
 }

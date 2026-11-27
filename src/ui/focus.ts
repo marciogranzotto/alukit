@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals";
 import { compareIds } from "#core/ids.ts";
 import type { Ref } from "#core/problems/types.ts";
-import type { SelectMode } from "../viewer/scene.ts";
+import type { CrossedEnds, SelectMode } from "../viewer/scene.ts";
 import { extendHook } from "./hook.ts";
 import type { Model } from "./model.ts";
 import { model } from "./store.ts";
@@ -17,7 +17,7 @@ import { resolveTargets } from "./targets.ts";
  * the drawn model from store.ts only when `show` runs, so the two import each other safely.
  */
 
-export type { Ref, SelectMode };
+export type { CrossedEnds, Ref, SelectMode };
 
 /** The selected refs: entities, ends' bars, copies, and corners (`corner:<key>`). */
 export const selection = signal<ReadonlySet<string>>(new Set());
@@ -53,17 +53,44 @@ export interface Shown {
 }
 export const shown = signal<Shown | undefined>(undefined);
 
-export function select(ids: readonly string[], mode: SelectMode): void {
-  if (mode === "replace") {
-    selection.value = new Set(ids);
-    return;
+/**
+ * What the boxes that made the selection held only in part (docs/ux/polish-editing-decisions.md,
+ * AutoCAD's STRETCH): for each bar a crossing box took without holding it whole, its ends inside
+ * the box (none, one or both). It belongs to the selection those boxes made, by identity: any
+ * other change of the selection (a click, the outline, a verb) leaves it behind. Move reads it
+ * (`crossedEnds`): those bars stretch, their ends inside moving and the rest staying.
+ */
+let crossing: { of: ReadonlySet<string>; ends: CrossedEnds } | undefined;
+
+/** The bars the selection's crossing boxes held in part, and their ends inside; or undefined. */
+export function crossedEnds(sel: ReadonlySet<string> = selection.peek()): CrossedEnds | undefined {
+  return crossing && crossing.of === sel && crossing.ends.size > 0 ? crossing.ends : undefined;
+}
+
+/**
+ * Selects ids. A box gives `crossed` (empty for a window): an added box keeps what the boxes
+ * before it held in part, except a bar it holds whole, or one that was selected whole already.
+ */
+export function select(ids: readonly string[], mode: SelectMode, crossed?: CrossedEnds): void {
+  const before = selection.peek();
+  if (mode === "replace") selection.value = new Set(ids);
+  else {
+    const next = new Set(before);
+    for (const id of ids) {
+      if (mode === "toggle" && next.has(id)) next.delete(id);
+      else next.add(id);
+    }
+    selection.value = next;
   }
-  const next = new Set(selection.value);
-  for (const id of ids) {
-    if (mode === "toggle" && next.has(id)) next.delete(id);
-    else next.add(id);
+  if (!crossed) return;
+  const prior = mode === "replace" ? undefined : crossedEnds(before);
+  const ends = new Map(prior ?? []);
+  for (const id of ids) if (!crossed.has(id)) ends.delete(id);
+  for (const [id, e] of crossed) {
+    const wholeBefore = mode !== "replace" && before.has(id) && !prior?.has(id);
+    if (!wholeBefore) ends.set(id, e);
   }
-  selection.value = next;
+  crossing = { of: selection.peek(), ends };
 }
 
 let shows = 0;
