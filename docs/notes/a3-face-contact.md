@@ -142,6 +142,13 @@ Every bar runs along +X, so local x is world +Y and local y world +Z (§4.4).
 - **Every committed fixture derives byte for byte as before** (**verified**: `derive --json` and
   the cut list of the cart, G1–G28, the order fixture and both base frames, with the code before
   and after this change, compared in-process). G1–G28 and the cart's tests pass unchanged.
+- **On a full frame with angle layers** (the v1 acceptance frame, which lives outside the repo),
+  only its angle joints moved (**verified**, the same comparison): four joints of an angle T-nutted
+  to a T-slot profile, grip 79.99 to **10.14** (the angle's 76.2 box plus the groove's lip, now its
+  6.35 leg plus the lip), and two M12 stacks of angle, RHS and angle, 252.40 to **112.70**
+  (6.35 + 100 + 6.35). Their holes are now listed from the legs' outer faces. No error appeared or
+  went away. With the gap closed, that frame's block on the inner face of an angle's leg can now
+  be written as a layer of its stack.
 
 ## Performance
 
