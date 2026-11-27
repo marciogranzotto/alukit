@@ -502,6 +502,57 @@ below: E3, but the line on `wire/ends.ts`, E4's.*
   shows the one they set (it was a flag), so another user's gizmo shown since stays.
 - **The tools' router** (`wiring.ts`): Select's grab remembers the pointer (where a paste starts).
 
+## Editing round: E4 changes
+
+*Stream E4 of the [editing audit](editing-audit.md) ([e4-decisions.md](e4-decisions.md)): bars and
+ends. Each adds; E0's interfaces keep their members. Owner of everything below: E4, but the lines
+marked with another owner, whose files E4 changed by the smallest addition.*
+
+- **The view model** (`src/server/view.ts`, E1's; `src/ui/model.ts`): `claims`, derive's providers
+  of each bar end (`"b13.a"` → `["c9"]`), every one whether or not its plane resolved. Not part of
+  `alukit.derived/1`.
+- **End words** (`src/ui/inspector/words.ts`): `endWords` reads `claims` (D2), naming the joint
+  that claims an end and why it fails; `planeWords(plane)`, an end's own plane in words.
+- **End edits** (`src/ui/inspector/endEdits.ts`, new, pure): `endFields`, `planeKind`,
+  `endPatch(m, bar, end, set)`, `faceStops`, `endStopsNear`, `detachBatch`, `planeBatch`,
+  `pickedPlane(m, pick, hit)`, `EndPick` (`{ bar, end, kind: "face" | "end" }`). The rows
+  (`Ends.tsx`: `EndRows`) carry `row-end-{e}`, `end-cut-{e}`, `end-extend-{e}`, `end-plane-{e}`,
+  `end-face-{e}`, `end-flush-{e}`, `end-pick-{e}`, `end-detach-{e}`, `end-pick-note`.
+- **The end pick** (`src/ui/tools/wire/ends.ts`): `endPick`, a signal (`EndPick` and an optional
+  `why`); while set, the end handles' grab takes the next press in Select, sends the plane, and
+  clears it; Esc (scope `tool`), another selection or another tool clears it.
+- **The bar's actions** (`src/ui/inspector/barActions.ts`, new): `barActions()` registers
+  `split-here`, `split-at`, `reverse` and `add-hole` (group `bar`), returning the undo;
+  `splitAsked` and `holeAsked`, the forms the menu opens; `splitHere(c)`, `holeHere(c)`,
+  `runOf(m, bar)`, `oneBar(c)`. The inspector registers them while it is shown.
+- **The action row** (`src/ui/inspector/ActionRow.tsx`, new): `ActionRow({ m, ids, groups })`,
+  buttons `action-{id}` for the registry's actions in those groups (Delete, Join and Replace have
+  their own rows).
+- **Batches** (`src/ui/edit/batches.ts`, E3's): `splitBatch` built (E4.3, its body E4's).
+- **The anchor dots** (`src/ui/common/AnchorDots.tsx`, new): `AnchorDots({ bbox, datums, anchors,
+  value, onPick, disabled?, size? })`, the section's dots on the `.cb-anchor-pad` classes. The
+  command bar's `AnchorPicker` (`src/ui/tools/CommandBar.tsx`, E3's) renders it; its markup is
+  unchanged.
+- **Holes** (`src/ui/inspector/holes.ts`, new, pure): `holesOf`, `holeWords`, `sizeText`,
+  `parseSize`, `parseLength`, `holeOp`, `addHole`, `changeHole`, `removeHole`, `FACES`; the rows
+  (`Holes.tsx`: `HoleRows`) carry `hole-{i}` with `-face`, `-at`, `-from`, `-size`, `-depth`,
+  `-remove`, and the form `hole-form` (`hole-face`, `hole-at`, `hole-from`, `hole-size`,
+  `hole-depth`, `hole-add`), `hole-new`.
+- **Several selected** (`src/ui/inspector/many.ts`, new, pure): `shared`, `manyBars`, `labelled`,
+  `optionBatch`, `anchorBatch`, `rollBatch`, `labelBatch`, `tagsOf`, `tagBatch`; `ManyFields.tsx`
+  (`many-fields`, `many-opt-{name}`, `many-anchor`, `many-roll`, `many-label`, `many-tags`).
+- **Lengths** (`src/ui/inspector/length.ts`): `LengthEnd` (`"b" | "a" | "middle"`),
+  `lengthMode(m, id, which)`, `lengthPatch(m, id, typed, which)`, `TypedLength`; the select
+  `field-length-end`.
+- **Nodes** (`src/ui/inspector/node.ts`, new, pure): `nodePlace`, `NodePlace`, `moveNodeAt`,
+  `moveNodeOn`, `nodeUsers`; `NodeFields.tsx` (`row-node-users`, `field-node-{x,y,z}`,
+  `field-node-bar`, `-at`, `-from`, `-face`).
+- **The bar's rows** (`BarFields.tsx`): `OffsetRow` (`row-offset`, `field-off-x`, `field-off-y`),
+  the anchor's dots in `row-anchor`, `SplitForm` (`split-form`, `split-at`, `split-splice`,
+  `split-apply`).
+- **Styles** (`src/ui/styles/inspector.css`): `.end-edit`, `.end-pick`, `.insp-actions`,
+  `.split-form`.
+
 ## Editing round: E0
 
 *Stream E0 of the [editing audit](editing-audit.md) (§7.2) built the shared interfaces the editing
