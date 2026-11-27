@@ -1,0 +1,502 @@
+/*
+ * The app's shell: its grid, the top bar, the banners, the side columns, the outline, the
+ * catalog browser, and the sheets' container (the drawer and its tabs). Owner: S2.
+ */
+
+.app {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  height: 100%;
+}
+
+/* Top bar */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+
+.topbar .brand {
+  font-weight: 700;
+}
+
+.topbar .project {
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 30ch;
+}
+
+.topbar button {
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 3px 10px;
+  cursor: pointer;
+  max-width: 24ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.topbar .spacer {
+  flex: 1;
+}
+
+.topbar .rev {
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar .conn {
+  font-size: var(--fs-tiny);
+  padding: 1px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+
+.topbar .conn.live {
+  color: var(--ready);
+}
+
+.topbar .conn.lost,
+.topbar .conn.refused,
+.topbar .conn.no-token {
+  color: var(--blocked);
+}
+
+.topbar .notice {
+  color: var(--text-2);
+  max-width: 50ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar .notice.error {
+  color: var(--blocked);
+}
+
+.topbar .restore {
+  border-color: var(--act-line);
+}
+
+.topbar .variant {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.topbar select,
+.topbar input {
+  background: var(--bg-well);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 2px 4px;
+  font: inherit;
+}
+
+.revisions-anchor {
+  position: relative;
+}
+
+.popover.revisions {
+  top: calc(100% + 4px);
+  min-width: 340px;
+  max-width: 460px;
+  gap: 6px;
+}
+
+.popover.revisions button {
+  max-width: none;
+}
+
+.revision-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.revision-list li {
+  padding: 4px 0;
+  border-top: 1px solid var(--line);
+}
+
+/* Banners: read-only, no access */
+
+.banner {
+  padding: 8px 12px;
+  background: var(--blocked-wash);
+  border-bottom: 1px solid var(--blocked);
+  color: var(--blocked-ink);
+}
+
+.banner ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.banner .hint {
+  display: block;
+  color: var(--blocked-ink-2);
+  font-size: var(--fs-small);
+}
+
+/* Main area */
+
+/* The banners (rows 2 and 3) render only when they have something to say: the main area and the
+   drawer name their rows, or with no banner the main area is placed in an auto row and the 1fr row
+   lies empty below it (the viewport shrinks to the tree's height). */
+.main {
+  grid-row: 4;
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr minmax(220px, 320px);
+  min-height: 0;
+}
+
+.left,
+.right {
+  background: var(--bg-panel);
+  overflow: auto;
+  min-height: 0;
+}
+
+.left {
+  border-right: 1px solid var(--line);
+}
+
+.right {
+  border-left: 1px solid var(--line);
+}
+
+/* Tree */
+
+.tree-tools {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-panel);
+}
+
+.tree-tools input[type="search"] {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-well);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 2px 6px;
+}
+
+.tree-tools label {
+  font-size: var(--fs-tiny);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.tree section > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree .group {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tree .count {
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+.tree .row {
+  width: 100%;
+  display: flex;
+  gap: 6px;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 2px 8px 2px 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tree .row:hover {
+  background: var(--bg-raised);
+}
+
+.tree .row.selected {
+  background: var(--sel-wash);
+  color: var(--sel-text);
+}
+
+.tree .row.error .id {
+  color: var(--blocked);
+}
+
+.tree .row.copy .id {
+  font-style: italic;
+}
+
+.tree .row .text {
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The sheets' container: the drawer and its tabs */
+
+.drawer {
+  grid-row: 5;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.drawer.open {
+  height: 32vh;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 5px 10px;
+  cursor: pointer;
+  color: var(--text-2);
+}
+
+.tab[aria-selected="true"] {
+  color: var(--text-1);
+  border-bottom-color: var(--mark-active);
+}
+
+.badge {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--blocked);
+  color: var(--status-ink);
+  font-size: var(--fs-tiny);
+}
+
+.drawer-body {
+  overflow: auto;
+  padding: 6px 10px;
+  min-height: 0;
+  flex: 1;
+}
+
+/* Left: project tree and catalog browser */
+
+.left-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.ltab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--text-2);
+}
+
+.ltab.on {
+  color: var(--text-1);
+  border-bottom-color: var(--mark-active);
+}
+
+.catalog select {
+  background: var(--bg-well);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 1px 4px;
+  max-width: 9em;
+}
+
+.cat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ctree .cat-list {
+  padding-left: 12px;
+}
+
+.cat-node,
+.cat-leaf {
+  width: 100%;
+  display: flex;
+  gap: 6px;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cat-node {
+  font-weight: 600;
+}
+
+.cat-node.on,
+.cat-leaf.selected {
+  color: var(--mark-active-text);
+}
+
+.cat-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.catalog .count {
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+.catalog .list-count {
+  padding: 4px 8px;
+  margin: 0;
+  font-size: var(--fs-tiny);
+}
+
+.catalog .card {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--line);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.catalog .card:hover,
+.catalog .card.selected {
+  background: var(--bg-raised);
+}
+
+.catalog .card-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.catalog .card-text .sub {
+  font-size: var(--fs-tiny);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thumb {
+  flex: none;
+  fill: var(--text-1);
+  background: var(--bg-well);
+  border-radius: 3px;
+}
+
+.thumb.none {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+  text-transform: uppercase;
+}
+
+.card-detail {
+  margin: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--bg-raised);
+}
+
+.card-detail .card-head {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.card-detail .card-head > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-detail .close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-2);
+}
+
+.cd-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.cd-primary {
+  background: var(--act-fill);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 2px 8px;
+  cursor: pointer;
+  margin: 6px 0;
+  border-color: var(--act-line);
+}
+
+.card-detail td.prov-est {
+  color: var(--warn);
+}
+
+/* Snapshot mode (§7.3): the viewport alone */
+
+.app.snapshot {
+  display: block;
+}

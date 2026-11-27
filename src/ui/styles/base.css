@@ -1,0 +1,96 @@
+/* The page and the elements every region shares: text, code, buttons, popovers. Owner: S4. */
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg-app);
+  color: var(--text-1);
+  font: var(--fs-body) / var(--lh-body) var(--font-sans);
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+code {
+  font: var(--fs-mono) / var(--lh-mono) var(--font-mono);
+  word-break: break-all;
+}
+
+.sub {
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-empty {
+  padding: 12px;
+  color: var(--text-3);
+}
+
+.msg-error {
+  color: var(--blocked);
+}
+
+.popover {
+  position: absolute;
+  z-index: 10;
+  right: 0;
+  top: 1.5em;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 200px;
+  max-width: 280px;
+  padding: 6px 8px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-float);
+  font-size: var(--fs-small);
+}
+
+.popover p {
+  margin: 0;
+}
+
+.popover .note {
+  color: var(--text-3);
+}
+
+/* A row of controls, and the small button every panel and form uses */
+
+.tp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.tp-btn {
+  background: var(--bg-panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.tp-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

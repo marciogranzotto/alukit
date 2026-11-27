@@ -1,0 +1,90 @@
+/*
+ * The viewport: the canvas, box select, the bar over it (the tools' slot and the view controls:
+ * standard views, projection, fit, the section plane), and snapshot mode. Owner: S3.
+ */
+
+.viewport {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.viewport canvas {
+  display: block;
+  touch-action: none;
+}
+
+.select-box {
+  position: absolute;
+  border: 1px dashed var(--sel);
+  background: color-mix(in srgb, var(--sel) 8%, transparent);
+  pointer-events: none;
+}
+
+/* The bar over the viewport: the tool buttons (the `left` slot) and the view controls */
+
+.toolbar {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  pointer-events: none;
+}
+
+.toolbar .tb {
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: var(--fs-small);
+}
+
+.toolbar .tb.on {
+  border-color: var(--mark-active);
+  color: var(--mark-active-text);
+}
+
+.toolbar .tb:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.toolbar .sep {
+  width: 10px;
+}
+
+.toolbar .section-tools {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.toolbar .section-at {
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+}
+
+.section-range {
+  width: 160px;
+  accent-color: var(--mark-active);
+}
+
+.toolbar .section-at .num {
+  min-width: 9ch;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Snapshot mode (§7.3): the viewport alone */
+
+.viewport.snapshot {
+  position: fixed;
+  inset: 0;
+}
