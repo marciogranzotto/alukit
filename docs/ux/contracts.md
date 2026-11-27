@@ -166,3 +166,45 @@ S1 changed the contracts above only by adding, and built the clients. Its decisi
 | The box frame | `src/core/commands/frame.ts` | `addFrame`, whose answer's `info` is `{ posts, rings: { base?, shelf?, top? }, connections, params? }`: what S5.7's tool and S2's start card read (drop 2) |
 | Restore | `POST /api/restore` | `kept`, the paths of the files kept in `.alukit/rejected/` (drop 2) |
 | The catalog list | `src/catalog/search.ts` | `CatalogEntry.from`, `{ minor, currency?, per }` (`FromPrice`, `src/core/order/price.ts`; drop 2) |
+
+## S2 changes
+
+S2 ([s2-decisions.md](s2-decisions.md)) changed these contracts. Each adds, except the two marked
+**changed**.
+
+- **Changed: the status bar is not in the viewport's `bottom` slot.** It sits under the viewport in
+  the canvas column (`App.tsx`), so it never covers the scene; `bottom` is the command bar's alone
+  (S5). `centre` holds the start card, the coach strip and the read-only "last good state" label;
+  `topRight` the toasts.
+- **Changed: `params` is no longer a sheet.** The params are in the project panel (D-UX-4);
+  `records/Params.tsx` exports `ParamsTable` and `pointParam(name)`, which a problem's param fix
+  calls (`problems/Fixes.tsx`, an S2 cross-edit). The sheet ids are S4's six.
+- **Sheets** (`sheets/registry.ts`): `setSheets({ open?, max?, height? }, remember?)`, `sheetsMax`,
+  `sheetsHeight`, `SHEETS_HEIGHT`, `firstOutputPending`; `openSheet(id, { maximize })` maximizes.
+  A sheet's body sits in `.drawer-body`, as before.
+- **The store** (`store.ts`): `problems` is filled for each drawn revision (`fetchProblems`, in the
+  tab's variant and date). `tell(text, error, refs?)` raises a notice, which is
+  `{ text, error, refs?, n }` and shows as a toast. `sendCommands(commands, what, { strict?, inline? })`:
+  `inline` keeps a refusal out of the toasts, for a form that shows it under itself; S4's and S5's
+  forms do not pass it yet. `heard` holds the `rev` events the tab heard, with when (`heardAt(rev)`).
+  `restore()` answers `{ ok, rev?, kept: string[], message? }`.
+- **Keys** (`keys.ts`): `letterKeys` and `setLetterKeys(on)`, the single-key switch (app-scope
+  handlers do not see one printable character while it is off); `isCharacterKey(e)`.
+  `describeKeys({ id, title, order, rows })` puts a section in help and returns its undo; help shows
+  `tools` (10), `drawing` (20), `view` (50) and `app` (60) itself until S5 and S3 describe those ids.
+- **Focus** (`focus.ts`): `showKey(e)`, Esc leaving Show, which `App.tsx` registers at app scope,
+  priority 10. S3's viewport registers its own: one goes at the merge.
+- **Steps** (`steps.ts`): `who(source)`, `isOwn`, `stepWords(step)` (`text`, else `what`),
+  `whoWhat`, `ago(ms)`, `diffModels(before, after)`, `hasConsequences`, `summaryText`.
+- **Shell modules** (`shell/`): `start.ts`'s `frameWay` is the box frame's form: S5.7 sets it to a
+  component taking `{ onDone }`, and the start card shows it as its first way in. `startShown`,
+  `showStart()`, `dismissStart()`. `readiness()` is the order's state for the pill.
+  `prefs.ts`'s `readPref`/`writePref` guard every storage access.
+- **Catalog** (`catalog/`): `arm(card, opt)` arms the palette and switches tool; `cardOf(id)` caches
+  `/api/catalog/item`; `Card.tsx` exports `OptionSelects` and `useOptions`. `options.ts`'s
+  `optionFields(options, offers, defaults)` is the one place an item's options are offered.
+- **The project panel** has `data-testid="project-panel"`; it keeps the hint "Select a bar, part or
+  connection…" at its foot.
+- **Requested from S1**: `/api/catalog` listing the built-in catalogs (`builtins: [{ id, name,
+  vendor, profiles }]`), so the start card and settings can add one with one click (D-UX-6). Until
+  then they take a built-in id typed in Project settings.

@@ -1226,8 +1226,19 @@
   font-size: var(--fs-tiny);
 }
 
+.start-way {
+  min-width: 0;
+}
+
 .start-way .cd-row {
   margin: 0;
+}
+
+/* A profile's whole name is long: the select stays inside its way and clips it */
+.start-way select {
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
 }
 
 .start-links {
