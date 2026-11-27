@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { GENERATORS } from "../sections/generators/index.ts";
-import { DatumName, Face, IsoDate, LocalId, Ref, SourceRef, Vec2 } from "./common.ts";
+import { DatumName, Face, IsoDate, LocalId, Ref, SourceRef, Thread, Vec2 } from "./common.ts";
 
 /**
  * A section file, `sections/<id>.json` (design §3.5): one section, in mm, about its nominal
@@ -23,6 +23,21 @@ export const GrooveAt = z.strictObject({
 });
 
 export { DatumName };
+
+/**
+ * A core of a drawn section (§3.5, §5.5): a hole of its outline that an end tap is cut in, at the
+ * hole's centre, with the bore's diameter the drawing prints and the threads the vendor labels it
+ * with. A `tslot` section's cores are its generator's `bores`.
+ */
+export const CoreAt = z.strictObject({
+  at_mm: Vec2.describe("its centre, in section coordinates"),
+  d_mm: z.number().positive().describe("the bore's diameter, which a tap's fit is judged by"),
+  threads: z
+    .array(Thread)
+    .min(1)
+    .optional()
+    .describe("the threads the vendor labels the core with, each of which fits it (§5.5)"),
+});
 
 const common = {
   schema: z.literal(SECTION_SCHEMA),
@@ -55,6 +70,10 @@ export const DrawnSection = z.strictObject({
   holes: z.array(RingSchema).optional(),
   bbox_mm: Box2.describe("the nominal box, which cut lengths use (§3.5)"),
   grooves: z.array(GrooveAt).optional(),
+  cores: z
+    .array(CoreAt)
+    .optional()
+    .describe("the holes that are cores, where an end tap is cut; absent when not known"),
   datums: z.record(DatumName, Vec2).optional(),
 });
 

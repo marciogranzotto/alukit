@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Vec2 } from "#core/section-properties.ts";
-import { Face, Ref } from "../../schema/common.ts";
+import { Face, Ref, Thread } from "../../schema/common.ts";
 import { combine, disc, type Part, rect, triangle } from "../closed-form.ts";
 import { circle } from "../geometry.ts";
 import { box2, type GeneratedGroove, type Generator, type GrooveDims } from "./types.ts";
@@ -31,10 +31,18 @@ export const TslotParams = z.strictObject({
     .describe("default: one groove centred on each face"),
   bores: z
     .array(
-      z.strictObject({ at_mm: z.tuple([z.number(), z.number()]), d_mm: z.number().positive() }),
+      z.strictObject({
+        at_mm: z.tuple([z.number(), z.number()]),
+        d_mm: z.number().positive(),
+        threads: z
+          .array(Thread)
+          .min(1)
+          .optional()
+          .describe("the threads the vendor labels the core with, each of which fits it (§5.5)"),
+      }),
     )
     .optional()
-    .describe("core bores: centre and diameter"),
+    .describe("core bores: centre, diameter and the vendor's thread labels"),
 });
 export type TslotParams = z.infer<typeof TslotParams>;
 
@@ -255,7 +263,15 @@ export const tslot: Generator<TslotParams> = {
       grooves,
       datums: {},
       // The bores are its cores, where an end tap is cut (§5.5); with none given, not known.
-      ...(p.bores ? { cores: p.bores.map((b) => ({ at_mm: b.at_mm, d_mm: b.d_mm })) } : {}),
+      ...(p.bores
+        ? {
+            cores: p.bores.map((b) => ({
+              at_mm: b.at_mm,
+              d_mm: b.d_mm,
+              ...(b.threads ? { threads: b.threads } : {}),
+            })),
+          }
+        : {}),
     };
   },
 

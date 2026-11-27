@@ -1,6 +1,6 @@
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { checkCatalog } from "#catalog/check.ts";
 import { openCatalog } from "#catalog/open.ts";
 import { ConnectorItem } from "#catalog/schema/items.ts";
@@ -9,8 +9,8 @@ import { referrers } from "../commands/refs.ts";
 import { rewriteEntity } from "../commands/rewrite.ts";
 import { cutList } from "../cutlist/cutlist.ts";
 import { machiningText } from "../cutlist/format.ts";
-import type { ItemSource } from "../items.ts";
-import { openProject } from "../project/open.ts";
+import { catalogItems, type ItemSource } from "../items.ts";
+import { openLiveCatalogs, openProject } from "../project/open.ts";
 import { editJson, FIXTURES, mergePatch, scratchFixtures } from "../testing.ts";
 import { derive } from "./derive.ts";
 import { derivedJson } from "./output.ts";
@@ -327,6 +327,53 @@ describe("an end tap on its section's cores (§5.5)", () => {
     expect(machining(derive(raw, on))).toEqual([]);
   });
 
+  it("is a machining error where a tap on a core does not fit it, and an info where it cannot tell", async () => {
+    // An M8 on one of TS80's Ø13.7 cores: 13.7 is wider than M8's largest minor diameter, 6.647 +
+    // 0.265 = 6.912 (6H), so the thread would be shallow.
+    const p = await project("G34");
+    const raw = mergePatch(p.raw, {
+      bars: { b3: null },
+      connections: { c1: { connector: "test-stud:TAP-AT" }, c2: null },
+    });
+    const at = (thread: string) =>
+      derive(
+        raw,
+        withTapAt(p.items, "test-stud:TAP-AT", [
+          { op: "end-tap", on: "butting", thread, at_mm: [[20, 20]] },
+        ]),
+      );
+    expect(errors(at("M8"))).toEqual([["machining", "b2"]]);
+    expect(machining(at("M8"))).toEqual([
+      [
+        "error",
+        "b2",
+        ["c1"],
+        "the tap M8 in end a at x 20.00, y 20.00 from the centre (c1) does not fit the Ø13.70 core of test-stud:TS80 it is on: the core is wider than M8's largest minor diameter, 6.912 (6H), so the thread would be shallow",
+      ],
+    ]);
+    // An M20 there: its tap drill 17.50 would take 3.80 off the core, more than its 2.50 pitch.
+    expect(machining(at("M20"))).toEqual([
+      [
+        "error",
+        "b2",
+        ["c1"],
+        "the tap M20 in end a at x 20.00, y 20.00 from the centre (c1) does not fit the Ø13.70 core of test-stud:TS80 it is on: M20's tap drill, 17.50, would drill it up 3.80, more than one pitch (2.50)",
+      ],
+    ]);
+    // A thread with no tap drill here: on a core, so the place is right; the fit is not judged.
+    expect(errors(at("1/2-13 UNC"))).toEqual([]);
+    expect(machining(at("1/2-13 UNC"))).toEqual([
+      [
+        "info",
+        "b2",
+        ["c1"],
+        "the tap 1/2-13 UNC in end a at x 20.00, y 20.00 from the centre (c1) is on the Ø13.70 core of test-stud:TS80; its fit is not checked: AluKit has no tap drill and 6H tolerance for 1/2-13 UNC",
+      ],
+    ]);
+    // The M16 the core is sized for fits it, drilled up 0.30 to its 14.00 tap drill.
+    expect(machining(at("M16"))).toEqual([]);
+  });
+
   it("checks a splice's taps in both spliced ends, and a through bar's end taps", async () => {
     // One stud at (10, 5): in b2's end b and b3's end a, each in its own section. TS80's nearest
     // core is (20, 20), √(10² + 15²) = 18.03 off.
@@ -415,5 +462,129 @@ describe("an end tap on its section's cores (§5.5)", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("an end tap on a Forseti section's cores, labelled by the vendor (§3.5, §5.5)", () => {
+  // PF40-03B, the 80x80 básico (p. 20): four Ø13.7 (M16) cores at (±20, ±20), an open channel at
+  // the centre, and four Ø5 (M6) corner holes 4.5 in from both faces, at (±35.5, ±35.5). PF40-03,
+  // the reforçado (p. 21), has the same cores, read from its vector outline.
+  let items: ItemSource;
+  beforeAll(async () => {
+    const live = await openLiveCatalogs(FIXTURES, {
+      catalogs: ["forseti", "./catalogs/test", "./catalogs/ref-test", "./catalogs/test-stud"],
+    });
+    expect(live.diagnostics).toEqual([]);
+    const base = catalogItems(live.set);
+    const bush = base.item("test-stud:BUSH-END");
+    if (!bush.ok) throw new Error(bush.message);
+    items = {
+      ...base,
+      item: (ref) => {
+        const m = /^test-stud:TAP_(M\d+)_(-?[\d.]+)_(-?[\d.]+)$/.exec(ref);
+        if (!m) return base.item(ref);
+        // A connector for Forseti's bases 40 and 20 that taps the butting end at one place, and
+        // does nothing else.
+        const item = ConnectorItem.parse({
+          ...bush.item,
+          fits: ["forseti:s40-c8", "forseti:s20-c6"],
+          mounts: undefined,
+          requires: [
+            { op: "end-tap", on: "butting", thread: m[1], at_mm: [[Number(m[2]), Number(m[3])]] },
+          ],
+        });
+        return { ok: true, id: ref, item };
+      },
+    };
+  });
+
+  /** b2, a post of the section, butts through b1, of the same, with a tap at (x, y) in its end a. */
+  const post = (section: string, thread: string, x: number, y: number) => {
+    const bar = { item: `forseti:${section}`, opt: { finish: "anodised" } };
+    return derive(
+      {
+        schema: "alukit.project/1",
+        bars: {
+          b1: { ...bar, a: [0, 0, 0], b: [600, 0, 0] },
+          b2: { ...bar, a: [300, 0, 0], b: [300, 0, 500] },
+        },
+        connections: {
+          c1: {
+            type: "butt",
+            through: "b1",
+            ends: ["b2.a"],
+            connector: `test-stud:TAP_${thread}_${x}_${y}`,
+          },
+        },
+      },
+      items,
+    );
+  };
+  const machining = (d: ReturnType<typeof derive>) =>
+    d.diagnostics
+      .filter((x) => x.code === "machining")
+      .map((x) => [x.severity, x.entity, x.message]);
+
+  for (const section of ["PF40-03B", "PF40-03"]) {
+    it(`${section}: an M6 in a corner hole passes, and an M16 on a module core`, () => {
+      // M6's tap drill, 6 − 1 = 5.00, is the Ø5 hole; M16's, 14.00, drills the Ø13.7 core up 0.30.
+      const corner = post(section, "M6", 35.5, -35.5);
+      expect(corner.diagnostics.filter((x) => x.severity === "error")).toEqual([]);
+      expect(machining(corner)).toEqual([]);
+      expect(machining(post(section, "M16", -20, 20))).toEqual([]);
+    });
+
+    it(`${section}: an M16 in a corner hole is a machining error: on a core, and not fitting it`, () => {
+      // Not its label, M6, so the cut-thread rule: M16's tap drill, 14.00, is 9.00 over the Ø5
+      // hole, more than its 2.00 pitch.
+      expect(machining(post(section, "M16", 35.5, -35.5))).toEqual([
+        [
+          "error",
+          "b2",
+          `the tap M16 in end a at x 35.50, y -35.50 from the centre (c1) does not fit the Ø5.00 core of forseti:${section} (labelled M6) it is on: M16's tap drill, 14.00, would drill it up 9.00, more than one pitch (2.00)`,
+        ],
+      ]);
+    });
+
+    it(`${section}: any tap at the centre is a machining error: it has no core there`, () => {
+      for (const thread of ["M6", "M16"]) {
+        expect(machining(post(section, thread, 0, 0))).toEqual([
+          [
+            "error",
+            "b2",
+            `the tap ${thread} in end a at the centre (c1) is on no core of forseti:${section}; the nearest, 28.28 off: x -20.00, y -20.00; x -20.00, y 20.00; x 20.00, y -20.00; x 20.00, y 20.00 from the centre`,
+          ],
+        ]);
+      }
+    });
+  }
+
+  it("passes an M5 in a 20-series Ø4.6 core, the thread the vendor labels it with", () => {
+    // The 20x60 V-slot's drawing prints "Ø4,6 (M5)" (p. 11); the 40x40 V-slot's and the 40x80C's
+    // cores are M5 by the shop's description. By the cut-thread rule 4.6 is wider than M5's
+    // 4.334; Ø4.6 is a forming tap's pre-hole, and the vendor's label sanctions it.
+    expect(machining(post("PF20-14", "M5", 0, 20))).toEqual([]);
+    expect(machining(post("PF20-15", "M5", 0, 0))).toEqual([]);
+    expect(machining(post("PF20-13", "M5", -10, 30))).toEqual([]);
+  });
+
+  it("passes an M6 and an M5 in PF20-21's Ø6 core, which the shop's description labels both", () => {
+    // "Centro permite rosca: M5 / M6" (the shop); the drawing (PF20-01's, p. 10) prints Ø6 and no
+    // thread. Neither would pass as a cut thread: Ø6 is wider than M6's 5.153 and M5's 4.334.
+    expect(machining(post("PF20-21", "M6", 0, 0))).toEqual([]);
+    expect(machining(post("PF20-21", "M5", 0, 0))).toEqual([]);
+  });
+
+  it("judges a thread the drawing does not label as a cut thread: M5 in the 20x40's Ø5 (M6)", () => {
+    // p. 11 prints the 20x40 V-slot's cores Ø5 (M6), and the drawing's label wins over the shop's
+    // M5: an M5 there is cut, and Ø5 is wider than its 4.334.
+    expect(machining(post("PF20-12", "M5", 0, 10))).toEqual([
+      [
+        "error",
+        "b2",
+        "the tap M5 in end a at x 0.00, y 10.00 from the centre (c1) does not fit the Ø5.00 core of forseti:PF20-12 (labelled M6) it is on: the core is wider than M5's largest minor diameter, 4.334 (6H), so the thread would be shallow",
+      ],
+    ]);
+    expect(machining(post("PF20-12", "M6", 0, 10))).toEqual([]);
   });
 });

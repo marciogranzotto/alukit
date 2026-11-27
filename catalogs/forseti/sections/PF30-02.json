@@ -8,7 +8,7 @@
     "method": "vector",
     "scale": "width 60 mm",
     "read": "2026-11-26",
-    "note": "vector path of 1269 segments; the outline is the stroke centreline. Drawn 60x30, turned 90° counter-clockwise into the section frame. Centred on its box, coordinates rounded to 0.0001 mm."
+    "note": "vector path of 1269 segments; the outline is the stroke centreline. Drawn 60x30, turned 90° counter-clockwise into the section frame. Centred on its box, coordinates rounded to 0.0001 mm. Cores: the holes whose inscribed circle is a bore the page prints (Ø12.1 ×2, each within 0.15 mm), centred on the hole to 0.1 mm. The cores are labelled M14 by the drawing on p. 15."
   },
   "bbox_mm": [[-15, -30], [15, 30]],
   "grooves": [
@@ -18,6 +18,10 @@
     { "face": "+y", "at_mm": 0, "type": "c8-30" },
     { "face": "-x", "at_mm": -15, "type": "c8-30" },
     { "face": "-x", "at_mm": 15, "type": "c8-30" }
+  ],
+  "cores": [
+    { "at_mm": [0, -15], "d_mm": 12.1, "threads": ["M14"] },
+    { "at_mm": [0, 15], "d_mm": 12.1, "threads": ["M14"] }
   ],
   "outline": [
     [8.7923, -30],

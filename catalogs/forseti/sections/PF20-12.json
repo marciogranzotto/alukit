@@ -7,7 +7,7 @@
     "ref": "pdf:catalogo_forsetiA4.pdf#p11",
     "method": "generator",
     "read": "2026-11-26",
-    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the page draws this profile as a raster image"
+    "note": "a T-slot envelope from the printed overall size and core bore, with the groove type measured on the series' vector outline; the page draws this profile as a raster image. The cores are labelled M6 by the drawing on p. 11. P. 11 prints the cores Ø5 (M6), as p. 10 does the 20x20 V-slot's; the shop's description says M5"
   },
   "generator": "tslot",
   "params": {
@@ -22,6 +22,9 @@
       { "face": "-x", "at_mm": -10 },
       { "face": "-x", "at_mm": 10 }
     ],
-    "bores": [{ "at_mm": [0, -10], "d_mm": 4.6 }, { "at_mm": [0, 10], "d_mm": 4.6 }]
+    "bores": [
+      { "at_mm": [0, -10], "d_mm": 5, "threads": ["M6"] },
+      { "at_mm": [0, 10], "d_mm": 5, "threads": ["M6"] }
+    ]
   }
 }

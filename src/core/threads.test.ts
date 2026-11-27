@@ -1,0 +1,97 @@
+import { describe, expect, it } from "vitest";
+import { minorDiameterMax, tapFit } from "./threads.ts";
+
+/**
+ * The tap-fit rule (design §5.5): a tap whose thread is one the vendor labels the core with fits
+ * it; any other fits when the core is no wider than the thread's largest minor diameter (6H) and
+ * its tap drill takes no more than one pitch off the core's diameter. Each expected value is
+ * worked by hand from ISO 724's basic minor diameter, D − 1.082532 P, and ISO 965-3's T_D1 for 6H,
+ * in the comments.
+ */
+
+describe("a tap on a core the vendor labels with threads", () => {
+  it("fits when its thread is one of the labels, whatever the cut-thread rule says", () => {
+    // M5 in the 20-series V-slot's Ø4.6 (labelled M5): by the cut rule 4.6 is wider than M5's
+    // 4.334, but the vendor sanctions it (a forming tap's pre-hole).
+    expect(tapFit("M5", { d_mm: 4.6, threads: ["M5"] })).toEqual({ fits: true });
+    // PF20-21's Ø6, labelled M5 and M6 by the shop: both fit, though neither would cut there.
+    expect(tapFit("M6", { d_mm: 6, threads: ["M5", "M6"] })).toEqual({ fits: true });
+    expect(tapFit("M5", { d_mm: 6, threads: ["M5", "M6"] })).toEqual({ fits: true });
+    // The coarse pitch written out is the same thread.
+    expect(tapFit("M5x0.8", { d_mm: 4.6, threads: ["M5"] })).toEqual({ fits: true });
+  });
+
+  it("falls to the cut-thread rule for any other thread", () => {
+    // M16 in a Ø5 corner hole labelled M6: tap drill 14.00, 9.00 over the core.
+    expect(tapFit("M16", { d_mm: 5, threads: ["M6"] })).toEqual({
+      fits: false,
+      why: "core-narrow",
+      limit_mm: 12,
+    });
+    // M6 in the Ø4.6 labelled M5: drilled up 0.40 to its 5.00, within its 1 mm pitch.
+    expect(tapFit("M6", { d_mm: 4.6, threads: ["M5"] })).toEqual({ fits: true });
+    // A fine M5 is not the coarse M5 the label names: 4.6 is wider than M5x0.5's 4.459 + 0.140.
+    expect(tapFit("M5x0.5", { d_mm: 4.6, threads: ["M5"] })).toEqual({
+      fits: false,
+      why: "core-wide",
+      limit_mm: 4.599,
+    });
+  });
+});
+
+describe("the largest minor diameter of a 6H internal thread", () => {
+  it("is the basic minor diameter plus T_D1 for its pitch", () => {
+    // M6: 6 − 1.082532 = 4.917, + 0.236 = 5.153. M8: 8 − 1.353165 = 6.647, + 0.265 = 6.912.
+    // M16: 16 − 2.165064 = 13.835, + 0.375 = 14.210. M5: 5 − 0.866026 = 4.134, + 0.200 = 4.334.
+    expect(minorDiameterMax("M6")).toBeCloseTo(5.153, 3);
+    expect(minorDiameterMax("M8")).toBeCloseTo(6.912, 3);
+    expect(minorDiameterMax("M16")).toBeCloseTo(14.21, 3);
+    expect(minorDiameterMax("M5")).toBeCloseTo(4.334, 3);
+    // A fine pitch takes its own T_D1: M10x1.25, 10 − 1.353165 + 0.265 = 8.912.
+    expect(minorDiameterMax("M10x1.25")).toBeCloseTo(8.912, 3);
+  });
+
+  it("is not known for a thread that is not metric, or a pitch the table does not give", () => {
+    expect(minorDiameterMax("1/4-20 UNC")).toBeUndefined();
+    // M24's coarse pitch is 3 mm: the table read stops at 2.5.
+    expect(minorDiameterMax("M24")).toBeUndefined();
+  });
+});
+
+describe("a tap on a core", () => {
+  it("fits the core its thread is sized for, drilled up to its tap drill, labelled or not", () => {
+    // M6 in Ø5: tap drill 5.00, the core itself. M8 in Ø6.8, the cart's TS40, whose bore carries
+    // no label: 6.8 ≤ 6.912, and the tap drill 6.75 takes nothing off (cart.test.ts holds the
+    // cart's whole verdict). M16 in Ø13.7: drilled up 0.30 to 14.00, within its 2 mm pitch.
+    // M14 in Ø12.1 (the 30 series): 12.1 ≤ 11.835 + 0.375 = 12.210. M8 in Ø6.5: drilled up 0.25.
+    expect(tapFit("M6", { d_mm: 5 })).toEqual({ fits: true });
+    expect(tapFit("M8", { d_mm: 6.8 })).toEqual({ fits: true });
+    expect(tapFit("M16", { d_mm: 13.7 })).toEqual({ fits: true });
+    expect(tapFit("M14", { d_mm: 12.1 })).toEqual({ fits: true });
+    expect(tapFit("M8", { d_mm: 6.5 })).toEqual({ fits: true });
+  });
+
+  it("does not fit a core wider than its largest minor diameter: the thread would be shallow", () => {
+    // M8 in an 80x80's Ø13.7 core; M5 in Ø4.6, 4.6 > 4.334.
+    expect(tapFit("M8", { d_mm: 13.7 })).toEqual({
+      fits: false,
+      why: "core-wide",
+      limit_mm: 6.912,
+    });
+    expect(tapFit("M5", { d_mm: 4.6 })).toEqual({ fits: false, why: "core-wide", limit_mm: 4.334 });
+  });
+
+  it("does not fit a core it would drill up by more than one pitch", () => {
+    // M16 in a Ø5 corner hole: tap drill 14.00, 9.00 over the core, its pitch 2: the narrowest
+    // core it fits is 14 − 2 = 12. M8 in Ø5: 6.75, 1.75 over its pitch 1.25: the narrowest 5.50.
+    expect(tapFit("M16", { d_mm: 5 })).toEqual({ fits: false, why: "core-narrow", limit_mm: 12 });
+    expect(tapFit("M8", { d_mm: 5 })).toEqual({ fits: false, why: "core-narrow", limit_mm: 5.5 });
+    // At the limit it fits: M10 (tap drill 8.5, pitch 1.5) in a Ø7 core.
+    expect(tapFit("M10", { d_mm: 7 })).toEqual({ fits: true });
+  });
+
+  it("cannot be judged for a thread AluKit has no tap drill or tolerance for", () => {
+    expect(tapFit("1/4-20 UNC", { d_mm: 5 })).toBeUndefined();
+    expect(tapFit("M24", { d_mm: 21 })).toBeUndefined();
+  });
+});
