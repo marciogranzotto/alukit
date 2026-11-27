@@ -6,7 +6,9 @@ import { type Corner, cornersOf } from "../corners.ts";
 import type { Model } from "../model.ts";
 import { hostOf, viewOf } from "../testing.ts";
 import {
+  type Arrangement,
   arrangeBatch,
+  arrangementBatch,
   arrangementsOf,
   cannotArrange,
   joinOpenBatch,
@@ -387,6 +389,74 @@ describe("a corner's arrangements (S5.5)", () => {
     }
   });
 
+  it("offers a mitre beside the butts at a corner of two ends, with derive's cut lengths (E5.5)", async () => {
+    const h = await hostOf(await empty());
+    try {
+      await h.apply(RECTANGLE);
+      await h.apply(JOIN);
+      const m = h.view();
+      const corners = cornersOf(m);
+      const c = at(corners, "1000,600,0");
+      const got = await h.arrange([c.at]);
+      const { list, refused } = arrangementsOf(m, c, got.rules, got.joints);
+      expect(list.map((a) => [a.kind, a.title, a.current])).toEqual([
+        ["butt", "Rail Y runs through", true],
+        ["butt", "Rail X runs through", false],
+        ["miter", "Mitre", false],
+      ]);
+      // A splice joins two ends in line; these two meet square, and derive says so.
+      expect(refused).toEqual([{ rule: "splice", why: expect.stringMatching(/collinear/) }]);
+      const mitre = list[2] as Arrangement;
+      expect(mitre.detail).toBe("b2 and b3 are cut to meet; no bar runs through.");
+      // By hand: a mitre's cut is measured on its long point, at the corner's outer edge, 20 past
+      // the design point on each bar. b2 ran through, 20 past already: 600. b3 stopped 20 short of
+      // the corner and now reaches 20 past it: 1000 + 40 = 1040.
+      expect(mitre.cuts).toEqual([
+        { bar: "b2", cut: 600, was: 600 },
+        { bar: "b3", cut: 1040, was: 1000 },
+      ]);
+      // Apply sends the batch the server dry-ran: the corner's butt out, a mitre of its ends.
+      const batch = arrangementBatch(m, [c], mitre);
+      const answer = got.joints.find((j) => j.kind === "miter");
+      expect(answer?.ok && answer.commands).toEqual(batch);
+      expect(batch).toEqual([
+        { cmd: "removeEntity", args: { id: c.connections[0] as string } },
+        { cmd: "addConnection", args: { type: "miter", ends: ["b2.b", "b3.a"] } },
+      ]);
+      const dry = await h.dry(batch);
+      if (!dry.ok) throw new Error("the mitre was refused");
+      expect(dry.effects.cuts).toEqual({ b3: [1000, 1040] });
+      // Every ground corner is an L of the same section, and none is mitred yet: all four match.
+      expect(
+        matchingCorners(m, corners, c, mitre)
+          .map((k) => k.key)
+          .sort(),
+      ).toEqual(["0,0,0", "0,600,0", "1000,0,0", "1000,600,0"]);
+
+      await h.apply(batch);
+      const after = h.view();
+      const mitred = at(cornersOf(after), "1000,600,0");
+      expect(cannotArrange(after, mitred)).toBeUndefined();
+      const again = await h.arrange([mitred.at]);
+      const now = arrangementsOf(after, mitred, again.rules, again.joints).list;
+      expect(now.map((a) => [a.kind, a.current])).toEqual([
+        ["butt", false],
+        ["butt", false],
+        ["miter", true],
+      ]);
+      // Flip changes which bar runs through; at a mitre none does, so there is nothing to flip.
+      expect(nextArrangement(now)).toBeUndefined();
+      // Before the mitre, Flip went between the two butts and passed the mitre by.
+      expect(nextArrangement(list)).toBe(list[1]);
+      // The mitred corner is no longer one the mitre would change.
+      expect(
+        matchingCorners(after, cornersOf(after), mitred, now[2] as Arrangement).map((k) => k.key),
+      ).not.toContain("1000,600,0");
+    } finally {
+      await h.close();
+    }
+  });
+
   it("takes out only a corner's ends from a butt that has ends elsewhere, and joins open corners", async () => {
     // The cart's c1 holds four ends at two corners: b1.b and b7.a at (0,0,900), b2.b and b8.a
     // at (1200,0,900). Arranging the first corner keeps c1 for the second.
@@ -399,8 +469,8 @@ describe("a corner's arrangements (S5.5)", () => {
     expect(takeOut(cart, [c, at(corners, "1200,0,900")])).toEqual([
       { cmd: "removeEntity", args: { id: "c1" } },
     ]);
-    // A splice and a pattern copy's butt are not arranged here.
-    expect(cannotArrange(cart, at(corners, "700,300,900"))).toMatch(/^c9 is a splice/);
+    // A pattern copy's butt is not arranged here: its template is. A splice is (E5.5).
+    expect(cannotArrange(cart, at(corners, "700,300,900"))).toBeUndefined();
     expect(cannotArrange(cart, at(corners, "300,0,100"))).toMatch(/^c26@1 is a pattern copy/);
 
     const open = await viewOf(await empty(), RECTANGLE);

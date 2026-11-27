@@ -157,15 +157,27 @@ export function isExprSchema(schema: JsonSchema): boolean {
   );
 }
 
-/** Visits every string in `value` that sits where its schema takes an expression. */
+/**
+ * The names an expression's field binds besides the params, from its schema's `exprNames`: a
+ * sleeve's `len_mm` reads `bore` (§4.5). Empty for every other field.
+ */
+export function exprNames(schema: JsonSchema): readonly string[] {
+  const n = schema.exprNames;
+  return Array.isArray(n) ? n.filter((x): x is string => typeof x === "string") : [];
+}
+
+/**
+ * Visits every string in `value` that sits where its schema takes an expression, with the names
+ * that field binds besides the params (`exprNames`).
+ */
 export function visitExprs(
   value: unknown,
   schema: JsonSchema,
-  visit: (src: string, path: readonly PathKey[]) => void,
+  visit: (src: string, path: readonly PathKey[], names: readonly string[]) => void,
   path: PathKey[] = [],
 ): void {
   if (typeof value === "string") {
-    if (isExprSchema(schema)) visit(value, path);
+    if (isExprSchema(schema)) visit(value, path, exprNames(schema));
     return;
   }
   const b = branchFor(schema, value);

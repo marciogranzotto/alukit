@@ -11,22 +11,36 @@ import { model } from "../store.ts";
  * inspector's Connector field all choose with it, so they list the same connectors in the same
  * order. A connector fits when its `fits` holds every system the bars have, as derive judges a
  * butting bar (`hardware.ts`); a splice or a hinge joins ends another way, so it is not offered.
+ *
+ * The other connections choose with it too (the editing audit's E5.2), by what their connector
+ * joins (`joins`): a splice's among the splices, a pivot's among the hinges, a mitre's among
+ * every connector, since no subtype names a mitre's.
  */
 
 /** Connector subtypes that join ends some other way than a butt. */
 const NOT_BUTT = new Set(["splice", "hinge"]);
 
-/** The catalogs' butt connectors, read once per set of catalogs the project names. */
+/** What a connection's connector joins, and so which connectors it is chosen among. */
+export type Joins = "butt" | "splice" | "hinge" | "any";
+
+const JOINS: Readonly<Record<Joins, (family: string) => boolean>> = {
+  butt: (f) => !NOT_BUTT.has(f),
+  splice: (f) => f === "splice",
+  hinge: (f) => f === "hinge",
+  any: () => true,
+};
+
+/** The catalogs' connectors, read once per set of catalogs the project names. */
 let cache: { key: string; list: Promise<ListedEntry[]> } | undefined;
 
 function catalogsKey(m: Model | undefined): string {
   return JSON.stringify(m?.doc.catalogs ?? []);
 }
 
-function buttConnectors(key: string): Promise<ListedEntry[]> {
+function catalogConnectors(key: string): Promise<ListedEntry[]> {
   if (cache?.key !== key) {
     const list = fetchCatalogItems({ kind: "connector", limit: 200 }).then((r) =>
-      r.ok ? r.value.items.filter((e) => !NOT_BUTT.has(e.family)) : [],
+      r.ok ? r.value.items : [],
     );
     cache = { key, list };
     // A failed read is not kept: the next picker asks again.
@@ -50,22 +64,25 @@ export interface Connectors {
   ready: boolean;
   /** Those that fit every system, by the catalog's order. */
   fit: ListedEntry[];
-  /** The other butt connectors. */
+  /** The other connectors of the kind. */
   other: ListedEntry[];
 }
 
-/** The project's butt connectors, split by whether they fit bars of `systems`. */
-export function useConnectors(systems: readonly string[]): Connectors {
+/**
+ * The project's connectors that join as `joins` says (butts unless it says), split by whether
+ * they fit bars of `systems`.
+ */
+export function useConnectors(systems: readonly string[], joins: Joins = "butt"): Connectors {
   const key = catalogsKey(model.value);
   const [list, setList] = useState<ListedEntry[] | undefined>(undefined);
   useEffect(() => {
     let live = true;
-    void buttConnectors(key).then((l) => live && setList(l));
+    void catalogConnectors(key).then((l) => live && setList(l));
     return () => {
       live = false;
     };
   }, [key]);
-  const all = list ?? [];
+  const all = (list ?? []).filter((e) => JOINS[joins](e.family));
   return {
     ready: list !== undefined,
     fit: all.filter((e) => fitsAll(e, systems)),
@@ -118,11 +135,13 @@ export interface ConnectorSelectProps {
   testid: string;
   disabled?: boolean;
   id?: string;
+  /** What the connector joins: butts unless it says. */
+  joins?: Joins;
 }
 
 /** The select: the caller's lead choices, then "Fits these bars", then "Other connectors". */
 export function ConnectorSelect(p: ConnectorSelectProps) {
-  const c = useConnectors(p.systems);
+  const c = useConnectors(p.systems, p.joins);
   const known = [...c.fit, ...c.other].some((e) => e.id === p.value);
   const leading = p.lead.some((l) => l.value === p.value);
   return (

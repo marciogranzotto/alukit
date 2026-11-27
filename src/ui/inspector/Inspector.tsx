@@ -18,10 +18,12 @@ import { BarFields, ReplaceForm } from "./BarFields.tsx";
 import { barActions } from "./barActions.ts";
 import { DeleteButton, DeleteFlow } from "./Delete.tsx";
 import { BarDerived, Item, OtherDerived, ProjectItem } from "./Derived.tsx";
+import { editActions } from "./edit-actions.ts";
 import { PointedField, pointedFor } from "./Fields.tsx";
 import { ManyFields } from "./ManyFields.tsx";
 import { NodeFields } from "./NodeFields.tsx";
 import { ButtConnector, ConnectionFields, PartFields, PlainFields } from "./OtherFields.tsx";
+import { PatternFields } from "./PatternFields.tsx";
 import { copyMembers } from "./remove.ts";
 import { copyOf, entityName, labelOf, NOUN, patternOf, type RefKind, refKind } from "./words.ts";
 
@@ -191,7 +193,7 @@ function EntityBody({
       {kind === "connection" && <ConnectionFields m={m} id={id} />}
       {kind === "node" && <NodeFields m={m} id={id} />}
       {kind === "run" && <PlainFields m={m} id={id} title="Run" />}
-      {kind === "pattern" && <PlainFields m={m} id={id} title="Pattern" />}
+      {kind === "pattern" && <PatternFields m={m} id={id} />}
       {kind === "copy" && <CopyBody m={m} id={id} />}
       {kind === "item" && <ItemBody m={m} id={id} />}
       {end && (
@@ -293,6 +295,8 @@ export function Inspector() {
   useEffect(() => inspectorActions(), []);
   // A bar's own actions (E4): split, reverse, holes.
   useEffect(() => barActions(), []);
+  // E5's: Edit and Change connector on a connection, Explode a pattern, Replace a part.
+  useEffect(() => editActions(), []);
   return (
     <>
       <DeleteFlow />

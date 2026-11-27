@@ -80,7 +80,9 @@ test("a corner's arrangements: the dry run's cut lengths, applied as one step; F
   await page.mouse.click(at[0], at[1]);
   const props = page.getByTestId("properties");
   await expect(props).toHaveAttribute("data-corner", "1000,600,0");
-  await expect(page.getByTestId("arrangement")).toHaveCount(2);
+  // Two butts, and a mitre beside them since the corner holds two ends (E5.5).
+  await expect(page.locator('[data-testid="arrangement"][data-kind="butt"]')).toHaveCount(2);
+  await expect(page.locator('[data-testid="arrangement"][data-kind="miter"]')).toHaveCount(1);
   await expect(
     page.getByTestId("arrangement").filter({ hasText: "Rail Y runs through" }),
   ).toContainText("(now)");

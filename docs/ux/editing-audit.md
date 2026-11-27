@@ -231,7 +231,7 @@ and the empty project); "words" means shown and read-only.
 | Face | `bars`, `fastening`, `fastener`, `stack`, `stations`, `gaps_mm`, `faces`, `tap_depth_mm` | words (measured on c23) |
 | Part | `item` | words in the inspector; the catalog card can replace it |
 | | `on.bar`, `on.face`, `on.at_mm`, `on.from` | edit |
-| | `on.groove` | not offered: the inspector's face list has no grooves, though Place can put a part in one |
+| | `on.groove` | not offered: the inspector's face list has no grooves, though Place can put a part in one. *Corrected by E5 ([e5](e5-decisions.md) 25): the list has had a section's grooves since S5 (read); the part measured was likely the carriage on its rail, which has none (inferred)* |
 | | `on.off_mm` | words |
 | | `roll_deg` | edit |
 | | `at` (a world pose) | words |

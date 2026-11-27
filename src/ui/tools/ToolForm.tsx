@@ -1,11 +1,17 @@
 import { signal } from "@preact/signals";
-import { usedItems } from "../catalog/PartsBin.tsx";
-import { pins, recent } from "../catalog/state.ts";
+import { useEffect } from "preact/hooks";
 import { Diagnostics, Errors, stepDiagnostics } from "../Feedback.tsx";
-import { selection } from "../focus.ts";
+import { select, selection } from "../focus.ts";
 import { palette } from "../palette.ts";
 import { busy, type CommandOutcome, model, sendCommands } from "../store.ts";
-import { connectionCommand, patternCommand, pivotBatch, runOf } from "./commands.ts";
+import {
+  connectionCommand,
+  faceEditCommand,
+  patternCommand,
+  pivotBatch,
+  runOf,
+} from "./commands.ts";
+import { BinList, connectReplacing, FaceForm } from "./forms/FaceForm.tsx";
 import { FrameForm } from "./forms/FrameForm.tsx";
 import {
   activeTool,
@@ -13,45 +19,21 @@ import {
   type ConnectType,
   connectPicks,
   connectType,
-  type FaceOptions,
   faceOptions,
   type PivotOptions,
   patternState,
   pivotOptions,
   toolPrompt,
 } from "./state.ts";
+import { typedNumber, typedWords } from "./typed.ts";
 
 /**
  * The active tool's long form, above the inspector (D-UX-5): Connect's picks, face and pivot
  * fields; Pattern's; the box frame's. The other tools' options are in the command bar. A
- * refusal shows under the form that sent it (U30). Owner: S5.
+ * refusal shows under the form that sent it (U30). The face form is shared with the inspector,
+ * which also sends Connect here to re-pick a face joint's layers, offering to replace that joint
+ * (the editing audit's E-UX-14). Owner: E5.
  */
-
-/**
- * The items a fastener, a stack or a hinge may be picked from (S5.9): the parts bin's, what the
- * project uses (bars aside), then what was armed and pinned, each once.
- */
-function BinList({ id }: { id: string }) {
-  const m = model.value;
-  const seen = new Set<string>();
-  const items: { id: string; name: string }[] = [];
-  const add = (x: { id: string; name?: string | undefined }) => {
-    if (seen.has(x.id)) return;
-    seen.add(x.id);
-    items.push({ id: x.id, name: x.name ?? "" });
-  };
-  if (m) for (const u of usedItems(m)) if (u.kind !== "bar") add({ id: u.item.id, name: u.name });
-  for (const b of [...recent.value, ...pins.value]) add(b);
-  return (
-    <datalist id={id} data-testid={id}>
-      {items.map((x) => (
-        <option key={x.id} value={x.id}>
-          {x.name}
-        </option>
-      ))}
-    </datalist>
-  );
-}
 
 /** The last connection made or refused: the refusal, or the new connection and its checks. */
 const connectOutcome = signal<{ outcome: CommandOutcome; id?: string } | undefined>(undefined);
@@ -195,98 +177,62 @@ function PivotFields() {
   );
 }
 
-function FaceFields() {
-  const f = faceOptions.value;
-  const set = (next: Partial<FaceOptions>) => {
-    faceOptions.value = { ...f, ...next };
-  };
-  const text = (k: keyof FaceOptions, label: string, placeholder: string, list?: string) => (
-    <label>
-      {label}{" "}
-      <input
-        data-testid={`face-${k}`}
-        placeholder={placeholder}
-        value={f[k] as string}
-        type="text"
-        list={list}
-        onInput={(e) => set({ [k]: (e.target as HTMLInputElement).value })}
-      />
-    </label>
-  );
-  return (
-    <>
-      <div class="tp-row">
-        <label
-          title={
-            "none: resting; bolt: through every layer; T-nut: into the last layer's groove; " +
-            "screw: tapped into the last layer; blind: set from one side, gripping in the " +
-            "last layer's bore or behind it"
-          }
-        >
-          fastening{" "}
-          <select
-            data-testid="face-fastening"
-            value={f.fastening}
-            onChange={(e) =>
-              set({ fastening: (e.target as HTMLSelectElement).value as FaceOptions["fastening"] })
-            }
-          >
-            <option value="none">none (resting)</option>
-            <option value="bolt">bolt</option>
-            <option value="tnut">T-nut</option>
-            <option value="screw">screw</option>
-            <option value="blind">blind</option>
-          </select>
-        </label>
-      </div>
-      {f.fastening !== "none" && (
-        <>
-          <div class="tp-row">
-            {text("fastener", f.rod ? "rod stock" : "fastener", "an item id", "connect-bin")}
-            <label>
-              <input
-                type="checkbox"
-                data-testid="face-rod"
-                checked={f.rod}
-                onChange={() => set({ rod: !f.rod })}
-              />{" "}
-              cut from bar stock
-            </label>
-            {f.rod && text("rodLen", "length", "mm")}
-          </div>
-          <div class="tp-row">{text("stack", "stack", "items, head to nut", "connect-bin")}</div>
-          <div class="tp-row">
-            {text("at", "at", "mm along the first layer, e.g. 100, 300")}
-            {text("across", "across", "mm, e.g. -15, 15")}
-            <label>
-              <input
-                type="checkbox"
-                data-testid="face-railHoles"
-                checked={f.railHoles}
-                onChange={() => set({ railHoles: !f.railHoles })}
-              />{" "}
-              at the rail's holes
-            </label>
-          </div>
-          {f.fastening === "screw" && (
-            <div class="tp-row">{text("tapDepth", "tap depth", "mm (through when empty)")}</div>
-          )}
-        </>
-      )}
-      <div class="tp-row">{text("gaps", "gaps", "mm per pair of layers")}</div>
-    </>
-  );
+/** The written face joint Connect is replacing the layers of, while its type is face. */
+function replacing(type: ConnectType): { id: string; c: Record<string, unknown> } | undefined {
+  const id = connectReplacing.value;
+  const conns = model.value?.doc.connections;
+  const c =
+    id && typeof conns === "object" && conns !== null
+      ? (conns as Record<string, unknown>)[id]
+      : undefined;
+  return type === "face" && id && typeof c === "object" && c !== null
+    ? { id, c: c as Record<string, unknown> }
+    : undefined;
 }
 
 function ConnectPanel() {
   const picks = connectPicks.value;
   const type = connectType.value;
   const pivot = pivotOptions.value;
-  const c = connectionCommand(picks, type, { pivot, face: faceOptions.value });
+  const made = connectionCommand(picks, type, { pivot, face: faceOptions.value });
+  const swap = replacing(type);
+  // Replacing a joint's layers: the one setConnection that changes what was re-picked or retyped.
+  const replace =
+    swap && !("why" in made)
+      ? faceEditCommand(
+          swap.id,
+          swap.c,
+          faceOptions.value,
+          picks.map((p) => p.ref),
+        )
+      : undefined;
+  const c =
+    replace === undefined
+      ? made
+      : "same" in replace
+        ? { why: `nothing changed: re-pick ${swap?.id}'s layers, or change a field` }
+        : replace;
   const last = connectOutcome.value;
+  // Leaving Connect leaves the replacing behind.
+  useEffect(
+    () => () => {
+      connectReplacing.value = undefined;
+    },
+    [],
+  );
   const apply = async () => {
     const m = model.value;
     if ("why" in c || !m) return;
+    if (swap) {
+      const outcome = await sendCommands([c], `relayer ${swap.id}`, { inline: true });
+      connectOutcome.value = { outcome, id: swap.id };
+      if (outcome.ok) {
+        connectPicks.value = [];
+        connectReplacing.value = undefined;
+        select([swap.id], "replace");
+      }
+      return;
+    }
     // A pivot's carried ends point at it, so its batch names the id it creates (§4.5).
     const p = type === "pivot" ? pivotBatch(c, m.doc) : undefined;
     const outcome = await sendCommands(p ? p.commands : [c], "connect", {
@@ -344,7 +290,15 @@ function ConnectPanel() {
       )}
       <BinList id="connect-bin" />
       {type === "pivot" && <PivotFields />}
-      {type === "face" && <FaceFields />}
+      {type === "face" && (
+        <FaceForm
+          value={faceOptions.value}
+          onChange={(f) => {
+            faceOptions.value = f;
+          }}
+          listId="connect-bin"
+        />
+      )}
       <div class="tp-row">
         <button
           type="button"
@@ -353,8 +307,21 @@ function ConnectPanel() {
           disabled={"why" in c || busy.value}
           onClick={() => void apply()}
         >
-          Apply
+          {swap ? `Replace ${swap.id}` : "Apply"}
         </button>
+        {swap && (
+          <button
+            type="button"
+            class="tp-btn"
+            data-testid="connect-replace-off"
+            title={`Make a new joint of these layers instead of replacing ${swap.id}'s`}
+            onClick={() => {
+              connectReplacing.value = undefined;
+            }}
+          >
+            make a new one instead
+          </button>
+        )}
       </div>
       {"why" in c && (picks.length > 0 || pivot.base) && (
         <p class="hint-text" data-testid="connect-why">
@@ -365,7 +332,7 @@ function ConnectPanel() {
         <div data-testid="connect-outcome">
           {last.outcome.ok && last.id && (
             <p class="tool-status">
-              made <code>{last.id}</code>
+              {last.outcome.created.includes(last.id) ? "made" : "changed"} <code>{last.id}</code>
               {stepDiagnostics(last.outcome, [last.id]).length === 0 ? "" : "; derive says:"}
             </p>
           )}
@@ -382,7 +349,9 @@ const patternOutcome = signal<CommandOutcome | undefined>(undefined);
 
 function PatternPanel() {
   const s = patternState.value;
-  const c = patternCommand(s);
+  const params = model.value?.derived.params ?? {};
+  const c = patternCommand(s, params);
+  const pitch = typedNumber(s.pitch, params);
   const field = (k: "pitch" | "count" | "along", label: string) => (
     <label>
       {label}{" "}
@@ -417,6 +386,11 @@ function PatternPanel() {
         {field("pitch", "pitch mm")}
         {field("count", "count")}
       </div>
+      {!("why" in pitch) && typeof pitch.written === "string" && (
+        <p class="hint-text" data-testid="pattern-pitch-words">
+          pitch {typedWords(pitch)}
+        </p>
+      )}
       <button
         type="button"
         class="tp-btn"
