@@ -233,11 +233,15 @@ says why and the tools are disabled until it is fixed.
 
 **Cut list** (`alukit cutlist`) lists, per item and option, each piece with its quantity, its cut
 length at the long point, the cut angle on each end, and its machining (holes and taps, from a
-named end, on a named face). For an item sold by the bar the pieces are nested into stock bars
-with kerf and end trim, and you see the stock bar, its price, its offcut and its waste:
+named end, on a named face). A piece with an angled end also gives its centre-line length and its
+**span**: the length of bar it takes, from one end's long point to the other's. A piece is ordered,
+billed and nested at its span. That is its cut length unless its two cuts lean the same way: a
+brace cut on two parallel faces takes its long point plus the section's depth times the tangent of
+the cut angle. For an item sold by the bar the pieces are nested into stock bars with kerf and end
+trim, and you see the stock bar, its price, its offcut and its waste:
 
 ```
-| 2 | 300.00 |  | square / square | Ø11.00 hole 100.00 mm from end a on face -y, -15.00 across; ... | b20, b23 |
+| 2 | 300.00 |  |  | square / square | Ø11.00 hole 100.00 mm from end a on face -y, -15.00 across; ... | b20, b23 |
 ```
 
 **BOM** (`alukit bom`) is every item and quantity grouped by kind, with its mass: as the catalog
