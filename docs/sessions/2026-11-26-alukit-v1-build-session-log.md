@@ -867,3 +867,11 @@ anything, and each has a default in place.
 - **11:35**: Polish merged; gate PASS (1,127 tests).
   - Code conflicts with the integration pass: the badges had moved to their own file for lazy loading, so the polish changes were ported there. The start card's imports and the tools' imports were reconciled, and two imports left unused were dropped.
 - **11:36**: The decided frame's run 9 launched on the project's wall-fix head, with the new constructs written natively (walls as placeholder parts, named cross-hole faces).
+- **11:54**: The designer re-check of the polish is in (`docs/ux/review-phase4.md` §9).
+  - The blocker and M1–M8 are all confirmed fixed on the running app.
+  - The box frame now takes 4 clicks, 12 keys and about 27 s (before: 5, 17, about 43 s). The template path reaches READY with its brackets ordered.
+  - One new major finding: the inspector's problem row lays out one word per line and its buttons overlap the text. Plus six minor items. A fix pass was launched.
+- **12:06**: The decided frame's run 9 (internal): **pass**, on the project's wall-fix head, with walls as placeholder parts and named faces written natively.
+  - AluKit judges exactly the project's five wall-side faces covered, and finds no clear face for them either.
+  - Two gaps: a cover that arrives after assembly (a wall the frame is later set against) can't be said (**F11**), and a face can be named only in the catalog, not on a project connection (**F12**). A gap batch was launched.
+  - A stale figure fixed in `docs/notes/x9-f8-f9.md`: X9 moves ten holes in the decided frame, not six.
