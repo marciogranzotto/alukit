@@ -40,12 +40,20 @@ alukit serve ~/frames/my-frame             # prints http://127.0.0.1:<port>/#t=<
 (`ALUKIT_PROJECT=~/frames/my-frame pnpm dev` does the same inside Vite's dev server, with hot
 reload, and prints the address with its token.)
 
-The empty project opens with a start card over the 3D view. Under **Draw the first bar**, pick a
-size (40 × 40), the profile and its finish, and press **Start drawing**: that profile becomes the
-project's default bar and the draw tool is on. Click a start point, type a length and press Enter
-(or click the end). Draw a leg, then a rail onto its top: the ends butt where they meet, and a
-toast says what moved. Or press **Load the example** for the skill's work table. Press `?` for
-every key; see the [guide](docs/guide.md) for the layout and the tools.
+The empty project opens with a start card over the 3D view and three ways in:
+
+- **A box frame**: type its width, depth and height and press **Make the frame**: four posts, a
+  base and a top ring, every corner butted, in one step. The form shows the cut lengths first.
+- **Draw the first bar**: pick a size (40 × 40), the profile and its finish, and press **Start
+  drawing**. That profile becomes the project's default bar and the draw tool is on. Click a
+  start point, type a length and press Enter (or click the end). Draw a leg, then a rail onto its
+  top: before you click, the preview by the end says what the joint will do ("will butt on b1 ·
+  cut 580 · b1 800 → 820"), and `Tab` flips which bar runs through.
+- **Load the example**: the skill's work table, as one step.
+
+If the catalogs you named sell no profile, the card says so, and **Add one in Project settings**
+lists the built-in catalogs with an **Add** button each. Press `?` for every key; see the
+[guide](docs/guide.md) for the layout and the tools.
 
 Read what you drew from a terminal, while the server runs or not:
 
@@ -71,10 +79,12 @@ support it; `alukit --help` and `alukit <command> --help` list the options.
 |---|---|
 | `new <dir>` | create a project: the document, its lock and a `.gitignore` line for `.alukit/` |
 | `serve <dir>` | run the project's server and open the app; edits from tabs and the CLI go through it |
-| `do <dir> '<json>'` | apply a batch of commands atomically (also `-f file` or `-` for stdin) |
-| `add bar\|point\|connection\|part <dir>` | one entity, as sugar over `do` |
+| `do <dir> '<json>'` | apply a batch of commands atomically (also `-f file` or `-` for stdin); `--dry-run` says what the step would do and writes nothing |
+| `add bar\|point\|connection\|part\|frame <dir>` | one entity, or a box frame in one step, as sugar over `do` |
 | `query <dir> <selector>` | read entities back: `b7`, `tag:leg`, `item:forseti:PF40-01`, `connections of b2` |
 | `check <dir>` | validate, derive and run the checks; exit 1 on an error |
+| `problems <dir>` | the checks and the order's reasons as one list in words, each with its fixes; exit 1 when one blocks the order |
+| `arrangements <dir> --at x,y,z` | at a corner, each corner rule's arrangement: which bar runs through, the cut lengths, the batch; writes nothing |
 | `derive <dir> --json` | the full derived model, for report builders; `--select bars.*.cut_mm,params` keeps only what you name |
 | `cutlist` `bom` `order` `costs <dir>` | the outputs; `order` exits 1 when blocked |
 | `machining <dir>` | the machining sheet for the project's own plates and bent angles |
@@ -109,12 +119,16 @@ How `std` and `ref-hiwin` were checked is in
 
 **Your own catalog** is a folder you name by path. Start from the synthetic one in
 [`tests/fixtures/catalogs/test`](tests/fixtures/catalogs/test) (`catalog.json`, `offers.json`,
-`sections/`, optional `families/` and `overrides.json`), and ask the CLI for the exact shape:
+`sections/`, optional `families/` and `overrides.json`), with
+[`ref-test`](tests/fixtures/catalogs/ref-test) beside it, since its carriage clones a rail block
+from there, and ask the CLI for the exact shape:
 
 ```sh
-alukit catalog schema            # the JSON Schema of every catalog file
-alukit catalog check ./my-parts  # computed against published values, references, offers
-alukit new my-project --catalog ./my-parts --catalog forseti
+mkdir -p ~/parts && cp -R tests/fixtures/catalogs/test ~/parts/my-parts
+cp -R tests/fixtures/catalogs/ref-test ~/parts/ref-test && cd ~/parts
+alukit catalog schema                                 # the JSON Schema of every catalog file
+alukit catalog check ./my-parts --catalog ./ref-test  # computed against published values, references, offers
+alukit new my-project --catalog ./my-parts --catalog ./ref-test --catalog forseti
 ```
 
 Catalogs merge in layers (vendor data, your overrides, then the project), and every number keeps

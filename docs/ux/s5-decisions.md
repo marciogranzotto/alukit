@@ -180,9 +180,13 @@ to place it that far from the nearer end.
 
 - **The four corner arrangements are four dry runs, one after another** (up to 2.5 s on 1,008
   bars under load). One server call that answers every rule at once would make it one.
+  *Done: `GET /api/arrangements` ([integration-decisions.md](integration-decisions.md) 13–17).*
 - **The joint preview asks in open space too**: a pause asks even when nothing can join (the
   answer is then not shown). Asking only when an end is on something would save those
   calls, at the cost of missing an end that lands on a bar's end without snapping to it.
+  *Done, by geometry rather than by snap, so such an end still asks (integration 18).*
 - **Help's text and the guide**: S2.17 takes the section above.
+  *Done (integration 24).*
 - **The plan names this note `docs/notes/ux-s5-decisions.md`**: kept beside the plan as the brief
   asked; the integration pass may move every stream's note at once.
+  *Kept here (integration 25).*

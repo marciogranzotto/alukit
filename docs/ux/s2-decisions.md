@@ -80,7 +80,8 @@ changed are in [contracts.md](contracts.md) ("S2 changes"). The plan names this 
   on another source's step is `viewer.pulse`, a no-op until S3.
 - **S5**: the box frame way (`frameWay`, decision 10); the command bar in the `bottom` slot; the
   tools', drawing's and view's key sections (decision 21); S5's forms passing `inline`.
-- **S1** (merged): a list of built-in catalogs on `/api/catalog`, for one-click adding (decision 11).
+- **S1** (merged): a list of built-in catalogs on `/api/catalog`, for one-click adding (decision 11). *Done in the
+  integration pass ([integration-decisions.md](integration-decisions.md) 20–22).*
 
 ## Tests
 
