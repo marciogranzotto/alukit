@@ -236,3 +236,125 @@ test("a length a param drives: the handle is locked and says 'driven by L', and 
   await expect(page.getByTestId("param-edit")).toHaveValue("400");
   expect(await page.evaluate(() => window.__alukit?.drawnRev())).toBe(0);
 });
+
+// ---------------------------------------------------------------------------------------------
+// Editable ends (docs/ux/editing-audit.md E4.1; docs/ux/e4-decisions.md): the cut, the
+// extension, the plane and the joint that claims an end, each from the end's row, one step each.
+
+/** `alukit check --json`'s errors, as `code entity`. */
+async function errorsOf(dir: string): Promise<string[]> {
+  const r = await cli(["check", dir, "--json"]);
+  const out = JSON.parse(r.out) as {
+    diagnostics: { severity: string; code: string; entity?: string }[];
+  };
+  return out.diagnostics.filter((d) => d.severity === "error").map((d) => `${d.code} ${d.entity}`);
+}
+
+test("the audit's brace: its rows name the butts that claim its ends (D2), and declare both cuts", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  served = await serve("brace");
+  // The draw tool's batch for the brace, then its cuts undeclared: the state the audit measured,
+  // two angled ends that declare no cut, each claim failing (`by: "default"`).
+  const drawn = await cli(["do", served.dir, "-f", join(served.dir, "brace.json")]);
+  expect(drawn.code, drawn.err).toBe(0);
+  const bare = { cmd: "setBar", args: { id: "b13", set: { ends: null } } };
+  expect((await cli(["do", served.dir, JSON.stringify(bare)])).code).toBe(0);
+  expect(await errorsOf(served.dir)).toEqual(["angled-end b13.a", "angled-end b13.b"]);
+  await openTab(page, served, 2);
+  await pick(page, "b13");
+  const a = page.getByTestId("row-end-a");
+  await expect(a).toContainText("butts on b3 (c9); the joint fails, so it is square");
+  await expect(page.getByTestId("row-end-b")).toContainText("butts on b4 (c10)");
+  // Claimed, so not open: no Join.
+  await expect(page.getByTestId("join-end-a")).toHaveCount(0);
+
+  // The cut, from each end's row: one step each.
+  await page.getByTestId("end-cut-a").selectOption("angle");
+  await waitDrawn(page, 3);
+  await page.getByTestId("end-cut-b").selectOption("angle");
+  await waitDrawn(page, 4);
+  const d = await doc(served.dir);
+  expect(d.bars.b13?.ends).toEqual({ a: { cut: "angle" }, b: { cut: "angle" } });
+  expect(await errorsOf(served.dir)).toEqual([]);
+  await expect(a).toContainText("butts on b3 (c9), cut at 36.87°");
+  // The brace's cut, 920 / 0.8 = 1150 by hand (tests/fixtures/brace), is the CLI's.
+  expect(await cutOf(served.dir, "b13")).toBe(1150);
+  expect(errors).toEqual([]);
+});
+
+test("stop at a face: b3's end b stops on b1's near face, from its row or picked in the view", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  served = await serve("ux/ends");
+  await openTab(page, served, 0);
+  await pick(page, "b3");
+  // From the row: the faces b3's line meets, the nearest first.
+  await page.getByTestId("end-plane-b").selectOption("face");
+  const faces = page.getByTestId("end-face-b");
+  await expect(faces.locator("option").nth(1)).toHaveText("b1's face +x · 280 mm longer");
+  await faces.selectOption({ index: 1 });
+  await waitDrawn(page, 1);
+  expect((await doc(served.dir)).bars.b3?.ends).toEqual({
+    b: { plane: { face: { bar: "b1", face: "+x" } } },
+  });
+  // b1's +x face is at y = 20: the cut runs from y = 600 to 20.
+  expect(await cutOf(served.dir, "b3")).toBe(580);
+  await expect(page.getByTestId("row-end-b")).toContainText("stops at b1's face +x");
+  await page.getByTestId("undo").click();
+  await waitDrawn(page, 2);
+  expect((await doc(served.dir)).bars.b3?.ends).toBeUndefined();
+
+  // Picked in the view: the next click on b1 stops the end at the face of b1 its line meets
+  // first, whichever side of b1 the click lands on (here its top, which the line never meets).
+  // The row has caught up with the undo (the view may draw it first).
+  await expect(page.getByTestId("end-plane-b")).toHaveValue("joint");
+  await page.getByTestId("end-plane-b").selectOption("face");
+  await page.getByTestId("end-pick-b").click();
+  await expect(page.getByTestId("end-pick-note")).toContainText("click the face b3.b stops at");
+  const s = await screen(page, [300, 0, 20]);
+  await page.mouse.move(s[0], s[1]);
+  await page.mouse.click(s[0], s[1]);
+  await waitDrawn(page, 3);
+  expect((await doc(served.dir)).bars.b3?.ends).toEqual({
+    b: { plane: { face: { bar: "b1", face: "+x" } } },
+  });
+  await expect(page.getByTestId("end-pick-note")).toHaveCount(0);
+});
+
+test("an end's extension, and freeing a butted end from its butt, each one step", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  served = await serve("ux/ends");
+  await openTab(page, served, 0);
+  // b3's end b 10 longer than its design point: the cut follows, as the CLI cuts it.
+  await pick(page, "b3");
+  const ext = page.getByTestId("end-extend-b");
+  await ext.fill("10");
+  await ext.press("Enter");
+  await waitDrawn(page, 1);
+  expect((await doc(served.dir)).bars.b3?.ends).toEqual({ b: { extend_mm: 10 } });
+  expect(await cutOf(served.dir, "b3")).toBe(310);
+
+  // b2.a butts on b1 by c1, its only end: freeing it removes c1, and the end is open.
+  await pick(page, "b2");
+  await expect(page.getByTestId("row-end-a")).toContainText("butts on b1 (c1)");
+  await page.getByTestId("end-detach-a").click();
+  await waitDrawn(page, 2);
+  expect((await doc(served.dir)).connections).toEqual({});
+  await expect(page.getByTestId("row-end-a")).toContainText("open: nothing joins it");
+  await expect(page.getByTestId("join-end-a")).toBeVisible();
+  // One Undo puts c1 back.
+  await page.getByTestId("undo").click();
+  await waitDrawn(page, 3);
+  expect((await doc(served.dir)).connections?.c1).toEqual({
+    type: "butt",
+    through: "b1",
+    ends: ["b2.a"],
+  });
+});

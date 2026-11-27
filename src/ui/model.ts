@@ -82,6 +82,12 @@ export interface Model {
     hardware: { item: string; opt: Record<string, string>; source: string; qty: number }[];
     diagnostics: Diagnostic[];
   };
+  /**
+   * Per bar end (`b2.a`), every provider that claims it (`c1`, `b2.ends.a.plane`), whether or not
+   * its plane resolved: derive's claims, which `alukit.derived/1` leaves out. An end no provider
+   * claims is open, by the rule `autoConnect` applies (e1 2).
+   */
+  claims: Record<string, string[]>;
   display: {
     bars: Record<string, ViewBar>;
     sections: Record<string, ViewSection>;

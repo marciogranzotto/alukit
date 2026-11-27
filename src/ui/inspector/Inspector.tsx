@@ -16,10 +16,13 @@ import { resolveTargets } from "../targets.ts";
 import { drawnCorners } from "../viewport/viewer.ts";
 import { inspectorActions, useReplaceAsked } from "./actions.ts";
 import { BarFields, ReplaceForm } from "./BarFields.tsx";
+import { barActions } from "./barActions.ts";
 import { DeleteFlow } from "./Delete.tsx";
 import { BarDerived, Item, OtherDerived, ProjectItem } from "./Derived.tsx";
 import { editActions } from "./edit-actions.ts";
 import { PointedField, pointedFor } from "./Fields.tsx";
+import { ManyFields } from "./ManyFields.tsx";
+import { NodeFields } from "./NodeFields.tsx";
 import { ButtConnector, ConnectionFields, PartFields, PlainFields } from "./OtherFields.tsx";
 import { PatternFields } from "./PatternFields.tsx";
 import { copyMembers } from "./remove.ts";
@@ -189,7 +192,7 @@ function EntityBody({
       {kind === "bar" && <BarFields m={m} id={id} />}
       {kind === "part" && <PartFields m={m} id={id} />}
       {kind === "connection" && <ConnectionFields m={m} id={id} />}
-      {kind === "node" && <PlainFields m={m} id={id} title="Point" />}
+      {kind === "node" && <NodeFields m={m} id={id} />}
       {kind === "run" && <PlainFields m={m} id={id} title="Run" />}
       {kind === "pattern" && <PatternFields m={m} id={id} />}
       {kind === "copy" && <CopyBody m={m} id={id} />}
@@ -247,6 +250,7 @@ function Many({ m, ids }: { m: Model; ids: string[] }) {
       </p>
       <SelectionProblems m={m} ids={ids} />
       {item && <ReplaceMany m={m} bars={bars} item={item} />}
+      <ManyFields m={m} ids={ids} />
       {butts.length > 0 && (
         <section>
           <h3>Butts</h3>
@@ -290,6 +294,8 @@ export function Inspector() {
   const sel = [...selection.value];
   // Delete, Join and Replace, for the keys and the menus, while the inspector is shown.
   useEffect(() => inspectorActions(), []);
+  // A bar's own actions (E4): split, reverse, holes.
+  useEffect(() => barActions(), []);
   // E5's: Edit and Change connector on a connection, Explode a pattern, Replace a part.
   useEffect(() => editActions(), []);
   return (

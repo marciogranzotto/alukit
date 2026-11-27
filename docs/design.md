@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3" and 100–104 in "3D editing, E5"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "3D editing, E5". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4" and 100–104 in "3D editing, E5"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "3D editing, E4". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -701,6 +701,35 @@ text takes these in when the editing round is folded in.
   command that wrote a face joint with a sleeve cut to `bore` was refused, the cart's c23's edits
   among them. The schema names the names a field's expression binds besides the params
   (`exprNames`), and the check reads them there; `bore` elsewhere is still not a param (e5 29).
+
+### 3D editing, E4
+
+Stream E4 of the [editing audit](ux/editing-audit.md) edits a bar's ends, offset, anchor, holes
+and length, splits and reverses it, edits several selected at once and a node's place
+([`ux/e4-decisions.md`](ux/e4-decisions.md), cited as "e4"; the interfaces in
+[`ux/contracts.md`](ux/contracts.md), "Editing round: E4 changes"). Every edit is a command the
+core had (`setBar`, `setConnection`, `removeEntity`, `splitBar`, `reverseBar`, `moveNode`,
+`label`, `tag`), so nothing in the document, the commands or the CLI changes; the server's view
+model gains derive's claims, which `alukit.derived/1` does not carry. §8's text takes these in
+when the editing round is folded in.
+
+- §8: **an end's words name the joint that claims it, even when the joint fails** ("butts on b3
+  (c9); the joint fails, so it is square"), read from derive's claims, so a failed claim no
+  longer reads as an open end with a Join that `autoConnect` refuses (D2; e4 1). Call 95.
+- §8: **an end's row edits its cut, its extension and its plane** (by its joint, stopped at a
+  face the end's line meets, flush with a near end, or picked in the view with the next click in
+  Select), and **frees it from its joint**; a plane replaces the joint in the same step and
+  declares an angled cut (E-UX-11; e4 2–6). Call 96.
+- §8: **the bar's actions** (Split here, Split at…, Reverse, Add a hole here…) are on the menu and
+  in the inspector's action row; each hole is a row that edits and removes it, one `setBar` of the
+  whole list; the Offset row names each section axis by its world direction (e4 7–12). Call 97.
+- §8: **several selected share fields**: options (one profile), anchor, roll, label and tags, each
+  its shared value or "varies", one step (E-UX-15; e4 13–15). Call 98.
+- §8: **a length is typed as a value or an expression** and a param is written as typed; end b,
+  end a or both from the middle move (E-UX-16); **a node's fields move it through `moveNode`**, so
+  every bar end at it follows (e4 16–18). Call 99.
+- §5.4: the BOM's Markdown marks an estimated mass `(est)`, as a computed one is marked `(calc)`
+  (e4 22).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -3718,6 +3747,28 @@ reasons. Marking the room is the run's own change, in its project.
     for a bar along a world axis, the gizmo's arrows being world axes. While a gesture is on, its
     keys reach it before an outline row's own handler, never before a text field's, a dialog's or
     a menu's (e3 13, 17).
+95. *New in 2.3, 3D editing E4, open.* An end's words read derive's claims (every provider of each
+    end, resolved or not), which the server's view model carries beside `alukit.derived/1`
+    without changing it; a failed claim is named with why it fails ("the joint fails, so it is
+    square"; "two joints claim it"). `moveEnd`'s hold still reads the derived provider, so it
+    treats such an end as free; left to the core's owner (e4 1).
+96. *New in 2.3, 3D editing E4, open.* A plane chosen in an end's row replaces the joint that
+    claims the end in the same step (an end has one provider) and declares `cut: "angle"` when it
+    is angled and no cut is declared. The faces offered are those the end's line meets beyond the
+    bar's other end, the nearest first; a face picked in the view on a side the line never meets
+    gives that bar's first face the line meets (e4 3–6).
+97. *New in 2.3, 3D editing E4, open.* Split here splits at the menu's station rounded to the
+    millimetre, not snapped (the menu has no snap); exact distances are typed in Split at…, an
+    expression valued, since `splitBar` takes a number. A hole is offered only on a bar's side
+    face; each hole edit is one `setBar` of the whole `ops` list, keeping what its row does not
+    show (e4 9, 11, 12).
+98. *New in 2.3, 3D editing E4, open.* Several selected share options only when they share one
+    profile; the tags field edits only the tags all carry, so a tag some carry survives; a shared
+    length is left out, each bar's length having its own end and driver (e4 13–15).
+99. *New in 2.3, 3D editing E4, open.* The inspector's length writes the end's coordinates with
+    `setBar`, not `moveEnd`, which refuses an end a joint holds; an expression is written only
+    along a world axis, and from the middle as the centre ± half the expression. A node's fields
+    send `moveNode`; a pivot's point is not edited (e4 16–18).
 
 
 100. *New in 2.3, 3D editing E5, open.* A face joint is edited in the Connect tool's own form, and

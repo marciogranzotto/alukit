@@ -9,6 +9,9 @@ import type { Snapshot } from "./host.ts";
  * panel is at the same revision:
  *
  * - `derived`: the derived model as `alukit.derived/1` (§7.3), the contract report builders read;
+ * - `claims`: per bar end, every provider that claims it, whether or not its plane resolved
+ *   (derive's claims, which `alukit.derived/1` leaves out): what joins an end, for the
+ *   inspector's words and its Join, by the rule `autoConnect` applies (e1 2; e4 1);
  * - `display`: what drawing and snapping need beyond it: each bar's section and where the
  *   section sits on the design line, the sections' display outlines (§3.5: simplified at
  *   0.05 mm) with their grooves and datums, parts' boxes and datums, the shapes and holes of the
@@ -58,6 +61,7 @@ export function viewModel(snap: Snapshot) {
     variant: derived.variant ?? null,
     doc: rawDoc,
     derived: derivedJson(derived),
+    claims: Object.fromEntries(derived.claims),
     display,
     items: catalogItems,
     defaults: isObject(rawDoc.defaults) ? rawDoc.defaults : {},

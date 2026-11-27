@@ -243,7 +243,8 @@ describe("alukit derive, cutlist and bom", () => {
     expect(md.code).toBe(0);
     expect(md.out.join("\n")).toMatch(/^# Bill of materials$/m);
     expect(md.out.join("\n")).toMatch(
-      /^\| test:CAR20 \| .* \| 3 \| 0\.400 \| 1\.200 \| p1, p1@1, p1@2 \|$/m,
+      // The test catalog's carriage mass is an estimate: marked (est), as a computed one is (calc).
+      /^\| test:CAR20 \| .* \| 3 \| 0\.400 \| 1\.200 \(est\) \| p1, p1@1, p1@2 \|$/m,
     );
     const csv = await capture(["bom", project("cart"), "--format", "csv"]);
     expect(csv.out.join("\n").split("\n")[0]).toMatch(/^kind,item,name,options,qty,length_mm,/);

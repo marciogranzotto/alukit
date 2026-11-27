@@ -3,20 +3,26 @@ import type { ItemCard, ListedEntry } from "../../server/catalog.ts";
 import { OptionSelects, useOptions } from "../catalog/Card.tsx";
 import { cardOf } from "../catalog/state.ts";
 import { fetchCatalogItems } from "../client/catalog.ts";
+import { AnchorDots } from "../common/AnchorDots.tsx";
 import { EntityChips } from "../common/EntityChip.tsx";
+import { splitBatch } from "../edit/batches.ts";
 import { Errors } from "../Feedback.tsx";
 import { mm, plural } from "../format.ts";
 import type { Model } from "../model.ts";
 import { optionFields } from "../options.ts";
 import { pointParam } from "../records/Params.tsx";
 import { busy } from "../store.ts";
-import { typedValue } from "../tools/typed.ts";
+import { typedNumber, typedValue } from "../tools/typed.ts";
+import { ActionRow } from "./ActionRow.tsx";
 import { useReplaceAsked } from "./actions.ts";
+import { runOf, splitAsked } from "./barActions.ts";
 import { contextBatch, contextOf } from "./context.ts";
+import { EndRows } from "./Ends.tsx";
 import { CommitInput, Row, RowErrors, readOnly, useSend, WordsRow } from "./Fields.tsx";
-import { lengthMode, lengthPatch } from "./length.ts";
+import { HoleRows } from "./Holes.tsx";
+import { type LengthEnd, lengthMode, lengthPatch } from "./length.ts";
 import { barsLike, chosenOption, replaceBatch } from "./replace.ts";
-import { endWords, isObject, written } from "./words.ts";
+import { isObject, written } from "./words.ts";
 
 /**
  * A bar's fields, edited in place (docs/ux/plan.md S5.3, F5, U3): its length (or what drives
@@ -27,7 +33,20 @@ import { endWords, isObject, written } from "./words.ts";
 type O = Record<string, unknown>;
 
 /** The fields a bar's rows show, so the rest are listed as words below them. */
-const SHOWN = new Set(["item", "opt", "a", "b", "anchor", "roll_deg", "label", "tags", "context"]);
+const SHOWN = new Set([
+  "item",
+  "opt",
+  "a",
+  "b",
+  "anchor",
+  "off_mm",
+  "roll_deg",
+  "ends",
+  "ops",
+  "label",
+  "tags",
+  "context",
+]);
 
 /** An item's card, fetched once per item; undefined while it loads or when it cannot be had. */
 export function useCard(id: string | undefined): ItemCard | undefined {
@@ -47,39 +66,68 @@ export function useCard(id: string | undefined): ItemCard | undefined {
   return card;
 }
 
+/** Which end a typed length moves (E-UX-16): end b by default. */
+const LENGTH_ENDS: readonly { value: LengthEnd; text: string }[] = [
+  { value: "b", text: "moves end b" },
+  { value: "a", text: "moves end a" },
+  { value: "middle", text: "from the middle" },
+];
+
 function LengthRow({ m, id }: { m: Model; id: string }) {
-  const mode = lengthMode(m, id);
+  const [which, setWhich] = useState<LengthEnd>("b");
+  const mode = lengthMode(m, id, which);
   const { outcome, send } = useSend();
   // A typed length the field cannot take is said under it, as a refusal would be.
   const [bad, setBad] = useState<string>();
-  useEffect(() => setBad(undefined), [id]);
   const cut = m.derived.bars[id]?.cut_mm;
   const cutText = cut !== undefined ? <span class="sub"> · cut {mm(cut)}</span> : null;
+  const ends = isObject(written(m, id)) ? (
+    <select
+      class="insp-select"
+      data-testid="field-length-end"
+      aria-label="Which end a new length moves"
+      value={which}
+      onChange={(e) => {
+        setWhich((e.currentTarget as HTMLSelectElement).value as LengthEnd);
+        setBad(undefined);
+      }}
+    >
+      {LENGTH_ENDS.map((x) => (
+        <option key={x.value} value={x.value}>
+          {x.text}
+        </option>
+      ))}
+    </select>
+  ) : null;
   let body: preact.ComponentChildren;
   if (mode.kind === "edit") {
     body = (
       <>
         <CommitInput
-          label="Length, mm"
+          label={`Length, mm; ${LENGTH_ENDS.find((x) => x.value === which)?.text}`}
           testid="field-length"
           size={9}
           value={mm(mode.len).replace(/\.00$/, "")}
           onCommit={(text) => {
-            const p = lengthPatch(m, id, Number(text.trim()));
+            // D-UX-17: units and params, a leading `=` allowed; a param is written as typed.
+            const t = typedNumber(text.trim().replace(/^=\s*/, ""), m.derived.params);
+            const p = "why" in t ? t : lengthPatch(m, id, t, which);
             setBad("why" in p ? p.why : undefined);
             if ("set" in p) {
               void send([{ cmd: "setBar", args: { id, set: p.set } }], `set the length of ${id}`);
             }
           }}
         />{" "}
-        mm{cutText}
+        mm {ends}
+        {cutText}
         {mode.note && <div class="sub">{mode.note}</div>}
       </>
     );
   } else if (mode.kind === "driven") {
     body = (
       <>
-        <span data-testid="field-length-value">{mm(mode.len)}</span> mm{cutText}
+        <span data-testid="field-length-value">{mm(mode.len)}</span> mm {ends}
+        {cutText}
         <div class="sub" data-testid="length-driven">
           {mode.params.length > 0 ? (
             <>
@@ -105,14 +153,19 @@ function LengthRow({ m, id }: { m: Model; id: string }) {
   } else if (mode.kind === "ref") {
     body = (
       <>
-        {mm(mode.len)} mm{cutText}
+        {mm(mode.len)} mm {ends}
+        {cutText}
         <div class="sub">
           {mode.text}, which sets it {mode.refs.length > 0 && <EntityChips ids={mode.refs} />}
         </div>
       </>
     );
   } else {
-    body = <span class="sub">{mode.why}</span>;
+    body = (
+      <>
+        <span class="sub">{mode.why}</span> {ends}
+      </>
+    );
   }
   return (
     <>
@@ -372,6 +425,68 @@ export function anchorWords(a: string): string {
   return a;
 }
 
+/** A world direction in words: the axis it runs along (`+Y`), else none. */
+function worldAxis(v: readonly number[] | undefined): string | undefined {
+  if (!v) return undefined;
+  const i = [0, 1, 2].find((k) => Math.abs(Math.abs(v[k] as number) - 1) < 1e-6);
+  return i === undefined ? undefined : `${(v[i] as number) > 0 ? "+" : "-"}${"XYZ"[i]}`;
+}
+
+/**
+ * The offset (`off_mm`, §4.4): the section moved from its anchor along its own x and y, each
+ * named by the world direction it runs in when it runs along one. A param is written as typed
+ * (D-UX-17); both zero removes it. One step (E4.2).
+ */
+function OffsetRow({ m, id }: { m: Model; id: string }) {
+  const w = written(m, id) as O;
+  const { outcome, send } = useSend();
+  const [bad, setBad] = useState<string>();
+  const off = Array.isArray(w.off_mm) ? (w.off_mm as (number | string)[]) : [0, 0];
+  const frame = m.derived.bars[id]?.frame;
+  const commit = (i: 0 | 1, text: string) => {
+    const t = typedNumber(text.trim().replace(/^=\s*/, "") || "0", m.derived.params);
+    if ("why" in t) {
+      setBad(t.why);
+      return;
+    }
+    setBad(undefined);
+    const next = [...off];
+    next[i] = t.written;
+    const none = next.every((x) => x === 0);
+    void send(
+      [{ cmd: "setBar", args: { id, set: { off_mm: none ? null : next } } }],
+      `offset ${id}`,
+    );
+  };
+  return (
+    <>
+      <Row label="Offset" fields={["off_mm"]} testid="row-offset">
+        <span class="end-edit">
+          {([0, 1] as const).map((i) => {
+            const axis = i === 0 ? "x" : "y";
+            const world = worldAxis(i === 0 ? frame?.x : frame?.y);
+            return (
+              <span key={axis}>
+                {axis}
+                {world ? ` (world ${world})` : ""}{" "}
+                <CommitInput
+                  label={`Offset along the section's ${axis}${world ? `, world ${world}` : ""}, mm`}
+                  testid={`field-off-${axis}`}
+                  size={6}
+                  value={String(off[i] ?? 0)}
+                  onCommit={(text) => commit(i, text)}
+                />{" "}
+                mm
+              </span>
+            );
+          })}
+        </span>
+      </Row>
+      <RowErrors outcome={bad !== undefined ? { ok: false, why: bad, errors: [] } : outcome} />
+    </>
+  );
+}
+
 function AnchorRow({ m, id }: { m: Model; id: string }) {
   const w = written(m, id) as O;
   const card = useCard(m.derived.bars[id]?.item);
@@ -379,22 +494,35 @@ function AnchorRow({ m, id }: { m: Model; id: string }) {
   const now = typeof w.anchor === "string" ? w.anchor : "c";
   const anchors = card?.anchors ?? ["c", "-x-y", "+x-y", "+x+y", "-x+y", "-x", "+x", "-y", "+y"];
   const list = anchors.includes(now) ? anchors : [now, ...anchors];
+  const view = m.display.bars[id];
+  const section = view ? m.display.sections[view.section] : undefined;
+  const anchor = (v: string) =>
+    void send(
+      [{ cmd: "setBar", args: { id, set: { anchor: v === "c" ? null : v } } }],
+      `anchor ${id}`,
+    );
   return (
     <>
-      <Row label="Anchor" fields={["anchor", "off_mm"]} testid="row-anchor">
+      <Row label="Anchor" fields={["anchor"]} testid="row-anchor">
+        {section && (
+          <>
+            <AnchorDots
+              bbox={section.bbox}
+              datums={section.datums}
+              anchors={list}
+              value={now}
+              disabled={readOnly() || busy.value}
+              onPick={(a) => a !== now && anchor(a)}
+            />{" "}
+          </>
+        )}
         <select
           class="insp-select"
           data-testid="field-anchor"
           aria-label="Anchor: where the section sits on the bar's line"
           value={now}
           disabled={readOnly() || busy.value}
-          onChange={(e) => {
-            const v = (e.currentTarget as HTMLSelectElement).value;
-            void send(
-              [{ cmd: "setBar", args: { id, set: { anchor: v === "c" ? null : v } } }],
-              `anchor ${id}`,
-            );
-          }}
+          onChange={(e) => anchor((e.currentTarget as HTMLSelectElement).value)}
         >
           {list.map((a) => (
             <option key={a} value={a}>
@@ -430,40 +558,6 @@ function RollRow({ m, id }: { m: Model; id: string }) {
         />{" "}
         °
       </Row>
-      <RowErrors outcome={outcome} />
-    </>
-  );
-}
-
-function EndRows({ m, id }: { m: Model; id: string }) {
-  const { outcome, send } = useSend();
-  return (
-    <>
-      {(["a", "b"] as const).map((e) => {
-        const w = endWords(m, id, e);
-        return (
-          <Row key={e} label={`End ${e}`} fields={[`ends.${e}`, e]} testid={`row-end-${e}`}>
-            {w.text} {w.refs.length > 0 && <EntityChips ids={w.refs} />}
-            {w.open && (
-              <button
-                type="button"
-                class="btn"
-                data-testid={`join-end-${e}`}
-                disabled={readOnly() || busy.value}
-                title="Butt it into what meets it there, by the project's corner rule, as one step"
-                onClick={() =>
-                  void send(
-                    [{ cmd: "autoConnect", args: { end: `${id}.${e}` } }],
-                    `join ${id}.${e}`,
-                  )
-                }
-              >
-                Join
-              </button>
-            )}
-          </Row>
-        );
-      })}
       <RowErrors outcome={outcome} />
     </>
   );
@@ -562,20 +656,101 @@ export function LabelRows({ m, id }: { m: Model; id: string }) {
   );
 }
 
+/**
+ * Split at a typed distance (E-UX-21), as the Split at… action asks: from end a's design point,
+ * an expression over params valued as typed (`splitBar` takes a number), with a splice when asked;
+ * a bar in a run is always spliced. One step.
+ */
+function SplitForm({ m, id }: { m: Model; id: string }) {
+  const run = runOf(m, id);
+  const [text, setText] = useState("");
+  const [splice, setSplice] = useState(false);
+  const [bad, setBad] = useState<string>();
+  const { outcome, send } = useSend();
+  const close = () => {
+    splitAsked.value = undefined;
+  };
+  const len = m.derived.bars[id]?.len_mm ?? 0;
+  return (
+    <form
+      class="split-form"
+      data-testid="split-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const t = typedNumber(text.trim().replace(/^=\s*/, ""), m.derived.params);
+        const b = "why" in t ? t : splitBatch(m, id, t.value, { splice: splice || !!run });
+        setBad("why" in b ? b.why : undefined);
+        if ("why" in b) return;
+        void send(b, `split ${id} at ${"why" in t ? "" : t.value} mm`).then((o) => {
+          if (o.ok) close();
+        });
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          close();
+        }
+      }}
+    >
+      <label>
+        Split {id} at{" "}
+        <input
+          class="insp-input"
+          data-testid="split-at"
+          size={8}
+          value={text}
+          placeholder={mm(len / 2).replace(/\.00$/, "")}
+          ref={(el) => el?.focus()}
+          onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
+        />{" "}
+        mm from end a
+      </label>{" "}
+      <label title={run ? `${id} is in run ${run}: its pieces are spliced` : undefined}>
+        <input
+          type="checkbox"
+          data-testid="split-splice"
+          checked={splice || !!run}
+          disabled={!!run}
+          onChange={(e) => setSplice((e.currentTarget as HTMLInputElement).checked)}
+        />{" "}
+        with a splice
+      </label>
+      <div class="tp-row">
+        <button
+          type="submit"
+          class="btn primary"
+          data-testid="split-apply"
+          disabled={readOnly() || busy.value}
+        >
+          Split
+        </button>
+        <button type="button" class="btn" onClick={close}>
+          Cancel
+        </button>
+      </div>
+      <Errors outcome={bad !== undefined ? { ok: false, why: bad, errors: [] } : outcome} />
+    </form>
+  );
+}
+
 export function BarFields({ m, id }: { m: Model; id: string }) {
   const w = written(m, id) as O;
   const rest = Object.entries(w).filter(([k]) => !SHOWN.has(k));
   return (
     <section>
       <h3>Bar</h3>
+      <ActionRow m={m} ids={[id]} groups={["bar"]} />
+      {splitAsked.value === id && <SplitForm m={m} id={id} />}
       <table class="kv fields" data-testid="fields">
         <tbody>
           <LengthRow m={m} id={id} />
           <ProfileRow m={m} id={id} />
           <OptionRows m={m} id={id} />
           <AnchorRow m={m} id={id} />
+          <OffsetRow m={m} id={id} />
           <RollRow m={m} id={id} />
           <EndRows m={m} id={id} />
+          <HoleRows m={m} id={id} />
           <LabelRows m={m} id={id} />
           <ContextRow m={m} id={id} />
           {rest.map(([k, v]) => (

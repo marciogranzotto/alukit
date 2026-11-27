@@ -26,6 +26,14 @@ function optText(opt: Readonly<Record<string, string>>): string {
     .join(", ");
 }
 
+/**
+ * A mass that is not as published is marked: computed (calc), or estimated (est), whether the
+ * catalog estimates it or it is computed from a traced section (design §3.5's fidelity table).
+ */
+function massMark(l: BomLine): string {
+  return l.mass_src === "calc" || l.mass_src === "est" ? ` (${l.mass_src})` : "";
+}
+
 function unplacedText(l: BomLine): string {
   return (l.unplaced ?? []).map((u) => `${u.part}: ${u.qty} unplaced, ${u.why}`).join("; ");
 }
@@ -33,7 +41,7 @@ function unplacedText(l: BomLine): string {
 export function bomMarkdown(b: Bom): string {
   const out: string[] = ["# Bill of materials", ""];
   out.push(
-    "Masses as the catalog publishes them, else computed from the section's area and the material's density (calc). Bars: pieces and the length of bar they take, each its span (its cut length, unless its two cuts lean the same way).",
+    "Masses as the catalog publishes them, else computed from the section's area and the material's density (calc); a mass the catalog estimates, or one computed from a traced section, is estimated (est). Bars: pieces and the length of bar they take, each its span (its cut length, unless its two cuts lean the same way).",
     "",
     ...lockLines(b.lock),
   );
@@ -49,8 +57,7 @@ export function bomMarkdown(b: Bom): string {
     );
     for (const l of g.lines) {
       const used = [l.sources.join(", "), unplacedText(l)].filter((x) => x !== "").join("; ");
-      const m =
-        l.mass_kg === undefined ? "?" : `${kg(l.mass_kg)}${l.mass_src === "calc" ? " (calc)" : ""}`;
+      const m = l.mass_kg === undefined ? "?" : `${kg(l.mass_kg)}${massMark(l)}`;
       const unit = l.unit_mass_kg === undefined ? "?" : kg(l.unit_mass_kg);
       const cells = bars
         ? [l.item, l.name, optText(l.opt), String(l.qty), mm(l.length_mm ?? 0), unit, m, used]

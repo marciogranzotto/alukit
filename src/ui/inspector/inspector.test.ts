@@ -1,4 +1,4 @@
-import { cp, rm } from "node:fs/promises";
+import { cp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { scratchFixtures } from "#core/testing.ts";
@@ -89,15 +89,53 @@ describe("words (U12, U18)", () => {
   });
 
   it("says what claims a bar's end", () => {
-    // The cart's top rail b7 butts into the front rail b5 through c1 at its end a.
-    expect(endWords(cart, "b7", "a").text).toMatch(/^butts into b5 \(c1\)/);
+    // The cart's top rail b7 butts on the front rail b5 through c1 at its end a, as the end
+    // handles say it ("butts on b5 (c1)").
+    expect(endWords(cart, "b7", "a").text).toMatch(/^butts on b5 \(c1\), square/);
     expect(endWords(cart, "b7", "a").refs).toEqual(["c1", "b5"]);
     // The splice c9 joins b11.b and b12.a.
     expect(endWords(cart, "b11", "b").text).toMatch(/^spliced to b12\.a \(c9\)/);
     // A post's foot: nothing joins it.
     expect(endWords(cart, "b1", "a")).toMatchObject({ open: true });
   });
+
+  it("names the joint that claims an end even when the joint fails (D2)", async () => {
+    // The audit's brace, its butts made by autoConnect, then its cuts undeclared: each butt
+    // makes a 36.87° end that declares no cut, so the claim fails and the end falls back to
+    // its default plane (`by: "default"`). It is claimed, not open, and no Join is offered.
+    const dir = join(root, "brace");
+    const brace = JSON.parse(await readFile(join(dir, "brace.json"), "utf8")) as {
+      commands: unknown[];
+    };
+    const m = await viewOf(dir, brace.commands, [
+      { cmd: "setBar", args: { id: "b13", set: { ends: null } } },
+    ]);
+    expect(m.derived.bars.b13?.ends.a.by).toBe("default");
+    const a = endWords(m, "b13", "a");
+    expect(a.text).toBe("butts on b3 (c9); the joint fails, so it is square");
+    expect(a).toMatchObject({ open: false, refs: ["c9", "b3"] });
+    expect(endWords(m, "b13", "b")).toMatchObject({
+      text: "butts on b4 (c10); the joint fails, so it is square",
+      open: false,
+    });
+    // G11: two butts claim b2.a, so neither holds it.
+    const g11 = await viewOf(join(root, "golden-ends", "G11"));
+    expect(endWords(g11, "b2", "a")).toMatchObject({
+      text: "butts on b1 (c1) and butts on b1 (c2); two joints claim it, so it is square",
+      open: false,
+      refs: ["c1", "b1", "c2"],
+    });
+    // G10: a miter of two sections cannot be cut; its ends are still the miter's.
+    const g10 = await viewOf(join(root, "golden-ends", "G10"));
+    expect(endWords(g10, "b1", "b")).toMatchObject({
+      text: "mitred with b2.a (c1); the joint fails, so it is square",
+      open: false,
+    });
+  });
 });
+
+/** A typed number as the length field reads it. */
+const n = (x: number) => ({ value: x, written: x });
 
 describe("the length field", () => {
   it("is driven by the param a post's height is written with", () => {
@@ -108,9 +146,13 @@ describe("the length field", () => {
       params: ["H"],
       expr: "H",
     });
-    expect(lengthPatch(frame, "b1", 950)).toEqual({ why: "driven by H: edit it" });
+    expect(lengthPatch(frame, "b1", n(950))).toEqual({ why: "driven by H: edit it" });
     // The base rail b9 runs along x to W.
     expect(lengthMode(frame, "b9")).toMatchObject({ kind: "driven", params: ["W"] });
+    // The post's foot is a number: moving end a is not driven.
+    expect(lengthMode(frame, "b1", "a")).toEqual({ kind: "edit", len: 900, how: "coords" });
+    expect(lengthPatch(frame, "b1", n(950), "a")).toEqual({ set: { a: [0, 0, -50] } });
+    expect(lengthMode(frame, "b1", "middle")).toMatchObject({ kind: "driven", params: ["H"] });
   });
 
   it("moves end b along the bar when it is written as numbers, keeping the other coordinates", async () => {
@@ -120,12 +162,44 @@ describe("the length field", () => {
       { cmd: "addBar", args: { a: [0, 0, 0], b: { len_mm: 250, dir: "+x" } } },
     ]);
     expect(lengthMode(m, "b1")).toEqual({ kind: "edit", len: 800, how: "coords" });
-    expect(lengthPatch(m, "b1", 950)).toEqual({ set: { b: [100, 0, 950] } });
+    expect(lengthPatch(m, "b1", n(950))).toEqual({ set: { b: [100, 0, 950] } });
     // A diagonal 500 long: 3-4-5, so 1000 doubles both.
-    expect(lengthPatch(m, "b2", 1000)).toEqual({ set: { b: [600, 800, 0] } });
+    expect(lengthPatch(m, "b2", n(1000))).toEqual({ set: { b: [600, 800, 0] } });
     expect(lengthMode(m, "b3")).toEqual({ kind: "edit", len: 250, how: "free" });
-    expect(lengthPatch(m, "b3", 400)).toEqual({ set: { b: { len_mm: 400 } } });
-    expect(lengthPatch(m, "b3", 0)).toEqual({ why: "a length is a number above 0" });
+    expect(lengthPatch(m, "b3", n(400))).toEqual({ set: { b: { len_mm: 400 } } });
+    expect(lengthPatch(m, "b3", n(0))).toEqual({ why: "a length is a number above 0" });
+    // A free end b is counted from end a: only end b's length moves it.
+    expect(lengthMode(m, "b3", "a")).toEqual({
+      kind: "none",
+      why: "end b is a free length from end a: move end b",
+    });
+  });
+
+  it("binds a length to a param as typed (E-UX-16), from either end or the middle", async () => {
+    const m = await viewOf(await empty(), [
+      { cmd: "setParam", args: { name: "D", value: 600 } },
+      { cmd: "addBar", args: { a: [0, 0, 0], b: [0, 600, 0] } },
+      { cmd: "addBar", args: { a: [100, 0, 0], b: [100, 600, 0] } },
+      { cmd: "addBar", args: { a: [0, 0, 0], b: [300, 400, 0] } },
+      { cmd: "addBar", args: { a: [0, 0, 0], b: { len_mm: 250, dir: "+x" } } },
+    ]);
+    const D = { value: 600, written: "D" };
+    // `=D` on a side rail: its end b is D from end a's y, 0, so D itself.
+    expect(lengthPatch(m, "b1", D)).toEqual({ set: { b: [0, "D", 0] } });
+    expect(lengthPatch(m, "b4", D)).toEqual({ set: { b: { len_mm: "D" } } });
+    // End a moves instead: D back from end b.
+    expect(lengthPatch(m, "b2", D, "a")).toEqual({ set: { a: [100, "600 - D", 0] } });
+    // From the middle, y = 300: each end half the length from it.
+    expect(lengthPatch(m, "b2", n(400), "middle")).toEqual({
+      set: { a: [100, 100, 0], b: [100, 500, 0] },
+    });
+    expect(lengthPatch(m, "b2", D, "middle")).toEqual({
+      set: { a: [100, "300 - (D / 2)", 0], b: [100, "300 + (D / 2)", 0] },
+    });
+    // A diagonal can keep no expression in one coordinate: a number is asked for, as moveEnd asks.
+    expect(lengthPatch(m, "b3", D)).toEqual({
+      why: "D reads D, which b3 keeps only along a world axis: give a number",
+    });
   });
 
   it("says what sets it when end b is a reference", () => {

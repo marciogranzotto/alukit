@@ -782,13 +782,13 @@ its own sugar.
 
 | Id | Task | Size | Done when |
 |---|---|---|---|
-| E4.1 | Editable ends: cut (angle, square), extension, plane (default; stop at a face, picked; flush with an end, picked); detach from the claiming connection. The words name that connection (D2) | M | `ends.spec`: the audit's brace gets both cuts declared from its rows and derives with no error; "stop at face" on a rail's end writes `plane.face`; D2's words read "butts on b1 (c9)" |
-| E4.2 | Offset fields (`off_mm` u, v) and the anchor picked on the section's dots (reuse the command bar's picker) | S | Setting `off_mm` [0, 20] on the brace moves it into the frame plane, as `setBar` does on the CLI |
+| E4.1 | Editable ends: cut (angle, square), extension, plane (default; stop at a face, picked; flush with an end, picked); detach from the claiming connection. The words name that connection (D2) | M | `ends.spec`: the audit's brace gets both cuts declared from its rows and derives with no error; "stop at face" on a rail's end writes `plane.face`; D2's words read "butts on b1 (c9)" (*E4: on `tests/fixtures/brace` the brace butts on b3, so "butts on b3 (c9)"*) |
+| E4.2 | Offset fields (`off_mm` u, v) and the anchor picked on the section's dots (reuse the command bar's picker) | S | Setting `off_mm` [0, 20] on the brace moves it into the frame plane, as `setBar` does on the CLI (*corrected by E4, measured: the brace's section x runs along world +Y and its y lies in the brace's own plane, so the offset is [−20, 0]; [e4 7](e4-decisions.md)*) |
 | E4.3 | Split here and Reverse, from the menu (E-UX-21) | S | Splitting b9 at 400 gives two bars whose cuts sum to b9's; Undo restores b9 |
 | E4.4 | Holes: "Add hole here" on a face; the inspector's Holes list edits and removes (E-UX-22) | M | A Ø7 hole at 20 from end a on b1's +x face equals the CLI's `setBar ops` result in `alukit machining` |
 | E4.5 | Fields for several selected, with "varies" (E-UX-15) | M | Four legs set to finish black in one step; Undo takes it back as one |
 | E4.6 | Lengths bind params; a choice of which end moves (E-UX-16) | S | Typing `=D` in a side rail's length writes `D` in its end b; "from the middle" keeps the centre |
-| E4.7 | A node's fields edit (`at`, `on`), through `moveNode` | M | On the skill's example (which uses nodes), moving a node by its fields moves every bar end at it |
+| E4.7 | A node's fields edit (`at`, `on`), through `moveNode` | M | On the skill's example (which uses nodes), moving a node by its fields moves every bar end at it (*corrected by E4, read: the skill's worked example has no node; the test builds a tripod whose three legs share one; [e4 18](e4-decisions.md)*) |
 
 ### 7.9 E5: connections, patterns, parts
 

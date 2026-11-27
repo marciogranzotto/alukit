@@ -130,6 +130,39 @@ table.kv .btn {
   margin-left: var(--sp-2);
 }
 
+/* An end's row (E4.1): its words, then its cut, extension and plane, each a line that wraps */
+.end-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  margin-top: var(--sp-1);
+}
+
+.end-edit .btn {
+  margin-left: 0;
+}
+
+.end-pick {
+  margin-top: var(--sp-1);
+}
+
+/* The inspector's action row (E-UX-1): the registry's actions on the selection, as buttons */
+.insp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: var(--sp-1) 0 var(--sp-2);
+}
+
+.split-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+
 .props .link {
   background: none;
   border: none;
