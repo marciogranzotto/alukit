@@ -974,3 +974,19 @@ anything, and each has a default in place.
 - **18:20**: Every editing stream is in. Two pieces of work started:
   - the integration pass: design §6 and §8, the guide and README, and `editing.spec` scripting §12's scenarios, each checked against the CLI, with timings for the designer review;
   - a core fix: an end whose joint fails was treated as free by `moveEnd` and the end handles.
+- **19:00**: The failing-joint fix merged (gate PASS, 1,417 tests). An end a failing joint claims is held by that joint: dragging it asks to detach, and the words say the joint fails. Nothing moved across 58 fixtures.
+- **19:25**: The integration pass merged (gate PASS, 1,417 tests).
+  - Design §6 to §8 describe the editing round as built, including a table from each app edit to the commands it sends. The guide and README are updated.
+  - `editing.spec` scripts the acceptance scenarios: 15 of 18 pass, each against the CLI. 3 are `fixme`: no stretch with a crossing box, and mirror not re-homing a station part.
+  - Defects found: A4 takes 6 steps (target ≤ 2), A1 10 clicks (≤ 8), A8 2 steps (1); the anchor dots overlap on a 40×80; Move's arrow keys wait for a move; the log keeps no arguments.
+  - Three agents started:
+    - polish A: stretch, mirror re-home, log arguments, Move's keys;
+    - polish B: A4, the anchor dots, A1, A8;
+    - an independent designer review of the running app, with the known items excluded.
+- **20:12**: The reference project's decided frame passed acceptance run 10 on its re-pinned revision, with **no exception**. Tests 1–4 match run 9 to the gram and the cent.
+  - Run 9's AluKit on the new record gives byte-identical outputs.
+  - Main's differences each have their cause:
+    - the traced PF40-02 outline moves the bearing under its lips;
+    - walls arriving after assembly (F11) turn 5 wall-side errors into warnings;
+    - context members (X11) take the walls out of the BOM and order, and the height check out of reach of the room.
+  - AluKit's own geometry puts A's block 9.7759 mm behind the back plane, the record's figure exactly.
