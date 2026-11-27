@@ -1,6 +1,13 @@
+import type { CornerPlan, RuleArrangement } from "#core/corners/arrange.ts";
+import {
+  arrangeBatch as batchFor,
+  CORNER_RULES,
+  lostFields as lostFor,
+  takeOut as takeOutFor,
+} from "#core/corners/batch.ts";
 import { compareIds } from "#core/ids.ts";
+import type { CornerRule } from "#core/project/schema.ts";
 import type { V3 } from "../../mesh/model.ts";
-import type { DryRun } from "../client/dryrun.ts";
 import type { Corner } from "../corners.ts";
 import type { Model } from "../model.ts";
 import type { Command } from "./remove.ts";
@@ -10,13 +17,15 @@ import { axisOf, barDir, copyOf, isObject, listWords } from "./words.ts";
  * A corner's arrangements (docs/ux/plan.md S5.5, D-UX-9, F3): which bar runs through where bar
  * ends meet, and the cut lengths each choice gives. The core decides (§4.5's rule stays in one
  * place, D-UX-11): for each corner rule an arrangement is the dry run of "take this corner's
- * butts out, then `autoConnect {at, prefer}`", and the rules that come to the same thing are one
- * arrangement. Applying one sends that same batch, so what was shown is what is built. Pure: the
- * dry runs are the caller's. Owner: S5.
+ * butts out, then `autoConnect {at, prefer}`" (src/core/corners/arrange.ts, which builds the
+ * batch and answers every rule in one request, `GET /api/arrangements`), and the rules that come
+ * to the same thing are one arrangement. Applying one sends that same batch, built by the same
+ * core function, so what was shown is what is built. Pure: the request is the caller's.
+ * Owner: S5.
  */
 
-export const RULES = ["vertical", "x", "y", "first"] as const;
-export type CornerRule = (typeof RULES)[number];
+export const RULES = CORNER_RULES;
+export type { CornerRule };
 
 type O = Record<string, unknown>;
 
@@ -29,15 +38,6 @@ function connections(m: Model): Record<string, O> {
 /** A written butt's ends. */
 function endsOf(c: O): string[] {
   return Array.isArray(c.ends) ? c.ends.filter((x): x is string => typeof x === "string") : [];
-}
-
-/** The written butts that claim one of the corner's ends, in id order. */
-function buttsAt(m: Model, corner: Corner): string[] {
-  const here = new Set(corner.ends);
-  return Object.entries(connections(m))
-    .filter(([, c]) => c.type === "butt" && endsOf(c).some((e) => here.has(e)))
-    .map(([id]) => id)
-    .sort(compareIds);
 }
 
 /**
@@ -60,43 +60,9 @@ export function cannotArrange(m: Model, corner: Corner): string | undefined {
   return undefined;
 }
 
-/**
- * The commands that take the corners' butts out: a butt whose ends are all at these corners is
- * removed; one that also has ends elsewhere loses only these corners' ends (`setConnection`).
- */
+/** The commands that take the corners' butts out (the core's `takeOut`, over the drawn document). */
 export function takeOut(m: Model, corners: readonly Corner[]): Command[] {
-  const drop = new Map<string, Set<string>>();
-  for (const corner of corners) {
-    for (const id of buttsAt(m, corner)) {
-      const set = drop.get(id) ?? new Set<string>();
-      for (const e of corner.ends) set.add(e);
-      drop.set(id, set);
-    }
-  }
-  const written = connections(m);
-  const out: Command[] = [];
-  for (const id of [...drop.keys()].sort(compareIds)) {
-    const gone = drop.get(id) as Set<string>;
-    const kept = endsOf(written[id] as O).filter((e) => !gone.has(e));
-    out.push(
-      kept.length === 0
-        ? { cmd: "removeEntity", args: { id } }
-        : { cmd: "setConnection", args: { id, set: { ends: kept } } },
-    );
-  }
-  return out;
-}
-
-/** The connector (and its quantity) of the corner's first butt that names one: kept on Apply. */
-export function keptConnector(m: Model, corner: Corner): { connector?: string; qty?: number } {
-  const written = connections(m);
-  for (const id of buttsAt(m, corner)) {
-    const c = written[id] as O;
-    if (typeof c.connector === "string") {
-      return { connector: c.connector, ...(typeof c.qty === "number" ? { qty: c.qty } : {}) };
-    }
-  }
-  return {};
+  return takeOutFor(m.doc, corners);
 }
 
 /** The fields a butt taken out whole carries that `autoConnect` does not write again. */
@@ -104,24 +70,12 @@ export function lostFields(
   m: Model,
   corners: readonly Corner[],
 ): { id: string; fields: string[] }[] {
-  const keep = new Set(["type", "through", "ends", "connector", "qty"]);
-  const written = connections(m);
-  return takeOut(m, corners)
-    .filter((c) => c.cmd === "removeEntity")
-    .map((c) => (c.args as { id: string }).id)
-    .map((id) => ({ id, fields: Object.keys(written[id] ?? {}).filter((k) => !keep.has(k)) }))
-    .filter((x) => x.fields.length > 0);
+  return lostFor(m.doc, corners);
 }
 
 /** The batch that arranges the corners by a rule: their butts out, one `autoConnect` each. */
 export function arrangeBatch(m: Model, corners: readonly Corner[], rule: CornerRule): Command[] {
-  return [
-    ...takeOut(m, corners),
-    ...corners.map((c) => ({
-      cmd: "autoConnect",
-      args: { at: [...c.at], prefer: rule, ...keptConnector(m, c) },
-    })),
-  ];
+  return batchFor(m.doc, corners, rule);
 }
 
 /** One arrangement of a corner, from the dry runs of the rules that give it. */
@@ -140,17 +94,6 @@ export interface Arrangement {
   title: string;
   /** "b3 runs through; b2 butts into it." */
   detail: string;
-}
-
-/** The plan an `autoConnect` reports (`info`): which bar runs through and which ends butt. */
-function planOf(dry: DryRun & { ok: true }): { through: string; ends: string[] } | undefined {
-  const last = dry.results[dry.results.length - 1];
-  const info = last?.info as { through?: unknown; ends?: unknown } | undefined;
-  if (!info || typeof info.through !== "string" || !Array.isArray(info.ends)) return undefined;
-  return {
-    through: info.through,
-    ends: info.ends.filter((e): e is string => typeof e === "string"),
-  };
 }
 
 /** What a bar is called at a corner: Post, Rail X, Rail Y, or by its id when that is not enough. */
@@ -201,34 +144,42 @@ export function arrangementWords(
   };
 }
 
+/** Why a rule was refused, in words: the command that refused and its errors. */
+function refusalWords(r: Extract<RuleArrangement, { ok: false }>): string {
+  const { index, cmd, errors } = r.failed;
+  return `command ${index + 1}${cmd ? ` (${cmd})` : ""}: ${errors.map((e) => e.message).join("; ")}`;
+}
+
 /**
- * The corner's arrangements from the dry runs of each rule, the rules that come to the same plan
- * and the same cut lengths merged, in RULES order; and the rules whose dry run was refused, with
- * why (shown, not hidden).
+ * The corner's arrangements from each rule's answer (`GET /api/arrangements` for this corner
+ * alone), the rules that come to the same plan and the same cut lengths merged, in RULES order;
+ * and the rules that were refused, with why (shown, not hidden).
  */
 export function arrangementsOf(
   m: Model,
   corner: Corner,
-  answers: readonly { rule: CornerRule; dry: DryRun }[],
+  answers: readonly RuleArrangement[],
 ): { list: Arrangement[]; refused: { rule: CornerRule; why: string }[] } {
   const list: Arrangement[] = [];
   const keys = new Map<string, Arrangement>();
   const refused: { rule: CornerRule; why: string }[] = [];
-  for (const { rule, dry } of answers) {
-    if (!dry.ok) {
-      refused.push({ rule, why: dry.why });
+  for (const answer of answers) {
+    const { rule } = answer;
+    if (!answer.ok) {
+      refused.push({ rule, why: refusalWords(answer) });
       continue;
     }
-    const plan = planOf(dry);
+    const plan: CornerPlan | undefined = answer.plans[0];
     if (!plan) {
       refused.push({ rule, why: "nothing butts at this corner" });
       continue;
     }
-    const bars = [...new Set([...corner.bars, ...Object.keys(dry.effects.cuts)])].sort(compareIds);
+    const moved = answer.effects.cuts;
+    const bars = [...new Set([...corner.bars, ...Object.keys(moved)])].sort(compareIds);
     const cuts = bars.flatMap((bar) => {
       const was = m.derived.bars[bar]?.cut_mm;
       if (was === undefined) return [];
-      return [{ bar, cut: dry.effects.cuts[bar]?.[1] ?? was, was }];
+      return [{ bar, cut: moved[bar]?.[1] ?? was, was }];
     });
     const key = JSON.stringify([plan.through, [...plan.ends].sort(), cuts]);
     const same = keys.get(key);
@@ -244,7 +195,7 @@ export function arrangementsOf(
       current:
         corner.state === "joined" &&
         corner.through === plan.through &&
-        Object.keys(dry.effects.cuts).length === 0,
+        Object.keys(moved).length === 0,
       ...arrangementWords(m, corner, plan.through, plan.ends),
     };
     keys.set(key, a);

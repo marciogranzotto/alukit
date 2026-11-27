@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { dryRun } from "../client/dryrun.ts";
+import { fetchArrangements } from "../client/arrangements.ts";
 import { EntityChips } from "../common/EntityChip.tsx";
 import { StatusGlyph } from "../common/StatusGlyph.tsx";
 import type { Corner } from "../corners.ts";
@@ -19,7 +19,6 @@ import {
   lostFields,
   matchingCorners,
   nextArrangement,
-  RULES,
 } from "./arrangements.ts";
 import { readOnly } from "./Fields.tsx";
 import { barRole, connectionType, isObject, labelOf, listWords, pointWords } from "./words.ts";
@@ -27,10 +26,10 @@ import { barRole, connectionType, isObject, labelOf, listWords, pointWords } fro
 /**
  * The corner inspector (docs/ux/plan.md S5.5, F3, D-UX-9): what meets at a corner, the
  * connections there and their connector, and the arrangements, each with the cut lengths it gives,
- * from dry runs of the core's corner rule. Apply to this corner, or to every corner made like it,
- * as one step; Flip to the next arrangement; join every open corner at once. The dry runs go out
- * when a corner is selected (and again when the drawn revision moves), never per render, and an
- * answer about another revision is dropped. Owner: S5.
+ * from one request that dry-runs every corner rule (`GET /api/arrangements`). Apply to this
+ * corner, or to every corner made like it, as one step; Flip to the next arrangement; join every
+ * open corner at once. The request goes out when a corner is selected (and again when the drawn
+ * revision moves), never per render, and an answer about another revision is dropped. Owner: S5.
  */
 
 type O = Record<string, unknown>;
@@ -56,9 +55,9 @@ type Arrangements =
   | { state: "error"; why: string };
 
 /**
- * The arrangements of a corner at the drawn revision: four dry runs, one per rule, sent when the
- * corner or the revision changes. An answer that ran against another revision than the one drawn
- * is dropped (the next revision asks again).
+ * The arrangements of a corner at the drawn revision: one request for every rule
+ * (`GET /api/arrangements`), sent when the corner or the revision changes. An answer that ran
+ * against another revision than the one drawn is dropped (the next revision asks again).
  */
 function useArrangements(m: Model, corner: Corner, offered: boolean): Arrangements {
   const [a, setA] = useState<Arrangements>({ state: "asking" });
@@ -67,24 +66,15 @@ function useArrangements(m: Model, corner: Corner, offered: boolean): Arrangemen
     let live = true;
     setA({ state: "asking" });
     const t0 = performance.now();
-    void Promise.all(
-      RULES.map(async (rule) => ({ rule, r: await dryRun(arrangeBatch(m, [corner], rule)) })),
-    ).then((answers) => {
+    void fetchArrangements([corner.at]).then((r) => {
       if (!live) return;
-      const failed = answers.find((x) => !x.r.ok);
-      if (failed && !failed.r.ok) {
-        setA({ state: "error", why: failed.r.why });
+      if (!r.ok) {
+        setA({ state: "error", why: r.why });
         return;
       }
-      const dries = answers.map((x) => ({ rule: x.rule, dry: x.r.ok ? x.r.value : undefined }));
-      const rev = dries.find((x) => x.dry?.ok)?.dry;
       // About another revision than the one drawn: wait for that one's own answer.
-      if (rev?.ok && rev.rev !== m.rev) return;
-      const { list, refused } = arrangementsOf(
-        m,
-        corner,
-        dries.flatMap((x) => (x.dry ? [{ rule: x.rule, dry: x.dry }] : [])),
-      );
+      if (r.value.rev !== m.rev) return;
+      const { list, refused } = arrangementsOf(m, corner, r.value.rules);
       setA({ state: "done", rev: m.rev, list, refused, ms: Math.round(performance.now() - t0) });
     });
     return () => {
