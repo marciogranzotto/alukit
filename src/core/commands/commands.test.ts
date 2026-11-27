@@ -574,6 +574,114 @@ describe("mirror", () => {
   });
 });
 
+describe("setProject (BE-1)", () => {
+  /** Built-in std and forseti; one folder inside the project, ./parts; anything else outside. */
+  const places: CommandEnv = {
+    ...ENV,
+    catalogs: {
+      builtin: ["forseti", "std"],
+      folder: (p) => (p === "./parts" ? undefined : `${p} is outside the project's folder`),
+    },
+  };
+  const set = (state: State, args: object, env = places) => {
+    const r = applyBatch(state, [{ cmd: "setProject", args }], env);
+    if (r.ok) exercised.add("setProject");
+    return r;
+  };
+
+  it("round-trips each field, merging objects, replacing lists, null removing", () => {
+    const fields: [string, unknown][] = [
+      ["name", "Cart 2"],
+      ["catalogs", ["../catalogs/test", "../catalogs/test-geo", "../catalogs/test-gen", "std"]],
+      ["currency", "EUR"],
+      ["price_basis", "lowest"],
+      ["fx", { USD: 5.6, GBP: { v: 7.1, src: "src", read: "2026-11-26" } }],
+      ["defaults", { bar: { item: "test:TS40", opt: { finish: "anodised" } }, butt: { qty: 2 } }],
+      ["order_rules", { "stale-price": "block", "est-price": "warn" }],
+    ];
+    for (const [k, v] of fields) {
+      const r = set(cart(), { [k]: v });
+      expect(r.ok, k).toBe(true);
+      if (!r.ok) continue;
+      expect(r.results[0]?.changed, k).toEqual([k]);
+      const want = k === "fx" ? { USD: 5.6, GBP: (v as { GBP: unknown }).GBP } : v;
+      expect(r.state.doc[k], k).toEqual(
+        k === "defaults" ? { ...(cart().doc.defaults as object), ...(v as object) } : want,
+      );
+      // Its document is in canonical form, and null takes the field away again.
+      expect(projectText(JSON.parse(projectText(r.state.doc)))).toBe(projectText(r.state.doc));
+      const gone = set(r.state, { [k]: null });
+      expect(gone.ok && Object.hasOwn(gone.state.doc, k), k).toBe(false);
+    }
+    // A merge patch: one default's option changes, its item and the others stay.
+    const black = set(cart(), { defaults: { bar: { opt: { finish: "black" } }, cutting: null } });
+    expect(black.ok && black.state.doc.defaults).toEqual({
+      bar: { item: "test:TS40", opt: { finish: "black" } },
+    });
+    // fx merges by currency: USD's rate is replaced, a new one added, null removes one.
+    const fx = set(cart(), { fx: { USD: null, EUR: 6.2 } });
+    expect(fx.ok && fx.state.doc.fx).toEqual({ EUR: 6.2 });
+  });
+
+  it("validates what it leaves, as the document's schema does, and names the field", () => {
+    const refused = (args: object) => {
+      const r = set(cart(), args);
+      return r.ok ? [] : r.failed.errors.map((e) => [e.code, e.field]);
+    };
+    expect(refused({ currency: "euro" })).toEqual([["args", "currency"]]);
+    expect(refused({ price_basis: "cheapest" })[0]).toEqual(["args", "price_basis"]);
+    expect(refused({ order_rules: { "no-such-rule": "block" } })[0]?.[0]).toBe("args");
+    expect(refused({ defaults: { butt: { qty: 0 } } })[0]?.[0]).toBe("args");
+    expect(refused({ defaults: { bar: { item: "test:NOPE" } } })).toEqual([
+      ["item", "defaults/bar/item"],
+    ]);
+    expect(refused({ bars: {} })[0]?.[0]).toBe("args");
+    expect(refused({})[0]?.[0]).toBe("args");
+  });
+
+  it("adds a built-in catalog or a folder inside the project, and nothing else (§7.2)", () => {
+    const named = (state: State) => state.doc.catalogs;
+    const was = cart().doc.catalogs as string[];
+    const ok2 = set(cart(), { catalogs: [...was, "forseti", "./parts"] });
+    expect(ok2.ok && named(ok2.state)).toEqual([...was, "forseti", "./parts"]);
+    // The cart's own folders outside it are kept: only what a command adds is judged.
+    const outside = set(cart(), { catalogs: [...was, "../elsewhere"] });
+    expect(outside.ok ? [] : outside.failed.errors).toEqual([
+      {
+        code: "catalog",
+        field: "catalogs",
+        refs: ["../elsewhere"],
+        message: "../elsewhere is outside the project's folder",
+      },
+    ]);
+    const unknown = set(cart(), { catalogs: ["nope"] });
+    expect(unknown.ok ? "" : unknown.failed.errors[0]?.message).toBe(
+      "there is no built-in catalog nope (built in: forseti, std)",
+    );
+    // With no project folder to resolve a path in, a folder is refused, a built-in id taken.
+    expect(set(cart(), { catalogs: [...was, "./parts"] }, ENV).ok).toBe(false);
+    expect(set(cart(), { catalogs: [...was, "std"] }, ENV).ok).toBe(true);
+  });
+
+  it("is one step that undo takes back whole", () => {
+    const h = new History(cart());
+    const before = projectText(h.current.doc);
+    const r = h.apply(
+      [
+        {
+          cmd: "setProject",
+          args: { name: "Renamed", currency: "USD", order_rules: { "stale-price": "off" } },
+        },
+      ],
+      places,
+    );
+    expect(r.ok).toBe(true);
+    expect(h.current.doc).toMatchObject({ name: "Renamed", currency: "USD" });
+    h.undo();
+    expect(projectText(h.current.doc)).toBe(before);
+  });
+});
+
 describe("items, params, costs and records", () => {
   it("addItem and setItem: a project item, checked against its kind's schema and its material", () => {
     // Design §4.2's example plate.
@@ -960,6 +1068,51 @@ describe("batches and history (§6)", () => {
     expect(h.current).toBe(before);
     expect(h.rev).toBe(0);
     expect(h.canUndo).toBe(false);
+  });
+
+  it("says each step in words, beside its command names (BE-4)", () => {
+    const h = new History(cart());
+    const step = (commands: object[]) => {
+      const r = h.apply(commands, ENV, "ui");
+      if (!r.ok) throw new Error(JSON.stringify(r.failed));
+      return h.log().at(-1);
+    };
+    // The draw tool's step: a bar and one autoConnect per end, the second finding nothing.
+    expect(
+      step([
+        { cmd: "addBar", args: { a: [0, -20, 0], b: [0, -20, 600] } },
+        { cmd: "autoConnect", args: { end: "b35.b", optional: true } },
+        { cmd: "addBar", args: { a: [0, -20, 600], b: [500, -20, 600] } },
+        { cmd: "autoConnect", args: { end: "b36.a", optional: true } },
+        { cmd: "autoConnect", args: { end: "b36.b", optional: true } },
+      ]),
+    ).toMatchObject({
+      what: "addBar, autoConnect, addBar, autoConnect, autoConnect",
+      text: "add bars b35 and b36, joined at 1 end",
+    });
+    expect(step([{ cmd: "autoConnect", args: { end: "b35.a", optional: true } }])?.text).toBe(
+      "no change",
+    );
+    expect(
+      step([{ cmd: "setBar", args: { id: "b1", set: { roll_deg: 90, opt: null } } }])?.text,
+    ).toBe("change b1's roll and options");
+    expect(
+      step([
+        { cmd: "setParam", args: { name: "W", value: 1300 } },
+        { cmd: "label", args: { id: "b1", label: "Front rail" } },
+        { cmd: "removeEntity", args: { id: "b36", cascade: true } },
+        { cmd: "addDecision", args: { text: "keep the rails" } },
+      ])?.text,
+    ).toBe('set W to 1300, label b1 "Front rail" and 2 more');
+    h.undo("cli:me");
+    expect(h.log().at(-1)).toMatchObject({
+      source: "cli:me",
+      what: "undo setParam, label, removeEntity, addDecision",
+      text: 'undo set W to 1300, label b1 "Front rail" and 2 more',
+    });
+    expect(step([{ cmd: "setProject", args: { name: "Cart 2", price_basis: "sale" } }])?.text).toBe(
+      "change the project's name and price basis",
+    );
   });
 
   it("undo and redo restore the document and the lock byte for byte", () => {

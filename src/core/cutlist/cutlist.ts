@@ -3,6 +3,7 @@ import { type Diagnostic, Diagnostics } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
 import type { ItemSource, OfferInfo, SaleInfo } from "../items.ts";
 import { amount, type Basis, barPrice, basisPrice } from "../order/price.ts";
+import { optText, soldOptionsText } from "../order/types.ts";
 import type { Face } from "../project/schema.ts";
 import { QUANTUM, quantize, roundHalfAway, snapCeil } from "../quantum.ts";
 import { oldestRead } from "../stamp.ts";
@@ -637,10 +638,17 @@ export function cutList(input: CutListInput): CutList {
     if (mode === "cut" && cutOffers.length === 0) mode = "none";
     if (mode === "stock" && stockOffers.length === 0) mode = "none";
     if (mode === "none") {
+      // In words (BE-7): the options asked for, and those sold when none of them matches.
+      const opt = optText(first.opt);
+      const sold = items.offers(first.item).filter((o) => o.sale);
+      const elsewhere = offers.length === 0 && sold.length > 0 ? soldOptionsText(sold) : "";
+      // The bars it names are the ones to change (BE-3): their pieces' sources.
+      const bars = [...new Set(ps.map((p) => p.source).filter((x) => /^b\d+(@\d+)?$/.test(x)))];
       d.warn(
         "no-offer",
         first.item,
-        `${first.item} ${optKey(first.opt)} has no offer that sells it by length`,
+        `${first.item}${opt ? ` with ${opt}` : ""} has no offer that sells it by length${elsewhere ? `; it is sold only with ${elsewhere}` : ""}`,
+        bars.length > 0 ? { refs: bars.sort(compareIds) } : {},
       );
     }
 

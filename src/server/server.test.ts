@@ -339,7 +339,13 @@ describe("the API", () => {
       commands: [{ cmd: "addNode", args: { at: [1, 2, 3] } }],
       source: "cli:t",
     });
-    expect(await next("rev")).toMatchObject({ rev: 1, source: "cli:t", what: "addNode" });
+    expect(await next("rev")).toMatchObject({
+      rev: 1,
+      source: "cli:t",
+      what: "addNode",
+      text: "add point n2",
+      undo: { rev: 1, source: "cli:t", what: "addNode", text: "add point n2" },
+    });
 
     await writeFile(join(f.dir, DOCUMENT), "{ nope");
     await r.host.checkFiles();
@@ -374,6 +380,43 @@ describe("the order and the costs (§5.4, §4.11)", () => {
       const cli = await capture([cmd, cart, "--format", "json", "--as-of", AS_OF]);
       expect(served.body, cmd).toBe(`${cli.out}\n`);
     }
+  });
+
+  it("answers the problems as alukit problems --json, byte for byte (BE-3)", async () => {
+    const f = await fixture();
+    const cart = join(f.dir, "..", "..", "cart");
+    // Headless first, before a server owns the folder: revision 0, the files as read.
+    const cli = await capture(["problems", cart, "--json", "--as-of", AS_OF]);
+    expect(cli.code).toBe(1);
+    const r = await serve({ ...f, dir: cart });
+    const served = await text(r, `api/problems?as_of=${AS_OF}`);
+    expect(served).toMatchObject({ status: 200, rev: "0" });
+    expect(served.body).toBe(`${cli.out}\n`);
+    // Its blocking problems are the order's blocking reasons; each raw is a message printed.
+    const p = JSON.parse(served.body) as { order: { blocks: number }; problems: { raw: string }[] };
+    const order = JSON.parse((await text(r, `api/order?as_of=${AS_OF}`)).body) as {
+      suppliers: { reasons: { action: string; message: string }[] }[];
+    };
+    const reasons = order.suppliers.flatMap((s) => s.reasons);
+    expect(p.order.blocks).toBe(reasons.filter((x) => x.action === "block").length);
+    const check = JSON.parse((await text(r, "api/check")).body) as {
+      diagnostics: { message: string }[];
+    };
+    const printed = new Set([...reasons, ...check.diagnostics].map((x) => x.message));
+    expect(p.problems.every((x) => printed.has(x.raw))).toBe(true);
+
+    // With the server running, the CLI asks it: the revision after a step, still equal.
+    await api(r, "api/commands", {
+      commands: [{ cmd: "resolveOpen", args: { id: "O2" } }],
+      source: "ui",
+    });
+    const after = await text(r, `api/problems?as_of=${AS_OF}`);
+    expect(after.rev).toBe("1");
+    const through = await capture(["problems", cart, "--json", "--as-of", AS_OF]);
+    expect(after.body).toBe(`${through.out}\n`);
+    expect(JSON.parse(after.body)).toMatchObject({ rev: 1, order: { blocks: p.order.blocks - 1 } });
+    expect((await text(r, "api/problems?as_of=26-11-2026")).status).toBe(400);
+    expect((await text(r, "api/problems?variant=nope")).status).toBe(400);
   });
 
   it("answers the machining sheet as alukit machining --format json, byte for byte", async () => {
@@ -449,6 +492,93 @@ describe("the order and the costs (§5.4, §4.11)", () => {
   });
 });
 
+describe("a dry run (BE-2)", () => {
+  /** A post where the beam ends, butted by the default rule: the beam's cut moves. */
+  const post = [
+    { cmd: "addBar", args: { a: [1000, 0, 0], b: [1000, 0, 600] } },
+    { cmd: "autoConnect", args: { end: "b4.a" } },
+  ];
+  const hashes = async (dir: string) =>
+    Promise.all(["alukit.json", "alukit.lock.json"].map((n) => readFile(join(dir, n), "utf8")));
+
+  it("writes, logs and broadcasts nothing, and says what the real step then does", async () => {
+    const r = await serve();
+    const files = await hashes(r.dir);
+    const events: unknown[] = [];
+    r.host.subscribe((e) => events.push(e));
+    const dry = await api(r, "api/commands", { commands: post, source: "ui", dryRun: true });
+    expect(dry.status).toBe(200);
+    expect(dry.body).toMatchObject({
+      schema: "alukit.do/1",
+      ok: true,
+      dry: true,
+      rev: 0,
+      created: ["b4", "c3"],
+      effects: { cuts: { b1: [1000, 980] }, removed: [], claimed: ["b1.b", "b4.a"] },
+    });
+    expect(Object.keys((dry.body.effects as { added: object }).added)).toEqual(["b4"]);
+    expect(await hashes(r.dir)).toEqual(files);
+    expect((await api(r, "api/log")).body.entries).toEqual([]);
+    expect(r.host.rev).toBe(0);
+    expect(events).toEqual([]);
+
+    const real = await api(r, "api/commands", { commands: post, source: "ui" });
+    expect(real.body.results).toEqual(dry.body.results);
+    expect(real.body.diagnostics).toEqual(dry.body.diagnostics);
+    // A refused dry run is refused as the step would be, and changes nothing either.
+    const refused = await api(r, "api/commands", {
+      commands: [{ cmd: "removeEntity", args: { id: "b1" } }],
+      source: "ui",
+      dryRun: true,
+    });
+    expect(refused).toMatchObject({ status: 422, body: { ok: false, dry: true, kind: "refused" } });
+    expect(r.host.rev).toBe(1);
+  });
+
+  it("runs in the queue: behind a step already queued, against the revision it makes", async () => {
+    const r = await serve();
+    const step = r.host.commands({
+      commands: [{ cmd: "addNode", args: { at: [5, 5, 5] } }],
+      source: "cli",
+    });
+    const dry = r.host.dryRun({ commands: post, source: "ui" });
+    expect((await step).rev).toBe(1);
+    expect(await dry).toMatchObject({ ok: true, rev: 1, created: ["b4", "c3"] });
+    expect(r.host.rev).toBe(1);
+  });
+
+  it("is alukit do --dry-run, through the server or in-process, writing nothing", async () => {
+    const root = await scratchFixtures();
+    scratch.push(root);
+    const dir = join(root, "golden-ends", "G27");
+    const files = await hashes(dir);
+    const headless = await capture(["do", dir, JSON.stringify(post), "--dry-run"]);
+    expect(headless.code).toBe(0);
+    expect(headless.out.split("\n")).toEqual([
+      "addBar: would create b4",
+      "autoConnect: would create c3",
+      "cut b1: 1000 → 980",
+      expect.stringMatching(/^new b4: cut \d+(\.\d+)?$/),
+      "claims b1.b, b4.a",
+      expect.stringMatching(/^dry run on rev [0-9a-f]{12}: .* after it; nothing was written$/),
+    ]);
+    expect(await hashes(dir)).toEqual(files);
+    const json = JSON.parse(
+      (await capture(["do", dir, JSON.stringify(post), "--dry-run", "--json"])).out,
+    );
+    const f = await fixture();
+    const served = await serve({ ...f, dir });
+    const through = JSON.parse(
+      (await capture(["do", dir, JSON.stringify(post), "--dry-run", "--json"])).out,
+    );
+    // The same step, the same answer, but for the revision: a hash headless, the counter here.
+    expect({ ...through, rev: 0 }).toEqual({ ...json, rev: 0 });
+    expect(through).toMatchObject({ dry: true, rev: 0 });
+    expect(served.host.rev).toBe(0);
+    expect(await hashes(dir)).toEqual(files);
+  });
+});
+
 describe("the CLI through a running server (§7.1, §7.3)", () => {
   it("sends do, add, undo, redo and log to the server, so the tabs see them live", async () => {
     const r = await serve();
@@ -476,6 +606,67 @@ describe("the CLI through a running server (§7.1, §7.3)", () => {
     expect(refused.code).toBe(1);
     expect(refused.err).toContain("refused: command 1 (addBar)");
     expect(r.host.rev).toBe(4);
+  });
+
+  it("logs --as agent:<name> as that agent, and a bare name as cli:<name> (U57)", async () => {
+    const r = await serve();
+    const as = async (cmd: string[], who: string) =>
+      expect((await capture([...cmd, "--as", who])).code, who).toBe(0);
+    await as(["do", r.dir, '{"cmd":"addNode","args":{"at":[1,2,3]}}'], "agent:claude");
+    await as(["add", "point", r.dir, "--at", "4,5,6"], "me");
+    await as(["add", "point", r.dir, "--at", "7,8,9"], "cli:other");
+    await as(["undo", r.dir], "agent:claude");
+    await as(["redo", r.dir], "agent:claude");
+    const log = JSON.parse((await capture(["log", r.dir, "--json"])).out) as {
+      entries: { source: string }[];
+    };
+    expect(log.entries.map((e) => e.source)).toEqual([
+      "agent:claude",
+      "cli:me",
+      "cli:other",
+      "agent:claude",
+      "agent:claude",
+    ]);
+    // A name the server would refuse is the CLI's usage error, before anything is sent.
+    for (const bad of ["agent:", "agent:two words", "x/y", ""]) {
+      const refused = await capture([
+        "do",
+        r.dir,
+        '{"cmd":"addNode","args":{"at":[0,0,1]}}',
+        "--as",
+        bad,
+      ]);
+      expect(refused.code, bad).toBe(2);
+      expect(refused.err, bad).toContain("--as");
+    }
+    expect(r.host.rev).toBe(5);
+  });
+
+  it("words each step for a person, keeping the command names for scripts (BE-4)", async () => {
+    const r = await serve();
+    await capture(["add", "point", r.dir, "--at", "4,5,6", "--as", "agent:claude"]);
+    await capture(["add", "bar", r.dir, "--a", "n2", "--b", "4,5,600"]);
+    await capture(["undo", r.dir]);
+    const log = JSON.parse((await capture(["log", r.dir, "--json"])).out) as {
+      entries: { what: string; text: string }[];
+    };
+    expect(log.entries.map((e) => [e.what, e.text])).toEqual([
+      ["addNode", "add point n2"],
+      ["addBar", "add bar b4"],
+      ["undo addBar", "undo add bar b4"],
+    ]);
+    expect((await capture(["log", r.dir])).out.split("\n")).toEqual([
+      "   1  agent:claude add point n2",
+      "   2  cli          add bar b4",
+      "   3  cli          undo add bar b4",
+      "rev 3",
+    ]);
+    // The undo and redo buttons read the same words, as the session and every event give them.
+    const session = (await api(r, "api/session")).body as {
+      undo: { text: string };
+      redo: { text: string };
+    };
+    expect([session.undo.text, session.redo.text]).toEqual(["add point n2", "add bar b4"]);
   });
 
   it("is refused while the project is read-only, naming why", async () => {

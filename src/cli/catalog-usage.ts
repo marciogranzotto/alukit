@@ -22,9 +22,11 @@ export const CATALOG_USAGES = {
     "    the merged item as JSON: fields with their sources, corrections, section, offers",
   ],
   search: [
-    "alukit catalog search <query> [--kind <kind>] [--catalog <id|dir>]... [--limit n] [--json]",
-    "    items whose id, code, name or family hold every word, ranked (exact id or code first);",
-    "    every built-in catalog unless --catalog names some; 20 items unless --limit (200 at most)",
+    "alukit catalog search <query> [--kind <kind>] [--prefer <kind>] [--catalog <id|dir>]... [--limit n] [--json]",
+    "    items whose id, code, name or family hold every word, ranked: exact id or code first,",
+    "    then bars of a size the query writes (40x40), then whole words; --prefer ranks a kind",
+    "    first within each; every built-in catalog unless --catalog names some; 20 items unless",
+    "    --limit (200 at most)",
   ],
   schema: [
     `alukit catalog schema [${SCHEMA_NAMES_FOR_USAGE.join("|")}]`,

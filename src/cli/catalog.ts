@@ -30,7 +30,7 @@ interface Args {
 
 /** Each subcommand's own options, besides `--catalog` and `--json`. */
 const OPTIONS: Readonly<Record<string, { values: readonly string[]; flags: readonly string[] }>> = {
-  search: { values: ["kind", "limit"], flags: [] },
+  search: { values: ["kind", "prefer", "limit"], flags: [] },
   import: { values: ["python", "snapshot", "pdf", "out"], flags: ["fetch"] },
 };
 
@@ -68,10 +68,12 @@ async function search(args: Args, io: Io): Promise<number> {
     io.err("alukit catalog search: --limit takes a whole number, 1 or more");
     return 2;
   }
+  const prefer = args.values.prefer;
   return searchCommand(
     {
       query,
       ...(kind !== undefined ? { kind } : {}),
+      ...(prefer !== undefined ? { prefer } : {}),
       catalogs: args.catalogs,
       ...(limit !== undefined ? { limit: Number(limit) } : {}),
       json: args.json,

@@ -9,6 +9,7 @@ import {
 import { autoConnect, reverseBar, splitBar } from "./geometry.ts";
 import { mirror } from "./mirror.ts";
 import { array, explodePattern } from "./patterns.ts";
+import { setProject } from "./project.ts";
 import {
   addCheck,
   addCost,
@@ -33,6 +34,7 @@ import type { CommandDef } from "./types.ts";
 
 /** Every command (design §6), in the order of §6's table. */
 export const COMMAND_LIST: readonly CommandDef<never>[] = [
+  setProject,
   addNode,
   moveNode,
   addBar,

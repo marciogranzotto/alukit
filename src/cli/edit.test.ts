@@ -61,6 +61,73 @@ describe("alukit new", () => {
     expect(JSON.parse(read(join(dir, "alukit.json"))).catalogs).toEqual(["std"]);
     expect(read(join(dir, ".gitignore"))).toBe("node_modules/\n.alukit/\n");
   });
+
+  it("says which finishes a profile is sold in when a bar names none (U2, U10)", async () => {
+    // The README's first frame: a fresh forseti project and a bar with no finish.
+    const root = await scratchFixtures();
+    const dir = join(root, "first");
+    expect((await capture(["new", dir, "--catalog", "forseti"])).code).toBe(0);
+    const add = ["add", "bar", dir, "--item", "forseti:PF40-01", "--a", "0,0,0", "--b", "600,0,0"];
+    expect((await capture(add)).code).toBe(0);
+    const order = await capture(["order", dir, "--as-of", "2026-11-26"]);
+    expect(order.code).toBe(1);
+    expect(order.err).toContain(
+      "option-not-sold: forseti:PF40-01: sold only with finish anodised or black; choose one",
+    );
+    const check = await capture(["check", dir]);
+    expect(check.out).toContain(
+      "warn no-offer forseti:PF40-01: forseti:PF40-01 has no offer that sells it by length; it is sold only with finish anodised or black",
+    );
+    expect(check.out).not.toContain("[]");
+  });
+});
+
+describe("setProject through alukit do (BE-1)", () => {
+  it("names a catalog and a default bar from it in one step, pinning the bar", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "first");
+    expect((await capture(["new", dir])).code).toBe(0);
+    const set = {
+      cmd: "setProject",
+      args: {
+        catalogs: ["std", "forseti"],
+        currency: "BRL",
+        defaults: { bar: { item: "forseti:PF40-01", opt: { finish: "anodised" } } },
+      },
+    };
+    const r = await capture(["do", dir, JSON.stringify(set), "--json"]);
+    expect(r.code, r.err).toBe(0);
+    expect(JSON.parse(r.out).results).toEqual([
+      {
+        cmd: "setProject",
+        created: [],
+        removed: [],
+        changed: ["catalogs", "currency", "defaults"],
+      },
+    ]);
+    const lock = JSON.parse(read(join(dir, "alukit.lock.json")));
+    expect(Object.keys(lock.items)).toEqual(["forseti:PF40-01"]);
+    // A bar drawn with no item takes the default, finish and all: nothing holds the order.
+    expect((await capture(["add", "bar", dir, "--a", "0,0,0", "--b", "600,0,0"])).code).toBe(0);
+    const order = await capture(["order", dir, "--as-of", "2026-11-26", "--format", "json"]);
+    expect(JSON.parse(order.out).status).toBe("READY");
+  });
+
+  it("refuses a catalog folder outside the project, and changes nothing", async () => {
+    const root = await scratchFixtures();
+    const dir = join(root, "golden-ends", "G01");
+    const before = read(join(dir, "alukit.json"));
+    const was = JSON.parse(before).catalogs as string[];
+    const add = (c: string) =>
+      capture(["do", dir, JSON.stringify({ cmd: "setProject", args: { catalogs: [...was, c] } })]);
+    const out = await add("../../catalogs/test-gen");
+    expect(out.code).toBe(1);
+    expect(out.err).toContain(
+      "catalog catalogs: ../../catalogs/test-gen is outside the project's folder",
+    );
+    expect((await add("./nowhere")).err).toContain("there is no folder ./nowhere in the project");
+    expect(read(join(dir, "alukit.json"))).toBe(before);
+  });
 });
 
 describe("alukit do", () => {

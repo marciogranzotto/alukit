@@ -1,9 +1,18 @@
 import { z } from "zod";
+import type { CatalogSet } from "#catalog/link.ts";
 import { pinLock } from "../lock/pin.ts";
 import { documentRefs, lockCovers } from "../lock/refs.ts";
 import { makeContext } from "./helpers.ts";
 import { COMMANDS } from "./registry.ts";
-import type { Command, CommandEnv, CommandError, Outcome, State } from "./types.ts";
+import type {
+  Command,
+  CommandDef,
+  CommandEnv,
+  CommandError,
+  Outcome,
+  RawDoc,
+  State,
+} from "./types.ts";
 import { schemaErrors } from "./validate.ts";
 
 /**
@@ -39,12 +48,12 @@ function pinNew(state: State, env: CommandEnv): State {
   return { doc: state.doc, lock: pinLock(env.live, refs, state.lock, { kind: "add" }).lock };
 }
 
-/** Applies one command. Never throws: an unexpected exception becomes an `internal` error. */
-export function applyCommand(
-  state: State,
-  command: unknown,
-  env: CommandEnv,
-): Outcome & { cmd?: string } {
+/** A command read: its definition and parsed arguments, or why it cannot run. */
+type Parsed =
+  | { ok: true; cmd: string; def: CommandDef<unknown>; args: unknown }
+  | { ok: false; cmd?: string; errors: CommandError[] };
+
+function parse(command: unknown): Parsed {
   const shape = CommandShape.safeParse(command);
   if (!shape.success) {
     return {
@@ -69,19 +78,60 @@ export function applyCommand(
       })),
     };
   }
+  return { ok: true, cmd, def, args: parsed.data };
+}
+
+/** Runs a parsed command and pins what it newly names. Never throws. */
+function run(
+  state: State,
+  p: Extract<Parsed, { ok: true }>,
+  env: CommandEnv,
+): Outcome & { cmd: string } {
   let out: Outcome;
   try {
-    out = def.apply(makeContext(state, env), parsed.data);
+    out = p.def.apply(makeContext(state, env), p.args);
   } catch (e) {
     out = {
       ok: false,
       errors: [
-        { code: "internal", message: `${cmd}: ${e instanceof Error ? e.message : String(e)}` },
+        { code: "internal", message: `${p.cmd}: ${e instanceof Error ? e.message : String(e)}` },
       ],
     };
   }
-  if (!out.ok) return { ...out, cmd };
-  return { ...out, state: pinNew(out.state, env), cmd };
+  if (!out.ok) return { ...out, cmd: p.cmd };
+  return { ...out, state: pinNew(out.state, env), cmd: p.cmd };
+}
+
+/** Applies one command. Never throws: an unexpected exception becomes an `internal` error. */
+export function applyCommand(
+  state: State,
+  command: unknown,
+  env: CommandEnv,
+): Outcome & { cmd?: string } {
+  const p = parse(command);
+  return p.ok ? run(state, p, env) : p;
+}
+
+/** Which command of a batch was refused, and why. */
+type Failed = { index: number; cmd?: string; errors: CommandError[] };
+
+function failure(index: number, out: { cmd?: string; errors: CommandError[] }): Failed {
+  return { index, ...(out.cmd ? { cmd: out.cmd } : {}), errors: out.errors };
+}
+
+/** The next command's outcome folded into the batch: its result recorded, or the refusal. */
+function fold(
+  results: CommandResult[],
+  index: number,
+  out: Outcome & { cmd?: string },
+): Failed | State {
+  if (!out.ok) return failure(index, out);
+  results.push({
+    cmd: out.cmd as string,
+    ...out.effect,
+    ...(out.info !== undefined ? { info: out.info } : {}),
+  });
+  return out.state;
 }
 
 export function applyBatch(
@@ -92,21 +142,50 @@ export function applyBatch(
   let current = state;
   const results: CommandResult[] = [];
   for (const [index, command] of commands.entries()) {
-    const out = applyCommand(current, command, env);
-    if (!out.ok) {
-      return {
-        ok: false,
-        failed: { index, ...(out.cmd ? { cmd: out.cmd } : {}), errors: out.errors },
-      };
-    }
-    current = out.state;
-    results.push({
-      cmd: out.cmd as string,
-      ...out.effect,
-      ...(out.info !== undefined ? { info: out.info } : {}),
-    });
+    const next = fold(results, index, applyCommand(current, command, env));
+    if (!("doc" in next)) return { ok: false, failed: next };
+    current = next;
   }
   return { ok: true, state: current, results };
+}
+
+/** The catalogs a document names, as written. */
+export function namedCatalogs(doc: RawDoc): readonly string[] {
+  return Array.isArray(doc.catalogs)
+    ? doc.catalogs.filter((c): c is string => typeof c === "string")
+    : [];
+}
+
+const sameList = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((x, i) => x === b[i]);
+
+/**
+ * `applyBatch` with the catalogs at hand, as the server and the CLI run a batch: before a
+ * command that changes the catalogs the document names (`catalogsAfter`), `open` gives the live
+ * catalogs of the new list, so the command checks what it names against them and the lock pins
+ * from them (§3.1, §4.13); the commands after it see them too. Answers the live catalogs the
+ * batch ended with.
+ */
+export async function applyBatchLive(
+  state: State,
+  commands: readonly unknown[],
+  env: CommandEnv,
+  open: (catalogs: readonly string[]) => Promise<CatalogSet>,
+): Promise<BatchResult & { live?: CatalogSet }> {
+  let current = state;
+  let e = env;
+  const results: CommandResult[] = [];
+  for (const [index, command] of commands.entries()) {
+    const p = parse(command);
+    if (!p.ok) return { ok: false, failed: failure(index, p) };
+    const after = p.def.catalogsAfter?.(p.args, current.doc);
+    if (after && !sameList(after, namedCatalogs(current.doc)))
+      e = { ...e, live: await open(after) };
+    const next = fold(results, index, run(current, p, e));
+    if (!("doc" in next)) return { ok: false, failed: next };
+    current = next;
+  }
+  return { ok: true, state: current, results, ...(e.live ? { live: e.live } : {}) };
 }
 
 /** A batch as written: one command, a list of them, or `{ "commands": [...] }`. */

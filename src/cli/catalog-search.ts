@@ -6,12 +6,13 @@ import { jsonText } from "#core/derive/output.ts";
 import type { Io } from "./cli.ts";
 
 /**
- * `alukit catalog search <query> [--kind <kind>] [--catalog <id|dir>]... [--limit n] [--json]`
- * (design §7.3): items whose id, code, name or family hold every word of the query, accents and
- * case aside, in the catalogs named (every built-in one by default). Ranked as the app's catalog
- * browser ranks them: an exact id or code first, then codes that start with the query, then the
- * rest, each in id order. The output is bounded, 20 items by default and 200 at most, and says
- * how many more matched.
+ * `alukit catalog search <query> [--kind <kind>] [--prefer <kind>] [--catalog <id|dir>]...
+ * [--limit n] [--json]` (design §7.3): items whose id, code, name or family hold every word of
+ * the query, accents and case aside, in the catalogs named (every built-in one by default).
+ * Ranked as the app's catalog browser ranks them (`searchCatalog`): an exact id or code first,
+ * then codes that start with the query, then bars of a size the query writes, then whole-word
+ * matches, then the rest; `--prefer` ranks a kind first within each. The output is bounded, 20
+ * items by default and 200 at most, and says how many more matched.
  */
 
 export const SEARCH_SCHEMA = "alukit.catalog-search/1";
@@ -20,6 +21,8 @@ const DEFAULT_LIMIT = 20;
 export interface SearchArgs {
   query: string;
   kind?: string;
+  /** A kind ranked first within each rank (BE-8): what a tool is looking for. */
+  prefer?: string;
   catalogs: string[];
   limit?: number;
   json: boolean;
@@ -49,6 +52,7 @@ export async function searchCommand(a: SearchArgs, io: Io): Promise<number> {
   const found = searchCatalog(catalogIndex(opened.set, undefined, opened.named), {
     q: a.query,
     ...(a.kind !== undefined ? { kind: a.kind } : {}),
+    ...(a.prefer !== undefined ? { prefer: a.prefer } : {}),
     limit,
   });
   if (a.json) {
@@ -57,6 +61,7 @@ export async function searchCommand(a: SearchArgs, io: Io): Promise<number> {
         schema: SEARCH_SCHEMA,
         query: a.query,
         ...(a.kind !== undefined ? { kind: a.kind } : {}),
+        ...(a.prefer !== undefined ? { prefer: a.prefer } : {}),
         catalogs: opened.named,
         total: found.total,
         items: found.items.map((e) => ({
@@ -66,6 +71,7 @@ export async function searchCommand(a: SearchArgs, io: Io): Promise<number> {
           name: e.name,
           ...(e.code !== undefined ? { code: e.code } : {}),
           vendor: e.vendor,
+          ...(e.size_mm !== undefined ? { size_mm: e.size_mm } : {}),
         })),
       }).trimEnd(),
     );

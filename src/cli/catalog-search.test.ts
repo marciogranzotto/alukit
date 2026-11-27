@@ -12,9 +12,17 @@ interface Found {
   schema: string;
   query: string;
   kind?: string;
+  prefer?: string;
   catalogs: string[];
   total: number;
-  items: { id: string; kind: string; family: string; name: string; code?: string }[];
+  items: {
+    id: string;
+    kind: string;
+    family: string;
+    name: string;
+    code?: string;
+    size_mm?: [number, number];
+  }[];
 }
 
 async function search(...argv: string[]) {
@@ -44,6 +52,7 @@ describe("alukit catalog search", () => {
       name: "Profile 40x40 (parametric)",
       code: "TS40",
       vendor: "test-vendor",
+      size_mm: [40, 40],
     });
   });
 
@@ -82,6 +91,32 @@ describe("alukit catalog search", () => {
     expect(profiles.found?.items.map((i) => i.id)).toEqual(
       expect.arrayContaining(["forseti:PF40-00", "forseti:PF40-01"]),
     );
+  });
+
+  it("lists a 40 × 40 profile first for 40x40, before what is only for one (U14)", async () => {
+    const r = await search("40x40", "--catalog", "forseti", "--json");
+    const first = r.found?.items[0];
+    expect(first).toMatchObject({ kind: "bar", size_mm: [40, 40] });
+    // Every 40 × 40 bar before the first item that only mentions the size.
+    const kinds = r.found?.items.map((i) => (i.size_mm?.join("x") === "40x40" ? "own" : "other"));
+    expect(kinds?.indexOf("other")).toBeGreaterThan(kinds?.lastIndexOf("own") ?? Infinity);
+    const text = await search("40x40", "--catalog", "forseti", "--limit", "1");
+    expect(text.out.split("\n")[0]).toMatch(/^forseti:PF40-\S+ +bar +s40-c8 +Perfil/);
+  });
+
+  it("ranks the kind --prefer names first within a rank, keeping the others", async () => {
+    const all = await search("m8", "--catalog", TEST, "--json");
+    const feet = await search("m8", "--catalog", TEST, "--prefer", "fastener", "--json");
+    expect(feet.found?.total).toBe(all.found?.total);
+    // Whole-word matches stay ahead of the rest; within them, the fastener first.
+    expect(feet.found?.items.map((i) => i.id)).toEqual([
+      "test:TNUT-M8",
+      "test:TNUT-M8-C10",
+      "test:FOOT-M8",
+      "test:SPL-STUD",
+      "test:SCR-M8x16",
+    ]);
+    expect(feet.found?.prefer).toBe("fastener");
   });
 
   it("bounds its output and says how many more matched", async () => {

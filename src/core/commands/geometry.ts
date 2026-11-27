@@ -30,6 +30,7 @@ import {
   refuse,
 } from "./types.ts";
 import { checkEntity } from "./validate.ts";
+import { idList } from "./words.ts";
 
 /**
  * The commands that move geometry (design §6): reverseBar, splitBar and autoConnect. They read
@@ -147,6 +148,7 @@ export const reverseBar: CommandDef<z.infer<typeof ReverseBar>> = {
   summary:
     "swap a bar's ends and rewrite anchor, offset, roll and every reference, so the body stays",
   args: ReverseBar,
+  describe: (a) => `reverse ${a.id}`,
   apply: (ctx, a) => guard(() => reverse(ctx, a.id)),
 };
 
@@ -375,6 +377,7 @@ export const splitBar: CommandDef<z.infer<typeof SplitBar>> = {
   group: "Structure",
   summary: "split a bar in two at a distance from end a, optionally adding a splice and the run",
   args: SplitBar,
+  describe: (a, d) => `split ${a.id} at ${a.at_mm} mm, making ${idList(d.created)}`,
   apply: (ctx, a) => guard(() => split(ctx, a)),
 };
 
@@ -602,6 +605,11 @@ export const autoConnect: CommandDef<z.infer<typeof AutoConnect>> = {
   summary:
     "add the default butt where bar ends meet: through the bar passing the point, else a vertical, else the lowest id",
   args: AutoConnect,
+  describe(_a, d) {
+    if (d.created.length === 0) return undefined;
+    const { through, ends } = d.info as { through: string; ends: string[] };
+    return `join ${idList(ends)} to ${through}`;
+  },
   apply: (ctx, a) => guard(() => connectAt(ctx, a)),
 };
 

@@ -261,7 +261,7 @@ What it gives:
 ```text
 alukit serve <dir> [--port N] [--no-open]
     run the project's server: tabs and the CLI edit through it; opens the app
-alukit undo | redo <dir> [--as <name>] [--json]
+alukit undo | redo <dir> [--as <name>|agent:<name>] [--json]
     take back the latest step, whoever made it, or apply again the last one taken back
 alukit log <dir> [--json]
     the server's log: every step, undo and redo, with its source
@@ -287,8 +287,12 @@ alukit new <dir> [--name <name>] [--catalog <id|path>]... [--currency <code>]
     create a project: alukit.json, alukit.lock.json and a .gitignore line for .alukit/
 alukit check <dir> [--json] [--variant v] [--frozen]
     validate, derive and run the checks; exit 1 on an error
-alukit do <dir> '<json>' | -f <file> | -  [--json] [--as <name>]
-    apply a batch of commands atomically, from an argument, a file or stdin
+alukit problems <dir> [--json] [--variant v] [--as-of YYYY-MM-DD]
+    the check and the order's reasons as one list in words, grouped by what they hold up,
+    each with its fixes (alukit.problems/1); exit 1 when one blocks the order or is an error
+alukit do <dir> '<json>' | -f <file> | -  [--json] [--as <name>|agent:<name>] [--dry-run]
+    apply a batch of commands atomically, from an argument, a file or stdin; --dry-run
+    writes nothing and says what the step would do: diagnostics, ids, cut lengths that move
 alukit add bar|point|connection|part <dir> [options] [--json]
     add one entity, as sugar over `do`; `alukit add <what> --help` lists the options
 alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]
@@ -324,9 +328,11 @@ alukit catalog check <path|id> [--catalog <dir>]... [--json]
     computed against published, references, overrides, family collisions, offers
 alukit catalog show <catalog>:<item> [--catalog <dir>]...
     the merged item as JSON: fields with their sources, corrections, section, offers
-alukit catalog search <query> [--kind <kind>] [--catalog <id|dir>]... [--limit n] [--json]
-    items whose id, code, name or family hold every word, ranked (exact id or code first);
-    every built-in catalog unless --catalog names some; 20 items unless --limit (200 at most)
+alukit catalog search <query> [--kind <kind>] [--prefer <kind>] [--catalog <id|dir>]... [--limit n] [--json]
+    items whose id, code, name or family hold every word, ranked: exact id or code first,
+    then bars of a size the query writes (40x40), then whole words; --prefer ranks a kind
+    first within each; every built-in catalog unless --catalog names some; 20 items unless
+    --limit (200 at most)
 alukit catalog schema [catalog|offers|section|family|overrides|item]
     the JSON Schema of a catalog file (all of them without a name)
 alukit catalog import forseti [--snapshot <dir>] [--pdf <file>] [--python <path>] [--out <dir>] [--fetch]
@@ -340,6 +346,14 @@ Each is `{ "cmd": "<name>", "args": { … } }` in `alukit do`. A `set…` comman
 is a merge patch (`null` removes a field). Types: `expr` is a number or an expression
 string; `<…>` is a string of that form; `?` marks an optional field.
 
+- **`setProject`** (project): change the project's name, catalogs, currency, price basis, fx, defaults or order rules: a merge patch, one step
+  - `name` (optional): `string | null` — the project's name
+  - `catalogs` (optional): `[string, …] | null` — the whole list, in merge order (§3.1): built-in ids, or folders inside the project (./parts)
+  - `currency` (optional): `string | null` — the project's currency, a 3-letter code (BRL)
+  - `price_basis` (optional): `"regular" | "sale" | "lowest" | null` — regular, sale or lowest (§4.11)
+  - `fx` (optional): `{ <key>: number | { v: number, src?: "src" | "meas" | "est" | "calc", ref?: string, read?: string, note?: string } | null } | null` — exchange rates by currency (§4.11): { EUR: 6.2 }; null removes one
+  - `defaults` (optional): `{ bar?: { item?: <a catalog item: "<catalog>:<code>"> | null, opt?: { <key>: string | null } | null } | null, butt?: { connector?: <a catalog item: "<catalog>:<code>"> | null, qty?: integer | null, overhang_mm?: number | null } | null, cutting?: { kerf_mm?: number | null, trim_mm?: number | null } | null } | null` — bar { item, opt }, butt { connector, qty, overhang_mm }, cutting { kerf_mm, trim_mm }; null removes
+  - `order_rules` (optional): `{ <key>: "block" | "warn" | "off" | null } | null` — an order rule's action, block, warn or off (§5.5); null restores its default
 - **`addNode`** (structure): add a named point that several entities share
   - `at` (optional): `[expr, expr, expr]` — a point: [x, y, z], numbers or expressions
   - `on` (optional): `{ bar: <a bar: b<number>> | <a run: r<number>>, at_mm: expr, from?: "a" | "b" | "a.cut" | "b.cut", face?: "+x" | "-x" | "+y" | "-y", groove?: <a groove: "+y.1", numbered by increasing section coordinate>, off_mm?: [expr, expr] }` — a point on a bar or run, which follows it (§4.3)

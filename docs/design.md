@@ -255,6 +255,28 @@ catch (below).
 - §4.6, §12–§14: golden cases G35–G37 and the `test-seat` catalog; the fourth run's gaps row;
   calls 40–44, all open.
 
+### UX redesign, S1
+
+Stream S1 of the [UX plan](ux/plan.md) (§4, §5.5) adds what the redesigned app needs from the
+core, the server and the CLI, each with its CLI form, and fixes the plain bugs the plan found
+(§2.2). No golden value moved; its decisions, and every output that changed with its old and new
+text, are in [`ux/s1-decisions.md`](ux/s1-decisions.md) (cited as "s1").
+
+- §5.5: **option wording**. With no option chosen, `option-not-sold` says what is sold, "sold only
+  with finish anodised or black; choose one", where it said "not sold with" and nothing; the cut
+  list's `no-offer` names the options in words, and what is sold when none matches (U10, BE-7;
+  s1 1).
+- §5.5: **the problem list**, `alukit.problems/1`: the check's diagnostics, the order's reasons
+  and the open items as one list grouped by consequence, each in words with its targets and its
+  fixes, never judged again (BE-3; s1 8–13).
+- §6: **`setProject`**, a merge patch over the project's settings, catalogs confined to built-in
+  ids and folders inside the project (BE-1; s1 4–6); **every command describes itself**, and a
+  step reads in words (BE-4; s1 7); **a dry run** (BE-2; s1 14–16).
+- §7.1: `GET /api/problems`; `dryRun` on `POST /api/commands`; the log's and the events' `text`;
+  `--as agent:<name>` reaches the log as that agent (U57, BE-10; s1 2).
+- §7.3: `alukit problems`; `alukit do --dry-run`; `alukit catalog search --prefer`, and a bar of
+  the size a query writes ranks above an item that only mentions it (U14, BE-8; s1 3).
+
 ## Draft 2.2 — what changed (2026-11-26)
 
 - **A shoe mitred square to a strut (gap G-A; §4.5, §16).** A plane's `normal` may name a bar:
@@ -1709,7 +1731,7 @@ error.
 | `missing-price` (incl. no exchange rate) | block | that supplier |
 | `est-price` | block | that supplier |
 | `out-of-stock` (as read) | block | that supplier |
-| `option-not-sold` ("not sold in this finish") | block | that supplier |
+| `option-not-sold` ("not sold with finish red"; with none chosen, "sold only with finish anodised or black; choose one", *2.3*) | block | that supplier |
 | `stale-price` (older than 30 days before the order's date) | warn | that supplier |
 
 The order list reports **READY** or **BLOCKED** per supplier, with every reason. `alukit order`
@@ -1725,6 +1747,19 @@ so a failing check holds the order through `check-error`.
 - **The cover does not avoid an out-of-stock offer**: the cheapest wins, and `out-of-stock` blocks
   until the project chooses another offer or switches the rule, since silently buying a dearer
   one would hide the cost (*2.3*).
+
+**The problem list** (*2.3*; [s1](ux/s1-decisions.md) 8–13). `alukit problems` and
+`GET /api/problems` give one list, `alukit.problems/1`, of what stands between the project and a
+sound build and a sendable order, grouped by consequence: what blocks the order, then errors,
+warnings and notes. It is made from the check's diagnostics and the order after the checks, at the
+order's date, and judges nothing again: a diagnostic is one problem in its severity's group, an
+order reason one problem over every supplier it holds, a `check-error` the error it repeats
+(which then blocks), an open item the `open-item` reason it causes or a note. Each problem has a
+title and a detail in plain words, keyed by its code or rule, the CLI's message as `raw`, its
+targets, and its fixes, the likeliest first: a batch of commands applied as one step ("Set
+anodised" on every bar that asks; "Join with the default butt"; "Release K1") or a form the app
+opens (resolve an open item, set a price, update the lock, edit a param). The answer carries the
+order's summary: `READY`, `BLOCKED` or `EMPTY`, and how many problems block it.
 
 ## 6. Commands (the one edit path)
 
@@ -1745,6 +1780,7 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
 | Records | `addVariant` `setVariant` `addCheck` `addOpen` `resolveOpen` `addDecision` |
 | Views | `saveView` |
 | Lock | `lockUpdate` (a step in the log like any other) |
+| Project (*2.3*) | `setProject` |
 
 - `removeEntity` **refuses** when anything refers to the entity and lists the referrers;
   `cascade: true` removes them too and returns what it removed (review m10). A cascade removes a
@@ -1758,6 +1794,19 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   the whole.
 - `autoConnect` takes `optional: true`, doing nothing where nothing butts, so the draw tool sends
   one per end without repeating §4.5's rule (*2.3*).
+- **`setProject`** (*2.3*) takes a merge patch over `name`, `catalogs`, `currency`,
+  `price_basis`, `fx`, `defaults` and `order_rules`, and answers the fields it changed. A catalog
+  it adds must be a built-in id or a folder that resolves, symbolic links followed, inside the
+  project (§7.2): a folder elsewhere stays a hand edit. One command may add a catalog and name its
+  items, the default bar say: the new catalogs open before it runs ([s1](ux/s1-decisions.md) 4–6).
+- **Every command describes what it did** (*2.3*), so a step reads in words: "add bar b12, joined
+  at 1 end", "add bars b1, b2 and b3", "undo add point n2". The log keeps the command names as
+  `what` beside the words, `text` ([s1](ux/s1-decisions.md) 7).
+- **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
+  It answers as the step would, with what it would do to what is derived: the bars whose cut
+  moves (`cuts`, before and after), the bars it adds with their cuts, what it removes, and the ends
+  it claims. The server runs it in its queue, against the revision after every step before it
+  ([s1](ux/s1-decisions.md) 14–16).
 - Every answer returns the new revision, the ids each command created, and diagnostics that name
   entities (review m2). A refusal is `{ code, message, entity?, field?, refs? }`; a command never
   throws.
@@ -1782,7 +1831,9 @@ Agents work at this level of meaning, so they never compute cut lengths by hand.
   release.
 - **The undo log is the server's**: one line for all sources, each step tagged (`ui`,
   `cli:<name>`, `agent:<name>`, `file`). A client may send `ui`, `cli`, `cli:<name>` or
-  `agent:<name>`; `file` is the watcher's alone (*2.3*). Undo pops the latest step, whoever made
+  `agent:<name>`; `file` is the watcher's alone (*2.3*). The CLI's `--as <name>` is
+  `cli:<name>`, and `--as agent:<name>` that agent (*2.3*). Each step in the log and in its event
+  carries its words, `text`, beside its commands' names, `what` (*2.3*, §6). Undo pops the latest step, whoever made
   it, and names it; redo applies again the last one taken back; `alukit log` shows what happened
   and what was undone. The log lives as long as the server process; git keeps the rest, so
   `undo`, `redo` and `log` need a running server and say so without one (*2.3*).
@@ -1811,7 +1862,11 @@ Agents work at this level of meaning, so they never compute cut lengths by hand.
   model, the outputs, the checks and the GLB export, so the same variant gives the same bytes from
   either. `GET /api/order` and `/api/costs` take `?as_of=` as the CLI takes `--as-of`, and answer
   what `alukit order` and `alukit costs --format json` print, byte for byte. Revisions are listed,
-  saved and verified through the server (§4.13).
+  saved and verified through the server (§4.13). `GET /api/problems` takes both and answers what
+  `alukit problems --json` prints (*2.3*, §5.5).
+- **A dry run** (*2.3*, §6) is `dryRun: true` on `POST /api/commands`: it is queued like a step
+  and answers `alukit.do/1` with `dry: true`, but nothing is written, logged or broadcast, and no
+  `id` is remembered.
 
 Two paths keep a tab and the file in step, the event stream and the watcher; draft 1 had four
 (review m16).
@@ -1854,10 +1909,11 @@ source in the log.
 | `alukit new <dir>` | creates a project, its lock, and a `.gitignore` line for `.alukit/` |
 | `alukit serve <dir>` | runs the project's server and opens the tab |
 | `alukit check <dir> [--frozen]` | validates, derives and runs the checks; non-zero exit on an error |
+| `alukit problems <dir> [--variant v] [--as-of d] [--json]` (*2.3*) | the problem list (§5.5); non-zero exit when one blocks the order or is an error |
 | `alukit cutlist` / `bom` / `machining` / `order` / `costs <dir> [--variant v] [--format md\|csv\|json]` | the outputs; `machining` (*2.3*) has no CSV; `order` and `costs` take `--as-of YYYY-MM-DD` (*2.3*); `order` exits non-zero when blocked |
 | `alukit derive <dir> --json [--select <paths>]` | the derived model, for report builders (`alukit.derived/1`, with its own JSON Schema). `--select` (*2.3*) takes dotted paths, `*` for every member, commas to merge (`bars.*.cut_mm,params`), and keeps the model's shape; a path the model lacks is an error |
 | `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context |
-| `alukit do <dir> -f batch.json` (or `-f -` for stdin) | edits from a file or stdin, one process per batch; inline JSON also works |
+| `alukit do <dir> -f batch.json` (or `-f -` for stdin) | edits from a file or stdin, one process per batch; inline JSON also works. `--dry-run` (*2.3*) says what the batch would do and writes nothing (§6) |
 | `alukit add bar --item … --a n1 --b 0,0,900`, … | sugar over `do` |
 | `alukit log` / `alukit undo` / `alukit redo` | the server's log; undo the latest step; redo the last one undone (*2.3*: all three need a running server) |
 | `alukit lock update <dir> [--item id] [--dry-run]` | §4.13 |
@@ -1866,7 +1922,7 @@ source in the log.
 | `alukit revision save "<name>"` / `list` / `show <name>` / `verify <name>` | §4.13 |
 | `alukit snapshot <dir> --view iso [--size 1600x1000] -o shot.png` | lets an agent see what it built |
 | `alukit export glb <dir> -o x.glb` | §9 |
-| `alukit catalog search\|show\|check\|schema\|import <…>` | catalog work. `search` (*2.3*) ranks as the app's browser does and prints 20 items unless `--limit` (200 at most); `schema` prints a catalog file's JSON Schema; `import forseti` runs the Python importer on a shop snapshot and the catalogue PDF, says what is missing instead of half-running, and reads the network only with `--fetch` |
+| `alukit catalog search\|show\|check\|schema\|import <…>` | catalog work. `search` (*2.3*) ranks as the app's browser does and prints 20 items unless `--limit` (200 at most): an exact id or code, a code prefix, then a bar whose own section is the size the query writes (`40x40`, either way round), then whole words; `--prefer <kind>` ranks that kind first within each; `schema` prints a catalog file's JSON Schema; `import forseti` runs the Python importer on a shop snapshot and the catalogue PDF, says what is missing instead of half-running, and reads the network only with `--fetch` |
 | `alukit skill install` | links the skill into `~/.claude/skills/` |
 
 **Snapshots** always render in headless Chromium through Playwright, from a fresh page on the

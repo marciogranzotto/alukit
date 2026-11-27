@@ -68,8 +68,9 @@ test("a CLI command appears in two open tabs within 1 s, at the same revision", 
       ),
     ),
   );
+  // `alukit log` prints each step in words (BE-4); `--json` keeps the command names as `what`.
   const log = await cli(["log", served.dir]);
-  expect(log.out).toMatch(/1 {2}cli:e2e +addBar/);
-  expect(log.out).toMatch(/2 {2}ui +undo addBar/);
+  expect(log.out).toMatch(/1 {2}cli:e2e +add bar b35$/m);
+  expect(log.out).toMatch(/2 {2}ui +undo add bar b35$/m);
   expect(errors).toEqual([]);
 });

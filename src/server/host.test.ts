@@ -62,7 +62,7 @@ describe("steps", () => {
         source: "ui",
         what: "addNode",
         changes: { created: ["n2"], removed: [], changed: [] },
-        undo: { rev: 1, source: "ui", what: "addNode" },
+        undo: { rev: 1, source: "ui", what: "addNode", text: "add point n2" },
         redo: null,
       }),
     ]);
@@ -108,9 +108,9 @@ describe("steps", () => {
     expect(r).toMatchObject({ ok: true, rev: 3, redo: null });
     expect(await text(dir)).toBe(after);
     expect(h.log()).toEqual([
-      { rev: 1, source: "cli:a", what: "addNode" },
-      { rev: 2, source: "ui", what: "undo addNode", of: 1 },
-      { rev: 3, source: "agent:x", what: "redo addNode", of: 1 },
+      { rev: 1, source: "cli:a", what: "addNode", text: "add point n2" },
+      { rev: 2, source: "ui", what: "undo addNode", text: "undo add point n2", of: 1 },
+      { rev: 3, source: "agent:x", what: "redo addNode", text: "redo add point n2", of: 1 },
     ]);
     expect(await h.redo("ui")).toMatchObject({ ok: false, kind: "nothing", rev: 3 });
   });
@@ -156,7 +156,12 @@ describe("direct edits", () => {
     await writeFile(join(dir, DOCUMENT), JSON.stringify(doc));
     await h.checkFiles();
     expect(h.rev).toBe(2);
-    expect(h.log()[1]).toEqual({ rev: 2, source: "file", what: "file edit" });
+    expect(h.log()[1]).toEqual({
+      rev: 2,
+      source: "file",
+      what: "file edit",
+      text: "edit the files by hand",
+    });
     expect(events.at(-1)).toMatchObject({ type: "rev", rev: 2, source: "file" });
     // G27: with n1 at z = 100 the strut is 884.00 (golden case G27).
     expect(h.snapshot().derived.bars.get("b3")?.lengths.cut).toBeCloseTo(884, 9);

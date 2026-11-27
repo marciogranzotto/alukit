@@ -6,7 +6,14 @@ import { type CatalogSet, linkCatalogs } from "#catalog/link.ts";
 import { type Lock, LockFile } from "#core/lock/schema.ts";
 import { openLiveCatalogs } from "#core/project/open.ts";
 import { FIXTURES, readJson, scratchFixtures } from "#core/testing.ts";
-import { catalogIndex, catalogTree, familyOf, itemCard, searchCatalog } from "./catalog.ts";
+import {
+  type CatalogEntry,
+  catalogIndex,
+  catalogTree,
+  familyOf,
+  itemCard,
+  searchCatalog,
+} from "./catalog.ts";
 import { type RunningServer, startServer } from "./server.ts";
 
 /**
@@ -40,6 +47,7 @@ describe("the index", () => {
       code: "TS40",
       pinned: true,
       live: true,
+      size_mm: [40, 40],
     });
     expect(entries.find((e) => e.id === "test:FOOT-M8")).toMatchObject({
       kind: "accessory",
@@ -69,6 +77,7 @@ describe("the index", () => {
     expect(entries.find((e) => e.id === "test:TS4080")).toMatchObject({
       vendor: "test-vendor",
       family: "s40-c8",
+      size_mm: [40, 80],
     });
     const card = itemCard("test:TS4080", linkCatalogs([]).set, lock, entries);
     expect(card?.section?.bbox).toEqual([
@@ -123,7 +132,68 @@ describe("search", () => {
     expect(page.total).toBeGreaterThan(3);
     expect(searchCatalog(entries, { q: "no such thing" }).total).toBe(0);
   });
+
+  it("knows each bar's own size, from its section's box (BE-8)", () => {
+    const entries = catalogIndex(live, lock, named);
+    const size = (id: string) => entries.find((e) => e.id === id)?.size_mm;
+    expect(size("test:TS40")).toEqual([40, 40]);
+    expect(size("test:TS4080")).toEqual([40, 80]);
+    expect(entries.filter((e) => e.kind !== "bar").every((e) => e.size_mm === undefined)).toBe(
+      true,
+    );
+  });
+
+  // A caster plate and a hinge kit "for 40x40" ranked above the profile itself (U14).
+  const sized: CatalogEntry[] = [
+    entry("v:CAP-40", "accessory", "Cap (for profile 40x40)"),
+    entry("v:HINGE", "generic", "Hinge kit 40x40"),
+    entry("v:P40", "bar", "Profile 40 basic, groove 8", [40, 40]),
+    entry("v:P40L", "bar", "Profile 40x40 light", [40, 40]),
+    entry("v:P4080", "bar", "Profile 40x80", [40, 80]),
+    entry("v:P2040", "bar", "Profile 40x40 V-slot", [20, 40]),
+  ];
+
+  it("ranks items whose own size is the size asked above items that only mention it", () => {
+    const ids = (q: string, more: object = {}) =>
+      searchCatalog(sized, { q, ...more }).items.map((e) => e.id);
+    // Both 40 × 40 bars, the shorter name first; then what says 40x40 without being it.
+    expect(ids("40x40")).toEqual(["v:P40L", "v:P40", "v:HINGE", "v:P2040", "v:CAP-40"]);
+    expect(ids("40 × 40")).toEqual(ids("40x40"));
+    // Either way round; and the other words still have to match.
+    expect(ids("80x40")).toEqual(["v:P4080"]);
+    expect(ids("40x40 light")).toEqual(["v:P40L"]);
+    expect(ids("40x40", { kind: "accessory" })).toEqual(["v:CAP-40"]);
+  });
+
+  it("ranks the kind the tool wants first within each tier (prefer)", () => {
+    const ids = (q: string, prefer?: string) =>
+      searchCatalog(sized, { q, ...(prefer ? { prefer } : {}) }).items.map((e) => e.id);
+    expect(ids("40x40", "accessory")).toEqual([
+      "v:P40L",
+      "v:P40",
+      "v:CAP-40",
+      "v:HINGE",
+      "v:P2040",
+    ]);
+    expect(ids("profile")).toEqual(["v:P4080", "v:P40L", "v:P2040", "v:CAP-40", "v:P40"]);
+    expect(ids("profile", "bar")).toEqual(["v:P4080", "v:P40L", "v:P2040", "v:P40", "v:CAP-40"]);
+    expect(ids("kit", "bar")).toEqual(["v:HINGE"]);
+  });
 });
+
+function entry(id: string, kind: string, name: string, size?: [number, number]): CatalogEntry {
+  return {
+    id,
+    catalog: "v",
+    vendor: "v",
+    kind,
+    family: kind,
+    name,
+    pinned: false,
+    live: true,
+    ...(size ? { size_mm: size } : {}),
+  };
+}
 
 describe("item cards", () => {
   it("give a bar's section with its grooves and datums, its anchors, data and offers", () => {

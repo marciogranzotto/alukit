@@ -117,3 +117,17 @@ now serves each test's in the test (`served = await serve(...)` first), where it
     section, orthographic, the tree filtered, read-only, an empty project) equal today's to the
     pixel after each S0 step, but for rounded corners' antialiasing, which also differs between
     two runs of today's build.
+
+## What S1 added
+
+S1 changed the contracts above only by adding, and built the clients. Its decisions are in
+[`s1-decisions.md`](s1-decisions.md). Outside its files it changed two assertions of S2's
+`live.spec.ts`, which read `alukit log`'s output before BE-4 put it in words (s1-decisions, "Outside S1's files").
+
+| Interface | File | What S1 added |
+|---|---|---|
+| Clients | `src/ui/client/{problems,dryrun,catalog}.ts` | `fetchProblems(q)` calls `GET /api/problems`; `dryRun(commands)` posts `dryRun: true`; `catalog.ts` (new) is `fetchCatalogItems(q)` with `prefer`. `problemsParams`, `dryRunOf` and `catalogParams` are exported for tests. `notYet` is gone, its stubs with it; `ClientAnswer` keeps `unavailable` |
+| A dry run's effects | `src/core/commands/dry.ts` | `DryRunEffects` is `DryEffects`: S0's `cuts`, `removed` and `claimed`, and `added`, each bar the step would create with its cut length (s1-decisions 14) |
+| Problem model | `src/core/problems/` | `problemsOf`, `problemsAt` and `problemsText` beside `types.ts`, whose types did not change |
+| The catalog list | `src/catalog/search.ts` | `CatalogEntry.size_mm` for bars, `SearchQuery.prefer` |
+| Steps in words | `src/core/commands/types.ts`, `history.ts`; `src/server/host.ts` | `CommandDef.describe`; `LogEntry.text`, `StepInfo.text` and the `rev` event's `text`. `what` is unchanged |

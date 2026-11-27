@@ -1,3 +1,4 @@
+import { cliSource } from "../server/source.ts";
 import { parseOptions, usageError } from "./args.ts";
 import type { Io } from "./cli.ts";
 import { applyToProject } from "./do.ts";
@@ -268,9 +269,11 @@ export async function addCommand(argv: readonly string[], io: Io): Promise<numbe
   } catch (e) {
     return usageError("add", e instanceof Error ? e.message : String(e), usage, io);
   }
+  const who = cliSource(args.values.as);
+  if ("error" in who) return usageError("add", who.error, usage, io);
   return applyToProject(dir, [command], io, {
     json: args.values.json === true,
-    ...(args.values.as ? { as: args.values.as } : {}),
+    source: who.source,
     cmd: "add",
   });
 }
