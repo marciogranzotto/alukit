@@ -21,8 +21,8 @@ below as dvb), so that the design again describes the system as built. A recorde
 proved the better choice is now the rule; a feature v1 does not have is stated as a **v1 limit**,
 with the version that takes it up. Calls left for the owner's review are marked *open* (§14, call 6
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39). Changed text is marked *2.3*. The build
-was not changed for this draft, except as "After acceptance run 2" and "After acceptance run 3"
-below record. Notes are cited by
+was not changed for this draft, except as "After acceptance run 2", "After acceptance run 3" and
+"After the alternative frame's acceptance" below record. Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -195,6 +195,24 @@ moved; two of G34's fault cases and G31's tapped case gain an error (below).
   an error; an unlabelled thread AluKit has no tap drill or 6H tolerance for is an info. Call 39
   (open) is the one-pitch limit. No golden value moves; the envelopes' computed areas shrink by
   their new bores, and every bar keeps its published mass.
+
+### After the alternative frame's acceptance
+
+The first acceptance run on the reference project's second frame found gap X4, fixed at its root
+with the failing tests written first ([`notes/x4-stock-length.md`](notes/x4-stock-length.md),
+cited as "x4").
+
+- §4.5, §4.6, §5.1, §5.3, §5.4, §12: **a piece is ordered at its span**, the length of straight
+  stock it takes: its extent along the axis from one end cut's long point to the other's, over the
+  box's corners. Two cuts that lean the same way, as parallel cuts do, put the long points on
+  opposite edges, so the span is longer than the long-point length `cut_mm` (by w · tan θ for
+  parallel cuts at θ); a trapezoid's span is its long point. Draft 2.3 ordered `cut_mm`, so a
+  brace cut on two parallel faces was ordered 20 mm short (1118.03 for 1138.03 of bar). Derive,
+  the cut list and its stock bars state `span_mm` with an angled end; ordering, billing, the
+  choice of cut offer, `min_mm`/`max_mm`, nesting and the BOM's length use it. Golden case G38
+  and its catalog `test-span`. A cut line two parallel pieces share in nesting is a **v1 limit**
+  (x4). No golden value moved: no fixture had two cuts leaning the same way; the cart's angled
+  lines state their span, equal to their long point (x4 1–10).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1004,8 +1022,10 @@ layers** (*2.3*), from the face its head bears on to the last layer's far face, 
 equals the grip and is where a length check would start. The stack is listed beside the grip.
 Adding the washers and checking the fastener's length are v1.1 (review m15, call 25).
 
-**Reported per bar:** `cut_mm` (the long-point length: what is ordered and sawn), `centre_mm`
-(along the bounding-box centre line), and per end the move from its design point, the angle
+**Reported per bar:** `cut_mm` (the long-point length: the longest of the box's four edges between
+the end faces), `centre_mm` (along the bounding-box centre line), `short_mm` (the shortest edge),
+with an angled end `span_mm` (*2.3*: the span, from one end's long point to the other's along the
+axis, what is ordered and nested, §5.3), and per end the move from its design point, the angle
 between the plane's normal and the axis, and for a compound cut its mitre and bevel components.
 An end that moved further than the through prism's depth plus the spacer warns "end far from its
 face", which catches a node left behind by an edit. The distance is the design point's from the
@@ -1030,7 +1050,8 @@ draft 2.2 by `golden-ends/G27/by_hand.py`). G28–G34 (*2.3*) came with the buil
 gaps the acceptance's two runs found); each fixture's `by_hand.py` works every number with plain
 arithmetic and imports nothing from AluKit, and the values below are copied from each fixture's
 `expected.json`. No value of G1–G27 changed in the build, nor of G28–G32 after the second run
-(*verified*: the golden tests).
+(*verified*: the golden tests). G38 (*2.3*) came with gap X4 the same way, and no value of G1–G34
+moved with it (*verified*: the golden tests, and a scan of every fixture's spans, x4).
 
 | # | Setup | Rule exercised | Expected |
 |---|---|---|---|
@@ -1066,7 +1087,8 @@ centred layout); kerf 3, no end trim. G29–G34 (*2.3*) use their own synthetic 
 (`test-open`: the `std` angle's generator parameters, a sharp-cornered channel and an M12 bolt;
 `test-joint`: bush ends, a joint recipe, end connectors; `test-stud`: an RHS 200x100x4.75, 40x40
 and 80x80 bars with M16 cores, a stud end, a bush end, four-core joints and splices), so they do
-not move with the built-in catalogs.
+not move with the built-in catalogs; so does G38 (*2.3*, `test-span`: a 40 x 40 square bar cut to
+length at R$ 126.50/m in 10 mm steps, 40–3000 mm, and in stock bars of 3000 and 6000).
 
 | # | Setup | Rule exercised | Expected |
 |---|---|---|---|
@@ -1081,6 +1103,7 @@ not move with the built-in catalogs.
 | G32 | G25's joint with the sleeve's `len_mm: "bore + sec(b3).t_mm"`, so it passes the RHS's head-side wall | a hole a sleeve passes clears it (gap A7, *2.3*) | 4 × 46.00 sleeve; the head-side wall's 4 holes Ø20 (ISO 273 medium for 18), the other 20 Ø11. With `clearance_mm: 1`: Ø19; with 0: Ø18. A 50 mm sleeve also enters the flat below the RHS 4 mm: its 4 holes there Ø11 with a counterbore Ø20 × 4 |
 | G33 | RHS 200x100x4.75 (no system) b1 (0,0,0)→(1000,0,0); 40x40 b2 (500,0,0)→(500,600,0) and b3 (500,−600,0)→(500,0,0); c1 `butt` through b1, ends [b2.a], a stud end (a stud, a bush, a sleeve `{inside: "through", len_mm: "bore"}`, an M16 end tap, a Ø9 hole through the through bar); c2 `butt` through b1, ends [b3.b], a bush end (a bush, the tap), `held_by: "c1"` | one through-fastener for two coaxial ends (gap A9, *2.3*) | no error; b2 and b3 550.00; one stud, two bushes; one sleeve 90.50; one Ø9 hole in b1 at 500.00 on face +x; an M16 tap in each butting end; the stud crosses 100.00 between the butting end faces. One butt with both ends and the stud end on each: two studs, two sleeves, the hole made twice (a `machining` error on b1). No `held_by`: a `fit` error on c2. b3 at x = 520: a `connection` error on c2 (20.00 off). A holder whose connector passes nothing through b1: a `connection` error on c2, and c1's `fit` error. The held butt's connector passing its own stud: a `connection` error on c2 (and the hole made twice) |
 | G34 | 80x80 bars, four cores at (±20, ±20): b1 (0,0,0)→(600,0,0); post b2 (300,0,0)→(300,0,500), `butt` through b1 with J4 (an M16 end tap and a Ø9 `through-hole` `at_holes: 0`, a mount of four holes at (±20, ±20) with a bush each); post b3 (300,0,500)→(300,0,1000) spliced to b2 with four M16 studs at `at_mm` (±20, ±20) | machining at positions; one splice tap per stud; coincident machining (gap A8, *2.3*) | b1 600.00, four Ø9 holes on face +y at 280.00 and 320.00 from end a, −20.00 and 20.00 across; b2 460.00, four M16 taps in each end at x, y ±20.00 from the centre; b3 500.00, four in end a; four bushes and four studs; no error. Positions as `at_mm`: the same. Each requirement written four times with no position: a `machining` error on b1 and on b2, and a second on b2, its taps at the centre, which is no core (*2.3*). Four studs and no positions: four taps at each end's centre, a `machining` error on b2 and on b3, and a second on each for the same reason (*2.3*). On 40x40 posts: a `connection` error on c1 (the taps fall off the end); b1's four holes stand |
+| G38 | 40 x 40 square bars: beams b1 (0,0,0)→(2000,0,0) and b2 (0,0,1040)→(2000,0,1040), their faces 1000 apart; brace b3 from `{on: {bar: b1, at_mm: 500}}` to `{on: {bar: b2, at_mm: 1020}}`, `cut: "angle"` at both ends; post b4 from b1 at 1600 to b2 at 1600; knee brace b5 from b1 at 1200 to `{on: {bar: b4, at_mm: 400}}`, both ends angled; `butt`s through b1, b2 and b4; cut to length, kerf 3 | a piece is ordered, billed and nested at its span (gap X4, *2.3*) | b3 long point, centre line and short point 1118.03 (parallel cuts at 26.57°), span 1138.03 = 1118.03 + 40 · tan 26.57°, ordered 1138, billed 1140, R$ 144.21; b5 549.12, 509.12, 469.12, span 549.12 (a trapezoid), billed 550; b1, b2 2000.00 and b4 1000.00, square; total R$ 846.29, BOM 6687.15. b3's end b on the plane through (1010,0,1020) with normal (1,0,3), leaning as end a does but not parallel: long point 1125.18, span 1130.89. b2 at z = 2720 (b3 to 1860 along it): long point 2996.33, inside the offer's 3000, span 3016.33, a `length` error. From stock bars: 2000 + 2000 + 1138.03 + 549.12 + 3 × 3 = 5696.15 in a 6000, the post in a 3000, R$ 930.00 |
 
 ### 4.7 Parts, rails and patterns (D14)
 
@@ -1374,7 +1397,8 @@ which gives its stored outputs (*2.3*).
 2. **Place.** Resolve points, bar frames and placed sections, runs, pivot points and pattern
    copies of structural entities, in dependency order (§4.3, §4.4).
 3. **Ends.** One plane per end in two sweeps, placement providers then end providers (§4.5); the
-   modifiers, cut lengths and angles.
+   modifiers, cut lengths and angles; each end's long point and the bar's span between them
+   (*2.3*, §5.3).
 4. **Attach.** Parts and part patterns (which may use cut ends and rail holes); face contacts on
    the trimmed bars, on bounding and inner faces (*2.3*); stations from rail-hole selections and
    across offsets; fastener and sleeve pieces cut from bar stock; generated machining (connector
@@ -1386,8 +1410,8 @@ which gives its stored outputs (*2.3*).
    and their grip. Last, ops of one bar of the same kind and size at one place, one op made twice,
    are a `machining` error (*2.3*, §5.5), and so is a tap into a bar's end on none of its
    section's cores, or on one its thread does not fit (*2.3*, §5.5).
-5. **Collect.** Cut list, BOM (joint recipes apart), machining sheet, order list (offers, packs,
-   kits), costs and totals (§5.3, §5.4).
+5. **Collect.** Cut list (each piece ordered and nested at its span, *2.3*), BOM (joint recipes
+   apart), machining sheet, order list (offers, packs, kits), costs and totals (§5.3, §5.4).
 6. **Check.** Built-in and project checks, then the order rules (§5.5).
 
 **Nothing throws on content** (review m10). An unknown reference, a cycle, an invalid connection
@@ -1420,13 +1444,14 @@ Pieces come from bars and, since 2.1, from fasteners and sleeves cut from bar st
 are listed per bar item and option, in one of two modes from the chosen offer's `sale`
 (overridable per project):
 
-- **`cut`** (the supplier cuts). Each piece is ordered at its cut length rounded to `res_mm`; the
-  rounding is shown. It is billed in `step_mm` steps, rounded up, with `min_bill_mm` where set.
-  Worked example (review M7): a 1,234 mm piece at R$ 126.50/m costs R$ 156.10 by the millimetre,
-  and R$ 156.86 in 10 mm steps (124 steps). Pieces outside `min_mm`–`max_mm` fail a check that
-  suggests a `splice`.
-- **`stock`** (whole bars, cut by you or a shop). Pieces are nested into the item's stock
-  lengths, allowing `kerf_mm` per cut and `trim_mm` at each bar end (from `order.<item>`, else
+- **`cut`** (the supplier cuts). Each piece is ordered at its span (below; *2.3*: earlier text said
+  its cut length) rounded to `res_mm`; the rounding is shown. It is billed in `step_mm` steps,
+  rounded up, with `min_bill_mm` where set. Worked example (review M7): a 1,234 mm piece at R$ 126.50/m costs R$ 156.10 by the millimetre,
+  and R$ 156.86 in 10 mm steps (124 steps). Pieces whose span is outside `min_mm`–`max_mm` fail a
+  check that suggests a `splice`.
+- **`stock`** (whole bars, cut by you or a shop). Pieces are nested, each at its span (*2.3*),
+  into the item's stock lengths, allowing `kerf_mm` per cut and `trim_mm` at each bar end (from
+  `order.<item>`, else
   `defaults.cutting`, else a kerf of 3 and no trim; lengths in whole hundredths of a millimetre,
   so a fit never drifts; *2.3*):
   [first-fit decreasing](https://en.wikipedia.org/wiki/First-fit-decreasing_bin_packing) for each
@@ -1438,14 +1463,32 @@ are listed per bar item and option, in one of two modes from the chosen offer's 
   A **factory-drilled rail** (§4.7) keeps a factory end on every piece (*2.1*): each stock bar
   holds at most two of its pieces, one at each end, with no `trim_mm` at a factory end, and a piece
   that names `stock_mm` goes only into that length (G23).
+  **v1 limit** (*2.3*, x4): each piece takes its whole span. Two parallel-cut pieces sawn one after
+  the other could share an angled cut, the second taking only its long-point length; that makes a
+  piece's length depend on its neighbour and on how each is turned, and an angled kerf
+  kerf / cos θ, which first-fit decreasing over independent lengths cannot express. Common-line
+  cutting is v1.1 or later.
 
-Identical pieces group into one line with a count: same item and option, same cut length to the
-quantum, same end cuts and the same machining. A piece and its end-for-end flip are the same
-piece; the canonical orientation is the one whose sorted machining list compares first.
+**A piece's span** (*2.3*; gap X4, G38) is the length of straight stock it is cut from: its extent
+along the axis, from end a's long point to end b's, each the farthest its end face reaches outward
+over the box's corners (§4.5's box, as for `cut_mm`). It is what a piece is **ordered, billed and
+nested at**, in both modes above, what chooses the cheapest cut offer, and what `min_mm`–`max_mm`
+bound; the BOM's length adds it (§5.4). When the two cuts lean opposite ways (a trapezoid) or one
+is square, both long points lie on one edge, and the span is the long-point length `cut_mm`. When
+they lean the same way, the long points lie on opposite edges and the span is longer: for parallel
+cuts at θ across a section w deep, by w · tan θ, so G38's brace, 1118.03 at its long point, takes
+1138.03 of bar. A weldment cut list measures a member the same way, as the blank between two
+planes square to its axis that holds both cuts (x4, its sources). A line with an angled end states
+`span_mm` beside `centre_mm` and `short_mm`; a square-cut piece spans its `cut_mm`.
+
+Identical pieces group into one line with a count: same item and option, same cut length and span
+(*2.3*) to the quantum, same end cuts and the same machining. A piece and its end-for-end flip are
+the same piece; the canonical orientation is the one whose sorted machining list compares first.
 
 Every piece lists its machining **from a named end**, measured along the axis from that end's long
-point: "tap M8 at end a; Ø7 access hole 20 mm from end a on face +y; Ø9 hole in end b along the
-axis, 10 off its centre" (an end hole, *2.3*, whose x turns over when the piece is turned end for
+point, so a hole's distances from the two ends add up to the span, not to `cut_mm` where they
+differ (*2.3*): "tap M8 at end a; Ø7 access hole 20 mm from end a on face +y; Ø9 hole in end b
+along the axis, 10 off its centre" (an end hole, *2.3*, whose x turns over when the piece is turned end for
 end); "tap M16 in end a, at x −20.00, y −20.00 from the centre" (an end tap at a position, *2.3*,
 whose x turns over the same way; an end's taps are listed by place). Identity compares machining by
 where it physically is, whichever end or side it is named from (*2.3*). Rails also list E at each
@@ -1454,7 +1497,8 @@ along the box's centre line from each end face (*2.3*).
 
 ### 5.4 BOM and order list (review B3, M7)
 
-- **BOM**: every item and option with its quantity (bars: count and total length), grouped by
+- **BOM**: every item and option with its quantity (bars: count and total length, each piece's
+  span, the bar it takes, §5.3; *2.3*), grouped by
   kind, with mass (§3.5's authority rule; a bar's is its centre-line length times its mass per
   metre, each line rounded once; *2.3*) and price. Unplaced lines (§4.7) show their `why`; a line
   covered by a cost line (§4.11) names it instead of a price. An item with no mass is a `mass`
@@ -2010,9 +2054,9 @@ needs:
   synthetic catalog per milestone that needed items `test/` does not hold, so no milestone moved
   another's oracle: `ref-test/` (clone ratings), `test-geo/` (M3a), `test-gen/` (M3b),
   `test-order/` and `test-order-eu/` (the order rules), `test-joint/` and `test-open/` (the
-  acceptance gaps), `test-stud/` (the second run's).
+  acceptance gaps), `test-stud/` (the second run's), `test-span/` (gap X4).
 - `golden-ends/`: the end cases of §4.6 (G1–G21; G27 and G28 since 2.2 and 2.3).
-- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26; G29–G34 since 2.3).
+- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26; G29–G34 and G38 since 2.3).
 - `order/` (*2.3*): two suppliers, both READY as written, for the order rules: each test patches
   one condition in, so each rule has a case that blocks and one that does not.
 - `base-frame/` (*2.3*): the cart's base frame built by the CLI from an empty project, the oracle

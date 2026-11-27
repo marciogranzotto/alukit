@@ -16,14 +16,23 @@ import { FIXTURES, mergePatch, readJson, shown, subdirs } from "./testing.ts";
  * G29 (gap A3: a layer on an angle's inner leg face, `docs/notes/a3-face-contact.md`), G30–G32
  * (the other gaps the v1 acceptance found, `docs/notes/acceptance-gaps.md`) and G33–G34 (the gaps
  * its second run found, `docs/notes/acceptance-gaps-2.md`) each have a hand calculation beside
- * them, `by_hand.py`, that imports nothing from AluKit.
+ * them, `by_hand.py`, that imports nothing from AluKit, and so does G38 (a piece's span, the length
+ * of stock it is cut from: `docs/notes/x4-stock-length.md`).
  */
 
 interface Expect {
+  /** Per bar: its lengths as derive gives them, to 0.01 (long point, centre line, short point, span). */
+  bars?: Record<
+    string,
+    { cut_mm?: number; centre_mm?: number; short_mm?: number; span_mm?: number }
+  >;
   /** Per rail bar: its hole count and end distances. */
   rails?: Record<string, { holes: number; E_a_mm: number; E_b_mm: number }>;
-  /** Per stock item: the number of pieces in each stock bar, and what each bar uses. */
-  stock?: Record<string, { pieces: number[]; used_mm?: number[] }>;
+  /**
+   * Per stock item: the number of pieces in each stock bar, what each bar uses, and the length
+   * each of its pieces takes from it, in order along the bar.
+   */
+  stock?: Record<string, { pieces: number[]; used_mm?: number[]; lengths_mm?: number[][] }>;
   /** Per face connection: its stations' world x. */
   stations?: Record<string, { x_mm: number[] }>;
   /**
@@ -43,8 +52,11 @@ interface Expect {
   >;
   /** Per part on a station: the bar it landed on and the distance from that bar's a. */
   parts?: Record<string, { bar: string; s_mm: number }>;
-  /** Per item: its cut-list lines, and where given, each line's machining as the cut list words it. */
-  lines?: Record<string, { count: number; cut_mm: number; machining?: string[] }[]>;
+  /**
+   * Per item: its cut-list lines, and where given, each line's span, ordered and billed lengths,
+   * and its machining as the cut list words it.
+   */
+  lines?: Record<string, LineExpect[]>;
   /** Per bar: its ops as derive gives them (written, then generated), numbers to 0.01. */
   ops?: Record<string, unknown[]>;
   /** Per item: its count among the connections' hardware. */
@@ -58,12 +70,27 @@ interface Expect {
     per_bar: Record<string, number>;
     ops?: Record<string, HoleOut[]>;
   };
-  /** The order list: per item, its one line's low, likely and high; and the total. */
+  /** The order list: per item, its one line's (or, as a list, its lines') low, likely and high; and the total. */
   order?: {
-    lines: Record<string, MoneyOut & { range?: "quote" | "band" }>;
+    lines: Record<string, LineMoney | LineMoney[]>;
     total: MoneyOut;
   };
+  /** Per item: its total length in the BOM. */
+  bom?: Record<string, { length_mm: number }>;
+  /** Every error the cut list reports, by code and entity. */
+  cut_errors?: { code: string; entity: string }[];
   errors: { code: string; entity: string; refs?: string[] }[];
+}
+
+type LineMoney = MoneyOut & { range?: "quote" | "band" };
+
+interface LineExpect {
+  count: number;
+  cut_mm: number;
+  span_mm?: number;
+  ordered_mm?: number;
+  billed_mm?: number;
+  machining?: string[];
 }
 
 /** A generated hole as the golden writes it. */
@@ -111,6 +138,19 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
     expect(match?.refs, `${label}: refs of ${e.code} on ${e.entity}`).toEqual(e.refs);
   }
 
+  for (const [id, b] of Object.entries(want.bars ?? {})) {
+    const l = d.bars.get(id)?.lengths;
+    expect(l, `${label}: bar ${id} derived`).toBeDefined();
+    const got: Record<string, number> = {
+      cut_mm: r2(l?.cut ?? Number.NaN),
+      centre_mm: r2(l?.centre ?? Number.NaN),
+      short_mm: r2(l?.short ?? Number.NaN),
+      span_mm: r2(l?.span ?? Number.NaN),
+    };
+    const given = Object.fromEntries(Object.keys(b).map((k) => [k, got[k]]));
+    expect(given, `${label}: ${id}'s lengths`).toEqual(b);
+  }
+
   for (const [id, r] of Object.entries(want.rails ?? {})) {
     const rail = d.bars.get(id)?.rail;
     expect(rail, `${label}: ${id} has a hole layout`).toBeDefined();
@@ -128,14 +168,30 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
       `${label}: ${item}'s stock bars`,
     ).toEqual(s.pieces);
     if (s.used_mm) expect(g?.stock?.map((b) => b.used_mm)).toEqual(s.used_mm);
+    if (s.lengths_mm) {
+      expect(
+        g?.stock?.map((b) => b.pieces.map((p) => p.span_mm ?? p.cut_mm)),
+        `${label}: the lengths ${item}'s pieces take from its stock bars`,
+      ).toEqual(s.lengths_mm);
+    }
+  }
+  if (want.cut_errors) {
+    expect(
+      shown(cl.diagnostics, "error").map((e) => ({ code: e.code, entity: e.entity })),
+      `${label}: the cut list's errors`,
+    ).toEqual(want.cut_errors);
   }
   for (const [item, lines] of Object.entries(want.lines ?? {})) {
     const g = cl.groups.find((x) => x.item === item);
-    // A line's machining, as the cut list prints it, is compared only where the case gives it.
+    // A line's span, ordered and billed lengths and machining (as the cut list prints it) are
+    // compared only where the case gives them.
     expect(
       g?.lines.map((l, i) => ({
         count: l.count,
         cut_mm: l.cut_mm,
+        ...(lines[i]?.span_mm !== undefined ? { span_mm: l.span_mm } : {}),
+        ...(lines[i]?.ordered_mm !== undefined ? { ordered_mm: l.ordered_mm } : {}),
+        ...(lines[i]?.billed_mm !== undefined ? { billed_mm: l.billed_mm } : {}),
         ...(lines[i]?.machining ? { machining: l.machining.map(machiningText) } : {}),
       })),
       `${label}: ${item}'s cut-list lines`,
@@ -219,8 +275,12 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
       expect(got, `${label}: ${bar}'s generated holes`).toEqual(ops);
     }
   }
+  const b = bom({ derived: d, items });
+  for (const [item, x] of Object.entries(want.bom ?? {})) {
+    const line = b.groups.flatMap((g) => g.lines).find((l) => l.item === item);
+    expect(line?.length_mm, `${label}: ${item}'s length in the BOM`).toBe(x.length_mm);
+  }
   if (want.order) {
-    const b = bom({ derived: d, items });
     const o = order({
       derived: d,
       items,
@@ -239,10 +299,14 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
           high_minor: l.high_minor,
           range: l.range,
         })),
-        `${label}: ${item}'s order line`,
-      ).toEqual([m]);
+        `${label}: ${item}'s order lines`,
+      ).toEqual(Array.isArray(m) ? m : [m]);
     }
-    expect(lines.length, `${label}: order lines`).toBe(Object.keys(want.order.lines).length);
+    const count = Object.values(want.order.lines).reduce(
+      (n, m) => n + (Array.isArray(m) ? m.length : 1),
+      0,
+    );
+    expect(lines.length, `${label}: order lines`).toBe(count);
     expect(o.totals.total, `${label}: the total`).toEqual(want.order.total);
   }
 }
@@ -250,7 +314,7 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
 const dirs = subdirs(join(FIXTURES, "golden-gen"));
 
 describe("golden generation cases (design §4.6)", () => {
-  it("has one fixture per case G22–G26, and G29 on", () => {
+  it("has one fixture per case G22–G26, G29–G34 and G38", () => {
     expect(dirs.map((d) => basename(d))).toEqual([
       "G22",
       "G23",
@@ -263,6 +327,7 @@ describe("golden generation cases (design §4.6)", () => {
       "G32",
       "G33",
       "G34",
+      "G38",
     ]);
   });
 

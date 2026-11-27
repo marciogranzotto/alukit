@@ -78,7 +78,7 @@ G1–G21 still pass unchanged.
 
 | # | Decision | Why |
 |---|---|---|
-| 34 | Groups in §3.4's kind order; lines by item id then options. Bars give pieces and their total cut length; everything else units | "Every item and quantity, grouped by kind" |
+| 34 | Groups in §3.4's kind order; lines by item id then options. Bars give pieces and their total cut length; everything else units. *Since gap X4 (2026-11-27), the total of their spans: [x4-stock-length](x4-stock-length.md) 7* | "Every item and quantity, grouped by kind" |
 | 35 | Bar mass is each piece's centre-line length times the mass per metre: the published `mass_kg_per_m`, else area × density (the published area, else the section's closed form when `props_ok`). Units take `mass_kg`. A line's `mass_src` is the catalog's provenance or `calc`. A threaded rod whose catalog publishes its stress area (the cart's M10, 58 mm²) weighs a little light by that area | §3.5's authority rule, applied as written |
 | 36 | Each line's mass is rounded once to 0.001 kg; groups and the total add the rounded lines. An item with no mass is a `mass` warning, listed in `mass_unknown` and left out of the totals | Totals that add up on paper; a missing mass is a catalog gap, not a broken project |
 | 37 | Unplaced lines merge into their item's line, with their `why` | One line per item |

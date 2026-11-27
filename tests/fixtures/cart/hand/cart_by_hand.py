@@ -18,14 +18,22 @@ Rules used, from docs/design.md:
   hollow one (M10: 11 mm); a sleeve cut to the bore takes the bore's inside depth (§4.5);
 - a splice stud needs its tap in both spliced ends (§3.4);
 - a stock rail's holes start at its factory end's E and keep E_min at the cut end (§4.7);
+- a piece's span is its extent along its axis, from end a's long point to end b's over the
+  corners of its box: the length of straight stock it is cut from. It is the long-point length
+  when the two cuts lean opposite ways or one is square, and longer when they lean the same way
+  (design 2.3, §5.3); every angled piece of the cart is of the first kind, so its span is its
+  long point, but the span is worked from the corners all the same;
 - the cut list groups identical pieces, a piece and its end-for-end flip being the same, the
   canonical orientation being the one whose machining, then rail end distances, then end cuts
   compare first; machining compares by where it physically is, a hole by its distance from
-  end a; it nests stock items first-fit decreasing, then each bar into the cheapest stock length
-  that holds it, cheapest result winning; a factory-drilled rail piece keeps a stock end, with
-  no trim there, and stays in the stock length it names (§5.3);
-- the BOM counts every item and option, bars by pieces and total cut length, with mass from the
-  published value, else area × density; a bar's mass by its centre-line length (§3.5, §5.4);
+  end a's long point (one named from end b converts by the span); a supplier-cut piece is
+  ordered at its span; it nests stock items, each piece taking its span, first-fit decreasing,
+  then each bar into the cheapest stock length that holds it, cheapest result winning; a
+  factory-drilled rail piece keeps a stock end, with no trim there, and stays in the stock length
+  it names (§5.3);
+- the BOM counts every item and option, bars by pieces and the total of their spans, with mass
+  from the published value, else area × density; a bar's mass by its centre-line length (§3.5,
+  §5.4);
 - the order list buys each BOM line on the regular price: supplier-cut pieces priced per metre
   on their billed length, whole stock bars per bar, other items by the project's choice (a kit,
   whose contents count against the other needs) or else the cheapest cover of packs; a line takes
@@ -75,7 +83,8 @@ RAIL = ("test:RAIL20", {})
 pieces = []
 
 
-def piece(item, source, cut, ends=("square", "square"), centre=None, short=None, machining=(), rail=None):
+def piece(item, source, cut, ends=("square", "square"), centre=None, short=None, machining=(), rail=None, span=None):
+    """A piece; a square-cut one spans its cut length (every edge is as long as the centre line)."""
     pieces.append(
         {
             "item": item[0],
@@ -84,6 +93,7 @@ def piece(item, source, cut, ends=("square", "square"), centre=None, short=None,
             "cut": cut,
             "centre": cut if centre is None else centre,
             "short": short,
+            "span": cut if span is None else span,
             "angled": centre is not None,
             "ends": ends,
             "machining": list(machining),
@@ -252,6 +262,20 @@ def angled(normal, outward, x, y):
     }
 
 
+def span(a, t, x, y, plane_a, plane_b):
+    """The span (§5.3): along the axis from end a's long point to end b's, over the four corners
+    of the 40 x 40 box. Each plane is a point on it and its normal; s is where the edge through a
+    corner meets it, measured from a along t."""
+
+    def s_on(o, plane):
+        p, n = plane
+        return dot(tuple(pc - ac - oc for pc, ac, oc in zip(p, a, o)), n) / dot(t, n)
+
+    h = T40 / 2
+    cs = [tuple(i * xc + j * yc for xc, yc in zip(x, y)) for i, j in ((-h, -h), (h, -h), (h, h), (-h, h))]
+    return max(s_on(o, plane_b) for o in cs) - min(s_on(o, plane_a) for o in cs)
+
+
 # --- Knee braces at the top corners -----------------------------------------------------------
 # Front-left: from 200 along the front rail to 200 along the left rail, in plan the line
 # x + y = 200, its top flush with the rails (z 860..900). It meets the front rail's inner face
@@ -268,10 +292,16 @@ corners = {
     "b29": ((200, D, H), (0, D - 200, H), (0, 1, 0), (-1, 0, 0)),  # back rail, left rail
     "b30": ((W - 200, D, H), (W, D - 200, H), (0, 1, 0), (1, 0, 0)),  # back rail, right rail
 }
+# The rails' inner faces: the front's y = 80 and the back's y = D − 80, the left's x = 40 and the
+# right's x = W − 40; a point on each, by its outward normal.
+inner = {(0, -1, 0): (0, T80, 0), (0, 1, 0): (0, D - T80, 0), (-1, 0, 0): (T40, 0, 0), (1, 0, 0): (W - T40, 0, 0)}
 for b, (pa, pb, na, nb) in corners.items():
     t, x, y = frame(pa, pb)
     ends = (angled(na, tuple(-c for c in t), x, y), angled(nb, t, x, y))
-    piece(TS40, b, centre + 2 * half, ends, centre, centre - 2 * half)
+    # The cuts close toward the corner, so both long points are on the outer edge: the span is
+    # the long-point length, 113.14 + 40 = 153.14.
+    sp = span(pa, t, x, y, (inner[na], na), (inner[nb], nb))
+    piece(TS40, b, centre + 2 * half, ends, centre, centre - 2 * half, span=sp)
 
 # --- The push handle --------------------------------------------------------------------------
 # An arm off the right front post's outer face (x = W) at z = 800, 150 long, its end b square at
@@ -286,7 +316,10 @@ pa, pb = (W + 350, 20, 600), (W + 150, 20, 800)
 t, x, y = frame(pa, pb)
 centre = (350 - 158) * math.sqrt(2)
 ends = ("square", angled((-1, 0, 0), t, x, y))  # the plane's normal, out of the grip's end b
-piece(TS40, "b32", centre + half, ends, centre, centre - half)
+# End a square at its design point: its long point is every corner's, so the span is the long
+# point at b less nothing, 271.53 + 20 = 291.53.
+sp = span(pa, t, x, y, (pa, tuple(-c for c in t)), ((W + 158, 0, 0), (-1, 0, 0)))
+piece(TS40, "b32", centre + half, ends, centre, centre - half, span=sp)
 
 # --- Id order, the canonical orientation and grouping ---------------------------------------
 
@@ -328,7 +361,7 @@ def rail_key(r):
 
 def orientation_key(p):
     return (
-        sorted(physical(m, q(p["cut"])) for m in p["machining"]),
+        sorted(physical(m, q(p["span"])) for m in p["machining"]),
         rail_key(p["rail"]),
         end_key(p["ends"][0]),
         end_key(p["ends"][1]),
@@ -383,9 +416,9 @@ STOCK = {
 
 
 def used(ps):
-    """A trim at each stock end that no factory end takes, the pieces, a kerf between each."""
+    """A trim at each stock end that no factory end takes, the pieces' spans, a kerf between each."""
     f = sum(1 for p in ps if p["factory"])
-    return (2 - f) * TRIM + sum(p["cut"] for p in ps) + (len(ps) - 1) * KERF
+    return (2 - f) * TRIM + sum(p["span"] for p in ps) + (len(ps) - 1) * KERF
 
 
 def holds(length, ps):
@@ -395,7 +428,7 @@ def holds(length, ps):
 def nest(ps, stocks):
     """First-fit decreasing per stock length, each bar then into the cheapest length that holds
     it (a bar holding a piece that names its length keeps it); the cheapest result wins."""
-    order = sorted(ps, key=lambda p: (-p["cut"], id_key(p["source"])))
+    order = sorted(ps, key=lambda p: (-p["span"], id_key(p["source"])))
     best = None
     for _, length, _ in sorted(stocks, key=lambda s: s[1]):
         if any(p["stock"] is None and not holds(length, [p]) for p in ps):
@@ -442,7 +475,13 @@ for item, opt_text in items:
     lines = {}
     for p in ps:
         key = json.dumps(
-            [q(p["cut"]), p["ends"], sorted(physical(m, q(p["cut"])) for m in p["machining"]), rail_key(p["rail"])]
+            [
+                q(p["cut"]),
+                q(p["span"]),
+                p["ends"],
+                sorted(physical(m, q(p["span"])) for m in p["machining"]),
+                rail_key(p["rail"]),
+            ]
         )
         lines.setdefault(key, []).append(p)
     out_lines = []
@@ -452,6 +491,7 @@ for item, opt_text in items:
         if p["angled"]:
             line["centre_mm"] = q(p["centre"])
             line["short_mm"] = q(p["short"])
+            line["span_mm"] = q(p["span"])
         line["ends"] = {"a": p["ends"][0], "b": p["ends"][1]}
         ms = sorted(p["machining"], key=listed)
         if ms:
@@ -459,7 +499,7 @@ for item, opt_text in items:
         if p["rail"] is not None:
             line["rail"] = p["rail"]
         if item in CUT:
-            ordered = math.floor(line["cut_mm"] + 0.5)  # res_mm 1, half away from zero
+            ordered = math.floor(q(p["span"]) + 0.5)  # the span; res_mm 1, half away from zero
             line["ordered_mm"] = ordered
             line["billed_mm"] = math.ceil(ordered / 10) * 10  # step_mm 10
         line["sources"] = sorted((m["source"] for m in members), key=id_key)
@@ -471,6 +511,7 @@ for item, opt_text in items:
             rail_key(l.get("rail")),
             end_key(l["ends"]["a"]),
             end_key(l["ends"]["b"]),
+            -l.get("span_mm", l["cut_mm"]),
             id_key(l["sources"][0]),
         )
     )
@@ -485,7 +526,7 @@ for item, opt_text in items:
         nest_in = [
             {
                 "source": p["source"],
-                "cut": q(p["cut"]),
+                "span": q(p["span"]),
                 "factory": p["rail"] is not None and "factory" in p["rail"],
                 "stock": None if p["rail"] is None else p["rail"].get("stock_mm"),
             }
@@ -500,7 +541,7 @@ for item, opt_text in items:
                 "length_mm": b["stock"][1],
                 "sources": [s for s, _ in layout],
                 "offcut_mm": q(b["stock"][1] - used(b["pieces"])),
-                "waste_mm": q(b["stock"][1] - sum(p["cut"] for p in b["pieces"])),
+                "waste_mm": q(b["stock"][1] - sum(p["span"] for p in b["pieces"])),
             }
             ends = {s: e for s, e in layout if e is not None}
             if ends:
@@ -571,7 +612,7 @@ for item, opt_text in items:
             "item": item,
             "opt": json.loads(opt_text),
             "qty": len(ps),
-            "length_mm": q(sum(q(p["cut"]) for p in ps)),
+            "length_mm": q(sum(q(p["span"]) for p in ps)),  # each piece's span: the bar it takes
             "unit_mass_kg": qkg(kg_per_m),
             "mass_kg": qkg(sum(p["centre"] for p in ps) * kg_per_m / 1000),
             "mass_src": src,

@@ -212,7 +212,10 @@ describe("alukit derive, cutlist and bom", () => {
   it("prints the cut list in each format", async () => {
     const md = await capture(["cutlist", project("cart")]);
     expect(md.code).toBe(0);
-    expect(md.out.join("\n")).toMatch(/\| 4 \| 153\.14 \| 113\.14 \| 45\.00° mitre -45\.00° \//);
+    // The knee braces: long point, centre line, then the span, which a trapezoid's long point is.
+    expect(md.out.join("\n")).toMatch(
+      /\| 4 \| 153\.14 \| 113\.14 \| 153\.14 \| 45\.00° mitre -45\.00° \//,
+    );
     const csv = await capture(["cutlist", project("cart"), "--format", "csv"]);
     expect(csv.out.join("\n").split("\n")[0]).toMatch(/^kind,item,options,mode,count,cut_mm,/);
     const json = await capture(["cutlist", project("cart"), "--format", "json"]);

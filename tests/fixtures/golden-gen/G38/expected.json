@@ -1,0 +1,102 @@
+{
+  "case": "G38",
+  "rule": "a piece is ordered, billed and nested at its span, its extent along the axis from one end cut's farthest point to the other's (§5.3)",
+  "design": "the brace b3, cut on two parallel faces 1000 apart at 26.57°: every edge 1118.03, span 1118.03 + 40 · tan 26.57° = 1138.03, ordered 1138, billed 1140 (R$ 144.21, where its edge length billed 1120 and R$ 141.68). The knee brace b5, a trapezoid: long point 549.12 is its span, billed 550. The square bars: span = cut. The brace's end b on a plane leaning the same way but not parallel: long point 1125.18, span 1130.89. b2 raised so the brace's long point is 2996.33, inside the offer's 3000, and its span 3016.33: a length error. Nested from stock bars: 2000 + 2000 + 1138.03 + 549.12 + 3 × 3 = 5696.15 in a 6000, and the post alone in a 3000",
+  "expect": {
+    "bars": {
+      "b1": { "cut_mm": 2000, "centre_mm": 2000, "short_mm": 2000, "span_mm": 2000 },
+      "b2": { "cut_mm": 2000, "centre_mm": 2000, "short_mm": 2000, "span_mm": 2000 },
+      "b3": { "cut_mm": 1118.03, "centre_mm": 1118.03, "short_mm": 1118.03, "span_mm": 1138.03 },
+      "b4": { "cut_mm": 1000, "centre_mm": 1000, "short_mm": 1000, "span_mm": 1000 },
+      "b5": { "cut_mm": 549.12, "centre_mm": 509.12, "short_mm": 469.12, "span_mm": 549.12 }
+    },
+    "lines": {
+      "test-span:SQ40": [
+        { "count": 2, "cut_mm": 2000, "ordered_mm": 2000, "billed_mm": 2000 },
+        {
+          "count": 1,
+          "cut_mm": 1118.03,
+          "span_mm": 1138.03,
+          "ordered_mm": 1138,
+          "billed_mm": 1140
+        },
+        { "count": 1, "cut_mm": 1000, "ordered_mm": 1000, "billed_mm": 1000 },
+        { "count": 1, "cut_mm": 549.12, "span_mm": 549.12, "ordered_mm": 549, "billed_mm": 550 }
+      ]
+    },
+    "order": {
+      "lines": {
+        "test-span:SQ40": [
+          { "low_minor": 50600, "likely_minor": 50600, "high_minor": 50600 },
+          { "low_minor": 14421, "likely_minor": 14421, "high_minor": 14421 },
+          { "low_minor": 12650, "likely_minor": 12650, "high_minor": 12650 },
+          { "low_minor": 6958, "likely_minor": 6958, "high_minor": 6958 }
+        ]
+      },
+      "total": { "low_minor": 84629, "likely_minor": 84629, "high_minor": 84629 }
+    },
+    "bom": { "test-span:SQ40": { "length_mm": 6687.15 } },
+    "cut_errors": [],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "ends leaning the same way, not parallel",
+      "patch": {
+        "bars": {
+          "b3": {
+            "ends": {
+              "b": { "plane": { "point": [1010, 0, 1020], "normal": [1, 0, 3] }, "cut": "angle" }
+            }
+          }
+        },
+        "connections": { "c2": { "ends": ["b4.b"] } }
+      },
+      "expect": {
+        "bars": {
+          "b3": { "cut_mm": 1125.18, "centre_mm": 1118.03, "short_mm": 1110.89, "span_mm": 1130.89 }
+        },
+        "errors": []
+      }
+    },
+    {
+      "name": "the span past the offer's maximum",
+      "patch": {
+        "bars": {
+          "b2": { "a": [0, 0, 2720], "b": [2000, 0, 2720] },
+          "b3": { "b": { "on": { "bar": "b2", "at_mm": 1860 } } }
+        }
+      },
+      "expect": {
+        "bars": {
+          "b3": { "cut_mm": 2996.33, "centre_mm": 2996.33, "short_mm": 2996.33, "span_mm": 3016.33 }
+        },
+        "cut_errors": [{ "code": "length", "entity": "b3" }],
+        "errors": []
+      }
+    },
+    {
+      "name": "nested from stock bars",
+      "patch": { "order": { "test-span:SQ40": { "sale": "stock" } } },
+      "expect": {
+        "stock": {
+          "test-span:SQ40": {
+            "pieces": [4, 1],
+            "used_mm": [5696.15, 1000],
+            "lengths_mm": [[2000, 2000, 1138.03, 549.12], [1000]]
+          }
+        },
+        "order": {
+          "lines": {
+            "test-span:SQ40": [
+              { "low_minor": 33000, "likely_minor": 33000, "high_minor": 33000 },
+              { "low_minor": 60000, "likely_minor": 60000, "high_minor": 60000 }
+            ]
+          },
+          "total": { "low_minor": 93000, "likely_minor": 93000, "high_minor": 93000 }
+        },
+        "errors": []
+      }
+    }
+  ]
+}

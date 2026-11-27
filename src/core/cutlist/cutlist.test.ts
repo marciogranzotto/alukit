@@ -263,6 +263,55 @@ describe("the cut list (design §5.3)", () => {
     ]);
   });
 
+  it("measures a parallel-cut piece's machining from each end's long point, on opposite edges", () => {
+    // G38's brace between two beams whose faces are 1000 apart, 1 across for 2 up, and the same
+    // brace drawn the other way round. The hole is 100 along the axis from the lower design
+    // point, which is 10√5 = 22.36 below the lower cut on the centre line; that cut's long point
+    // is 10 further out (20 · tan 26.57°), so the hole is 100 − 12.36 = 87.64 from end a's long
+    // point. From end b's it is the span less that, 1138.03 − 87.64: written from b on the
+    // reversed brace, it is the same hole, and the two are one piece.
+    const beams = {
+      b1: { a: [0, 0, 0], b: [2000, 0, 0] },
+      b2: { a: [0, 0, 1040], b: [2000, 0, 1040] },
+    };
+    const angled = { a: { cut: "angle" }, b: { cut: "angle" } };
+    const hole = (from: "a" | "b") => ({ op: "hole", face: "+x", at_mm: 100, d_mm: 7, from });
+    const cl = list(
+      {
+        ...beams,
+        b3: {
+          a: { on: { bar: "b1", at_mm: 500 } },
+          b: { on: { bar: "b2", at_mm: 1020 } },
+          ends: angled,
+          ops: [hole("a")],
+        },
+        b4: {
+          a: { on: { bar: "b2", at_mm: 1520 } },
+          b: { on: { bar: "b1", at_mm: 1000 } },
+          ends: angled,
+          ops: [hole("b")],
+        },
+      },
+      {
+        connections: {
+          c1: { type: "butt", through: "b1", ends: ["b3.a", "b4.b"] },
+          c2: { type: "butt", through: "b2", ends: ["b3.b", "b4.a"] },
+        },
+      },
+    );
+    const brace = cl.groups[0]?.lines.find((l) => l.sources.includes("b3"));
+    expect([brace?.count, brace?.cut_mm, brace?.span_mm, brace?.sources]).toEqual([
+      2,
+      1118.03,
+      1138.03,
+      ["b3", "b4"],
+    ]);
+    expect(brace?.machining).toEqual([
+      { op: "hole", face: "+x", from: "a", at_mm: 87.64, d_mm: 7 },
+    ]);
+    expect([brace?.ordered_mm, brace?.billed_mm]).toEqual([1138, 1140]);
+  });
+
   it("follows an order override to stock, and says when nothing sells it by length", () => {
     const cl = list(
       { b1: { item: "test-geo:FB-50x10", a: [0, 0, 0], b: [500, 0, 0] } },

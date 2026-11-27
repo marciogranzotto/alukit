@@ -48,6 +48,10 @@ function barJson(b: DerivedBar) {
     cut_mm: len(b.lengths.cut),
     centre_mm: len(b.lengths.centre),
     short_mm: len(b.lengths.short),
+    // The span (§5.3), with an angled end: square ends span their cut length.
+    ...(b.ends.a.mitre !== undefined || b.ends.b.mitre !== undefined
+      ? { span_mm: len(b.lengths.span) }
+      : {}),
     frame: { x: dir(p.frame.x), y: dir(p.frame.y), z: dir(p.frame.t) },
     box_mm: [
       [len(p.box.x0), len(p.box.y0)],

@@ -449,6 +449,7 @@
           "cut_mm": 291.53,
           "centre_mm": 271.53,
           "short_mm": 251.53,
+          "span_mm": 291.53,
           "ends": {
             "a": "square",
             "b": {
@@ -466,6 +467,7 @@
           "cut_mm": 153.14,
           "centre_mm": 113.14,
           "short_mm": 73.14,
+          "span_mm": 153.14,
           "ends": {
             "a": {
               "angle_deg": 45.0,

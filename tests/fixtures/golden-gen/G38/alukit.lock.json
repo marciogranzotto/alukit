@@ -1,0 +1,23 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test": { "hash": "sha256:9f7db6051d5ccdf546201ecd7761a355214b711e7cf4a4b2c7fc2ac64b1cf860", "name": "Test catalog (synthetic)", "vendor": "test-vendor", "currency": "BRL" },
+    "test-span": { "hash": "sha256:e3c96035e92dbde6953effb512063bbc5466857490d98e16ac80dc84d70df45f", "name": "Span test catalog (synthetic)", "vendor": "test-span-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-span:SQ40": { "hash": "sha256:d65f79c99f3c9bc28875a12041cb0a04ce039fa56f28cb66c624a9240538f63a", "item": { "kind": "bar", "name": "Square bar 40x40, cut to length or in stock bars (synthetic, G38)", "material": "test:al-6063-t5", "prov": { "src": "est", "note": "synthetic test data for a piece's span (G38), not a vendor's" }, "shape": "flat", "section": "SQ40" } }
+  },
+  "offers": {
+    "test-span:SQ40-3000": { "hash": "sha256:469f7c4995e28a1c49807b676506eff546424310459189408e14f65b536e41e4", "offer": { "item": "SQ40", "sale": { "mode": "stock", "length_mm": 3000 }, "price": { "regular_minor": 33000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test-span:SQ40-6000": { "hash": "sha256:0a449d42d8b8ce3f20691a17c4c3a98828eb8bc18c411d2d29d862753f01b961", "offer": { "item": "SQ40", "sale": { "mode": "stock", "length_mm": 6000 }, "price": { "regular_minor": 60000, "sale_minor": null, "per": "bar", "read": "2026-11-26", "src": "src" } } },
+    "test-span:SQ40-c": { "hash": "sha256:5c51a9818b6912ceaf5c0374a46a6c67a8a206ee27a835e494e3471005962f6c", "offer": { "item": "SQ40", "sale": { "mode": "cut", "min_mm": 40, "max_mm": 3000, "tol_mm": 1, "res_mm": 1, "step_mm": 10 }, "price": { "regular_minor": 12650, "sale_minor": null, "per": "m", "read": "2026-11-26", "src": "src" } } }
+  },
+  "sections": {
+    "test-span:SQ40": { "hash": "sha256:2ae71c4923e5538b72fd728025546217af8d45b605fad2def37f321e30289a43", "section": { "schema": "alukit.section/1", "id": "SQ40", "fidelity": "parametric", "props_ok": true, "generator": "flat", "params": { "b_mm": 40, "t_mm": 40 } } }
+  },
+  "materials": {
+    "test:al-6063-t5": { "hash": "sha256:e0c482b7732d94a71938e8fe5ddb0fecedb37039f991accf85a370fb368642c2", "material": { "name": "Aluminium 6063-T5", "alloy": "6063", "temper": "T5", "E_MPa": 69000, "G_MPa": 25900, "nu": 0.33, "density_kg_per_m3": 2700, "Rp02_MPa": { "v": 110, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" }, "Rm_MPa": { "v": 150, "src": "est", "note": "EN 755-2 minimum for thin sections, to verify" }, "alpha_per_K": 0.0000234 } }
+  },
+  "grooves": {},
+  "systems": {}
+}
