@@ -20,6 +20,7 @@ import { DeleteButton, DeleteFlow } from "./Delete.tsx";
 import { BarDerived, Item, OtherDerived, ProjectItem } from "./Derived.tsx";
 import { PointedField, pointedFor } from "./Fields.tsx";
 import { ManyFields } from "./ManyFields.tsx";
+import { NodeFields } from "./NodeFields.tsx";
 import { ButtConnector, ConnectionFields, PartFields, PlainFields } from "./OtherFields.tsx";
 import { copyMembers } from "./remove.ts";
 import { copyOf, entityName, labelOf, NOUN, patternOf, type RefKind, refKind } from "./words.ts";
@@ -188,7 +189,7 @@ function EntityBody({
       {kind === "bar" && <BarFields m={m} id={id} />}
       {kind === "part" && <PartFields m={m} id={id} />}
       {kind === "connection" && <ConnectionFields m={m} id={id} />}
-      {kind === "node" && <PlainFields m={m} id={id} title="Point" />}
+      {kind === "node" && <NodeFields m={m} id={id} />}
       {kind === "run" && <PlainFields m={m} id={id} title="Run" />}
       {kind === "pattern" && <PlainFields m={m} id={id} title="Pattern" />}
       {kind === "copy" && <CopyBody m={m} id={id} />}

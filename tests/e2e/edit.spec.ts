@@ -493,3 +493,36 @@ test("holes (E-UX-22): a Ø7 hole 20 from end a on b1's +x face, as the CLI's se
   await waitDrawn(page, 3);
   expect((await written(served.dir)).bars?.b1).not.toHaveProperty("ops");
 });
+
+test("a node's fields: moving the point three legs share moves every leg's end, as moveNode does", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  // A tripod: three legs whose ends b are node n1 (the skill's worked example uses no node).
+  const tripod = [
+    { cmd: "addNode", args: { at: [500, 0, 600] } },
+    { cmd: "addBar", args: { a: [0, 0, 0], b: "n1" } },
+    { cmd: "addBar", args: { a: [1000, 0, 0], b: "n1" } },
+    { cmd: "addBar", args: { a: [500, 300, 0], b: "n1" } },
+  ];
+  served = await serve("base-frame/empty");
+  await cliDo(served.dir, tripod);
+  const oracle = await scratchProject("base-frame/empty");
+  await cliDo(oracle.dir, tripod);
+  await cliDo(oracle.dir, { cmd: "moveNode", args: { id: "n1", at: [500, 0, 700] } });
+  await openTab(page, served, 1);
+
+  // n1 from the outline's Nodes group: what uses it, and where it is.
+  const tree = page.getByTestId("tree");
+  await tree.locator('[data-key="g:nodes"]').click();
+  await tree.locator('[data-id="n1"]').first().click();
+  await expect(page.getByTestId("row-node-users")).toContainText("b1.b, b2.b and b3.b");
+  await page.getByTestId("field-node-z").fill("700");
+  await page.getByTestId("field-node-z").press("Enter");
+  await waitDrawn(page, 2);
+  expect((await written(served.dir)).nodes).toEqual({ n1: [500, 0, 700] });
+  // Every leg's end followed, as the CLI's moveNode moves them: the same cut list.
+  expect(await cutList(served.dir)).toEqual(await cutList(oracle.dir));
+  expect(await lastStepWords(served.dir)).toBe("move point n1");
+  await oracle.remove();
+});
