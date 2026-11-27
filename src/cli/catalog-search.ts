@@ -72,6 +72,7 @@ export async function searchCommand(a: SearchArgs, io: Io): Promise<number> {
           ...(e.code !== undefined ? { code: e.code } : {}),
           vendor: e.vendor,
           ...(e.size_mm !== undefined ? { size_mm: e.size_mm } : {}),
+          ...(e.from !== undefined ? { from: e.from } : {}),
         })),
       }).trimEnd(),
     );

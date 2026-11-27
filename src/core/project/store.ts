@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
+import { access, mkdir, open, readFile, rename, unlink } from "node:fs/promises";
 import { hostname } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { parseJson } from "#catalog/json.ts";
@@ -136,6 +136,65 @@ export async function writeAtomic(
     }
   } catch {
     // Not every platform syncs a folder; the rename is atomic either way.
+  }
+}
+
+/** Where "restore last good" keeps the files it writes over (BE-9, D-UX-15). */
+export const REJECTED_DIR = "rejected";
+
+/**
+ * Keeps the text of files about to be written over, in `.alukit/rejected/`, named by the UTC
+ * time to the second (`2026-11-27T05-30-12Z.json`, the lock as `….lock.json`; colons are not
+ * allowed in a file name everywhere), and numbered `-2`, `-3` within a second. Each is created
+ * exclusively, so nothing kept is ever written over. Answers the paths kept, relative to the
+ * project and with `/`, as a person reads them.
+ */
+export async function keepRejected(
+  dir: string,
+  files: { doc?: string; lock?: string },
+  now: Date,
+): Promise<string[]> {
+  const EXTS = [".json", ".lock.json"] as const;
+  const kept = [
+    ...(files.doc !== undefined ? [{ ext: EXTS[0], text: files.doc }] : []),
+    ...(files.lock !== undefined ? [{ ext: EXTS[1], text: files.lock }] : []),
+  ];
+  if (kept.length === 0) return [];
+  const folder = join(dir, STATE_DIR, REJECTED_DIR);
+  await mkdir(folder, { recursive: true });
+  const time = `${now.toISOString().slice(0, 19).replaceAll(":", "-")}Z`;
+  const taken = async (path: string) =>
+    access(path).then(
+      () => true,
+      () => false,
+    );
+  for (let n = 1; ; n++) {
+    const stem = n === 1 ? time : `${time}-${n}`;
+    // A stem is one restore's: free only when neither of its names exists, so a set never
+    // mixes the document of one restore with the lock of another.
+    const names = EXTS.map((ext) => join(folder, `${stem}${ext}`));
+    if ((await Promise.all(names.map(taken))).some((t) => t)) continue;
+    const handles: Awaited<ReturnType<typeof open>>[] = [];
+    try {
+      // Created exclusively: a restore racing for the same stem moves on to the next.
+      for (const k of kept) handles.push(await open(join(folder, `${stem}${k.ext}`), "wx", 0o600));
+    } catch (e) {
+      for (const h of handles) await h.close();
+      for (const k of kept.slice(0, handles.length)) {
+        await unlink(join(folder, `${stem}${k.ext}`)).catch(() => {});
+      }
+      if ((e as NodeJS.ErrnoException).code === "EEXIST") continue;
+      throw e;
+    }
+    for (const [i, h] of handles.entries()) {
+      try {
+        await h.writeFile((kept[i] as { text: string }).text, "utf8");
+        await h.sync();
+      } finally {
+        await h.close();
+      }
+    }
+    return kept.map((k) => `${STATE_DIR}/${REJECTED_DIR}/${stem}${k.ext}`);
   }
 }
 

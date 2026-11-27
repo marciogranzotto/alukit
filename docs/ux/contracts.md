@@ -131,3 +131,7 @@ S1 changed the contracts above only by adding, and built the clients. Its decisi
 | Problem model | `src/core/problems/` | `problemsOf`, `problemsAt` and `problemsText` beside `types.ts`, whose types did not change |
 | The catalog list | `src/catalog/search.ts` | `CatalogEntry.size_mm` for bars, `SearchQuery.prefer` |
 | Steps in words | `src/core/commands/types.ts`, `history.ts`; `src/server/host.ts` | `CommandDef.describe`; `LogEntry.text`, `StepInfo.text` and the `rev` event's `text`. `what` is unchanged |
+| The corner rule | `src/core/project/schema.ts` | `CornerRule`; `Defaults.corner`; `autoConnect`'s `prefer` (drop 2) |
+| The box frame | `src/core/commands/frame.ts` | `addFrame`, whose answer's `info` is `{ posts, rings: { base?, shelf?, top? }, connections, params? }`: what S5.7's tool and S2's start card read (drop 2) |
+| Restore | `POST /api/restore` | `kept`, the paths of the files kept in `.alukit/rejected/` (drop 2) |
+| The catalog list | `src/catalog/search.ts` | `CatalogEntry.from`, `{ minor, currency?, per }` (`FromPrice`, `src/core/order/price.ts`; drop 2) |

@@ -6,6 +6,7 @@ import {
   setPart,
   setPattern,
 } from "./entities.ts";
+import { addFrame } from "./frame.ts";
 import { autoConnect, reverseBar, splitBar } from "./geometry.ts";
 import { mirror } from "./mirror.ts";
 import { array, explodePattern } from "./patterns.ts";
@@ -41,6 +42,7 @@ export const COMMAND_LIST: readonly CommandDef<never>[] = [
   setBar,
   reverseBar,
   splitBar,
+  addFrame,
   addRun,
   setRun,
   removeEntity,

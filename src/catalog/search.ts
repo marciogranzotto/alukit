@@ -2,6 +2,7 @@ import { compareIds } from "#core/ids.ts";
 import { catalogItems, type ItemSource } from "#core/items.ts";
 import type { Lock } from "#core/lock/schema.ts";
 import { lockItems } from "#core/lock/source.ts";
+import { type FromPrice, fromPrice } from "#core/order/price.ts";
 import type { CatalogSet } from "./link.ts";
 import type { Item } from "./schema/items.ts";
 
@@ -32,6 +33,8 @@ export interface CatalogEntry {
   project?: true;
   /** A bar's own size: its section's box, width then height, mm (BE-8). */
   size_mm?: readonly [number, number];
+  /** The lowest regular price it is sold at, per metre or per unit (BE-12). */
+  from?: FromPrice;
 }
 
 export function localId(ref: string | undefined): string | undefined {
@@ -76,6 +79,7 @@ export function catalogIndex(
     for (const li of cat.items.values()) {
       seen.add(li.id);
       const size = li.item.kind === "bar" ? sizeOf(fromLive, li.id) : undefined;
+      const from = fromPrice(fromLive.offers(li.id));
       out.push({
         id: li.id,
         catalog: cat.id,
@@ -87,6 +91,7 @@ export function catalogIndex(
         pinned: lock !== undefined && Object.hasOwn(lock.items, li.id),
         live: true,
         ...(size ? { size_mm: size } : {}),
+        ...(from ? { from } : {}),
       });
     }
   }
@@ -97,6 +102,7 @@ export function catalogIndex(
     const isLive = cat?.items.has(id.slice(catalog.length + 1)) === true;
     const source = isLive ? fromLive : fromLock;
     const size = e.item.kind === "bar" && source ? sizeOf(source, id) : undefined;
+    const from = source ? fromPrice(source.offers(id)) : undefined;
     out.push({
       id,
       catalog,
@@ -108,9 +114,32 @@ export function catalogIndex(
       pinned: true,
       live: isLive,
       ...(size ? { size_mm: size } : {}),
+      ...(from ? { from } : {}),
     });
   }
   return out.sort((a, b) => compareIds(a.id, b.id));
+}
+
+/**
+ * Whether one of the catalogs `ids` sells T-slot profile: a bar whose section has grooves, with
+ * an offer (D-UX-7). `alukit new` says so when none does, since a frame drawn then has no
+ * profile to draw with.
+ */
+export function sellsTslot(live: CatalogSet, ids: readonly string[]): boolean {
+  const items = catalogItems(live);
+  for (const id of ids) {
+    for (const li of live.catalogs.get(id)?.items.values() ?? []) {
+      if (li.item.kind !== "bar") continue;
+      const found = items.item(li.id);
+      if (
+        found.ok &&
+        (found.bar?.section.grooves.length ?? 0) > 0 &&
+        items.offers(li.id).length > 0
+      )
+        return true;
+    }
+  }
+  return false;
 }
 
 /** A bar's size, its built section's box (width, height), or undefined when it does not build. */

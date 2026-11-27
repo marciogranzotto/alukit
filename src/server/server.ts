@@ -94,7 +94,7 @@ import { viewModel } from "./view.ts";
  * | `GET /api/events` | the event stream: SSE wire format, read with `fetch` |
  * | `POST /api/commands` | `{ commands, source, id?, baseRev?, strict?, dryRun? }`: one step; with `dryRun`, what the step would do, writing nothing |
  * | `POST /api/undo`, `/api/redo` | `{ source }` |
- * | `POST /api/restore` | "restore last good": the last good state over invalid files |
+ * | `POST /api/restore` | "restore last good": the last good state over invalid files, which it keeps in `.alukit/rejected/` and names (`kept`) |
  *
  * Every request that derives (the model, the outputs, the GLB) takes `?variant=<name>`, as the
  * CLI takes `--variant`: that variant, else the document's default (§4.10). A name the document

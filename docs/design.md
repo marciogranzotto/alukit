@@ -21,7 +21,7 @@ below as dvb), so that the design again describes the system as built. A recorde
 proved the better choice is now the rule; a feature v1 does not have is stated as a **v1 limit**,
 with the version that takes it up. Calls left for the owner's review are marked *open* (§14, call 6
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
-40–44). Changed text is marked *2.3*. The build was not changed for this draft, except as "After
+40–44; call 6 has since been decided, under "UX redesign, S1" below). Changed text is marked *2.3*. The build was not changed for this draft, except as "After
 acceptance run 2", "After acceptance run 3", "After acceptance run 4" and "After the alternative
 frame's acceptance" below record. Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
@@ -276,6 +276,15 @@ text, are in [`ux/s1-decisions.md`](ux/s1-decisions.md) (cited as "s1").
   `--as agent:<name>` reaches the log as that agent (U57, BE-10; s1 2).
 - §7.3: `alukit problems`; `alukit do --dry-run`; `alukit catalog search --prefer`, and a bar of
   the size a query writes ranks above an item that only mentions it (U14, BE-8; s1 3).
+- §4.5, §14 call 6: **the corner rule** is `autoConnect`'s `prefer`, `vertical` (the rule as it
+  was, the default), `x`, `y` or `first`, else the project's `defaults.corner`; call 6 is
+  decided by D-UX-9 (BE-5; s1 19).
+- §6, §7.3: **`addFrame`** and `alukit add frame`, a box frame in one step, outside faces flush
+  with its size (BE-6, D-UX-8; s1 20–23).
+- §7.1: **restore keeps what it writes over**, in `.alukit/rejected/` (BE-9, D-UX-15; s1 24).
+- §7.3: `alukit snapshot --theme`, dark by default (BE-11, D-UX-21; s1 25); the catalog list's
+  **`from` price** (BE-12; s1 26); `alukit new` says when no catalog it names sells T-slot
+  profile (D-UX-7; s1 27).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1150,12 +1159,18 @@ plane along the face's normal (*2.3*), since an angled brace moves a long way al
 without being far from its face.
 
 **Default connection.** When the draw tool closes on a point, `autoConnect` adds a `butt` with the
-project's default connector. The through bar is the one that passes through the point; else a
-vertical; else the lowest id. Its end, if any, covers. Ends some connection already claims are
-left alone. All of it can be changed. In the draw tool it is a check box, on by default, and it
-does nothing where nothing butts (*2.3*). Because a vertical wins, a rail drawn onto a post's top
-butts into the post; a frame whose posts stand under its rails is drawn with it off and joined
-with Connect. Whether the rule should change for that case is open (call 6).
+project's default connector. The through bar is the one that passes through the point; else the
+one **the corner rule** prefers (*2.3*): `vertical`, a vertical, else the lowest id, the default;
+`x` or `y`, the bar along that world axis, so a rectangle's long or short sides run through;
+`first`, the lowest id. Where no bar runs along the axis asked, the default rule decides. The rule
+is `autoConnect`'s `prefer`, else the project's `defaults.corner`, else `vertical`, so no document
+or script changed meaning when it came (D-UX-9). A 1000 × 600 ground rectangle of 40 × 40,
+drawn b1 to b4 around, is cut 1040 / 600 / 1000 / 560 by `vertical` or `first` (nothing is
+vertical, so the lowest id runs through both its corners), 1040 / 560 / 1040 / 560 by `x`, and
+960 / 640 / 960 / 640 by `y` ([s1](ux/s1-decisions.md) 19). Its end, if any, covers. Ends some
+connection already claims are left alone. All of it can be changed. In the draw tool it is a
+check box, on by default, and it does nothing where nothing butts (*2.3*). A rail drawn onto a
+post's top butts into the post by `vertical`; with `x` or `y` the rail runs over the post.
 
 ### 4.6 Golden cases (review B1)
 
@@ -1771,7 +1786,7 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
 
 | Group | Commands |
 |---|---|
-| Structure | `addNode` `moveNode` `addBar` `setBar` `reverseBar` `splitBar` (optionally adding a `splice`, and the run) `addRun` `setRun` `removeEntity` |
+| Structure | `addNode` `moveNode` `addBar` `setBar` `reverseBar` `splitBar` (optionally adding a `splice`, and the run) `addFrame` (*2.3*) `addRun` `setRun` `removeEntity` |
 | Connections | `addConnection` `setConnection` `autoConnect` |
 | Parts and patterns | `addPart` `setPart` `addPattern` `setPattern` `explodePattern` `mirror` `array` |
 | Items | `addItem` `setItem` (project items) |
@@ -1802,6 +1817,15 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
 - **Every command describes what it did** (*2.3*), so a step reads in words: "add bar b12, joined
   at 1 end", "add bars b1, b2 and b3", "undo add point n2". The log keeps the command names as
   `what` beside the words, `text` ([s1](ux/s1-decisions.md) 7).
+- **`addFrame`** (*2.3*, D-UX-8) adds a box frame in one step: four posts, a base and a top ring
+  (either may be left out), an optional shelf ring (its top face `shelf_mm` above the base), and a
+  butt at every corner by the corner rule (§4.5), with the connector and count given or the
+  project's. The size is the frame's outside: the footprint W × D from `at` and the height H, each
+  bar's anchor putting its section inside, as the skill's worked example draws its table. With
+  `params: true` it writes W, D and H as params and the frame's points from them, refusing when
+  one of those names is taken. It is made of `setParam`, `addBar` and `autoConnect`, run in
+  order inside it, so the corner rule stays in one place; it refuses a size that leaves a rail
+  no length, and a shelf that is not between the rings ([s1](ux/s1-decisions.md) 20–23).
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
   moves (`cuts`, before and after), the bars it adds with their cuts, what it removes, and the ends
@@ -1846,7 +1870,9 @@ Agents work at this level of meaning, so they never compute cut lengths by hand.
   writes are recognised by hash). If valid, it enters the log as one `file` step, taken in as
   written (§2); an edit equal to the current state's canonical text is no step (*2.3*). If not, the
   project goes **read-only**: every client shows why, commands are refused, until the file is
-  valid again or someone chooses "restore last good". **Valid** means strict JSON (§2) that
+  valid again or someone chooses "restore last good". Restore keeps what it writes over first,
+  each file that differs from the state it restores, as `.alukit/rejected/<UTC time>.json` (the
+  lock as `….lock.json`), and its answer names them (*2.3*, D-UX-15). **Valid** means strict JSON (§2) that
   validates against the document's schema, and a lock, if present, against the lock's (*2.3*); a
   dangling reference or a bar that does not derive is a diagnostic, not invalidity (principle 8).
 - **`alukit serve` refuses to start on invalid files** and lists the problems, since there is no
@@ -1906,7 +1932,7 @@ source in the log.
 
 | Command | Does |
 |---|---|
-| `alukit new <dir>` | creates a project, its lock, and a `.gitignore` line for `.alukit/` |
+| `alukit new <dir>` | creates a project, its lock, and a `.gitignore` line for `.alukit/`; when no catalog it names sells T-slot profile, a notice names the built-in ones that do (*2.3*, D-UX-7) |
 | `alukit serve <dir>` | runs the project's server and opens the tab |
 | `alukit check <dir> [--frozen]` | validates, derives and runs the checks; non-zero exit on an error |
 | `alukit problems <dir> [--variant v] [--as-of d] [--json]` (*2.3*) | the problem list (§5.5); non-zero exit when one blocks the order or is an error |
@@ -1914,15 +1940,15 @@ source in the log.
 | `alukit derive <dir> --json [--select <paths>]` | the derived model, for report builders (`alukit.derived/1`, with its own JSON Schema). `--select` (*2.3*) takes dotted paths, `*` for every member, commas to merge (`bars.*.cut_mm,params`), and keeps the model's shape; a path the model lacks is an error |
 | `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context |
 | `alukit do <dir> -f batch.json` (or `-f -` for stdin) | edits from a file or stdin, one process per batch; inline JSON also works. `--dry-run` (*2.3*) says what the batch would do and writes nothing (§6) |
-| `alukit add bar --item … --a n1 --b 0,0,900`, … | sugar over `do` |
+| `alukit add bar --item … --a n1 --b 0,0,900`, … | sugar over `do`; `alukit add frame <dir> --size W,D,H` (*2.3*) is `addFrame` (§6) |
 | `alukit log` / `alukit undo` / `alukit redo` | the server's log; undo the latest step; redo the last one undone (*2.3*: all three need a running server) |
 | `alukit lock update <dir> [--item id] [--dry-run]` | §4.13 |
 | `alukit fmt <dir> [--check]` | canonical form |
 | `alukit diff <a> <b>` | files, `git:<ref>:<path>`, revisions (`rev:<name>`) or variants; each side with its own lock |
 | `alukit revision save "<name>"` / `list` / `show <name>` / `verify <name>` | §4.13 |
-| `alukit snapshot <dir> --view iso [--size 1600x1000] -o shot.png` | lets an agent see what it built |
+| `alukit snapshot <dir> --view iso [--size 1600x1000] [--theme dark\|light] -o shot.png` | lets an agent see what it built; dark unless `--theme light` (*2.3*, D-UX-21) |
 | `alukit export glb <dir> -o x.glb` | §9 |
-| `alukit catalog search\|show\|check\|schema\|import <…>` | catalog work. `search` (*2.3*) ranks as the app's browser does and prints 20 items unless `--limit` (200 at most): an exact id or code, a code prefix, then a bar whose own section is the size the query writes (`40x40`, either way round), then whole words; `--prefer <kind>` ranks that kind first within each; `schema` prints a catalog file's JSON Schema; `import forseti` runs the Python importer on a shop snapshot and the catalogue PDF, says what is missing instead of half-running, and reads the network only with `--fetch` |
+| `alukit catalog search\|show\|check\|schema\|import <…>` | catalog work. `search` (*2.3*) ranks as the app's browser does and prints 20 items unless `--limit` (200 at most): an exact id or code, a code prefix, then a bar whose own section is the size the query writes (`40x40`, either way round), then whole words; `--prefer <kind>` ranks that kind first within each; each item gives its `from` price, the lowest regular one, per metre when sold by length, else per unit (*2.3*); `schema` prints a catalog file's JSON Schema; `import forseti` runs the Python importer on a shop snapshot and the catalogue PDF, says what is missing instead of half-running, and reads the network only with `--fetch` |
 | `alukit skill install` | links the skill into `~/.claude/skills/` |
 
 **Snapshots** always render in headless Chromium through Playwright, from a fresh page on the
@@ -2336,8 +2362,9 @@ compared number moves: the check is right, and the question is the record's.
 5. A small safe expression language, not JavaScript; trig in degrees.
 6. The default connection is a butt with an angle bracket (no machining). The through bar is the
    one passing through the point, else a vertical, else the lowest id; its end covers. *2.3,
-   open*: drawing a rail onto a post's top then butts the rail into the post, so a frame whose
-   posts stand under its rails is drawn with auto-connect off (§4.5).
+   decided by D-UX-9*: that rule stays the default, and the corner rule (`prefer`,
+   `defaults.corner`: `vertical`, `x`, `y`, `first`) chooses another per call or per project
+   (§4.5).
 7. Importers may be Python (PyMuPDF is the right tool for PDF vectors); the tool itself is
    TypeScript.
 8. The SSE wire format read with `fetch`, not websockets; localhost only. The token is

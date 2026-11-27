@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { type FSWatcher, unwatchFile, watch, watchFile } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CatalogSet } from "#catalog/link.ts";
 import { type CheckOutput, checkModel } from "#core/check/check.ts";
@@ -20,7 +21,7 @@ import { projectText } from "#core/project/canonical.ts";
 import { gitStamp } from "#core/project/git.ts";
 import { catalogPlaces, DOCUMENT, openLiveCatalogs } from "#core/project/open.ts";
 import { parseProject } from "#core/project/parse.ts";
-import { readDocument, readLock, writeAtomic } from "#core/project/store.ts";
+import { keepRejected, readDocument, readLock, writeAtomic } from "#core/project/store.ts";
 import { type SaveResult, saveRevision } from "#core/revision/files.ts";
 
 /**
@@ -165,6 +166,8 @@ export interface HostOptions {
   settleMs?: number;
   /** The interval of the polling safety net beside `fs.watch`, in ms (default 1000; 0: none). */
   pollMs?: number;
+  /** The clock that names a file restore keeps (`.alukit/rejected/<UTC time>.json`). */
+  now?: () => Date;
 }
 
 /** The project could not be opened: its files are not valid (§7.4). */
@@ -428,15 +431,34 @@ export class ProjectHost {
     return this.run(() => this.move("redo", source));
   }
 
-  /** "Restore last good" (§7.1): writes the last good state over files that are not valid. */
-  restore(): Promise<{ ok: boolean; rev: number; message?: string }> {
+  /**
+   * "Restore last good" (§7.1): writes the last good state over files that are not valid. What
+   * it writes over is kept first in `.alukit/rejected/` (BE-9), and the answer names it: the one
+   * action that could lose a person's typing loses nothing.
+   */
+  restore(): Promise<{ ok: boolean; rev: number; message?: string; kept?: string[] }> {
     return this.run(async () => {
       // A fix saved a moment ago, before the watcher saw it, is not to be overwritten.
       await this.takeInFiles();
       if (!this.statusValue.readOnly) {
         return { ok: true, rev: this.rev, message: "the files already hold the current state" };
       }
+      let kept: string[];
       try {
+        // Each file as it stands, when it differs from what is written over it.
+        const [doc, lock] = await Promise.all(
+          [DOCUMENT, LOCK_FILE].map((f) =>
+            readFile(join(this.dir, f), "utf8").catch(() => undefined),
+          ),
+        );
+        kept = await keepRejected(
+          this.dir,
+          {
+            ...(doc !== undefined && doc !== projectText(this.state.doc) ? { doc } : {}),
+            ...(lock !== undefined && lock !== lockText(this.state.lock) ? { lock } : {}),
+          },
+          (this.opts.now ?? (() => new Date()))(),
+        );
         await this.write(this.state, true);
       } catch (e) {
         this.setStatus(writeFailure(e));
@@ -447,7 +469,7 @@ export class ProjectHost {
         };
       }
       this.setStatus({ readOnly: false });
-      return { ok: true, rev: this.rev };
+      return { ok: true, rev: this.rev, ...(kept.length > 0 ? { kept } : {}) };
     });
   }
 

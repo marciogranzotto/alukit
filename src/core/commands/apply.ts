@@ -1,8 +1,6 @@
 import { z } from "zod";
 import type { CatalogSet } from "#catalog/link.ts";
-import { pinLock } from "../lock/pin.ts";
-import { documentRefs, lockCovers } from "../lock/refs.ts";
-import { makeContext } from "./helpers.ts";
+import { makeContext, pinNew } from "./helpers.ts";
 import { COMMANDS } from "./registry.ts";
 import type {
   Command,
@@ -39,14 +37,6 @@ export interface CommandResult {
 export type BatchResult =
   | { ok: true; state: State; results: CommandResult[] }
   | { ok: false; failed: { index: number; cmd?: string; errors: CommandError[] } };
-
-/** Pins what the document newly names, when the live catalogs are open. */
-function pinNew(state: State, env: CommandEnv): State {
-  if (!env.live) return state;
-  const refs = documentRefs(state.doc);
-  if (lockCovers(state.lock, refs)) return state;
-  return { doc: state.doc, lock: pinLock(env.live, refs, state.lock, { kind: "add" }).lock };
-}
 
 /** A command read: its definition and parsed arguments, or why it cannot run. */
 type Parsed =

@@ -53,8 +53,9 @@ export const USAGE = {
     "    writes nothing and says what the step would do: diagnostics, ids, cut lengths that move",
   ],
   add: [
-    "alukit add bar|point|connection|part <dir> [options] [--json]",
-    "    add one entity, as sugar over `do`; `alukit add <what> --help` lists the options",
+    "alukit add bar|point|connection|part|frame <dir> [options] [--json]",
+    "    add one entity, or a box frame in one step, as sugar over `do`; `alukit add <what> --help`",
+    "    lists the options",
   ],
   query: [
     "alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]",

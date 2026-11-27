@@ -48,6 +48,7 @@ describe("the index", () => {
       pinned: true,
       live: true,
       size_mm: [40, 40],
+      from: { minor: 12650, currency: "BRL", per: "m" },
     });
     expect(entries.find((e) => e.id === "test:FOOT-M8")).toMatchObject({
       kind: "accessory",

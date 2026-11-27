@@ -409,6 +409,14 @@ export const Cutting = z.strictObject({
   trim_mm: z.number().nonnegative().optional(),
 });
 
+/**
+ * Which bar runs through at a corner the draw tool closes (§4.5, D-UX-9): `vertical`, today's
+ * rule, a vertical else the lowest id; `x` or `y`, the bar along that world axis; `first`, the
+ * lowest id. A bar passing through the point always wins first.
+ */
+export const CornerRule = z.enum(["vertical", "x", "y", "first"]);
+export type CornerRule = z.infer<typeof CornerRule>;
+
 export const Defaults = z.strictObject({
   bar: z
     .strictObject({
@@ -430,6 +438,9 @@ export const Defaults = z.strictObject({
     })
     .optional(),
   cutting: Cutting.optional(),
+  corner: CornerRule.optional().describe(
+    "which bar runs through where autoConnect names none: vertical (the default), x, y or first",
+  ),
 });
 export type Defaults = z.infer<typeof Defaults>;
 

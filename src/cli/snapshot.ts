@@ -7,14 +7,17 @@ import { diagnosticLine } from "./project.ts";
 import { publishUsageOf } from "./publish-usage.ts";
 
 /**
- * `alukit snapshot <dir> [--view iso] [--size 1600x1000] -o shot.png` (design §7.3): lets an agent
+ * `alukit snapshot <dir> [--view iso] [--size 1600x1000] [--theme dark|light] -o shot.png` (design
+ * §7.3): lets an agent
  * see what it built. It always renders in headless Chromium through Playwright, from a fresh page
  * on the project's server: the running one when there is one (found through
  * `.alukit/owner.json`), else an ephemeral one that holds the edit lock while it renders. One
  * code path, which never depends on a person's camera, selection or a hidden tab. The page
  * shows the viewport alone (`?snapshot=<view>`), at a named view (the document's `views`, then
  * the standard ones), with no animation, in SwiftShader at a fixed size and a device scale of 1,
- * so two snapshots of the same state match.
+ * so two snapshots of the same state match. The theme is dark unless `--theme light` (D-UX-21,
+ * BE-11): the page is asked for it (`&theme=`) and the browser prefers that scheme, so the
+ * picture never depends on the machine's setting.
  *
  * The PNG comes back to the CLI, which writes it wherever `-o` says (§7.2: the server writes only
  * inside the project).
@@ -24,6 +27,19 @@ const USAGE = publishUsageOf("snapshot");
 
 const SIZE = /^(\d{2,5})x(\d{2,5})$/;
 const MAX_PX = 8192;
+export const THEMES = ["dark", "light"] as const;
+export type SnapshotTheme = (typeof THEMES)[number];
+
+/** The page a snapshot loads: the viewport alone at a view, in a theme, the token in the hash. */
+export function snapshotUrl(o: {
+  url: string;
+  token: string;
+  view: string;
+  theme: SnapshotTheme;
+}): string {
+  const q = new URLSearchParams({ snapshot: o.view, theme: o.theme });
+  return `${o.url}?${q}#t=${o.token}`;
+}
 
 /** What a snapshot page answers once it has drawn, or why it cannot. */
 interface Hook {
@@ -37,8 +53,10 @@ export async function renderSnapshot(o: {
   view: string;
   width: number;
   height: number;
+  theme?: SnapshotTheme;
   timeoutMs?: number;
 }): Promise<Buffer> {
+  const theme = o.theme ?? "dark";
   let chromium: typeof import("@playwright/test").chromium;
   try {
     ({ chromium } = await import("@playwright/test"));
@@ -55,11 +73,12 @@ export async function renderSnapshot(o: {
     const context = await browser.newContext({
       viewport: { width: o.width, height: o.height },
       deviceScaleFactor: 1,
+      colorScheme: theme,
     });
     const page = await context.newPage();
     const pageErrors: string[] = [];
     page.on("pageerror", (e) => pageErrors.push(e.message));
-    await page.goto(`${o.url}?snapshot=${encodeURIComponent(o.view)}#t=${o.token}`);
+    await page.goto(snapshotUrl({ ...o, theme }));
     try {
       await page.waitForFunction(
         () => (window as unknown as { __alukit?: Hook }).__alukit?.snapshot() !== undefined,
@@ -89,6 +108,7 @@ export async function snapshotCommand(argv: readonly string[], io: Io): Promise<
       view: { type: "string" },
       size: { type: "string" },
       output: { type: "string", short: "o" },
+      theme: { type: "string" },
     },
     USAGE,
     io,
@@ -110,6 +130,11 @@ export async function snapshotCommand(argv: readonly string[], io: Io): Promise<
       USAGE,
       io,
     );
+  }
+
+  const theme = (args.values.theme ?? "dark") as SnapshotTheme;
+  if (!THEMES.includes(theme)) {
+    return usageError("snapshot", `invalid --theme ${theme}: dark or light`, USAGE, io);
   }
 
   // Loaded lazily so --help never touches the server.
@@ -141,7 +166,7 @@ export async function snapshotCommand(argv: readonly string[], io: Io): Promise<
     }
     let png: Buffer;
     try {
-      png = await renderSnapshot({ url, token, view, width, height });
+      png = await renderSnapshot({ url, token, view, width, height, theme });
     } catch (e) {
       io.err(`alukit snapshot: ${e instanceof Error ? e.message : String(e)}`);
       return 1;

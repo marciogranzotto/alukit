@@ -75,7 +75,7 @@ const DESCRIBE: Readonly<Record<Field, string>> = {
   price_basis: "regular, sale or lowest (§4.11)",
   fx: "exchange rates by currency (§4.11): { EUR: 6.2 }; null removes one",
   defaults:
-    "bar { item, opt }, butt { connector, qty, overhang_mm }, cutting { kerf_mm, trim_mm }; null removes",
+    "bar { item, opt }, butt { connector, qty, overhang_mm }, cutting { kerf_mm, trim_mm }, corner (vertical, x, y or first); null removes",
   order_rules: "an order rule's action, block, warn or off (§5.5); null restores its default",
 };
 

@@ -2,6 +2,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CatalogSet } from "#catalog/link.ts";
+import { modelExtent } from "../../mesh/extent.ts";
+import { checkModel } from "../check/check.ts";
+import { modelOutputs, outputAccessors } from "../check/outputs.ts";
 import { type Derived, derive } from "../derive/derive.ts";
 import { LockFile, lockText } from "../lock/schema.ts";
 import { lockItems } from "../lock/source.ts";
@@ -357,6 +360,70 @@ describe("connections", () => {
     );
   });
 
+  it("autoConnect's prefer gives the three arrangements of a rectangle's corners (BE-5)", () => {
+    // A 1000 × 600 ground rectangle of 40 × 40 bars, drawn b1 to b4 around, joined at each
+    // corner. The bar that runs through reaches 20 past its corner, one that butts stops 20
+    // short of it, so by hand: the lowest id through (today's rule, as nothing is vertical)
+    // 1040 / 600 / 1000 / 560; x through 1040 / 560 / 1040 / 560; y through 960 / 640 / 960 / 640.
+    const s0 = g("G01");
+    const empty = { ...s0, doc: { ...s0.doc, bars: {}, connections: {} } };
+    const corners = [
+      [0, 0, 0],
+      [1000, 0, 0],
+      [1000, 600, 0],
+      [0, 600, 0],
+    ];
+    const bars = corners.map((a, i) => ({
+      cmd: "addBar",
+      args: { a, b: corners[(i + 1) % 4] },
+    }));
+    const drawn = ok(empty, ...bars).state;
+    const cuts = (s: State) =>
+      ["b1", "b2", "b3", "b4"].map((id) => derived(s).bars.get(id)?.lengths.cut);
+    const join = (s: State, prefer?: string) =>
+      ok(
+        s,
+        ...corners.map((at) => ({
+          cmd: "autoConnect",
+          args: { at, ...(prefer ? { prefer } : {}) },
+        })),
+      ).state;
+    expect(cuts(join(drawn))).toEqual([1040, 600, 1000, 560]);
+    expect(cuts(join(drawn, "first"))).toEqual([1040, 600, 1000, 560]);
+    expect(cuts(join(drawn, "vertical"))).toEqual([1040, 600, 1000, 560]);
+    expect(cuts(join(drawn, "x"))).toEqual([1040, 560, 1040, 560]);
+    expect(cuts(join(drawn, "y"))).toEqual([960, 640, 960, 640]);
+
+    // Absent, prefer is the project's defaults.corner, which setProject sets.
+    const ys = ok(drawn, { cmd: "setProject", args: { defaults: { corner: "y" } } }).state;
+    expect((ys.doc.defaults as { corner?: string }).corner).toBe("y");
+    expect(cuts(join(ys))).toEqual([960, 640, 960, 640]);
+    expect(cuts(join(ys, "x"))).toEqual([1040, 560, 1040, 560]);
+
+    // A bar passing through the point still wins first; where no bar runs along the axis asked,
+    // the rule is today's: a vertical, else the lowest id.
+    const post = ok(drawn, { cmd: "addBar", args: { a: [1000, 0, 0], b: [1000, 0, 500] } }).state;
+    const at = (s: State, prefer: string, where: number[]) =>
+      ok(s, { cmd: "autoConnect", args: { at: where, prefer } }).results[0]?.info;
+    expect(at(post, "y", [1000, 0, 0])).toEqual({ through: "b2", ends: ["b1.b", "b5.a"] });
+    expect(at(post, "first", [1000, 0, 0])).toEqual({ through: "b1", ends: ["b2.a", "b5.a"] });
+    expect(at(post, "vertical", [1000, 0, 0])).toEqual({ through: "b5", ends: ["b1.b", "b2.a"] });
+    const tee = ok(drawn, { cmd: "addBar", args: { a: [500, 0, 0], b: [500, 300, 0] } }).state;
+    expect(at(tee, "y", [500, 0, 0])).toEqual({ through: "b1", ends: ["b5.a"] });
+    const slope = ok(
+      empty,
+      { cmd: "addBar", args: { a: [0, 0, 0], b: [300, 300, 300] } },
+      {
+        cmd: "addBar",
+        args: { a: [300, 300, 300], b: [300, 300, 900] },
+      },
+    ).state;
+    expect(at(slope, "x", [300, 300, 300])).toEqual({ through: "b2", ends: ["b1.b"] });
+    expect(no(drawn, { cmd: "autoConnect", args: { at: [0, 0, 0], prefer: "z" } })[0]?.code).toBe(
+      "args",
+    );
+  });
+
   it("autoConnect with optional does nothing where nothing butts, and connects where something does", () => {
     // The draw tool sends one for each end of the bar it adds, in the same batch (§7.1).
     const s = g("G01");
@@ -571,6 +638,168 @@ describe("mirror", () => {
       // Rz(90) points the part's x along +y; its image's x points along −y: Rz(270).
       at: { pos: [100, -50, 0], rot_deg: [0, 0, 270] },
     });
+  });
+});
+
+describe("addFrame (BE-6)", () => {
+  /** G01's project with nothing drawn: 40 × 40 test:TS40, anodised, by default. */
+  const empty = (): State => {
+    const s = g("G01");
+    return { ...s, doc: { ...s.doc, bars: {}, connections: {} } };
+  };
+  const tagged = (s: State, tag: string) =>
+    Object.entries(s.doc.bars as Record<string, { tags?: string[] }>)
+      .filter(([, b]) => b.tags?.includes(tag))
+      .map(([id]) => id);
+  /** The cut length of each bar of a role, sorted, mm. */
+  const cuts = (s: State, tag: string) => {
+    const d = derived(s);
+    return tagged(s, tag).map((id) => d.bars.get(id)?.lengths.cut);
+  };
+  const checked = (s: State) => {
+    const items = lockItems(s.lock);
+    const d = derive(s.doc, items);
+    const accessors = outputAccessors(modelOutputs(d, items));
+    return checkModel({ raw: s.doc, derived: d, items, accessors }).diagnostics;
+  };
+  const extent = (s: State) => {
+    const box = modelExtent(derived(s), lockItems(s.lock));
+    if (!box.ok || !box.extent) throw new Error("no extent");
+    return [box.extent.min, box.extent.max].map((p) => p.map((x) => Math.round(x * 100) / 100 + 0));
+  };
+
+  it("builds four posts, a base and a top ring, butted at all 8 corners, outside faces flush", () => {
+    const r = ok(empty(), { cmd: "addFrame", args: { size: [1000, 600, 800] } });
+    const s = r.state;
+    expect(r.results[0]?.created).toEqual([
+      ...Array.from({ length: 12 }, (_, i) => `b${i + 1}`),
+      ...Array.from({ length: 8 }, (_, i) => `c${i + 1}`),
+    ]);
+    expect(r.results[0]?.info).toEqual({
+      posts: ["b1", "b2", "b3", "b4"],
+      rings: { base: ["b5", "b6", "b7", "b8"], top: ["b9", "b10", "b11", "b12"] },
+      connections: ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"],
+    });
+    // The typed size is the footprint and the height: every outside face on it.
+    expect(extent(s)).toEqual([
+      [0, 0, 0],
+      [1000, 600, 800],
+    ]);
+    // The default rule, vertical: the posts run through, the rails butt between them.
+    expect(cuts(s, "post")).toEqual([800, 800, 800, 800]);
+    expect(cuts(s, "base")).toEqual([920, 920, 520, 520]);
+    expect(cuts(s, "top")).toEqual([920, 920, 520, 520]);
+    const conns = Object.values(s.doc.connections as Record<string, unknown>);
+    expect(conns).toHaveLength(8);
+    expect(conns.every((c) => (c as { type: string }).type === "butt")).toBe(true);
+    // Nothing open, nothing wrong.
+    const problems = checked(s);
+    expect(problems.filter((p) => p.code === "unconnected")).toEqual([]);
+    expect(problems.filter((p) => p.severity === "error")).toEqual([]);
+  });
+
+  it("follows the corner rule, a shelf ring, the ring choice and the connector", () => {
+    const at = (args: object) => ok(empty(), { cmd: "addFrame", args }).state;
+    // By hand: a rail that runs through spans its whole side; one that butts loses 40 a corner.
+    const x = at({ size: [1000, 600, 800], corner: "x" });
+    expect([cuts(x, "base"), cuts(x, "post")]).toEqual([
+      [1000, 1000, 520, 520],
+      [720, 720, 720, 720],
+    ]);
+    const y = at({ size: [1000, 600, 800], corner: "y" });
+    expect([cuts(y, "top"), cuts(y, "post")]).toEqual([
+      [920, 920, 600, 600],
+      [720, 720, 720, 720],
+    ]);
+    // The project's rule when the frame names none.
+    const ys = ok(empty(), { cmd: "setProject", args: { defaults: { corner: "y" } } }).state;
+    const yd = ok(ys, { cmd: "addFrame", args: { size: [1000, 600, 800] } }).state;
+    expect(cuts(yd, "top")).toEqual([920, 920, 600, 600]);
+
+    // A shelf ring, top face 300 above the base, butted on the posts, which pass it.
+    const shelf = at({ size: [1000, 600, 800], at: [100, 50, 10], shelf_mm: 300, corner: "x" });
+    expect(cuts(shelf, "shelf")).toEqual([920, 920, 520, 520]);
+    expect(Object.keys(shelf.doc.connections as object)).toHaveLength(12);
+    expect(extent(shelf)).toEqual([
+      [100, 50, 10],
+      [1100, 650, 810],
+    ]);
+    const top = derived(shelf).bars.get(tagged(shelf, "shelf")[0] as string)?.placed.A;
+    expect(top?.[2]).toBe(310);
+    expect(
+      checked(shelf).filter((p) => p.code === "unconnected" || p.severity === "error"),
+    ).toEqual([]);
+
+    // Only a top ring: the posts stand free at the base, which is no open corner.
+    const t = applyBatch(
+      empty(),
+      [
+        {
+          cmd: "addFrame",
+          args: { size: [1000, 600, 750], rings: ["top"], connector: "test:BRK-40", qty: 2 },
+        },
+      ],
+      { ...ENV, live },
+    );
+    if (!t.ok) throw new Error(JSON.stringify(t.failed));
+    const table = t.state;
+    expect(Object.keys(table.doc.bars as object)).toHaveLength(8);
+    expect(Object.values(table.doc.connections as object)).toEqual([
+      { type: "butt", through: "b1", ends: ["b5.a", "b7.a"], connector: "test:BRK-40", qty: 2 },
+      { type: "butt", through: "b2", ends: ["b5.b", "b8.a"], connector: "test:BRK-40", qty: 2 },
+      { type: "butt", through: "b3", ends: ["b6.a", "b7.b"], connector: "test:BRK-40", qty: 2 },
+      { type: "butt", through: "b4", ends: ["b6.b", "b8.b"], connector: "test:BRK-40", qty: 2 },
+    ]);
+    expect(checked(table).filter((p) => p.code === "unconnected")).toEqual([]);
+  });
+
+  it("writes W, D and H as params when asked, and the frame follows them", () => {
+    const r = ok(empty(), { cmd: "addFrame", args: { size: [1000, 600, 800], params: true } });
+    expect(r.state.doc.params).toEqual({ D: 600, H: 800, W: 1000 });
+    expect((r.state.doc.bars as Record<string, unknown>).b2).toMatchObject({
+      a: ["W", 0, 0],
+      b: ["W", 0, "H"],
+    });
+    const wider = ok(r.state, { cmd: "setParam", args: { name: "W", value: 1200 } }).state;
+    expect(cuts(wider, "base")).toEqual([1120, 1120, 520, 520]);
+    expect(extent(wider)[1]).toEqual([1200, 600, 800]);
+    // A param of that name already there is not overwritten.
+    expect(no(wider, { cmd: "addFrame", args: { size: [500, 500, 500], params: true } })).toEqual([
+      expect.objectContaining({ code: "exists", field: "params" }),
+    ]);
+  });
+
+  it("refuses a frame too small for its profile, a shelf outside the rings, and a bad size", () => {
+    expect(no(empty(), { cmd: "addFrame", args: { size: [70, 600, 800] } })).toEqual([
+      expect.objectContaining({ code: "geometry", field: "size" }),
+    ]);
+    expect(
+      no(empty(), { cmd: "addFrame", args: { size: [1000, 600, 800], shelf_mm: 60 } }),
+    ).toEqual([expect.objectContaining({ code: "geometry", field: "shelf_mm" })]);
+    expect(
+      no(empty(), { cmd: "addFrame", args: { size: [1000, 600, 800], shelf_mm: 790 } })[0]?.field,
+    ).toBe("shelf_mm");
+    expect(no(empty(), { cmd: "addFrame", args: { size: [1000, -600, 800] } })[0]?.code).toBe(
+      "args",
+    );
+  });
+
+  it("is one step, in words", () => {
+    const h = new History(empty());
+    const r = h.apply([{ cmd: "addFrame", args: { size: [1000, 600, 800] } }], ENV, "ui");
+    expect(r.ok).toBe(true);
+    expect(h.log()).toEqual([
+      { rev: 1, source: "ui", what: "addFrame", text: "add a box frame of 12 bars and 8 butts" },
+    ]);
+    const p = h.apply(
+      [{ cmd: "addFrame", args: { size: [1000, 600, 800], at: [2000, 0, 0], params: true } }],
+      ENV,
+      "ui",
+    );
+    expect(p.ok).toBe(true);
+    expect(h.log().at(-1)?.text).toBe(
+      "add a box frame of 12 bars and 8 butts, sized by W, D and H",
+    );
   });
 });
 

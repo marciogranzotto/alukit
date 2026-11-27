@@ -7,7 +7,8 @@ import type { ClientAnswer } from "./answer.ts";
  * search, ranked as `alukit catalog search` ranks them. `prefer` names the kind the active tool
  * wants (a bar for Draw, a connector for Connect), which ranks first within each rank without
  * leaving the others out. Each entry carries what a list row shows: a bar's own size, its
- * thumbnail and its mass per metre. Owner: S1.
+ * thumbnail, its mass per metre and its `from` price, the lowest regular one, per metre for an
+ * item sold by length, else per unit, in minor units of its currency. Owner: S1.
  */
 
 export interface CatalogQuery {
