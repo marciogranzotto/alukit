@@ -22,7 +22,7 @@ proved the better choice is now the rule; a feature v1 does not have is stated a
 with the version that takes it up. Calls left for the owner's review are marked *open* (§14, call 6
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
-up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections and 68–71 in
+up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections and 68–73 in
 "3D editing, E1"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
 groups below record, from "After acceptance run 2" to "3D editing, E1". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
@@ -497,9 +497,9 @@ now has its real outline where it passes a check against the published values
 
 The [editing audit](ux/editing-audit.md) (2026-11-27) found the model far ahead of the app, and
 four defects on the way; stream E1 builds the core and CLI half of its plan
-([`ux/e1-decisions.md`](ux/e1-decisions.md), cited as "e1"). Drop 1 is E1.5, E1.2 and E1.3. Each
-is built test first; the audit's brace is a fixture, `tests/fixtures/brace`, worked by hand in its
-test.
+([`ux/e1-decisions.md`](ux/e1-decisions.md), cited as "e1"). Drop 1 is E1.5, E1.2 and E1.3; drop 2
+is E1.4 and E1.6. Each is built test first; the audit's brace is a fixture, `tests/fixtures/brace`,
+worked by hand in its test.
 
 - §4.5 Default connection: **an end at a joined corner joins it** (E-UX-12, D4). A brace drawn into
   a box frame's corner, whose other ends are all claimed, butts on the corner's through bar, with a
@@ -521,6 +521,19 @@ test.
   "select similar" and "select connected" (E1.5; e1 10, 11). Call 71.
 - The audit's other defect, a claimed end whose words read "open: nothing joins it" (D2), is the
   inspector's words, not the core's: left to its stream (e1 12).
+- §7.1, §7.3: **a corner's arrangements include a miter and a splice** (E1.4): for a corner of two
+  ends, the batch that takes the corner's joint out and adds a miter (or splice) of its ends, run
+  as a dry run and judged by derive, or refused with derive's words; `rule=miter`, `rule=splice`.
+  Taking a corner's joint out now removes a miter or splice of its ends too, so a corner rule's
+  arrangement can follow a joint's. On G01's corner the miter takes b2 from 580 to 620 (e1 13–15).
+  Call 72.
+- §6: **a dry run lists the parts it adds** (E1.6), each with its item and where it lands (the bar
+  and the distance along it, and its origin), so a preview of `mirror`, `array` or
+  `explodePattern` reads the parts as it reads the bars and their cuts; `explodePattern`'s answer
+  names which drawn copy each new entity is (e1 16, 17). Call 73.
+- §3.5: **a mass computed from a traced section's area is `est`**, as the fidelity table says; it
+  was tagged `calc`. A computed value's provenance follows its section's fidelity. No mass moved:
+  each of the eight traced Forseti profiles publishes its mass (e1 18).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1061,7 +1074,8 @@ the holes whose inscribed circle is a printed diameter and checks their count ag
 
 **Authority rule** (review M6, M10). For mass and section properties the published value wins,
 after overrides. A computed value is used only when nothing is published and the section's
-`props_ok` is true. The shop's weight is never the BOM's mass. For the 40x40 básico that means
+`props_ok` is true. *2.3*: a computed value carries its section's provenance, `est` from a traced
+outline and `calc` from an exact outline or a generator; a mass from a published area is `calc`. The shop's weight is never the BOM's mass. For the 40x40 básico that means
 1.493 kg/m (catalogue), not 1.482 (shop) or 1.4945 (computed) (*read: survey §4, §7*).
 
 For display, an outline is simplified with
@@ -2326,8 +2340,10 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   ([int](ux/integration-decisions.md) 26).
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
-  moves (`cuts`, before and after), the bars it adds with their cuts, what it removes, and the ends
-  it claims. The server runs it in its queue, against the revision after every step before it
+  moves (`cuts`, before and after), the bars it adds with their cuts, the parts it adds (`parts`,
+  *2.3*, E1.6: each one's item, the bar and the distance from its design point A for a part on a
+  station, and its origin; or the quantity of a part counted, not placed), what it removes, and
+  the ends it claims. The server runs it in its queue, against the revision after every step before it
   ([s1](ux/s1-decisions.md) 14–16).
 - Every answer returns the new revision, the ids each command created, and diagnostics that name
   entities (review m2). A refusal is `{ code, message, entity?, field?, refs? }`; a command never
@@ -2397,7 +2413,11 @@ Agents work at this level of meaning, so they never compute cut lengths by hand.
   butting ends and the dry run's effects. The rules share the catalogs, the butts taken out and
   the derive of what that leaves, so four rules cost about one dry run and a third (measured: 244
   against 670 ms for four dry runs on 1,018 bars; [integration](ux/integration-decisions.md)
-  13–17). It answers what `alukit arrangements --json` prints.
+  13–17). Then, *2.3* (E1.4), for each of a miter and a splice (`joints`; `rule=miter`,
+  `rule=splice`): at a corner of two ends, the batch that takes the corner's joint out and adds that
+  joint of its two ends, from the same state, with its effects; or why not: a corner that is not two
+  ends, or the error derive gives the joint there, in its words. A corner names its miter or
+  splice (`joints`) beside its butts. It answers what `alukit arrangements --json` prints.
 - **`GET /api/catalog`** lists the built-in catalogs besides the project's (*2.3*): each one's id,
   name, item and bar counts, and whether it sells T-slot profile, so the app adds one by name.
 
@@ -2443,7 +2463,7 @@ source in the log.
 | `alukit serve <dir>` | runs the project's server and opens the tab |
 | `alukit check <dir> [--frozen]` | validates, derives and runs the checks; non-zero exit on an error |
 | `alukit problems <dir> [--variant v] [--as-of d] [--json]` (*2.3*) | the problem list (§5.5); non-zero exit when one blocks the order or is an error |
-| `alukit arrangements <dir> --at x,y,z [--at …] [--rule r]… [--json]` (*2.3*) | a corner's arrangements (§7.1, §8): per corner rule, the bar that runs through, the cut lengths that move and the batch that applies it, or why the rule is refused; writes nothing; exit 1 when the project cannot be read |
+| `alukit arrangements <dir> --at x,y,z [--at …] [--rule r]… [--json]` (*2.3*) | a corner's arrangements (§7.1, §8): per corner rule, the bar that runs through, the cut lengths that move and the batch that applies it, or why the rule is refused; then a miter's and a splice's, or why derive refuses each (`--rule miter`, `--rule splice`; E1.4); writes nothing; exit 1 when the project cannot be read |
 | `alukit cutlist` / `bom` / `machining` / `order` / `costs <dir> [--variant v] [--format md\|csv\|json]` | the outputs; `machining` (*2.3*) has no CSV; `order` and `costs` take `--as-of YYYY-MM-DD` (*2.3*); `order` exits non-zero when blocked |
 | `alukit derive <dir> --json [--select <paths>]` | the derived model, for report builders (`alukit.derived/1`, with its own JSON Schema). `--select` (*2.3*) takes dotted paths, `*` for every member, commas to merge (`bars.*.cut_mm,params`), and keeps the model's shape; a path the model lacks is an error |
 | `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context. *2.3* (E1.5): `like:b1`, the entities of b1's kind with its item and options (a bar's or part's as derived, a connection's of its type too); `connected:b1,c3`, the bars a connection joins to them (through bar, ends, base, layers, a run's bars), and `connected*:b1`, the whole assembly they belong to; the app's "select similar" and "select connected" read the same functions (`similarTo`, `connectedTo` in `src/core/query.ts`) |
@@ -3274,6 +3294,16 @@ recipe, so the faces took 8 recipes and 5 split butts (F12). Both are fixed at t
     derived (a connection: also its type), or every tag the entity carries; "connected" is the bars
     the document's connections name together, structurally, and not what an expression reads or a
     point placed on a bar's face. Pattern copies are neither (e1 10, 11).
+72. *New in 2.3, 3D editing E1, open.* A corner's miter and splice are arrangements beside the
+    corner rules, not rules: `corner` and `autoConnect` never make one. Derive judges each, from the
+    state the corner's joint leaves, and an error it brings refuses the arrangement in derive's
+    words; the arrangement has no rule of its own for which ends can mitre or splice. Taking a
+    corner's joint out removes a miter or splice of its ends, so any arrangement follows any other
+    (e1 13–15).
+73. *New in 2.3, 3D editing E1, open.* A dry run's effects list the parts a step adds, beside the
+    bars, as derived; a part a step moves or removes is not listed, as a bar's move is not. An
+    explode's copies keep their place, and its answer maps each copy (`b26@2`) to its new entity
+    (e1 16, 17).
 
 ## 15. Review 1 resolution
 

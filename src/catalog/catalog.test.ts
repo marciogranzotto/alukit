@@ -1,6 +1,7 @@
 import { copyFile, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { catalogItems } from "#core/items.ts";
 import { sectionProperties } from "#core/section-properties.ts";
 import { checkCatalog } from "./check.ts";
 import { buildSection, type CatalogSet } from "./link.ts";
@@ -481,6 +482,47 @@ describe("computed against published (design §3.6)", () => {
       at(d, "items", "TS40E").Ix_mm4 = 86000;
     });
     expect(codes(await checkTest(root))).toEqual(["mismatch", "traced-inertia"]);
+  });
+});
+
+describe("a computed value's provenance follows its section's fidelity (§3.5)", () => {
+  it("tags a mass computed from a traced outline `est`, from an exact one `calc`, and a published area's `calc` (2.3)", async () => {
+    const root = await fixtureCopy();
+    const traced = join(root, "test/sections/PF40-T.json");
+    await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), traced);
+    await patchJson(traced, (d) => {
+      d.id = "PF40-T";
+      d.fidelity = "traced";
+      for (const g of d.grooves as { type: string }[]) g.type = "c8";
+    });
+    // Nothing published: the mass is the outline's 553.5 mm² times 6063's 2700 kg/m³.
+    await patchJson(join(root, "test/catalog.json"), (d) => {
+      const it = at(d, "items", "TS40E");
+      it.section = "PF40-T";
+      for (const k of ["mass_kg_per_m", "area_mm2", "Ix_mm4", "Iy_mm4"]) delete it[k];
+    });
+    const massOf = async () => {
+      const { set } = await checkTest(root);
+      const got = catalogItems(set).item("test:TS40E");
+      if (!got.ok || !got.bar) throw new Error("no bar");
+      return got.bar.mass_kg_per_m;
+    };
+    const est = await massOf();
+    expect(est?.src).toBe("est");
+    expect(est?.v).toBeCloseTo(1.4945, 4);
+    // The same outline as an exact one: computed.
+    await patchJson(traced, (d) => {
+      d.fidelity = "exact";
+    });
+    expect((await massOf())?.src).toBe("calc");
+    // Traced again with a published area: the area is the vendor's, the mass is calculated from it.
+    await patchJson(traced, (d) => {
+      d.fidelity = "traced";
+    });
+    await patchJson(join(root, "test/catalog.json"), (d) => {
+      at(d, "items", "TS40E").area_mm2 = 553;
+    });
+    expect(await massOf()).toEqual({ v: (553 * 2700) / 1e6, src: "calc" });
   });
 });
 

@@ -2,6 +2,7 @@ import {
   type BuiltSection,
   buildSection,
   type CatalogSet,
+  computedSrc,
   generatorContext,
 } from "#catalog/link.ts";
 import { type LoadedSection, splitRef } from "#catalog/load.ts";
@@ -56,7 +57,11 @@ export interface BarGroove {
 /** A mass with the provenance of the value it came from (§3.5's authority rule). */
 export interface MassInfo {
   v: number;
-  /** `src`, `meas` or `est` as published; `calc` when computed from an area and a density. */
+  /**
+   * `src`, `meas` or `est` as published; when computed from an area and a density, `calc`, or the
+   * provenance of the section's computed area when nothing published it (`est` for a traced
+   * outline, *2.3*).
+   */
   src: Src;
 }
 
@@ -404,6 +409,8 @@ function barGrooves(
  * overrides; otherwise its area times its material's density, the area being the published
  * `area_mm2`, else the section's computed area when its `props_ok` is true. A parametric
  * section's computed area is its generator's closed form (exact); an outline's is the polygon's.
+ * The mass is `calc`, calculated, from a published area; from a computed one it takes the
+ * section's provenance (`computedSrc`): a traced outline's area, and so its mass, is `est`.
  */
 function barMass(
   set: CatalogSet,
@@ -421,13 +428,15 @@ function barMass(
     : undefined;
   if (density === undefined) return undefined;
   let area: number | undefined;
+  let src: Src = "calc";
   if (item.area_mm2 !== undefined) area = num(item.area_mm2);
   else if (built.props_ok) {
     const s = section.section;
     if (s.fidelity === "parametric") {
       area = GENERATORS[s.generator]?.closedForm(s.params, generatorContext(set, section)).area_mm2;
     } else area = sectionProperties([built.props]).area_mm2;
+    src = computedSrc(built.fidelity);
   }
   if (area === undefined) return undefined;
-  return { v: (area * num(density)) / 1e6, src: "calc" };
+  return { v: (area * num(density)) / 1e6, src };
 }

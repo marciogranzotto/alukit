@@ -301,9 +301,10 @@ alukit check <dir> [--json] [--variant v] [--frozen]
 alukit problems <dir> [--json] [--variant v] [--as-of YYYY-MM-DD]
     the check and the order's reasons as one list in words, grouped by what they hold up,
     each with its fixes (alukit.problems/1); exit 1 when one blocks the order or is an error
-alukit arrangements <dir> --at x,y,z [--at x,y,z]... [--rule vertical|x|y|first]... [--json]
+alukit arrangements <dir> --at x,y,z [--at x,y,z]... [--rule vertical|x|y|first|miter|splice]... [--json]
     where bar ends meet at those points, each corner rule's arrangement: which bar runs
-    through and the cut lengths it gives, and the batch that applies it; writes nothing
+    through and the cut lengths it gives, and the batch that applies it; then a miter's and
+    a splice's of a corner's two ends, or why derive refuses one; writes nothing
 alukit do <dir> '<json>' | -f <file> | -  [--json] [--as <name>|agent:<name>] [--dry-run]
     apply a batch of commands atomically, from an argument, a file or stdin; --dry-run
     writes nothing and says what the step would do: diagnostics, ids, cut lengths that move

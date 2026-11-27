@@ -14,11 +14,23 @@ export interface DryEffects {
   cuts: Record<string, [number, number]>;
   /** Each bar the step would add, with its cut length, mm. */
   added: Record<string, number>;
+  /**
+   * Each part the step would add (*2.3*, E1.6), as derived: its item, and where it lands, the bar
+   * and the distance from that bar's design point A for a part on a station, and its origin; or
+   * the quantity of a part counted, not placed. Mirror, array and explode add parts as they add
+   * bars, and a preview reads them here.
+   */
+  parts: Record<string, PartEffect>;
   /** The entities the step would remove, a cascade's included. */
   removed: string[];
   /** The bar ends a connection of the step would claim (`b1.b`), the new bars' included. */
   claimed: string[];
 }
+
+/** A part a step adds, as derived (`DryEffects.parts`). */
+export type PartEffect =
+  | { item: string; bar?: string; s_mm?: number; origin: [number, number, number] }
+  | { item: string; qty: number };
 
 const mm = (x: number) => quantize(x, QUANTUM.len_mm);
 
@@ -42,6 +54,18 @@ export function effectsOf(
       }
     }
   }
+  const parts: Record<string, PartEffect> = {};
+  for (const [id, p] of [...after.parts].sort(([x], [y]) => compareIds(x, y))) {
+    if (before.parts.has(id)) continue;
+    parts[id] = p.placed
+      ? {
+          item: p.item,
+          ...(p.bar !== undefined ? { bar: p.bar } : {}),
+          ...(p.s !== undefined ? { s_mm: mm(p.s) } : {}),
+          origin: p.origin.map(mm) as [number, number, number],
+        }
+      : { item: p.item, qty: p.qty };
+  }
   const removed = [...new Set(results.flatMap((r) => r.removed))].sort(compareIds);
-  return { cuts, added, removed, claimed };
+  return { cuts, added, parts, removed, claimed };
 }

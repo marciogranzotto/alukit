@@ -396,3 +396,15 @@ everything below: E1; other streams add to it only.*
   (e1 2). Not in `alukit.derived/1`.
 - **`DIAGNOSTIC_CODES`** and `DiagnosticCode` (`src/core/diagnostics.ts`): a diagnostic's code is
   one of the list, and each has a problem title (e1 7).
+- **`Arrangements.joints`** (`src/core/corners/arrange.ts`, `alukit.arrangements/1`): a
+  `JointArrangement` per kind, `{ kind: "miter" | "splice", ok: true, commands, plans: { at, ends
+  }[], effects }` or `{ kind, ok: false, why }`, after the rules; `ArrangedCorner.joints?`, the
+  corner's written miter or splice. `rules` is unchanged and holds only corner rules, so the
+  inspector's `arrangementsOf` reads what it read. `arrangeQuery` and `?rule=` take `miter` and
+  `splice`; naming any rule or joint answers only those named. In `batch.ts`: `JOINT_KINDS`,
+  `jointsAt`, `jointAdds`, `jointBatch`; `takeOut` also removes a corner's miter or splice (e1
+  13–15). For E5.5.
+- **`DryEffects.parts`** (`src/core/commands/dry.ts`): each part a step adds, `{ item, bar?, s_mm?,
+  origin }` for a placed part or `{ item, qty }` for a counted one, by id; always present, `{}` when
+  none. `explodePattern`'s `info.copies` maps each copy (`b26@2`) to the entity it became (e1 16,
+  17).

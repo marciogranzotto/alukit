@@ -5,6 +5,8 @@ import {
   arrange,
   arrangementsText,
   arrangeQuery,
+  type JointArrangement,
+  type JointKind,
   type RuleArrangement,
 } from "#core/corners/arrange.ts";
 import { localDate } from "#core/dates.ts";
@@ -21,9 +23,10 @@ import { usageOf } from "./project-usage.ts";
 /**
  * `alukit arrangements <dir> --at x,y,z [--at …] [--rule r]… [--json]` (S5.5, D-UX-9): where
  * bar ends meet at those points, every corner rule's arrangement: which bar runs through, which
- * ends butt, and the cut lengths each gives, from dry runs that write nothing. The corner
- * inspector's arrangements, for an agent or a script; the batch each rule answers is what
- * `alukit do` would apply.
+ * ends butt, and the cut lengths each gives, from dry runs that write nothing; then a miter's and
+ * a splice's, where the corner's two ends can take one, or why not (*2.3*, E1.4). The corner
+ * inspector's arrangements, for an agent or a script; the batch each answers is what
+ * `alukit do` would apply. `--rule miter` and `--rule splice` name a joint as a rule is named.
  *
  * With a server running, it asks the server, whose revision it reports; without one it runs the
  * same core in-process, at revision 0, as a server just opened on the files would say. Either way
@@ -53,26 +56,43 @@ function ruleLines(r: RuleArrangement): string[] {
   ];
 }
 
+/** What a miter or a splice comes to at each corner, and the cuts it moves; or why there is none. */
+function jointLines(j: JointArrangement): string[] {
+  if (!j.ok) return [`${j.kind}: refused: ${j.why}`];
+  const plans = j.plans.map((p) => `${pointText(p.at)} ${p.ends.join(" and ")}`);
+  const cuts = Object.entries(j.effects.cuts).map(([bar, [was, now]]) => `${bar} ${was} → ${now}`);
+  return [
+    `${j.kind}: ${plans.join("; ")}`,
+    `  ${cuts.length > 0 ? `cut ${cuts.join(", ")}` : "no cut moves"}`,
+  ];
+}
+
 /** The human form: the corners, each rule's arrangement, then a line of what it came to. */
 function humanText(rev: number, a: Arrangements): string[] {
   const corners = a.corners.map(
     (c) =>
-      `corner ${pointText(c.at)}: ${c.ends.length > 0 ? `ends ${c.ends.join(", ")}` : "no bar end here"}${c.butts.length > 0 ? `; butt${c.butts.length === 1 ? "" : "s"} ${c.butts.join(", ")}` : ""}`,
+      `corner ${pointText(c.at)}: ${c.ends.length > 0 ? `ends ${c.ends.join(", ")}` : "no bar end here"}${c.butts.length > 0 ? `; butt${c.butts.length === 1 ? "" : "s"} ${c.butts.join(", ")}` : ""}${c.joints ? `; ${c.joints.join(", ")}` : ""}`,
   );
   const distinct = new Set(
     a.rules.flatMap((r) => (r.ok ? [JSON.stringify([r.plans, r.effects.cuts])] : [])),
   ).size;
+  const joints = a.joints.filter((j) => j.ok).length;
   return [
     ...corners,
     ...a.rules.flatMap(ruleLines),
-    `arrangements on rev ${rev}: ${distinct} distinct of ${a.rules.length} rule${a.rules.length === 1 ? "" : "s"}; nothing was written`,
+    ...a.joints.flatMap(jointLines),
+    `arrangements on rev ${rev}: ${distinct} distinct of ${a.rules.length} rule${a.rules.length === 1 ? "" : "s"}, ${joints} of ${a.joints.length} joint${a.joints.length === 1 ? "" : "s"}; nothing was written`,
   ];
 }
 
 /** The arrangements from the project's files, in-process: what a server just opened answers. */
 async function headless(
   dir: string,
-  q: { at: V3[]; rules?: readonly ("vertical" | "x" | "y" | "first")[] },
+  q: {
+    at: V3[];
+    rules?: readonly ("vertical" | "x" | "y" | "first")[];
+    joints?: readonly JointKind[];
+  },
   io: Io,
 ): Promise<Arrangements | undefined> {
   const project = await loadProject(dir);
@@ -88,6 +108,7 @@ async function headless(
     derived: derive(project.raw, project.items),
     at: q.at,
     ...(q.rules ? { rules: q.rules } : {}),
+    ...(q.joints ? { joints: q.joints } : {}),
     env: { today: localDate(), live: live.set, catalogs: await catalogPlaces(dir) },
     open: async (catalogs) => (await openLiveCatalogs(dir, { catalogs })).set,
   });
@@ -128,7 +149,7 @@ export async function arrangementsCommand(argv: readonly string[], io: Io): Prom
   if (link) {
     const params = new URLSearchParams([
       ...q.at.map((p) => ["at", p.join(",")]),
-      ...(q.rules ?? []).map((r) => ["rule", r]),
+      ...[...(q.rules ?? []), ...(q.joints ?? [])].map((r) => ["rule", r]),
     ]);
     const r = await call(link, "GET", `/api/arrangements?${params}`);
     const body = r.body as {
@@ -136,7 +157,7 @@ export async function arrangementsCommand(argv: readonly string[], io: Io): Prom
       message?: string;
       status?: { message?: string };
     } & Partial<Arrangements>;
-    if (r.status !== 200 || !body.corners || !body.rules) {
+    if (r.status !== 200 || !body.corners || !body.rules || !body.joints) {
       const why = body.status?.message
         ? `the project is read-only: ${body.status.message}`
         : (body.message ?? `the server answered ${r.status}`);
@@ -144,7 +165,7 @@ export async function arrangementsCommand(argv: readonly string[], io: Io): Prom
       return 1;
     }
     rev = body.rev ?? 0;
-    answer = { corners: body.corners, rules: body.rules };
+    answer = { corners: body.corners, rules: body.rules, joints: body.joints };
   } else answer = await headless(root, q, io);
   if (!answer) return 1;
 

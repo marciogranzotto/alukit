@@ -48,9 +48,10 @@ export const USAGE = {
     "    each with its fixes (alukit.problems/1); exit 1 when one blocks the order or is an error",
   ],
   arrangements: [
-    "alukit arrangements <dir> --at x,y,z [--at x,y,z]... [--rule vertical|x|y|first]... [--json]",
+    "alukit arrangements <dir> --at x,y,z [--at x,y,z]... [--rule vertical|x|y|first|miter|splice]... [--json]",
     "    where bar ends meet at those points, each corner rule's arrangement: which bar runs",
-    "    through and the cut lengths it gives, and the batch that applies it; writes nothing",
+    "    through and the cut lengths it gives, and the batch that applies it; then a miter's and",
+    "    a splice's of a corner's two ends, or why derive refuses one; writes nothing",
   ],
   do: [
     "alukit do <dir> '<json>' | -f <file> | -  [--json] [--as <name>|agent:<name>] [--dry-run]",
