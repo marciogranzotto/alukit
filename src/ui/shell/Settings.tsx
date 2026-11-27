@@ -1,10 +1,11 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { Order } from "#core/order/types.ts";
-import type { ItemCard } from "../../server/catalog.ts";
-import { getAtRev } from "../api.ts";
+import type { BuiltinCatalog, ItemCard } from "../../server/catalog.ts";
+import { get, getAtRev } from "../api.ts";
 import { cardOf } from "../catalog/state.ts";
 import { Errors } from "../Feedback.tsx";
+import { plural } from "../format.ts";
 import type { Model } from "../model.ts";
 import { optionFields } from "../options.ts";
 import { busy, type CommandOutcome, model, sendCommands, summary } from "../store.ts";
@@ -175,6 +176,7 @@ function SettingsForm({ m }: { m: Model }) {
   const [newFx, setNewFx] = useState("");
   const [card, setCard] = useState<ItemCard | undefined>();
   const [rules, setRules] = useState<Record<string, string> | undefined>();
+  const [builtins, setBuiltins] = useState<readonly BuiltinCatalog[]>([]);
   const [outcome, setOutcome] = useState<CommandOutcome>();
   const [error, setError] = useState<string | undefined>();
   const set = (p: Partial<Form>) => setF({ ...f, ...p });
@@ -197,7 +199,13 @@ function SettingsForm({ m }: { m: Model }) {
       (r) => setRules(r.body.rules as Record<string, string>),
       () => setRules({}),
     );
+    // The built-in catalogs, offered by name so one is added with a click (D-UX-6).
+    get<{ builtins?: BuiltinCatalog[] }>("/api/catalog").then(
+      (r) => setBuiltins(r.builtins ?? []),
+      () => setBuiltins([]),
+    );
   }, []);
+  const offered = builtins.filter((b) => !f.catalogs.includes(b.id));
 
   const save = async (e: Event) => {
     e.preventDefault();
@@ -245,6 +253,27 @@ function SettingsForm({ m }: { m: Model }) {
                   onClick={() => set({ catalogs: f.catalogs.filter((x) => x !== c) })}
                 >
                   Remove
+                </button>
+              </li>
+            ))}
+            {offered.map((b) => (
+              <li key={b.id} data-builtin={b.id}>
+                <span>
+                  {b.name} <span class="sub">({b.id})</span>
+                </span>
+                {/* The start card's words for a catalog: its bars are its profiles. */}
+                <span class="sub">
+                  {plural(b.bars, "profile")}, {plural(b.items, "item")}
+                  {b.tslot ? "; sells T-slot profile" : ""}
+                </span>
+                <button
+                  type="button"
+                  class="btn"
+                  data-testid={`settings-catalog-add-${b.id}`}
+                  aria-label={`Add the built-in catalog ${b.name}`}
+                  onClick={() => set({ catalogs: [...f.catalogs, b.id] })}
+                >
+                  Add
                 </button>
               </li>
             ))}

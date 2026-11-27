@@ -3,10 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { type CatalogSet, linkCatalogs } from "#catalog/link.ts";
+import { builtinIds } from "#catalog/open.ts";
 import { type Lock, LockFile } from "#core/lock/schema.ts";
 import { openLiveCatalogs } from "#core/project/open.ts";
 import { FIXTURES, readJson, scratchFixtures } from "#core/testing.ts";
 import {
+  type BuiltinCatalog,
   type CatalogEntry,
   catalogIndex,
   catalogTree,
@@ -262,6 +264,20 @@ describe("the catalog API", () => {
       "test-geo",
       "test-gen",
     ]);
+    // Every built-in catalog, named or not, so settings can add one with a click (S2's ask):
+    // the folders of catalogs/, each with its name and counts. Forseti sells T-slot profile;
+    // the reference guideways and the standard shapes have bars, but none with grooves.
+    const builtins = tree.body.builtins as BuiltinCatalog[];
+    expect(builtins.map((b) => b.id)).toEqual(await builtinIds());
+    for (const b of builtins) {
+      expect(b.name.length, b.id).toBeGreaterThan(0);
+      expect(b.items, b.id).toBeGreaterThanOrEqual(b.bars);
+    }
+    const by = new Map(builtins.map((b) => [b.id, b]));
+    expect(by.get("forseti")).toMatchObject({ name: "Forseti", tslot: true });
+    expect(by.get("forseti")?.bars).toBeGreaterThan(0);
+    expect(by.get("std")).toMatchObject({ tslot: false });
+    expect(by.get("ref-hiwin")).toMatchObject({ tslot: false });
     const found = await get(s, "api/catalog/items?q=TS4080&kind=bar");
     expect((found.body.items as { id: string }[]).map((e) => e.id)).toEqual(["test:TS4080"]);
     // A list card carries a bar's thumbnail, so the list needs no request per item.

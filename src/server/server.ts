@@ -36,6 +36,8 @@ import { contentStamp, verified, verifyRevision } from "#core/revision/revision.
 import { packageVersion } from "#core/version.ts";
 import { projectGlb } from "../export/project.ts";
 import {
+  type BuiltinCatalog,
+  builtinCatalogs,
   CATALOG_SCHEMA,
   type CatalogEntry,
   catalogIndex,
@@ -276,6 +278,11 @@ interface Ctx {
   problems: { rev: number; text: Map<string, string> } | undefined;
   /** The catalog browser's index, built once per opening of the catalogs and lock. */
   catalog: CatalogIndex | undefined;
+  /**
+   * The built-in catalogs, opened the first time `/api/catalog` is asked, once per server: they
+   * ship with AluKit and do not change while it runs, unlike the project's own (opened afresh).
+   */
+  builtins: () => Promise<BuiltinCatalog[]>;
   /** The saved revisions, each file read once while it stays the same. */
   revisions: RevisionIndex;
   /** The current state's content hash (§4.13's stamp), once per revision. */
@@ -607,6 +614,8 @@ async function api(
           }),
           count: entries.length,
           tree: catalogTree(entries),
+          // Every built-in catalog, named by the document or not, so settings can add one.
+          builtins: await ctx.builtins(),
         });
         return;
       }
@@ -839,6 +848,7 @@ export async function openSession(options: SessionOptions): Promise<Session> {
   const token = newToken();
   // No request passes the gate before the server listens: port 0 is no request's Host.
   let port = 0;
+  let builtins: Promise<BuiltinCatalog[]> | undefined;
   const ctx: Ctx = {
     root: options.distDir,
     port: () => port,
@@ -847,6 +857,17 @@ export async function openSession(options: SessionOptions): Promise<Session> {
     model: undefined,
     problems: undefined,
     catalog: undefined,
+    builtins: () => {
+      const got = builtins ?? builtinCatalogs(dir, options.builtinDir);
+      if (got !== builtins) {
+        builtins = got;
+        // A failure is not remembered: the next request opens them again.
+        got.catch(() => {
+          if (builtins === got) builtins = undefined;
+        });
+      }
+      return got;
+    },
     revisions: new RevisionIndex(dir),
     stamp: undefined,
     streams: new Set(),

@@ -105,7 +105,7 @@ function ProjectStrip({ m, cats }: { m: Model; cats: Catalogs | undefined }) {
           >
             Add one in Project settings
           </button>
-          : a built-in catalog's id, or a folder inside the project.
+          : pick a built-in catalog, or name a folder inside the project.
         </span>
       )}
       <Errors outcome={outcome} />
