@@ -142,7 +142,7 @@ export function createTools(viewer: Viewer): Tools {
     measure,
   };
   /** The order each tool hears that the tool changed. */
-  const SWITCH_ORDER: readonly Wire[] = [connect, pattern, measure, frame, place];
+  const SWITCH_ORDER: readonly Wire[] = [connect, pattern, measure, frame, place, draw];
   const wire = (): Wire | undefined => wires[activeTool.peek()];
 
   /** Shows the active tool again where the pointer is (or without it, for the keyboard). */

@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration" and 108 in "An end a failing joint claims"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "3D editing, integration". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core" and 115–119 in "Editing polish, app"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "Editing polish, app". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -819,6 +819,33 @@ diagnostics moved (measured on all 58 fixture projects).
   150, Enter moves the shelf from the outline (pe 14, 15).
 - §8's "What the editing round left for later" loses the stretch, the mirror onto another bar
   and the log; calls 106 and 107 note what superseded them. Calls 109–114.
+
+### Editing polish, app
+
+The integration's scenarios found three over their targets (A1, A4, A8) and anchor dots a press
+could not reach on a 40 × 80 (ie's defect 3). This pass fixes them in the app
+([`ux/polish-editing-ui-decisions.md`](ux/polish-editing-ui-decisions.md), cited as "pu"): no
+command, schema, CLI path, golden value or derived output changes; every edit is a command the
+CLI sends the same way. `editing.spec`'s A1, A4 and A8 now assert §12's targets.
+
+- §8 Inspector, Draw: **a roll by whole quarter turns keeps the bar on its anchor's side**: the
+  app turns the anchor and the offset back with it, so a 40 × 80 anchored on a corner trades its
+  long side for its short one in that corner. A roll by another angle rolls about the anchor; a
+  datum stays. The inspector's Roll (one bar or several, each bar's anchor turned from its own)
+  and the draw tool's R share the rule; `setBar { roll_deg }` itself is unchanged. A4: 6 steps
+  to 2 (pu 1). Call 115.
+- §8 Inspector, Draw: **every anchor dot is a 24 × 24 px target, none overlapping** (WCAG 2.2,
+  2.5.8): the box's short side is drawn 48 px, its long side to scale up to 2 : 1; a datum is a
+  named button. The dots show for several bars that share a section too (pu 2). Call 116.
+- §8 Draw: **the command bar's Anchor opens above the bar** on the full pad, as its Options do,
+  its summary naming and drawing the anchor; a pick closes it. One click more than the inline pad,
+  which could not hold pressable dots in one row (pu 2). Call 117.
+- §8 Box frame: **the shelf and "W, D and H as params" are up front**, and **Joined with offers
+  the bracket that fits the most systems as one click** beside its list, never chosen for the
+  person (review B1). A1: 10 clicks to 8 (pu 3). Call 118.
+- §8 Pattern: **Draw the bar to repeat**: with along, pitch and count filled, the next bar drawn
+  commits with its pattern as one step, named by the id the document gives next and sent strict,
+  then Select with the pattern selected. A8: 2 steps to 1, five in 1 click (pu 4). Call 119.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -3124,8 +3151,10 @@ s5 9).
   3. Type a length and press Enter. Once digits are typed nothing pulls the line toward a snap
      (*2.3*); a click while a value is typed commits the value, toward the pointer (s5 5).
      `Space` draws the next bar from the last one's end (s5 7).
-  4. R rolls the section; A cycles the anchor. The item comes from the palette (*2.3*: the bin's
-     armed bar, the project's `defaults.bar` to start with).
+  4. R rolls the section a quarter turn; A cycles the anchor. *2.3*: R turns the anchor with the
+     roll, so the bar keeps its side of the line it is drawn on (pu 1); the command bar's Anchor
+     opens above the bar on the section's dots, and a pick closes it (pu 2). The item comes from
+     the palette (*2.3*: the bin's armed bar, the project's `defaults.bar` to start with).
   5. The gesture commits as one batch (*2.3*): `addBar`, then, with auto-connect on, an
      `autoConnect` with `optional: true` at each end (§4.5, §6). Points are written as the document would: a node by id, another bar's end as it
      is written (params kept), a point on a line as a station, anything else as coordinates.
@@ -3137,7 +3166,10 @@ s5 9).
 - **Box frame** (`G`; *2.3*, D-UX-8): the corner, then W and D, then H, each clicked or typed, as
   one `addFrame` (§6). Its form, also the start card's, sets the rings, a shelf, the corner rule,
   the connector and whether W, D and H become params, and shows the cut lengths from a dry run
-  (s5 14, 15).
+  (s5 14, 15). *2.3*: W, D, H, the shelf, the params switch and Joined with are up front, the
+  corner, the rings and the corner rule under More options; while the project names no default
+  butt connector, Joined with offers the bracket that fits the most systems as one click beside
+  its list, never chosen for the person (pu 3).
 - **Connect** (`C`): pick a through bar and butting ends (`butt`), two ends (`miter`,
   `splice`), a face and the ends it carries (`pivot`), or two or more layers, head to nut (`face`,
   resting or fastened, with every field §4.5 gives it; *2.3*). A pivot is one batch with the
@@ -3148,7 +3180,10 @@ s5 9).
   typed first counts from the nearer end; a roll in quarter turns. A part at a world pose is
   placed by command in v1. A pattern copy takes no parts (s5 16, 17).
 - **Pattern** (`X`, *2.3*): select the template, pick the bar (or type a bar or run), type pitch
-  and count. A pattern by a direction or by offsets is written by command in v1.
+  and count. A pattern by a direction or by offsets is written by command in v1. *2.3*: **Draw
+  the bar to repeat** makes a new bar the template: the next bar drawn commits with its pattern as
+  one step (`addBar`, its `autoConnect`s, `addPattern` of the id the document gives next, sent
+  strict), and the app returns to Select with the pattern selected (pu 4).
 - **Measure** (`M`): two snapped points, the distance and its components.
 
 **End handles** (*2.3*, after the UX redesign; [ends](ux/drag-ends-decisions.md) 1–11). One bar
@@ -3274,7 +3309,10 @@ overwritten.
   since `moveEnd` refuses an end a joint holds; off the world axes it asks for a number (e4 16, 17).
   **Replace** (this bar, the selected ones, all like it), the finish and options, the roll, and
   the **anchor**, as a list or picked on the section's dots, the command bar's picker made one
-  component (e4 8). **Offset** (`off_mm`) along the section's x and y, each labelled with the
+  component (e4 8). *2.3*: each dot is a 24 × 24 px target and no two overlap, on any section
+  (pu 2); **a roll by whole quarter turns turns the anchor and the offset with it**, so the bar
+  keeps its side of its line, and the row says so; another angle rolls about the anchor (pu 1).
+  **Offset** (`off_mm`) along the section's x and y, each labelled with the
   world direction it runs in (e4 7). **Context**, a checkbox (§4.4; x11 17). Calls 97, 99.
 - **Its ends** (E4.1). Each end's row names the joint that claims it, from derive's claims (the
   server's view model carries them beside `alukit.derived/1`), even when the claim fails: "butts
@@ -3299,7 +3337,9 @@ overwritten.
   e4 9–12). Call 97.
 - **Several selected** (E-UX-15): with several bars, their options (when they share one profile),
   anchor and roll; with any entities, their label and tags; each shows the value they share or
-  "varies", and a change is one step, one patch per entity. The tags field edits only the tags all
+  "varies", and a change is one step, one patch per entity. *2.3*: the anchor's dots show when the
+  bars share one section; a quarter roll turns each bar's anchor from its own, so four legs keep
+  four corners (pu 1, 2). The tags field edits only the tags all
   carry, so a tag some carry survives; length is not shared, each bar's having its own end and
   driver (e4 13–15). Call 98.
 - **A node** says what uses it (the bar ends at it, the planes through it) and edits where it is:
@@ -3357,7 +3397,8 @@ added two commands, `moveEnd` and `transform`. An agent makes the same edit with
 | A hole row, Add a hole | `setBar { ops }`, the whole list |
 | An end's cut, extension | `setBar { ends }` |
 | An end's plane, Free | `setBar { ends }` with `setConnection` or `removeEntity` of the joint it leaves |
-| Length, offset, anchor, roll, options, Replace, Context | `setBar` (several selected: one per bar) |
+| Length, offset, anchor, roll, options, Replace, Context | `setBar` (several selected: one per bar); a quarter roll writes `roll_deg` with the turned `anchor` and `off_mm` |
+| Pattern's Draw the bar to repeat | the draw step's batch, then `addPattern` of the bar it makes, strict |
 | Label, tags (several) | `label`, `tag` |
 | A node's fields | `moveNode` |
 | A connection's fields, a face joint's Apply | `setConnection` |
@@ -4227,9 +4268,9 @@ reasons. Marking the room is the run's own change, in its project.
      estimate beside them for the designer review (ie).
 106. *New in 2.3, 3D editing integration, open.* A scenario is `fixme` only when the app cannot do
      it as built. Where one path fails and another the app offers works (an arrow lock before a
-     move is on, the anchor dots of a 40 × 80), the test takes the path that works and the defect
-     is listed (ie), so the scenario's check still holds the result. (The arrow lock is fixed
-     since: call 114.)
+     move is on, the anchor dots of a 40 × 80 until call 116), the test takes the path that works
+     and the defect is listed (ie), so the scenario's check still holds the result. (The arrow
+     lock is fixed since: call 114.)
 107. *New in 2.3, 3D editing integration, open.* Agent parity (A15) replays the commands the app
      posted, read off its requests, with one `alukit do` per step: `alukit log` keeps each step's
      command names and words, not its arguments (§7.1), and this pass changes no product code to
@@ -4264,6 +4305,29 @@ reasons. Marking the room is the run's own change, in its project.
      selection waits, and a tool's starting keys (Move's arrows, Rotate's X, Y, Z and arrows) are
      its own wherever the focus is but a text field, a dialog or a menu, asked in the capture
      phase as a live gesture's keys are; `↓` stays the outline's (pe 14, 15).
+115. *New in 2.3, editing polish (app), open.* A roll by whole quarter turns sent from the app
+     turns the anchor and the offset back by as much, so the bar keeps its side of its line (§4.4:
+     a change of roll rewrites the references); another angle rolls about the anchor, and a datum
+     stays. The core's `setBar { roll_deg }` is unchanged, so scripts and goldens build as before;
+     Replace gained no "which way" choice, which would fix a roll only when made with a Replace
+     (pu 1).
+116. *New in 2.3, editing polish (app), open.* The anchor pad's dots are 24 × 24 px buttons (WCAG
+     2.2's minimum target), the box drawn 48 px on its short side so neighbours touch without
+     overlapping, its long side to scale up to 2 : 1 and 2 : 1 beyond; a datum is a named button
+     beside it, since it may fall on a box point (pu 2).
+117. *New in 2.3, editing polish (app), open.* The draw tool's anchor picker is a disclosure that
+     opens above the command bar, as its Options are: the bar is one 44 px row and a pad of
+     pressable dots is 72 px tall at least. Picking a dot there takes one click more than before;
+     `A` still cycles the anchors (pu 2).
+118. *New in 2.3, editing polish (app), open.* The box frame's form shows the shelf and the params
+     switch up front, and offers as one click the bracket, among the connectors that fit, made for
+     the most systems (review M8's rank for profiles, turned round), while the project names no
+     default butt connector; it is never chosen for the person (review B1). This changes polish m5,
+     which had both under More options (pu 3).
+119. *New in 2.3, editing polish (app), open.* Pattern's "Draw the bar to repeat" makes the bar and
+     its pattern one step: the batch names the bar by the id the document gives next and is sent
+     strict, as a pivot's is; after it the app is in Select with the pattern selected. Amending
+     the draw step after it commits (SketchUp's `x4`) stays out (D-UX-16) (pu 4).
 
 ## 15. Review 1 resolution
 

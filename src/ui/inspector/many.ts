@@ -1,3 +1,4 @@
+import { rollSet } from "../edit/roll.ts";
 import type { Model } from "../model.ts";
 import type { Written } from "../tools/typed.ts";
 import type { Command } from "./remove.ts";
@@ -48,9 +49,20 @@ export function anchorBatch(ids: readonly string[], anchor: string): Command[] {
   return ids.map((id) => setBar(id, { anchor: anchor === "c" ? null : anchor }));
 }
 
-/** The roll for each bar, a param written as typed; nought is removed. */
-export function rollBatch(ids: readonly string[], roll: Written): Command[] {
-  return ids.map((id) => setBar(id, { roll_deg: roll === 0 ? null : roll }));
+/**
+ * The roll for each bar, a param written as typed; nought is removed. A change by whole quarter
+ * turns turns each bar's anchor and offset back by as much (`rollSet`), so every bar keeps its
+ * side of its own line: four legs rolled together keep four different corners.
+ */
+export function rollBatch(
+  m: Model,
+  ids: readonly string[],
+  roll: { value: number; written: Written },
+): Command[] {
+  return ids.map((id) => {
+    const w = written(m, id);
+    return setBar(id, rollSet(isObject(w) ? w : {}, roll, m.derived.params).set);
+  });
 }
 
 /** The label for each entity; an empty one is removed. */

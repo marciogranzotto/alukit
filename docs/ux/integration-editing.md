@@ -46,15 +46,15 @@ characters as keys. Steps are the server's.
 
 | # | Task | Target (§12) | Result | Clicks | Keys | Steps | Script | Estimate |
 |---|---|---|---|---|---|---|---|---|
-| A1 | Table frame, shelf ring 250, W, D, H as params | ≤ 45 s, ≤ 8 clicks, ≤ 20 keys, 1 step | pass: the cut list is `alukit add frame --shelf 250 --params`'s, byte for byte; **10 clicks** | 10 | 13 | 1 | 2.8 s | 30 s |
+| A1 | Table frame, shelf ring 250, W, D, H as params | ≤ 45 s, ≤ 8 clicks, ≤ 20 keys, 1 step | pass: the cut list is `alukit add frame --shelf 250 --params`'s, byte for byte; 8 clicks since the editing polish (was 10; [pu](polish-editing-ui-decisions.md) 3), asserted | 8 | 13 | 1 | 3.8 s | 25 s |
 | A2 (i) | Widen by 100, editing W | ≤ 10 s, 1 step | pass: the 1100-wide frame's cut list | 2 | 5 | 1 | 0.8 s | 7 s |
 | A2 (ii) | Widen by 100 on a frame without params: crossing box over the right side, Move +100 X | ≤ 20 s, 1 step | pass since the polish (gap 1 closed): the box, D, →, 100, Enter; the 1100-wide frame's cut list, byte for byte, `alukit move`'s project of the box's ids and ends | 3 | 6 | 1 | 5.1 s ‡ | 10 s |
 | A3 | Shelf up 150 | ≤ 15 s, 1 step | pass: cuts as before, ends 150 up, no new diagnostic, `alukit move`'s project; since the polish by D, ↑, 150, Enter, the focus on the outline (defect 4 closed) | 2 | 6 | 1 | 1.6 s ‡ | 7 s |
-| A4 | Four legs to 40 × 80, the 80 along X | ≤ 30 s, ≤ 2 steps, legs in ≤ 2 clicks | pass: the CLI's cut list (front and back rails 840, sides 520 by hand); legs in 2 clicks; **6 steps** (gap 3) | 20 | 8 | 6 | 3.8 s | 55 s |
-| A5 | Diagonal brace in the back plane, joined at both ends | ≤ 45 s, ≤ 2 steps | pass: no error, both ends `angle`, its cut the dry run's of the same batch | 1 | 32 | 1 | 1.4 s | 12 s |
+| A4 | Four legs to 40 × 80, the 80 along X | ≤ 30 s, ≤ 2 steps, legs in ≤ 2 clicks | pass: the CLI's cut list (front and back rails 840, sides 520 by hand); legs in 2 clicks; 2 steps since the editing polish (was 6, defect 3; [pu](polish-editing-ui-decisions.md) 1), asserted | 8 | 8 | 2 | 2.0 s | 23 s |
+| A5 | Diagonal brace in the back plane, joined at both ends | ≤ 45 s, ≤ 2 steps | pass: no error, both ends `angle`, its cut the dry run's of the same batch; the command bar's Anchor opens before its dot since the editing polish (was 1 click; [pu](polish-editing-ui-decisions.md) 2) | 2 | 32 | 1 | 1.6 s | 14 s |
 | A6 | Bracket on the front-left leg's inner face at 300, mirrored to the front-right leg | ≤ 20 s for the mirror, 1 step | pass since the polish (gap 2 closed): Esc leaves Place, the menu's Mirror…, `=W / 2`, Enter; p2 on b2's face −x at 300, `alukit do mirror`'s project. Placing: 5 clicks, 10 keys, 1.5 s, 16 s | 2 | 8 | 1 | 1.6 s ‡ | 8 s |
 | A7 | Top front rail duplicated 300 down, joined to the legs | ≤ 15 s, 1 step | pass: butts at both ends, its cut the top rail's, the CLI's `array` and joins | 1 | 7 | 1 | 1.8 s | 5 s |
-| A8 | Four slats across the shelf, evenly spaced; then five by editing the pattern | ≤ 30 s, then ≤ 10 s, 1 step each | pass: spacing equal within 0.01 mm, the count follows, the CLI's project; four slats are **2 steps** (a slat, then its pattern) | 6, then 2 | 39, then 2 | 2, then 1 | 2.9 s, then 0.3 s | 27 s, then 6 s |
+| A8 | Four slats across the shelf, evenly spaced; then five by editing the pattern | ≤ 30 s, then ≤ 10 s, 1 step each | pass: spacing equal within 0.01 mm, the count follows, the CLI's project; four slats are 1 step since the editing polish, the slat drawn from Pattern (was 2, defect 7; [pu](polish-editing-ui-decisions.md) 4), asserted; five in 1 click, the pattern selected by the step | 6, then 1 | 37, then 2 | 1, then 1 | 1.3 s, then 0.2 s | 26 s, then 3 s |
 | A9 | Bracket slid from 300 to 450 along its leg | ≤ 10 s, 1 step | pass: `at_mm` 450, `alukit move`'s project | 1 | 5 | 1 | 0.5 s | 4 s |
 | A10 | Back top rail and its joints deleted; Undo | ≤ 10 s, 1 step | pass: the dialog lists b14 and the two butts it changes, no end left open, `removeEntity { cascade }`'s project; Undo gives the frame back | 2 | 1 | 1 | 0.8 s | 6 s |
 | A11 | Hide the top ring, isolate a corner, show all | ≤ 10 s, no step | pass: no step, `alukit diff` empty | 3 | 3 | 0 | 0.9 s | 9 s |
@@ -69,6 +69,11 @@ characters as keys. Steps are the server's.
 integration's. The integration's A2 (ii), as then written, failed its check (3 clicks, 11 keys,
 5.6 s); the same steps with the window's corners swapped (left to right) passed it (**measured**,
 a probe not kept).
+
+The rows of A1, A4, A5 and A8 are the [editing polish](polish-editing-ui-decisions.md)'s
+(**measured**, one run of `editing.spec` on its tree, the same headless set-up, the machine
+running other agents); their estimates are by the same model. Since then A1, A4 and A8 assert
+§12's counts.
 
 ## What the scenarios found
 
@@ -96,7 +101,9 @@ later"):
 
 Defects and friction (the scenario passed by another path; for the designer review):
 
-3. **The 80 along X costs six steps (A4).** A 40 × 80 standing up has its 80 along its section's
+3. *Fixed by the editing polish ([pu](polish-editing-ui-decisions.md) 1, 2): a quarter roll turns
+   each leg's anchor with it (A4 in 2 steps), and every anchor dot is a 24 px target that overlaps
+   no other.* **The 80 along X costs six steps (A4).** A 40 × 80 standing up has its 80 along its section's
    y, world Y. A quarter roll (one step for the four, in the shared Roll field) turns it, and then
    each leg's anchor, a corner of the section, must turn with it to keep the leg inside the
    footprint, a different corner per leg, so four more steps. **The anchor dots overlap on a
@@ -112,12 +119,15 @@ Defects and friction (the scenario passed by another path; for the designer revi
    Rotate's X, Y and Z do start a turn while a selection waits (e3 2). A typed offset
    (`0, 0, 150`) works, and the guide gives it.
 5. **A1 takes 10 clicks** (§12: ≤ 8): the shelf and "as params" are under More options, and the
-   joint is a select (two). Its keys and time are within the target.
+   joint is a select (two). Its keys and time are within the target. *Fixed by the editing polish
+   ([pu](polish-editing-ui-decisions.md) 3): both up front and the common bracket one click; 8.*
 6. **Closed: the log keeps each step's commands** (pe 12, 13). **The log carries no arguments (A15).** `alukit log` keeps each step's command names (`what`)
    and words (`text`), so "replay the log's commands" cannot be done from it; the test replays the
    commands the app posted, read off its requests, one `alukit do` per step, and checks that the
    log names the same commands (call 107).
-7. **Four slats are two steps (A8)**: one slat drawn, then its pattern; §12 counts one.
+7. **Four slats are two steps (A8)**: one slat drawn, then its pattern; §12 counts one. *Fixed by
+   the editing polish ([pu](polish-editing-ui-decisions.md) 4): Pattern draws its template, one
+   step.*
 
 ## Decision notes against the code
 

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import type { CornerRule } from "#core/project/schema.ts";
 import { GROUND } from "../../viewer/workplane.ts";
-import { AnchorDots } from "../common/AnchorDots.tsx";
+import { AnchorDots, AnchorGlyph } from "../common/AnchorDots.tsx";
 import { Icon } from "../icons/Icons.tsx";
 import { anchorWords } from "../inspector/BarFields.tsx";
 import { optionsText } from "../options.ts";
@@ -14,6 +14,7 @@ import {
   CORNER_RULES,
   CORNER_WORDS,
   drawOptions,
+  drawRepeat,
   drawState,
   fieldDone,
   fieldWanted,
@@ -29,6 +30,7 @@ import {
   mirrorOptions,
   pickingPlane,
   placeState,
+  rollDrawn,
   TOOL_NAMES,
   type ToolName,
   toolPrompt,
@@ -84,29 +86,59 @@ function Armed({ which }: { which: "bar" | "part" }) {
   );
 }
 
+/** A disclosure in the command bar closes on a press anywhere else, so it never stays over the view. */
+function useClosesOutside() {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const close = (e: PointerEvent) => {
+      const d = ref.current;
+      if (d?.open && !d.contains(e.target as Node)) d.open = false;
+    };
+    document.addEventListener("pointerdown", close, true);
+    return () => document.removeEventListener("pointerdown", close, true);
+  }, []);
+  return ref;
+}
+
 /**
- * The anchor picker on the section's own dots (U40): the section's box, a dot at each anchor the
- * bar offers, the chosen one filled. `A` cycles them too.
+ * The anchor picker on the section's own dots (U40): its summary names the anchor and draws it
+ * small; it opens on the section's box, a dot at each anchor the bar offers, the chosen one
+ * filled, each a 24 px target (AnchorDots). It opens above the bar, as the Options do, since a
+ * pad whose dots can all be pressed is taller than the bar's one row
+ * (docs/ux/polish-editing-ui-decisions.md 2). A pick closes it. `A` cycles the anchors too.
  */
 function AnchorPicker({ bar }: { bar: PaletteItem }) {
   const o = drawOptions.value;
+  const ref = useClosesOutside();
   const s = bar.section;
   if (!s) return null;
   return (
-    <fieldset class="cb-opt cb-anchor" data-testid="draw-anchor" data-anchor={o.anchor}>
-      <legend title="Where the bar's line runs through its section (A cycles)">
+    <details class="cb-more cb-anchor" data-testid="draw-anchor" data-anchor={o.anchor} ref={ref}>
+      <summary
+        data-testid="draw-anchor-open"
+        title="Where the bar's line runs through its section (A cycles)"
+      >
+        <AnchorGlyph bbox={s.bbox} datums={s.datums} value={o.anchor} />
         Anchor: {anchorWords(o.anchor)}
-      </legend>
-      <AnchorDots
-        bbox={s.bbox}
-        datums={s.datums}
-        anchors={bar.anchors ?? ["c"]}
-        value={o.anchor}
-        onPick={(a) => {
-          drawOptions.value = { ...drawOptions.value, anchor: a };
-        }}
-      />
-    </fieldset>
+      </summary>
+      <fieldset class="cb-more-panel cb-anchor-panel">
+        <legend class="sr-only">The bar's anchor on its section</legend>
+        <AnchorDots
+          bbox={s.bbox}
+          datums={s.datums}
+          anchors={bar.anchors ?? ["c"]}
+          value={o.anchor}
+          onPick={(a) => {
+            drawOptions.value = { ...drawOptions.value, anchor: a };
+            const d = ref.current;
+            if (d) {
+              d.open = false;
+              d.querySelector("summary")?.focus();
+            }
+          }}
+        />
+      </fieldset>
+    </details>
   );
 }
 
@@ -158,29 +190,28 @@ const CORNER_SHORT: Readonly<Record<CornerRule, string>> = {
 function DrawOptions() {
   const o = drawOptions.value;
   const bar = palette.value.bar;
-  // The options' panel closes on a press anywhere else, so it never stays over the view.
-  const more = useRef<HTMLDetailsElement>(null);
-  useEffect(() => {
-    const close = (e: PointerEvent) => {
-      const d = more.current;
-      if (d?.open && !d.contains(e.target as Node)) d.open = false;
-    };
-    document.addEventListener("pointerdown", close, true);
-    return () => document.removeEventListener("pointerdown", close, true);
-  }, []);
+  const repeat = drawRepeat.value;
+  const more = useClosesOutside();
   return (
     <>
       <Armed which="bar" />
+      {repeat && (
+        <span
+          class="cb-opt cb-chip"
+          data-testid="draw-repeat"
+          title="Pattern's repeat: the bar drawn next and its pattern are one step; Esc drops it"
+        >
+          then {repeat.count} along {repeat.along}, pitch {String(repeat.pitch_mm)}
+        </span>
+      )}
       {bar && <AnchorPicker bar={bar} />}
       <button
         type="button"
         class="cb-btn"
         data-testid="draw-roll"
         data-roll={o.roll}
-        title="Roll the profile a quarter turn (R)"
-        onClick={() => {
-          drawOptions.value = { ...o, roll: (o.roll + 90) % 360 };
-        }}
+        title="Roll the profile a quarter turn, keeping its anchor's side: the anchor turns too (R)"
+        onClick={rollDrawn}
       >
         Roll {o.roll}°
       </button>

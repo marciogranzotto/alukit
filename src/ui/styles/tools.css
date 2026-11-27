@@ -301,28 +301,50 @@
   color: var(--blocked-ink);
 }
 
-/* The anchor picker: the section's box, a dot at each anchor (U40) */
+/*
+ * The anchor picker: the section's box, a dot at each anchor (U40). Each dot is a 24 px target
+ * (WCAG 2.2, 2.5.8) and the box is laid out so neighbours never overlap (AnchorDots.tsx).
+ */
 
-/* The anchor picker is a fieldset (its legend names it for assistive tech) laid out as one row. */
-.cb-anchor {
+/*
+ * The draw tool's picker opens from the command bar, as its Options do (review M5). Its glyph
+ * says it opens a section, so it takes no caret: the bar keeps to one row at 1440 px (review N3).
+ */
+.cb-anchor > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-left: var(--sp-2);
+}
+
+.cb-anchor > summary::after {
+  content: none;
+}
+
+/* A fieldset (a legend names it for assistive tech), drawn as the Options' panel is. */
+.cb-anchor-panel {
+  left: 0;
+  right: auto;
   margin: 0;
-  padding: 0;
-  border: 0;
   min-inline-size: 0;
 }
 
-/* A floated legend is laid out as ordinary content, so it stays in the row. */
-.cb-anchor legend {
-  float: left;
-  padding: 0;
+.cb-anchor-set {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  vertical-align: middle;
 }
 
 .cb-anchor-pad {
   position: relative;
   display: inline-block;
+  flex: none;
 }
 
-.cb-anchor-pad svg {
+.cb-anchor-pad svg,
+.cb-anchor-glyph {
   display: block;
 }
 
@@ -332,28 +354,76 @@
   stroke-width: 1;
 }
 
+.cb-anchor-glyph .cb-anchor-box {
+  stroke: var(--text-2);
+}
+
+.cb-anchor-at {
+  fill: var(--tool);
+}
+
+.cb-datum-mark {
+  stroke: var(--text-3);
+  stroke-width: 1;
+}
+
+.cb-datum-mark.on {
+  stroke: var(--tool);
+  stroke-width: 2;
+}
+
+/* The button is the 24 px target; the dot drawn in it is 12. */
 .cb-dot {
   position: absolute;
-  width: 12px;
-  height: 12px;
-  margin: -6px 0 0 -6px;
+  width: 24px;
+  height: 24px;
+  margin: 0;
   padding: 0;
+  border: 0;
   border-radius: 50%;
-  border: 1px solid var(--text-2);
-  background: var(--bg-panel);
+  background: transparent;
   cursor: pointer;
 }
 
-/* A dot's target is 24 px across (WCAG 2.5.8), its drawing 12. */
-.cb-dot::after {
+.cb-dot::before {
   content: "";
   position: absolute;
-  inset: -6px;
+  inset: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--text-2);
+  background: var(--bg-panel);
 }
 
-.cb-dot.on {
+.cb-dot:hover::before {
+  border-color: var(--text-1);
+}
+
+.cb-dot.on::before {
   background: var(--tool);
   border-color: var(--tool);
+}
+
+/* A section's datum, by name: a text button at least a target tall. */
+.cb-datum {
+  min-height: 24px;
+  padding: 0 var(--sp-3);
+  font: inherit;
+  font-size: var(--fs-small);
+  color: var(--text-1);
+  background: var(--bg-panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.cb-datum.on {
+  border-color: var(--tool);
+  box-shadow: inset 0 0 0 1px var(--tool);
+}
+
+.cb-dot:disabled,
+.cb-datum:disabled {
+  cursor: default;
 }
 
 /* The active tool's long form, above the inspector (D-UX-5) */
@@ -387,8 +457,34 @@
 }
 
 .tool-panel input[type="checkbox"],
-.frame-form input[type="checkbox"] {
+.frame-form input[type="checkbox"],
+.frame-form input[type="radio"] {
   max-width: none;
+}
+
+/* The box frame's one-click bracket, beside the full list (polish-editing 3): a chip, its name cut short. */
+.frame-joint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 24px;
+  box-sizing: border-box;
+  max-width: 10em;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.frame-joint-chip:has(input:checked) {
+  border-color: var(--act);
+  background: var(--info-wash);
+}
+
+.frame-joint-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tool-panel .picks {

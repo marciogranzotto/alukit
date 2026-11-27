@@ -535,7 +535,7 @@ function Card({
           <div class="start-ways">
             {Frame && (
               <section
-                class="start-way"
+                class="start-way start-way-frame"
                 aria-labelledby="start-frame-title"
                 data-testid="start-frame"
               >

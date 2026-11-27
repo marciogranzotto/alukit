@@ -6,13 +6,14 @@ import { fetchCatalogItems } from "../client/catalog.ts";
 import { AnchorDots } from "../common/AnchorDots.tsx";
 import { EntityChips } from "../common/EntityChip.tsx";
 import { splitBatch } from "../edit/batches.ts";
+import { ROLL_WORDS, rollSet } from "../edit/roll.ts";
 import { Errors } from "../Feedback.tsx";
 import { mm, plural } from "../format.ts";
 import type { Model } from "../model.ts";
 import { optionFields } from "../options.ts";
 import { pointParam } from "../records/Params.tsx";
 import { busy } from "../store.ts";
-import { typedNumber, typedValue } from "../tools/typed.ts";
+import { typedNumber } from "../tools/typed.ts";
 import { ActionRow } from "./ActionRow.tsx";
 import { useReplaceAsked } from "./actions.ts";
 import { runOf, splitAsked } from "./barActions.ts";
@@ -536,9 +537,15 @@ function AnchorRow({ m, id }: { m: Model; id: string }) {
   );
 }
 
+/**
+ * The roll (§4.4), a param written as typed. A quarter turn keeps the bar on its anchor's side
+ * of its line, turning the anchor and offset with it (`rollSet`); another angle rolls about the
+ * anchor. One step.
+ */
 function RollRow({ m, id }: { m: Model; id: string }) {
   const w = written(m, id) as O;
   const { outcome, send } = useSend();
+  const [bad, setBad] = useState<string>();
   const roll = w.roll_deg;
   return (
     <>
@@ -549,16 +556,18 @@ function RollRow({ m, id }: { m: Model; id: string }) {
           size={6}
           value={roll === undefined ? "0" : String(roll)}
           onCommit={(text) => {
-            const v = typedValue(text);
+            const t = typedNumber(text.trim().replace(/^=\s*/, "") || "0", m.derived.params);
+            setBad("why" in t ? t.why : undefined);
+            if ("why" in t) return;
             void send(
-              [{ cmd: "setBar", args: { id, set: { roll_deg: v === 0 || v === "" ? null : v } } }],
+              [{ cmd: "setBar", args: { id, set: rollSet(w, t, m.derived.params).set } }],
               `roll ${id}`,
             );
           }}
         />{" "}
-        °
+        °<div class="sub">{ROLL_WORDS}</div>
       </Row>
-      <RowErrors outcome={outcome} />
+      <RowErrors outcome={bad !== undefined ? { ok: false, why: bad, errors: [] } : outcome} />
     </>
   );
 }

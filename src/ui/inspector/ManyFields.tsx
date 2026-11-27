@@ -1,4 +1,6 @@
 import { useState } from "preact/hooks";
+import { AnchorDots } from "../common/AnchorDots.tsx";
+import { ROLL_WORDS } from "../edit/roll.ts";
 import type { Model } from "../model.ts";
 import { optionFields } from "../options.ts";
 import { busy } from "../store.ts";
@@ -114,18 +116,38 @@ function ManyAnchor({ m, ids }: { m: Model; ids: string[] }) {
   const card = useCard(items.size === 1 ? [...items][0] : undefined);
   const { outcome, send } = useSend();
   const anchors = card?.anchors ?? ANCHORS;
+  const values = ids.map((id) => {
+    const w = written(m, id);
+    return isObject(w) && typeof w.anchor === "string" ? w.anchor : "c";
+  });
+  const s = shared(values);
+  // The section's dots, as one bar's row shows them (e4 8), when the bars share one section:
+  // the shared anchor filled, none while they vary.
+  const sections = new Set(ids.map((id) => m.display.bars[id]?.section));
+  const one = sections.size === 1 ? [...sections][0] : undefined;
+  const section = one !== undefined ? m.display.sections[one] : undefined;
+  const pick = (v: string) => void send(anchorBatch(ids, v), `anchor ${ids.length} bars`);
   return (
     <>
       <Row label="Anchor" testid="many-row-anchor">
+        {section && (
+          <AnchorDots
+            bbox={section.bbox}
+            datums={section.datums}
+            anchors={anchors}
+            value={"value" in s ? s.value : ""}
+            disabled={readOnly() || busy.value}
+            onPick={(a) => {
+              if (!("value" in s) || a !== s.value) pick(a);
+            }}
+          />
+        )}
         <SharedSelect
           testid="many-anchor"
           label={`Anchor of the ${ids.length} bars`}
-          values={ids.map((id) => {
-            const w = written(m, id);
-            return isObject(w) && typeof w.anchor === "string" ? w.anchor : "c";
-          })}
+          values={values}
           choices={anchors.map((a) => ({ value: a, text: anchorWords(a) }))}
-          onPick={(v) => void send(anchorBatch(ids, v), `anchor ${ids.length} bars`)}
+          onPick={pick}
         />
       </Row>
       <RowErrors outcome={outcome} />
@@ -154,10 +176,10 @@ function ManyRoll({ m, ids }: { m: Model; ids: string[] }) {
           onCommit={(text) => {
             const t = typedNumber(text.trim().replace(/^=\s*/, "") || "0", m.derived.params);
             setBad("why" in t ? t.why : undefined);
-            if (!("why" in t)) void send(rollBatch(ids, t.written), `roll ${ids.length} bars`);
+            if (!("why" in t)) void send(rollBatch(m, ids, t), `roll ${ids.length} bars`);
           }}
         />{" "}
-        °
+        °<div class="sub">{ROLL_WORDS}</div>
       </Row>
       <RowErrors outcome={bad !== undefined ? { ok: false, why: bad, errors: [] } : outcome} />
     </>

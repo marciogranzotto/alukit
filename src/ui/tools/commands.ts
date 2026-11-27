@@ -340,16 +340,49 @@ export function patternCommand(
 ): { cmd: string; args: Record<string, unknown> } | { why: string } {
   const template = s.template.filter((id) => !id.includes("@"));
   if (template.length === 0) return { why: "select the entities to repeat" };
+  const r = patternRepeat(s, params);
+  if ("why" in r) return r;
+  return { cmd: "addPattern", args: { template, ...r } };
+}
+
+/** How a pattern repeats, whatever it repeats: along a bar or run, a pitch and a count. */
+export interface Repeat {
+  along: string;
+  pitch_mm: number | string;
+  count: number;
+}
+
+/** The Pattern form's along, pitch and count as a pattern takes them, or why not. */
+export function patternRepeat(
+  s: { along?: string | undefined; pitch: string; count: string },
+  params: Readonly<Record<string, number>> = {},
+): Repeat | { why: string } {
   if (!s.along) return { why: "pick the bar or run to repeat along" };
   const pitch = typedNumber(s.pitch, params);
   if ("why" in pitch) return { why: `the pitch: ${pitch.why}` };
   if (pitch.value === 0) return { why: "the pitch is a length in mm, not 0" };
   const count = Number(s.count);
   if (!(Number.isInteger(count) && count >= 2)) return { why: "the count is 2 or more" };
-  return {
-    cmd: "addPattern",
-    args: { template, along: s.along, pitch_mm: pitch.written, count },
-  };
+  return { along: s.along, pitch_mm: pitch.written, count };
+}
+
+/**
+ * The draw step with its pattern (Pattern's "Draw the bar to repeat",
+ * docs/ux/polish-editing-ui-decisions.md 4): the bar and its joins as the draw tool sends them,
+ * then `addPattern` of that bar, one step. The bar's id is the one the document gives next
+ * (`nextIdNumber`), as a pivot's batch predicts its connection's; the batch is sent strict.
+ */
+export function repeatBatch(
+  drawn: readonly { cmd: string; args?: unknown }[],
+  doc: Readonly<Record<string, unknown>>,
+  repeat: Repeat,
+): { cmd: string; args?: unknown }[] {
+  const ids = (doc.ids ?? {}) as Record<string, unknown>;
+  const bars = doc.bars;
+  const existing =
+    typeof bars === "object" && bars !== null ? Object.keys(bars as object) : ([] as string[]);
+  const id = `b${nextIdNumber(ids.b, existing, "b")}`;
+  return [...drawn, { cmd: "addPattern", args: { template: [id], ...repeat } }];
 }
 
 const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -422,6 +455,25 @@ function perEnd(text: string): { value: number } | { why: string } {
 
 /** Why a frame is not made while its corners' joint is still to be chosen. */
 export const JOINT_UNCHOSEN = "choose how the corners are joined";
+
+/**
+ * The connector the box frame offers as one click beside its full list
+ * (docs/ux/polish-editing-ui-decisions.md 3): among those that fit the frame's bar, a bracket (a
+ * corner held from outside, no machining asked), the one that fits the most systems, the
+ * catalog's order between equals. It ranks connectors as review M8 ranks profiles: what is made
+ * for the most of the catalog is the common piece. Offered, never chosen: the corners' joint is
+ * still the person's choice (review B1). Undefined when no bracket fits.
+ */
+export function suggestedJoint<E extends { family: string; fits?: readonly string[] }>(
+  fit: readonly E[],
+): E | undefined {
+  let best: E | undefined;
+  for (const e of fit) {
+    if (e.family !== "bracket") continue;
+    if (!best || (e.fits?.length ?? 0) > (best.fits?.length ?? 0)) best = e;
+  }
+  return best;
+}
 
 /**
  * The box frame's `addFrame` (BE-6) from the draft and the options, or why it makes none. The
