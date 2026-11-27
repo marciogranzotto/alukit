@@ -1,15 +1,15 @@
 import { effect, signal } from "@preact/signals";
 import type { CornerRule } from "#core/project/schema.ts";
-import type { V3 } from "../../mesh/model.ts";
-import type { MarkerKind, OverlayState } from "../../viewer/overlay.ts";
-import type { Grab, ToolPointer, Viewer } from "../../viewer/scene.ts";
-import { rayLineParams } from "../../viewer/snap.ts";
-import type { DryRun } from "../client/dryrun.ts";
-import { selection } from "../focus.ts";
-import { extendHook } from "../hook.ts";
-import type { Model } from "../model.ts";
-import { model, summary } from "../store.ts";
-import type { GestureSpec, Gestures } from "./drag.ts";
+import type { V3 } from "../../../mesh/model.ts";
+import type { MarkerKind, OverlayState } from "../../../viewer/overlay.ts";
+import type { Grab, ToolPointer, Viewer } from "../../../viewer/scene.ts";
+import { rayLineParams } from "../../../viewer/snap.ts";
+import type { DryRun } from "../../client/dryrun.ts";
+import { selection } from "../../focus.ts";
+import { extendHook } from "../../hook.ts";
+import type { Model } from "../../model.ts";
+import { model, summary } from "../../store.ts";
+import type { GestureSpec, Gestures } from "../drag.ts";
 import {
   draggable,
   type EndAxis,
@@ -23,10 +23,10 @@ import {
   type Stop,
   typedCut,
   typedLanding,
-} from "./ends.ts";
-import { type JointWords, jointWords } from "./joint.ts";
-import { type Cmd, createPreviewer } from "./preview.ts";
-import { activeTool, drawOptions, gesture, hint, labelEdit, typed } from "./state.ts";
+} from "../ends.ts";
+import { type JointWords, jointWords } from "../joint.ts";
+import { type Cmd, createPreviewer } from "../preview.ts";
+import { activeTool, drawOptions, gesture, hint, labelEdit, typed } from "../state.ts";
 
 /**
  * The end handles (docs/ux/drag-ends-decisions.md): one bar selected in Select shows a grip at
@@ -37,7 +37,7 @@ import { activeTool, drawOptions, gesture, hint, labelEdit, typed } from "./stat
  * is one step: `moveEnd`, then `autoConnect` at the end, so an end that lands on a bar joins it
  * by the project's corner rule, which the joint preview says first and Tab flips. An end a pivot,
  * miter, splice or its own plane sets, or one a param drives, is drawn locked, and pressing it
- * says why. Owner: S5.
+ * says why. Owner: E4.
  */
 
 /** A press this close to a handle grabs it, px. */
@@ -361,7 +361,7 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
   };
 }
 
-declare module "../hook.ts" {
+declare module "../../hook.ts" {
   interface AlukitHook {
     /**
      * The selected bar's end handles: each end, its world point and whether it can be dragged;

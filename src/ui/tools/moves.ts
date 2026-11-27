@@ -10,7 +10,7 @@ import { parseTyped } from "./typed.ts";
 /**
  * The Move tool's rules (docs/ux/drag-ends-decisions.md, "The Move tool"), pure, so the unit
  * tests read them: what a selection moves, the axis a lone part slides on, a typed offset, the
- * step a move is, and its dry run in words. The tool itself is `mover.ts`. Owner: S5.
+ * step a move is, and its dry run in words. The tool itself is `wire/move.ts`. Owner: S5.
  */
 
 export type Vec = [Expr, Expr, Expr];

@@ -6,9 +6,9 @@ import { pointParam } from "../records/Params.tsx";
 import { sendCommands } from "../store.ts";
 import { viewer } from "../viewport/viewer.ts";
 import { endAxis, endCommands, endStops, labelEnd, typedCut, typedLanding } from "./ends.ts";
-import { endGhost, endNote, endWords } from "./handles.ts";
 import { createPreviewer, type JointPreviewer } from "./preview.ts";
 import { drawOptions, gesture, jointPreview, labelEdit } from "./state.ts";
+import { endGhost, endNote, endWords } from "./wire/ends.ts";
 
 /**
  * The selected bar's length label, and typing a new length into it (docs/ux/drag-ends-decisions.md;
