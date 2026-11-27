@@ -1,12 +1,14 @@
+import { cliSource } from "../server/source.ts";
 import { parseOptions, usageError } from "./args.ts";
 import type { Io } from "./cli.ts";
 import { applyToProject } from "./do.ts";
 import { usageOf } from "./project-usage.ts";
 
 /**
- * `alukit add bar|point|connection|part <dir> [options]` (design §7.3): one entity, as sugar
- * over `alukit do`. Each builds one command and applies it the same way. A point is a node id
- * (`n3`), coordinates `x,y,z` (numbers or expressions), or a station `<bar>:<at_mm>[:<from>]`.
+ * `alukit add bar|point|connection|part|frame <dir> [options]` (design §7.3): one entity, or a
+ * box frame (BE-6), as sugar over `alukit do`. Each builds one command and applies it the same
+ * way. A point is a node id (`n3`), coordinates `x,y,z` (numbers or expressions), or a station
+ * `<bar>:<at_mm>[:<from>]`.
  */
 
 const ADD_USAGE = usageOf("add");
@@ -33,6 +35,22 @@ const KINDS = {
     usage:
       "alukit add part <dir> --item <ref> (--on <bar>:<at_mm>[:<from>] [--groove <g> | --face <f>] [--roll <deg>] | --at <x,y,z> [--rot <x,y,z>]) [--label <text>] [--tag <t>]...",
     options: ["item", "on", "groove", "face", "roll", "at", "rot", "label", "tag"],
+  },
+  frame: {
+    usage:
+      "alukit add frame <dir> --size <W,D,H> [--at <x,y,z>] [--item <ref>] [--opt <name>=<value>]... [--corner vertical|x|y|first] [--rings base,top] [--shelf <mm>] [--connector <ref>] [--qty n] [--params]",
+    options: [
+      "size",
+      "at",
+      "item",
+      "opt",
+      "corner",
+      "rings",
+      "shelf",
+      "connector",
+      "qty",
+      "params",
+    ],
   },
 } as const;
 
@@ -70,6 +88,27 @@ function vec3(s: string, what: string): (number | string)[] {
     throw new Error(`${what}: give three comma-separated values, x,y,z`);
   }
   return parts.map(value);
+}
+
+/** Three plain numbers, `a,b,c`: a size or a corner, which take no expression. */
+function numbers3(s: string, what: string, names: string): number[] {
+  const parts = s.split(",").map((p) => p.trim());
+  if (parts.length !== 3 || parts.some((p) => !/^-?(\d+(\.\d*)?|\.\d+)$/.test(p))) {
+    throw new Error(`${what}: give three comma-separated values, ${names}`);
+  }
+  return parts.map(Number);
+}
+
+/** `--opt finish=anodised --opt colour=red` as `{ finish: "anodised", colour: "red" }`. */
+function options(v: string[] | undefined): Record<string, string> | undefined {
+  if (!v || v.length === 0) return undefined;
+  const out: Record<string, string> = {};
+  for (const o of v) {
+    const m = /^([^=\s]+)=(.+)$/.exec(o.trim());
+    if (!m) throw new Error(`--opt takes <name>=<value>, e.g. finish=anodised: ${o}`);
+    out[m[1] as string] = m[2] as string;
+  }
+  return out;
 }
 
 function station(s: string, what: string): Record<string, unknown> {
@@ -201,6 +240,26 @@ function commandFor(kind: Kind, v: Values): { cmd: string; args: Record<string, 
       };
       return { cmd: "addPart", args: { item, at, ...common(v) } };
     }
+    case "frame": {
+      const opt = options(v.opt as string[] | undefined);
+      return {
+        cmd: "addFrame",
+        args: {
+          ...(v.at !== undefined ? { at: numbers3(v.at as string, "--at", "x,y,z") } : {}),
+          size: numbers3(need(v, "size"), "--size", "W,D,H"),
+          ...(v.item !== undefined ? { item: v.item } : {}),
+          ...(opt ? { opt } : {}),
+          ...(v.corner !== undefined ? { corner: v.corner } : {}),
+          ...(v.rings !== undefined
+            ? { rings: (v.rings as string).split(",").map((r) => r.trim()) }
+            : {}),
+          ...(v.shelf !== undefined ? { shelf_mm: Number(v.shelf) } : {}),
+          ...(v.connector !== undefined ? { connector: v.connector } : {}),
+          ...(v.qty !== undefined ? { qty: Number(v.qty) } : {}),
+          ...(v.params ? { params: true } : {}),
+        },
+      };
+    }
   }
 }
 
@@ -213,7 +272,7 @@ export async function addCommand(argv: readonly string[], io: Io): Promise<numbe
   if (!Object.hasOwn(KINDS, what)) {
     return usageError(
       "add",
-      `cannot add "${what}": add bar, point, connection or part`,
+      `cannot add "${what}": add bar, point, connection, part or frame`,
       ADD_USAGE,
       io,
     );
@@ -244,6 +303,12 @@ export async function addCommand(argv: readonly string[], io: Io): Promise<numbe
       groove: { type: "string" },
       face: { type: "string" },
       rot: { type: "string" },
+      size: { type: "string" },
+      opt: { type: "string", multiple: true },
+      corner: { type: "string" },
+      rings: { type: "string" },
+      shelf: { type: "string" },
+      params: { type: "boolean" },
       json: { type: "boolean" },
       as: { type: "string" },
       help: { type: "boolean", short: "h" },
@@ -268,9 +333,11 @@ export async function addCommand(argv: readonly string[], io: Io): Promise<numbe
   } catch (e) {
     return usageError("add", e instanceof Error ? e.message : String(e), usage, io);
   }
+  const who = cliSource(args.values.as);
+  if ("error" in who) return usageError("add", who.error, usage, io);
   return applyToProject(dir, [command], io, {
     json: args.values.json === true,
-    ...(args.values.as ? { as: args.values.as } : {}),
+    source: who.source,
     cmd: "add",
   });
 }

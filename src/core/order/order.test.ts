@@ -413,6 +413,27 @@ describe("option-not-sold: an item sold, but not in the options asked for", () =
     ]);
   });
 
+  it("names the options sold when none was chosen, rather than an empty list (U10)", () => {
+    // The reason said "not sold with " and the cut list's warning "[]": no option was chosen.
+    const clamp = run({
+      parts: { p3: { item: "test-order:CLAMP-O", qty: 2, unplaced: true, why: "clamps" } },
+    });
+    expect(reasons(clamp, "option-not-sold")).toEqual([
+      ["shop-a", "block", "test-order:CLAMP-O: sold only with finish zinc; choose one"],
+    ]);
+    const bare = run({ bars: { b2: { opt: null } } });
+    expect(reasons(bare, "option-not-sold")).toEqual([
+      ["shop-a", "block", "test-order:FLAT-O: sold only with finish raw; choose one"],
+    ]);
+    expect(bare.diagnostics.filter((d) => d.code === "no-offer").map((d) => d.message)).toEqual([
+      "test-order:FLAT-O has no offer that sells it by length; it is sold only with finish raw",
+    ]);
+    const painted = run({ bars: { b2: { opt: { finish: "painted" } } } });
+    expect(painted.diagnostics.filter((d) => d.code === "no-offer").map((d) => d.message)).toEqual([
+      "test-order:FLAT-O with finish painted has no offer that sells it by length; it is sold only with finish raw",
+    ]);
+  });
+
   it("does not block in the options sold, or when switched to warn", () => {
     const o = run(clamps("zinc"));
     expect(status(o)).toEqual(READY);

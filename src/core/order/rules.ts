@@ -1,5 +1,6 @@
 import type { Derived } from "../derive/derive.ts";
 import type { Diagnostic } from "../diagnostics.ts";
+import { compareIds } from "../ids.ts";
 import { type CostLine, ORDER_RULES, type OrderRule, type RuleAction } from "../project/schema.ts";
 import { scopeName } from "../project/scope.ts";
 import { rateFor } from "./pricing.ts";
@@ -133,7 +134,14 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
       add("missing-price", at, `${withOpt}: no offer sells it by length`, [item]);
     if (w.missing === "rate")
       add("missing-price", at, `${what}: no exchange rate for ${w.line.currency}`, [item]);
-    if (w.missing === "option") add("option-not-sold", at, `${item}: not sold with ${opt}`, [item]);
+    if (w.missing === "option") {
+      // With no option chosen there is no option to name: say what is sold instead (BE-7).
+      const message = opt
+        ? `${item}: not sold with ${opt}`
+        : `${item}: sold only with ${w.sold ?? "other options"}; choose one`;
+      // It names what asks for those options too, which a fix changes (BE-3).
+      add("option-not-sold", at, message, [item, ...[...w.sources].sort(compareIds)]);
+    }
     for (const s of w.line.services ?? []) {
       if (s.by !== "supplier" || s.covered_by) continue;
       const k = `${w.key}\u0000${what}`;

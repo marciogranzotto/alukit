@@ -231,6 +231,8 @@ export interface Work {
   sources: Set<string>;
   /** Why it has no price: `no-price` is a project item that gives none (§4.8). */
   missing?: "no-offer" | "by-length" | "option" | "rate" | "placeholder" | "no-price";
+  /** For `missing: "option"`: the options the item's offers sell it in, in words (BE-7). */
+  sold?: string;
   placeholder?: boolean;
   /** A project item's price (§4.8): the date it was read, when it says. An offer's is its own. */
   read?: string;
@@ -262,6 +264,28 @@ export function optText(opt: Readonly<Record<string, string>>): string {
     .sort()
     .map((k) => `${k} ${opt[k]}`)
     .join(", ");
+}
+
+/** "a", "a or b", "a, b or c". */
+function orList(xs: readonly string[]): string {
+  return xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} or ${xs.at(-1)}`;
+}
+
+/**
+ * The options an item's offers sell it in, in words (BE-7): each option's values, the options in
+ * name order and each one's values sorted, as "finish anodised or black" or "finish raw and
+ * length 3000 or 6000". Empty when the offers name no option.
+ */
+export function soldOptionsText(offers: readonly { options: Readonly<Record<string, string>> }[]) {
+  const values = new Map<string, Set<string>>();
+  for (const o of offers) {
+    for (const [k, v] of Object.entries(o.options))
+      values.set(k, (values.get(k) ?? new Set()).add(v));
+  }
+  return [...values.keys()]
+    .sort(cmp)
+    .map((k) => `${k} ${orList([...(values.get(k) as Set<string>)].sort(cmp))}`)
+    .join(" and ");
 }
 
 export const moneyOut = (m: Money): MoneyOut => ({

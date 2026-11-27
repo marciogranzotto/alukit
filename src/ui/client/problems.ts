@@ -1,12 +1,13 @@
 import type { ProblemsAnswer } from "#core/problems/types.ts";
-import { type ClientAnswer, notYet } from "./answer.ts";
+import { get } from "../api.ts";
+import type { ClientAnswer } from "./answer.ts";
 
 /**
  * The problems of the project (BE-3, D-UX-12): `GET /api/problems?variant=&as_of=`, the answer
- * `alukit problems --json` prints, `alukit.problems/1` (src/core/problems/types.ts). The tab asks
- * for the drawn revision's, in its variant and at the order's date. Owner: S1, which replaces the
- * stub with the call in S1.6; until then it answers "not available yet", and the UI streams build
- * against tests/fixtures/ux/problems-cart.json.
+ * `alukit problems --json` prints, `alukit.problems/1` (src/core/problems/types.ts): the check's
+ * diagnostics, the order's reasons and the open items as one list, grouped by consequence, each
+ * in words with its targets and fixes. The tab asks for the drawn revision's, in its variant and
+ * at the order's date; the answer names its revision (`rev`). Owner: S1.
  */
 
 export interface ProblemsQuery {
@@ -16,6 +17,22 @@ export interface ProblemsQuery {
   asOf?: string;
 }
 
-export async function fetchProblems(_q: ProblemsQuery = {}): Promise<ClientAnswer<ProblemsAnswer>> {
-  return notYet("GET /api/problems", "BE-3, S1.6");
+/** The query string of a problems request, its fields in a fixed order. */
+export function problemsParams(q: ProblemsQuery): string {
+  const p = new URLSearchParams();
+  if (q.variant !== undefined) p.set("variant", q.variant);
+  if (q.asOf !== undefined) p.set("as_of", q.asOf);
+  return p.toString();
+}
+
+export async function fetchProblems(q: ProblemsQuery = {}): Promise<ClientAnswer<ProblemsAnswer>> {
+  const params = problemsParams(q);
+  try {
+    return {
+      ok: true,
+      value: await get<ProblemsAnswer>(`/api/problems${params ? `?${params}` : ""}`),
+    };
+  } catch (e) {
+    return { ok: false, why: e instanceof Error ? e.message : String(e) };
+  }
 }

@@ -1,21 +1,25 @@
 import { z } from "zod";
 import { type Derived, derive } from "../derive/derive.ts";
 import type { ItemSource } from "../items.ts";
+import { pinLock } from "../lock/pin.ts";
+import { documentRefs, lockCovers } from "../lock/refs.ts";
 import { lockItems } from "../lock/source.ts";
 import { parseProject } from "../project/parse.ts";
 import { projectItems } from "../project-items/source.ts";
 import { getEntity, KIND_NOUN, type Kind, kindOf, mergePatch, nextId, withEntity } from "./doc.ts";
 import {
   type CommandContext,
+  type CommandDef,
   type CommandEnv,
   type CommandError,
+  type Did,
   done,
   type Outcome,
   type RawDoc,
   refuse,
   type State,
 } from "./types.ts";
-import { checkEntity } from "./validate.ts";
+import { checkEntity, schemaErrors } from "./validate.ts";
 
 /** Building blocks shared by the commands. */
 
@@ -40,6 +44,50 @@ export function makeContext(state: State, env: CommandEnv): CommandContext {
       return derived;
     },
   };
+}
+
+/**
+ * Pins what the document newly names, when the live catalogs are open (§4.13): after each
+ * command, so the next one, and derive, see it.
+ */
+export function pinNew(state: State, env: CommandEnv): State {
+  if (!env.live) return state;
+  const refs = documentRefs(state.doc);
+  if (lockCovers(state.lock, refs)) return state;
+  return { doc: state.doc, lock: pinLock(env.live, refs, state.lock, { kind: "add" }).lock };
+}
+
+/** A command's definition and its arguments as written, run inside another command. */
+export interface Step {
+  /** Any command: its arguments are checked by its own schema before it runs. */
+  def: CommandDef<unknown>;
+  args: unknown;
+}
+
+/**
+ * Runs commands inside one command, in order, each on the state the one before it left and
+ * pinning what it names, as a batch does: a command made of others (`addFrame`) keeps their
+ * rules rather than repeating them, and stays one step. The first refusal refuses it all.
+ */
+export function runSteps(
+  state: State,
+  env: CommandEnv,
+  steps: readonly Step[],
+): { ok: true; state: State; did: Did[] } | { ok: false; errors: CommandError[] } {
+  const did: Did[] = [];
+  let at = state;
+  for (const { def, args } of steps) {
+    const parsed = def.args.safeParse(args);
+    if (!parsed.success) {
+      const errors = schemaErrors(def.args, args).map((e) => ({ ...e, code: "args" }));
+      return { ok: false, errors };
+    }
+    const out = def.apply(makeContext(at, env), parsed.data);
+    if (!out.ok) return out;
+    at = pinNew(out.state, env);
+    did.push({ ...out.effect, ...(out.info !== undefined ? { info: out.info } : {}) });
+  }
+  return { ok: true, state: at, did };
 }
 
 export function failed(errors: CommandError[]): Outcome {

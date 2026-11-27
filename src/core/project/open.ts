@@ -1,10 +1,13 @@
+import { existsSync, realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { parseJson } from "#catalog/json.ts";
 import { type CatalogSet, linkCatalogs } from "#catalog/link.ts";
-import { BUILTIN_DIR, openCatalog } from "#catalog/open.ts";
+import { BUILTIN_DIR, builtinIds, openCatalog } from "#catalog/open.ts";
+import type { CatalogPlaces } from "../commands/types.ts";
 import type { Diagnostic } from "../diagnostics.ts";
 import { catalogItems, type ItemSource } from "../items.ts";
+import { isPath } from "./paths.ts";
 
 /**
  * Opening a project folder from disk (Node only; derive itself is pure). Reads `alukit.json`
@@ -23,9 +26,38 @@ export interface OpenedProject {
   diagnostics: Diagnostic[];
 }
 
-/** A catalog entry is a folder path (relative to the project) rather than a built-in id. */
-export function isPath(name: string): boolean {
-  return name.startsWith(".") || name.includes("/") || name.includes("\\");
+export { isPath };
+
+/**
+ * Where a project's commands may take catalogs from (BE-1, §7.2): the built-in ids, and folders
+ * that resolve, symbolic links followed, inside the project's folder and hold a `catalog.json`.
+ * A folder elsewhere stays a hand edit of the document: a request never names a path outside
+ * the project the server owns.
+ */
+export async function catalogPlaces(
+  dir: string,
+  builtinDir: string = BUILTIN_DIR,
+): Promise<CatalogPlaces> {
+  const builtin = await builtinIds(builtinDir);
+  const root = realpathSync(dir);
+  return {
+    builtin,
+    folder(path) {
+      if (isAbsolute(path)) return `${path} is an absolute path: name a folder inside the project`;
+      let real: string;
+      try {
+        real = realpathSync(resolve(root, path));
+      } catch {
+        return `there is no folder ${path} in the project`;
+      }
+      const rel = relative(root, real);
+      if (rel.startsWith("..") || isAbsolute(rel)) {
+        return `${path} is outside the project's folder; a catalog elsewhere is named by editing alukit.json`;
+      }
+      if (!existsSync(join(real, "catalog.json"))) return `${path} holds no catalog.json`;
+      return undefined;
+    },
+  };
 }
 
 export async function openProject(

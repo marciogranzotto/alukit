@@ -22,7 +22,7 @@ export const PUBLISH = {
     "    (<dir> defaults to the current folder)",
   ],
   snapshot: [
-    "alukit snapshot <dir> -o <file.png> [--view <name>] [--size <w>x<h>]",
+    "alukit snapshot <dir> -o <file.png> [--view <name>] [--size <w>x<h>] [--theme dark|light]",
     "    render a view to PNG in headless Chromium, on the running server or an ephemeral one:",
     "    a view the document names, or iso, top, front, side, left, back, bottom (1600x1000, iso)",
   ],
