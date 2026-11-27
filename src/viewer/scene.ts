@@ -64,7 +64,16 @@ import { CORNER_PREFIX, MarkerLayer, type MarkerPoint } from "./markers.ts";
 
 export { CORNER_PREFIX };
 
-import { type HandlesState, Overlay, type OverlayState } from "./overlay.ts";
+import {
+  Gizmo,
+  type GizmoDrag,
+  type GizmoPart,
+  type GizmoSpec,
+  gizmoDrag,
+  gizmoPartAt,
+  mmPerPx,
+} from "./gizmo.ts";
+import { Overlay, type OverlayState } from "./overlay.ts";
 import { hitOn } from "./pick.ts";
 import type { P2, Ray } from "./snap.ts";
 import type { Hex, ViewTheme } from "./theme.ts";
@@ -225,8 +234,20 @@ export interface Viewer {
   setOverlay(state: OverlayState): void;
   /** The press the app takes as a drag, before the camera; undefined: none. */
   setGrab(g: Grab | undefined): void;
-  /** Grips over the model, through every body (end handles); undefined takes them away. */
-  setHandles(h: HandlesState | undefined): void;
+  /**
+   * The gizmo (src/viewer/gizmo.ts): axes at a point, or grips (a selected bar's end handles),
+   * drawn over every body, built once; undefined takes it away. One at a time.
+   */
+  setGizmo(spec: GizmoSpec | undefined): void;
+  /** The gizmo shown now. */
+  gizmo(): GizmoSpec | undefined;
+  /**
+   * Calls back while an axes gizmo's part is dragged: at the press (`start`), as the pointer
+   * moves, and as it comes up (`end`), with how far along the part and, on a ring, how far
+   * round. A press on a part is the gizmo's, before a grab, a tool or the camera. Returns the
+   * undo. (Handles are dragged through `setGrab`.)
+   */
+  onGizmoDrag(cb: (e: GizmoDrag) => void): () => void;
   /** The pointer's ray in world coordinates (Z up, mm), for analytic snapping (§8). */
   ray(clientX: number, clientY: number): Ray;
   /** A world point's position on the page, in CSS pixels; undefined behind the camera. */
@@ -387,6 +408,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   const glyphs = new Glyphs(theme.overlay.ring);
   const overlay = new Overlay(theme, glyphs, dpr);
   world.add(overlay.group);
+  const gizmo = new Gizmo(theme, glyphs, dpr);
+  world.add(gizmo.group);
   const joints = new MarkerLayer("joints", glyphs, JOINT_PX, dpr, 900);
   // Joined corners are drawn while hovered or selected, until the view asks for every one (m8).
   joints.setQuiet(JOINED_QUIET);
@@ -1323,6 +1346,42 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   };
   /** A right press, until it comes up: a click there opens the context menu, a drag pans. */
   let rightDown: { x: number; y: number } | undefined;
+  /** An axes gizmo's part being dragged: which, through which point, and the press's ray. */
+  let gizmoDragging: { part: GizmoPart; at: V3; from: Ray } | undefined;
+  const gizmoCbs = new Set<(e: GizmoDrag) => void>();
+  /** Millimetres per CSS pixel at a world point (Z up), as the camera sees it now. */
+  function mmPerPxAt(at: V3): number {
+    if (camera === ortho) return mmPerPx({ perspective: false, zoom: ortho.zoom }, at, 1);
+    const p = new Vector3(...at).applyMatrix4(world.matrixWorld);
+    const f = persp.getWorldDirection(new Vector3());
+    return mmPerPx(
+      {
+        perspective: true,
+        eye: [persp.position.x, persp.position.y, persp.position.z],
+        forward: [f.x, f.y, f.z],
+        fovDeg: persp.fov,
+      },
+      [p.x, p.y, p.z],
+      container.clientHeight,
+    );
+  }
+  /** The axes gizmo's part under the pointer, if one is shown there. */
+  function gizmoPartUnder(clientX: number, clientY: number): GizmoPart | undefined {
+    const g = gizmo.shown();
+    if (!g || !("parts" in g)) return undefined;
+    return gizmoPartAt(g, {
+      at: [clientX, clientY],
+      ray: ray(clientX, clientY),
+      project,
+      mmPerPx: mmPerPxAt(g.at),
+    });
+  }
+  function emitGizmo(phase: GizmoDrag["phase"], e: { clientX: number; clientY: number }): void {
+    const d = gizmoDragging;
+    if (!d) return;
+    const r = gizmoDrag(d.part, d.at, d.from, ray(e.clientX, e.clientY));
+    for (const cb of gizmoCbs) cb({ part: d.part, phase, ...r });
+  }
   const el = renderer.domElement;
   const onDown = (e: PointerEvent) => {
     if (e.button === 2) {
@@ -1330,6 +1389,18 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       return;
     }
     if (e.button !== 0) return;
+    // A gizmo's part under the pointer is what the press is on, before anything else.
+    const part = gizmoPartUnder(e.clientX, e.clientY);
+    const shown = gizmo.shown();
+    if (part && shown && "parts" in shown) {
+      gizmoDragging = { part, at: shown.at, from: ray(e.clientX, e.clientY) };
+      down = undefined;
+      controls.enabled = false;
+      el.setPointerCapture(e.pointerId);
+      emitGizmo("start", e);
+      invalidate();
+      return;
+    }
     // A drag the app takes (a handle, Move) goes first: the camera lets go of this press.
     if (grab?.press(e)) {
       grabbing = true;
@@ -1350,6 +1421,13 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     }
   };
   const onMove = (e: PointerEvent) => {
+    if (gizmoDragging) {
+      emitGizmo("move", e);
+      invalidate();
+      return;
+    }
+    // The part a press would take is drawn lit.
+    if (e.buttons === 0 && gizmo.setHover(gizmoPartUnder(e.clientX, e.clientY))) invalidate();
     if (grabbing) {
       grab?.move(e, true);
       invalidate();
@@ -1391,6 +1469,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         const hit = hitUnder(e.clientX, e.clientY);
         for (const cb of menuCbs) cb(hit, [e.clientX, e.clientY]);
       }
+      return;
+    }
+    if (gizmoDragging) {
+      emitGizmo("end", e);
+      gizmoDragging = undefined;
+      controls.enabled = true;
+      if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+      invalidate();
       return;
     }
     if (grabbing) {
@@ -1547,6 +1633,9 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     }
     detailMaterial.opacity = opacity;
     if (detail) detail.lines.visible = opacity > 0.004;
+    // The axes keep their size on the screen wherever the camera goes.
+    const g = gizmo.shown();
+    if (g && "parts" in g) gizmo.fit(mmPerPxAt(g.at));
   }
 
   const renderCbs = new Set<() => void>();
@@ -1642,9 +1731,15 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     setGrab(g) {
       grab = g;
     },
-    setHandles(h) {
-      overlay.setHandles(h);
+    setGizmo(spec) {
+      gizmo.set(spec);
+      if (!spec || !("parts" in spec)) gizmoDragging = undefined;
       invalidate();
+    },
+    gizmo: () => gizmo.shown(),
+    onGizmoDrag(cb) {
+      gizmoCbs.add(cb);
+      return () => gizmoCbs.delete(cb);
     },
     ray,
     project,
@@ -1734,6 +1829,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       look.setTheme(t);
       ground.setTheme(t);
       overlay.setTheme(t);
+      gizmo.setTheme(t);
       glyphs.setRing(t.overlay.ring);
       sectionMaterial.color.setHex(t.tool);
       applyThemeMaterials();
@@ -1782,6 +1878,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       release(owned);
       release(retired);
       overlay.dispose();
+      gizmo.dispose();
       joints.dispose();
       badges.dispose();
       ground.dispose();

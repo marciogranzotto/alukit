@@ -4,6 +4,7 @@ import type { GhostBar, MarkerKind } from "../../../viewer/overlay.ts";
 import type { Grab, Hit, ToolHandler, ToolPointer, Viewer } from "../../../viewer/scene.ts";
 import { rayLineParams, type Snap, type SnapTargets } from "../../../viewer/snap.ts";
 import { rayPlane } from "../../../viewer/workplane.ts";
+import { transformBatch } from "../../edit/batches.ts";
 import { select, selection } from "../../focus.ts";
 import { chord, describeKeys, onKey } from "../../keys.ts";
 import type { Model } from "../../model.ts";
@@ -12,7 +13,6 @@ import type { GestureSpec, Gestures } from "../drag.ts";
 import {
   MOVE_LOCKS,
   type MoveSet,
-  moveCommands,
   moveSet,
   moveWords,
   type Offset,
@@ -165,7 +165,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
         return;
       }
       preview.ask({
-        commands: (prefer) => moveCommands(set, now.written, detach, prefer ?? rule()),
+        commands: (prefer) => transformBatch(set, now.written, detach, prefer ?? rule()),
         at: dest,
         soon: snapped || label === "typed",
         words: (r) => moveWords(r, detach),
@@ -211,7 +211,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
         if (why) return { why };
         if (norm(now.d) < 0.005) return "nothing";
         return {
-          commands: moveCommands(set, now.written, detach, rule()),
+          commands: transformBatch(set, now.written, detach, rule()),
           what: `move ${idList(set.ids)}`,
         };
       },

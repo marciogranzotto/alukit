@@ -617,3 +617,40 @@ test("a revision draws with the shader programs it has: none is compiled again",
   await expect.poll(frames).toBeGreaterThan(drawn);
   expect(await links()).toBe(before);
 });
+
+test("a revision with a gizmo shown links no shader program either", async ({ page }) => {
+  // The gizmo (src/viewer/gizmo.ts, editing audit E0.6) is built once with its materials: a
+  // selected bar's end handles show it, and a revision moves them without making a material.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __links: number };
+    w.__links = 0;
+    const link = WebGL2RenderingContext.prototype.linkProgram;
+    WebGL2RenderingContext.prototype.linkProgram = function (p) {
+      w.__links++;
+      link.call(this, p);
+    };
+  });
+  served = await serve("cart");
+  await openTab(page, served, 0);
+  const links = () => page.evaluate(() => (window as unknown as { __links: number }).__links);
+  const frames = () => page.evaluate(() => window.__alukit?.frames()?.frames ?? 0);
+  await expect.poll(frames).toBeGreaterThan(1);
+  const loaded = await frames();
+  await page.getByTestId("tree").locator('[data-id="b1"]').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__alukit?.gizmo()))
+    .toMatchObject({ handles: [{ key: "a" }, { key: "b" }] });
+  // The frame that first draws the handles links what they need; then a revision.
+  await expect.poll(frames).toBeGreaterThan(loaded);
+  const before = await links();
+  expect(before).toBeGreaterThan(0);
+  const idle = await frames();
+  const r = await cli(["add", "bar", served.dir, "--a", "0,0,0", "--b", "0,-300,0"]);
+  expect(r.code, r.err).toBe(0);
+  await waitDrawn(page, 1);
+  await expect.poll(frames).toBeGreaterThan(idle);
+  expect(await page.evaluate(() => window.__alukit?.gizmo())).toMatchObject({
+    handles: [{ key: "a" }, { key: "b" }],
+  });
+  expect(await links()).toBe(before);
+});

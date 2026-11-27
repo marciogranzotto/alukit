@@ -1,10 +1,12 @@
 import { effect, signal } from "@preact/signals";
 import type { CornerRule } from "#core/project/schema.ts";
 import type { V3 } from "../../../mesh/model.ts";
+import { type GizmoHandle, handleAt as handleUnder } from "../../../viewer/gizmo.ts";
 import type { MarkerKind, OverlayState } from "../../../viewer/overlay.ts";
 import type { Grab, ToolPointer, Viewer } from "../../../viewer/scene.ts";
 import { rayLineParams } from "../../../viewer/snap.ts";
 import type { DryRun } from "../../client/dryrun.ts";
+import { endBatch } from "../../edit/batches.ts";
 import { selection } from "../../focus.ts";
 import { extendHook } from "../../hook.ts";
 import type { Model } from "../../model.ts";
@@ -15,7 +17,6 @@ import {
   type EndAxis,
   type EndState,
   endAxis,
-  endCommands,
   endState,
   endStops,
   type Landing,
@@ -40,8 +41,6 @@ import { activeTool, drawOptions, gesture, hint, labelEdit, typed } from "../sta
  * says why. Owner: E4.
  */
 
-/** A press this close to a handle grabs it, px. */
-const GRAB_PX = 12;
 /** How far a stop pulls a dragged end, px on the screen. */
 const PULL_PX = 10;
 
@@ -157,18 +156,29 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
 
   current = () => handles;
 
+  /** Whether the view's gizmo shows these handles: only then do they take it away. */
+  let showing = false;
   const draw = () => {
     const edit = labelEdit.peek();
-    const points = handles.map((h) => ({
-      p: dragged && dragged.end === h.end ? dragged.p : h.p,
+    const grips: GizmoHandle[] = handles.map((h) => ({
+      key: h.end,
+      at: dragged && dragged.end === h.end ? dragged.p : h.p,
       locked: !draggable(h.state),
     }));
     const focus = dragged
-      ? handles.findIndex((h) => h.end === dragged?.end)
+      ? dragged.end
       : edit && edit.bar === bar
-        ? handles.findIndex((h) => h.end === edit.end)
-        : hot;
-    viewer.setHandles(points.length > 0 ? { points, hot: focus } : undefined);
+        ? edit.end
+        : hot !== undefined
+          ? handles[hot]?.end
+          : undefined;
+    if (grips.length > 0) {
+      viewer.setGizmo({ handles: grips, ...(focus ? { hot: focus } : {}) });
+      showing = true;
+    } else if (showing) {
+      viewer.setGizmo(undefined);
+      showing = false;
+    }
   };
 
   // The handles follow the selection, the revision drawn, the tool and the label being typed in.
@@ -191,16 +201,15 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
     draw();
   });
 
-  /** The handle under the pointer, by its screen distance. */
+  /** The handle under the pointer, by its screen distance (gizmo.ts). */
   function handleAt(e: ToolPointer): number | undefined {
-    let best: { i: number; d: number } | undefined;
-    handles.forEach((h, i) => {
-      const s = viewer.project(h.p);
-      if (!s) return;
-      const d = Math.hypot(s[0] - e.clientX, s[1] - e.clientY);
-      if (d <= GRAB_PX && (!best || d < best.d)) best = { i, d };
-    });
-    return best?.i;
+    const key = handleUnder(
+      handles.map((h) => ({ key: h.end, at: h.p })),
+      [e.clientX, e.clientY],
+      viewer.project,
+    );
+    const i = handles.findIndex((h) => h.end === key);
+    return i >= 0 ? i : undefined;
   }
 
   const preview = createPreviewer(
@@ -229,7 +238,7 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
             (m.doc.connections as Record<string, { through?: string }>)[state.conn]?.through));
 
     const commands = (prefer: CornerRule | undefined): Cmd[] =>
-      endCommands(ref, now, state.kind === "detach", prefer);
+      endBatch(ref, now, state.kind === "detach", prefer);
 
     return {
       kind: "end",
@@ -354,7 +363,8 @@ export function createEndHandles(viewer: Viewer, gestures: Gestures): EndHandles
     dispose() {
       offHandles();
       preview.reset();
-      viewer.setHandles(undefined);
+      if (showing) viewer.setGizmo(undefined);
+      showing = false;
       endNote.value = undefined;
       current = () => [];
     },

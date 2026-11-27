@@ -4,13 +4,13 @@ import type { V3 } from "../../mesh/model.ts";
 import type { DryRun } from "../client/dryrun.ts";
 import type { Model } from "../model.ts";
 import type { JointWords } from "./joint.ts";
-import type { Cmd } from "./preview.ts";
 import { parseTyped } from "./typed.ts";
 
 /**
  * The Move tool's rules (docs/ux/drag-ends-decisions.md, "The Move tool"), pure, so the unit
  * tests read them: what a selection moves, the axis a lone part slides on, a typed offset, the
- * step a move is, and its dry run in words. The tool itself is `wire/move.ts`. Owner: S5.
+ * step a move is (`transformBatch`, src/ui/edit/batches.ts), and its dry run in words. The
+ * tool itself is `wire/move.ts`. Owner: E3.
  */
 
 export type Vec = [Expr, Expr, Expr];
@@ -122,32 +122,6 @@ export function typedOffset(
     d: t.items.map((x, i) => x.value - (base[i] as number)) as unknown as V3,
     written: t.items.map((x, i) => plus(x.written, -(base[i] as number))) as Vec,
   };
-}
-
-/**
- * The step a move is (design §6): one `transform`, then an `autoConnect` at each end of the bars
- * it moves, as drawing a bar sends one per end, so an end that lands on a bar joins it by the
- * corner rule. `detach` frees what joins the selection to the rest (Alt).
- */
-export function moveCommands(
-  set: MoveSet,
-  written: Vec,
-  detach: boolean,
-  prefer: string | undefined,
-): Cmd[] {
-  const join = set.bars.slice(0, 12).flatMap((b) =>
-    (["a", "b"] as const).map((e) => ({
-      cmd: "autoConnect",
-      args: { end: `${b}.${e}`, optional: true, ...(prefer ? { prefer } : {}) },
-    })),
-  );
-  return [
-    {
-      cmd: "transform",
-      args: { ids: set.ids, by: written, ...(detach ? { joined: "detach" } : {}) },
-    },
-    ...join,
-  ];
 }
 
 /** What a move's dry run says will happen, by the pointer: what follows, frees, joins, is cut. */

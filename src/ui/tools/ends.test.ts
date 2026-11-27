@@ -1,18 +1,10 @@
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { scratchFixtures } from "#core/testing.ts";
+import { endBatch } from "../edit/batches.ts";
 import type { Model } from "../model.ts";
 import { hostOf, viewOf } from "../testing.ts";
-import {
-  endAxis,
-  endCommands,
-  endState,
-  endStops,
-  labelEnd,
-  landing,
-  typedCut,
-  typedLanding,
-} from "./ends.ts";
+import { endAxis, endState, endStops, labelEnd, landing, typedCut, typedLanding } from "./ends.ts";
 
 /**
  * The end handles' rules (docs/ux/drag-ends-decisions.md) on tests/fixtures/ux/ends: b1 a rail
@@ -93,13 +85,13 @@ describe("end handles", () => {
     if (!b3) throw new Error("no axis");
     const stops = endStops(m, b3);
     const open = typedLanding(b3, stops, 360, "L - 40");
-    expect(endCommands("b3.b", open, false, undefined)[0]).toEqual({
+    expect(endBatch("b3.b", open, false, undefined)[0]).toEqual({
       cmd: "moveEnd",
       args: { end: "b3.b", cut_mm: "L - 40" },
     });
     // 590 reaches into b1's body: the joint sets the cut, so the end goes to b1.
     const into = typedLanding(b3, stops, 590, 590);
-    expect(endCommands("b3.b", into, false, "vertical")).toEqual([
+    expect(endBatch("b3.b", into, false, "vertical")).toEqual([
       { cmd: "moveEnd", args: { end: "b3.b", to: "b1" } },
       { cmd: "autoConnect", args: { end: "b3.b", optional: true, prefer: "vertical" } },
     ]);
