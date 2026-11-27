@@ -101,16 +101,24 @@ export function differing(a: Image, b: Image, tol = 8): number {
   return n / (a.width * a.height);
 }
 
-/** The share of pixels that are not the most common colour: zero for a blank image. */
+/**
+ * The share of pixels that are not their row's most common colour: zero for a blank image. By
+ * row, because the 3D view's background is a vertical gradient (docs/ux/visual-design.md §5.1):
+ * each row of it is one colour, and only what is drawn over it counts.
+ */
 export function coverage(img: Image): number {
-  const counts = new Map<number, number>();
-  for (let p = 0; p < img.width * img.height; p++) {
-    const key =
-      ((img.data[p * 4] as number) << 16) |
-      ((img.data[p * 4 + 1] as number) << 8) |
-      (img.data[p * 4 + 2] as number);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+  let covered = 0;
+  for (let y = 0; y < img.height; y++) {
+    const counts = new Map<number, number>();
+    for (let x = 0; x < img.width; x++) {
+      const p = y * img.width + x;
+      const key =
+        ((img.data[p * 4] as number) << 16) |
+        ((img.data[p * 4 + 1] as number) << 8) |
+        (img.data[p * 4 + 2] as number);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    covered += img.width - Math.max(...counts.values());
   }
-  const most = Math.max(...counts.values());
-  return 1 - most / (img.width * img.height);
+  return covered / (img.width * img.height);
 }
