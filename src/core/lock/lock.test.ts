@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { bom } from "../bom/bom.ts";
 import { bomJson } from "../bom/format.ts";
@@ -88,39 +88,45 @@ describe("pinning (§4.13)", () => {
     expect(LockFile.safeParse(JSON.parse(lockText(lock))).success).toBe(true);
   });
 
-  it("derives from the lock what it derives from the live catalogs", async () => {
-    // Everything derive and its outputs read must reach the lock: the derived model with its
-    // generated parts, fastenings and machining, the cut list, the bill of materials, and the
-    // order list with its offers, packs, kits and prices.
-    const outputs = (raw: unknown, items: ItemSource) => {
-      const derived = derive(raw, items);
-      const cl = cutList({ derived, items });
-      const b = bom({ derived, items });
-      return {
-        derived: jsonText(derivedJson(derived)),
-        cutList: cutListJson(cl),
-        bom: bomJson(b),
-        order: orderJson(
-          order({ derived, items, bom: b, cutList: cl, diagnostics: [], asOf: "2026-11-26" }),
-        ),
+  // One test per fixture project: each derives its project twice, so a single test over every
+  // fixture would grow with the fixture set against one timeout.
+  const projects = fixtureProjects().map((dir) => [relative(FIXTURES, dir), dir] as const);
+
+  it.each(projects)(
+    "derives from the lock what it derives from the live catalogs: %s",
+    async (_name, dir) => {
+      // Everything derive and its outputs read must reach the lock: the derived model with its
+      // generated parts, fastenings and machining, the cut list, the bill of materials, and the
+      // order list with its offers, packs, kits and prices.
+      const outputs = (raw: unknown, items: ItemSource) => {
+        const derived = derive(raw, items);
+        const cl = cutList({ derived, items });
+        const b = bom({ derived, items });
+        return {
+          derived: jsonText(derivedJson(derived)),
+          cutList: cutListJson(cl),
+          bom: bomJson(b),
+          order: orderJson(
+            order({ derived, items, bom: b, cutList: cl, diagnostics: [], asOf: "2026-11-26" }),
+          ),
+        };
       };
-    };
-    for (const dir of fixtureProjects()) {
       const { raw, set } = await live(dir);
       const { lock } = pinLock(set, documentRefs(raw), undefined, { kind: "refresh" });
-      expect(outputs(raw, lockItems(lock)), dir).toEqual(outputs(raw, catalogItems(set)));
-    }
-  });
+      expect(outputs(raw, lockItems(lock))).toEqual(outputs(raw, catalogItems(set)));
+    },
+  );
 
-  it("every fixture's committed lock covers its document and is current", async () => {
-    for (const dir of fixtureProjects()) {
+  it.each(projects)(
+    "the committed lock covers its document and is current: %s",
+    async (_name, dir) => {
       const lock = LockFile.parse(readJson(join(dir, "alukit.lock.json")));
       const { raw, set } = await live(dir);
-      expect(lockCovers(lock, documentRefs(raw)), dir).toBe(true);
+      expect(lockCovers(lock, documentRefs(raw))).toBe(true);
       const fresh = pinLock(set, documentRefs(raw), lock, { kind: "refresh" }).lock;
-      expect(diffLocks(lock, fresh), dir).toEqual({ entries: [], catalogs: [] });
-    }
-  });
+      expect(diffLocks(lock, fresh)).toEqual({ entries: [], catalogs: [] });
+    },
+  );
 
   it("an add pins new references and never changes an entry already there", async () => {
     const root = await scratchFixtures();
