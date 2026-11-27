@@ -23,7 +23,7 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 90–94 in "3D editing, E3" and 100–104 in "3D editing, E5"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3" and 100–104 in "3D editing, E5"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
 groups below record, from "After acceptance run 2" to "3D editing, E5". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
