@@ -71,17 +71,33 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
   expect(await page.evaluate(() => window.__alukit?.selection())).toEqual(["b1"]);
   await expect(menu).toHaveAttribute("aria-label", "Actions on b1");
   // Each stream adds its actions to the menu as it lands: the seeded ones are there, in their
-  // groups' order (select, edit, bar, view), each with its keys, enabled or saying why.
+  // groups' order (select, edit, transform, bar, view), each with its keys, enabled or saying why.
   const hook = await page.evaluate(() => window.__alukit?.menu());
   expect(hook?.title).toBe("b1");
   const ids = hook?.entries.map((e) => e.id) ?? [];
-  const seeded = ["select-all", "select-similar", "delete", "join-end", "replace", "fit", "show"];
+  const seeded = [
+    "select-all",
+    "select-similar",
+    "delete",
+    "copy",
+    "duplicate",
+    "mirror",
+    "align",
+    "join-end",
+    "replace",
+    "fit",
+    "show",
+  ];
   expect(ids.filter((id) => seeded.includes(id))).toEqual(seeded);
   for (const id of seeded) {
     expect(hook?.entries.find((e) => e.id === id)?.enabled, id).toBe(true);
   }
   const item = (id: string) => menu.locator(`[data-action="${id}"]`);
   await expect(item("delete")).toHaveText(/^Delete\s*Delete/);
+  await expect(item("copy")).toHaveText(/^Copy\s*Ctrl\+C/);
+  await expect(item("duplicate")).toHaveText(/^Duplicate\s*Ctrl\+D/);
+  await expect(item("mirror")).toHaveText(/^Mirror…/);
+  await expect(item("align")).toHaveText(/^Align to a face…/);
   await expect(item("join-end")).toHaveText(/^Join b1\.a/);
   await expect(item("replace")).toHaveText(/^Replace profile…/);
   await expect(item("fit")).toHaveText(/^Fit to the selection\s*F/);

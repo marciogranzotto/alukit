@@ -165,3 +165,31 @@ function list(ids: readonly string[]): string {
     ? `${ids.slice(0, 2).join(", ")} and ${ids.length - 2} more`
     : ids.join(", ");
 }
+
+/**
+ * What a copy's dry run says it makes, by the pointer (Duplicate and Paste, E-UX-6): the new
+ * entities, the joints their ends make and their cuts, or why the core refuses it.
+ */
+export function copyWords(r: DryRun): JointWords {
+  if (!r.ok) {
+    const said = r.errors[0]?.message ?? r.why;
+    return { text: said, shape: "refused", joins: false };
+  }
+  const made = r.results[0]?.created ?? [];
+  const joins = r.results
+    .slice(1)
+    .filter((x) => x.created.length > 0)
+    .map((x) => {
+      const plan = x.info as { through?: string } | undefined;
+      return `joins ${plan?.through ?? x.created.join(", ")} (${x.created.join(", ")})`;
+    });
+  const cuts = [...new Set(made.map((id) => r.effects.added[id]).filter((c) => c !== undefined))];
+  const parts = [
+    made.length > 0 ? `makes ${list(made)}` : "makes nothing",
+    ...(joins.length > 3 ? [`${joins.length} joints`] : joins),
+    ...(cuts.length > 0
+      ? [`cut ${cuts.slice(0, 3).join(", ")}${cuts.length > 3 ? " …" : ""}`]
+      : []),
+  ];
+  return { text: parts.join(" · "), shape: joins.join("|"), joins: joins.length > 0 };
+}

@@ -505,6 +505,48 @@ everything below: E1; other streams add to it only.*
   none. `explodePattern`'s `info.copies` maps each copy (`b26@2`) to the entity it became (e1 16,
   17).
 
+## Editing round: E3 changes
+
+*Stream E3 of the [editing audit](editing-audit.md) ([e3-decisions.md](e3-decisions.md)): the
+transform and copy tools. Each adds; E0's interfaces keep their members. Owner of everything
+below: E3, but the line on `wire/ends.ts`, E4's.*
+
+- **Tools** (`src/ui/tools/state.ts`): `rotate` in `TOOLS`, its key `Q` in `TOOL_KEYS`, "Rotate"
+  in `TOOL_NAMES`, its prompt; the icon `rotate` (`src/ui/icons/Icons.tsx`). `Gesture.kind` adds
+  `duplicate` (Duplicate and Paste), `rotate`, `mirror` and `align`; the command bar's gesture row
+  reads its icon and its field's placeholder by kind (`data-tool` is the kind, `drag-end` for an
+  end), and Mirror's box (`data-testid="mirror-remove"`). `mirrorOptions` (`{ remove }`).
+- **Gestures** (`src/ui/tools/drag.ts`): `GestureSpec.press?(e)`, asked before a press commits:
+  `"drag"` (a new start, a base point), `"taken"`, or undefined to commit; `Gestures.refresh()`,
+  the gesture drawn again where the pointer was. While a gesture is on, its keys reach it in the
+  capture phase when the focus is on an element (not a text field, a dialog or a menu).
+- **Rotate** (`src/ui/tools/wire/rotate.ts`): `createRotateTool(viewer, gestures, { snap, pick })`
+  gives `{ handler, grab, enter, dispose }`; the router hands the viewer its grab while Rotate is
+  the tool, and Enter to `enter`. It shows the gizmo's rings (`ring-x`, `ring-y`, `ring-z`) and
+  hears `onGizmoDrag`.
+- **The Move tool** (`wire/move.ts`): `MoveTool.startCopy(ids, { title, base?, based }, e?)`, a
+  session on a copy (Duplicate, Paste); `CopyHow`. In Select, a part alone (or parts on one bar
+  along a world axis) shows the gizmo's `move-x`, `move-y` or `move-z` arrow at it, and a drag on
+  it slides them.
+- **Duplicate, Copy, Paste** (`wire/duplicate.ts`): `copyActions(mover, pointer)` registers
+  `duplicate` (`mod+d`, group transform), `copy` (`mod+c`) and `paste` (`mod+v`, in a menu once
+  something is copied), both group edit; `clipboard`, the tab's copied ids.
+- **Mirror** (`wire/mirror.ts`): `createMirror(viewer, gestures, { snap })` registers `mirror`
+  ("Mirror…", group transform); `mirrorWords(dryRun)`; `membersCount(ctx)`.
+- **Align** (`wire/align.ts`): `createAlign(viewer, gestures)` registers `align` ("Align to a
+  face…", group transform).
+- **Batches** (`src/ui/edit/batches.ts`): `duplicateBatch`, `mirrorBatch`, `arrayBatch` and
+  `alignBatch` built; `duplicateBatch` gains `opts.prefer`, `alignBatch` a target face `a` or `b`
+  (an end) and an optional `prefer`; new `rotateBatch(set, { axis, deg, about }, detach, prefer)`.
+- **Geometry** (`src/ui/edit/geometry.ts`, new, pure): `membersOf`, `centreOf`, `minCorner`,
+  `WorldMap` with `translation`, `turn` and `reflection`, `ghostsOf` (bars drawn where a map puts
+  them), `barCorners`, `extentAlong`, `facePlane`, `BarFace`, `sideWords`, `rounded`, `splitCopies`
+  (`4x`, `/4`), `MAX_COPIES`, `typedAngle`, `snapAngle`, `Axis`, `AXIS_INDEX`, `UNIT`.
+- **Rules** (`src/ui/tools/moves.ts`): `copyWords(dryRun)`, a copy's preview in words.
+- **The end handles** (`wire/ends.ts`, E4's): they take the gizmo away only when the view still
+  shows the one they set (it was a flag), so another user's gizmo shown since stays.
+- **The tools' router** (`wiring.ts`): Select's grab remembers the pointer (where a paste starts).
+
 ## Editing round: E0
 
 *Stream E0 of the [editing audit](editing-audit.md) (§7.2) built the shared interfaces the editing
