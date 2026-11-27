@@ -1,0 +1,21 @@
+{
+  "schema": "alukit.project/1",
+  "name": "End handles",
+  "catalogs": ["../../catalogs/test"],
+  "ids": { "b": 4, "c": 1 },
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } }
+  },
+  "params": {
+    "L": "400"
+  },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [1000, 0, 0], "label": "rail" },
+    "b2": { "a": [1000, 0, 0], "b": [1000, 600, 0], "label": "rail butted on b1" },
+    "b3": { "a": [500, 600, 0], "b": [500, 300, 0], "label": "brace, short of b1" },
+    "b4": { "a": [200, 300, 0], "b": [200, 300, "L"], "label": "post, as tall as L" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"] }
+  }
+}

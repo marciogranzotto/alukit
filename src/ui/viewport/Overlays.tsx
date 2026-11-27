@@ -9,8 +9,9 @@ import { model } from "../store.ts";
 import { resolveTargets, type Targets } from "../targets.ts";
 import { theme } from "../theme/theme.ts";
 import { viewTheme } from "../theme/tokens.ts";
+import { LengthLabel } from "../tools/LengthEdit.tsx";
 import { colourBy, drawnCorners, ghostsRest, viewer } from "./viewer.ts";
-import { barWords, hoverWords, itemCode, legendItems } from "./words.ts";
+import { endsWords, hoverWords, itemCode, legendItems } from "./words.ts";
 
 /**
  * What the viewport draws in the page over the canvas (docs/ux/visual-design.md §5.3; plan
@@ -103,9 +104,10 @@ export function SelectionLabel() {
   ];
   useAnchor(at, host);
   if (!m || !id || !bar) return null;
+  // The cut is a button: a click types a new length into it (S5's LengthLabel).
   return (
     <div class="sel-label anchored" ref={host} data-testid="selection-label">
-      {barWords(m, id)}
+      <LengthLabel m={m} id={id} ends={endsWords(m, id) ?? ""} />
     </div>
   );
 }

@@ -376,3 +376,53 @@ contracts. Each adds, except the moves marked **moved**.
   `lane`, the message lane; the command bar is no longer a viewport slot but a row of the canvas
   column (`App.tsx`).
 - **`outline/rows.ts`**: a `Row` gains `figure` and `title`.
+
+## End handles changes
+
+*The end handles and the length label ([drag-ends-decisions.md](drag-ends-decisions.md)). Each
+adds, except the move marked **moved**.*
+
+- **The viewer** (`src/viewer/scene.ts`, S3's): `setGrab(g)` with `Grab` (`press`, `move(e, held)`,
+  `release`, `busy`): a press the app takes as a drag, asked before the camera, the tools and
+  Select; a taken press turns the camera off and captures the pointer until the button comes up,
+  and makes no click. `setHandles(h)` with `HandlesState` (`src/viewer/overlay.ts`): grips drawn
+  over every body, draggable or locked, one hot; three lasting materials, so no state links a
+  program.
+- **Moved: the joint preview** is `src/ui/tools/preview.ts` (`createPreviewer(viewer, live, rule)`,
+  `PreviewAsk`, `PAUSE_MS`, `SNAP_MS`), shared by the draw tool, the end handles and the length
+  label; the draw tool's wiring no longer keeps its own. `jointWords` reads a moved bar's own cut
+  from `effects.cuts` as it reads a new bar's from `added`.
+- **Drag gestures** (`src/ui/tools/drag.ts`): `createGestures(viewer)` and `GestureSpec`; the
+  signals `gesture` (a drag on: its title, prompt, reading and snap) and `labelEdit` (the bar and
+  end the label's field moves) in `tools/state.ts`. The command bar shows a drag's bar whatever the
+  tool (`data-tool="drag-end"`), its `ValueField` taking a `reading` and a `placeholder`.
+- **The end handles** (`src/ui/tools/handles.ts`, `ends.ts`, `LengthEdit.tsx`): `createEndHandles`,
+  made by the tools' wiring and given the viewer's grab in Select; `endNote` (what holds a locked
+  end, by its handle, `EndNoteView`, which the viewport renders); `LengthLabel`, which the
+  viewport's `SelectionLabel` renders in place of the label's text.
+- **Words** (`src/ui/viewport/words.ts`, S3's): `barWords` says "cut 569.88 mm  square · square";
+  `endsWords` gives the ends alone.
+- **The hook** adds `handles()` (each end's point, whether locked, and its state) and `gesture()`.
+- **Core**: `src/core/commands/hold.ts` (`endHold`, `drivenEnd`, `drivers`, `movingAxes`), free of
+  the schemas, which the app reads; `src/core/commands/move.ts` (`moveEnd`); `numbers.ts` adds
+  `offsetBy`.
+
+## Move tool changes
+
+*The Move tool and `transform` ([drag-ends-decisions.md](drag-ends-decisions.md), "The Move
+tool"). Each adds.*
+
+- **Tools** (`src/ui/tools/state.ts`): `move` in `TOOLS`, its key `D` in `TOOL_KEYS`, "Move" in
+  `TOOL_NAMES`, and its prompt; the icon `move` (`src/ui/icons/Icons.tsx`).
+- **The Move tool** (`src/ui/tools/mover.ts`): `createMoveTool(viewer, gestures, { snap })` gives
+  `{ handler, grab, startFromKeyboard, dispose }`; the tools' wiring makes it once, hands the
+  viewer its `grab` while Move is the tool, and routes a value key to `startFromKeyboard` when a
+  selection waits and no drag is on. Its gesture is a `GestureSpec` of kind `"move"` on
+  `drag.ts`, the end handles' machinery; the gesture bar shows it (`data-tool="move"`).
+- **Its rules** (`src/ui/tools/moves.ts`, pure): `moveSet`, `slideAxis`, `typedOffset`,
+  `offsetOf`, `moveCommands`, `moveWords`, `MOVE_LOCKS`, `UNIT`.
+- **The overlay** (`src/viewer/overlay.ts`, S3's): `OverlayState.ghosts`, several bars drawn as the
+  ghost is, on its one material, from a pool of meshes and a geometry per section, both kept.
+- **Core**: `src/core/commands/transform.ts` (`transform`, `TransformInfo`); `move.ts` exports
+  `axisMeetsLine`, which `moveEnd` and `transform` share. **CLI**: `src/cli/move.ts` (`alukit
+  move`, `alukit rotate`); `add.ts` exports `vec3` and `numbers3` for it.

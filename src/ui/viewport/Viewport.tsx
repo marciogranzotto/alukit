@@ -21,6 +21,7 @@ import { model } from "../store.ts";
 import { resolveTargets } from "../targets.ts";
 import { theme } from "../theme/theme.ts";
 import { viewTheme } from "../theme/tokens.ts";
+import { EndNoteView } from "../tools/LengthEdit.tsx";
 import { Callout, Gizmo, HoverLabel, Legend, SelectionLabel, usePointer } from "./Overlays.tsx";
 import { ViewControls } from "./ViewControls.tsx";
 import {
@@ -230,6 +231,7 @@ export function Viewport({
         </div>
       </div>
       <SelectionLabel />
+      <EndNoteView />
       <Callout />
       <Legend />
       <Gizmo />

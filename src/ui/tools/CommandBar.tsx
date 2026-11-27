@@ -20,6 +20,8 @@ import {
   frameDraft,
   frameNumbers,
   frameStage,
+  type Gesture,
+  gesture,
   hint,
   jointPreview,
   lastResult,
@@ -362,8 +364,19 @@ function Result() {
 /** The last request for the keyboard (`fieldWanted`) the field has served. */
 let focusServed = 0;
 
-/** The value field: what is typed, with what it comes to beside it. */
-function ValueField({ tool }: { tool: ToolName }) {
+/**
+ * The value field: what is typed, with what it comes to beside it. A drag gesture gives its own
+ * reading and placeholder, and shows the joint preview as the draw tool does.
+ */
+function ValueField({
+  tool,
+  reading,
+  placeholder,
+}: {
+  tool: ToolName;
+  reading?: string | undefined;
+  placeholder?: string | undefined;
+}) {
   const ref = useRef<HTMLInputElement>(null);
   // A layout effect: wired when the field is in the DOM, before the next key can arrive.
   useLayoutEffect(() => {
@@ -390,8 +403,8 @@ function ValueField({ tool }: { tool: ToolName }) {
       for (const off of offs) off();
     };
   }, []);
-  const words = valueWords(tool);
-  const j = tool === "draw" ? jointPreview.value : undefined;
+  const words = reading !== undefined ? { text: reading, error: false } : valueWords(tool);
+  const j = tool === "draw" || reading !== undefined ? jointPreview.value : undefined;
   return (
     <>
       <label class="cb-value">
@@ -402,7 +415,7 @@ function ValueField({ tool }: { tool: ToolName }) {
           data-testid="command-value"
           spellcheck={false}
           autocomplete="off"
-          placeholder={tool === "frame" ? "1000, 600" : "length"}
+          placeholder={placeholder ?? (tool === "frame" ? "1000, 600" : "length")}
           aria-describedby="command-result"
           value={typed.value}
           onInput={(e) => {
@@ -429,7 +442,7 @@ function ValueField({ tool }: { tool: ToolName }) {
       </output>
       {j && (
         <output class="cb-joint" data-testid="joint-preview">
-          {j.text} · Tab: flip
+          {j.joins === false ? j.text : `${j.text} · Tab: flip`}
         </output>
       )}
     </>
@@ -443,9 +456,47 @@ function ValueField({ tool }: { tool: ToolName }) {
  * cut short with its words in the title, and announced, since the status bar no longer repeats
  * it (m2). The box frame's options are its form's alone (M6).
  */
+/**
+ * A drag gesture's bar (drag.ts): an end handle or Move, whatever the tool. What it comes to is the
+ * gesture's own reading; a value typed is its length or offset; the joint preview and the result
+ * as the draw tool shows them.
+ */
+function GestureBar({ g }: { g: Gesture }) {
+  return (
+    <section
+      class="command-row command-bar"
+      data-testid="command-bar"
+      data-tool={g.kind === "end" ? "drag-end" : "move"}
+      aria-label={`${g.title}: command bar`}
+    >
+      <span class="cb-tool">
+        <Icon name={g.kind === "end" ? "select" : "move"} /> {g.title}
+      </span>
+      <span class="cb-prompt" data-testid="command-prompt" title={g.prompt} aria-live="polite">
+        {g.prompt}
+      </span>
+      <ValueField
+        tool="draw"
+        reading={g.reading}
+        placeholder={g.kind === "end" ? "cut length" : "distance"}
+      />
+      <Result />
+    </section>
+  );
+}
+
 export function CommandBar() {
   const tool = activeTool.value;
   const prompt = toolPrompt.value;
+  const g = gesture.value;
+  if (g && model.value) {
+    return (
+      <>
+        <Hint />
+        <GestureBar g={g} />
+      </>
+    );
+  }
   return (
     <>
       <Hint />

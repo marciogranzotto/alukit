@@ -172,6 +172,104 @@ describe("alukit do", () => {
     expect(doc.bars.b3).toEqual({ a: "n1", b: [1000, 600, 0] });
   });
 
+  it("moves a bar's end as the app's end handle does: dry run, then one step (moveEnd)", async () => {
+    const { dir } = await g01();
+    // b2.a butts on b1 through c1: freed and lengthened 100 past b1, then nothing to join.
+    const batch = JSON.stringify([
+      { cmd: "moveEnd", args: { end: "b2.a", by_mm: 100, detach: true } },
+      { cmd: "autoConnect", args: { end: "b2.a", optional: true } },
+    ]);
+    const dry = JSON.parse((await capture(["do", dir, batch, "--dry-run", "--json"])).out);
+    expect(dry).toMatchObject({ ok: true, dry: true });
+    expect(dry.effects.cuts.b2).toEqual([580, 700]);
+    expect(dry.effects.removed).toEqual(["c1"]);
+    const r = await capture(["do", dir, batch, "--json"]);
+    expect(r.code).toBe(0);
+    const doc = JSON.parse(read(join(dir, "alukit.json")));
+    expect(doc.bars.b2).toEqual({ a: [1000, -100, 0], b: [1000, 600, 0] });
+    expect(doc.connections).toEqual({});
+    expect((await capture(["fmt", "--check", dir])).code).toBe(0);
+    const held = await capture([
+      "do",
+      dir,
+      '{"cmd":"moveEnd","args":{"end":"b1.a","by_mm":5,"len_mm":3}}',
+    ]);
+    expect(held.code).not.toBe(0);
+  });
+
+  it("moves and turns bars as the app's Move tool does: alukit move and rotate (transform)", async () => {
+    const { dir } = await g01();
+    // b1 away from b2 along −Y: b2.a, butted on it, slides along b2 to stay on it.
+    const dry = await capture([
+      "move",
+      dir,
+      "--ids",
+      "b1",
+      "--by",
+      "0,-100,0",
+      "--dry-run",
+      "--json",
+    ]);
+    expect(dry.code).toBe(0);
+    const answer = JSON.parse(dry.out);
+    expect(answer).toMatchObject({ ok: true, dry: true });
+    expect(answer.effects.cuts.b2).toEqual([580, 680]);
+    expect(answer.results[0].info).toEqual({
+      moved: ["b1", "b2"],
+      followed: ["b2.a"],
+      freed: [],
+      kept: [],
+    });
+    const r = await capture(["move", dir, "--ids", "b1", "--by", "0,-100,0"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/^transform: changed b1, b2\n/);
+    let doc = JSON.parse(read(join(dir, "alukit.json")));
+    expect(doc.bars.b2.a).toEqual([1000, -100, 0]);
+    // Detached, the joint goes: b2 moves up off b1, and c1 with its last end.
+    expect((await capture(["move", dir, "--ids", "b2", "--by", "0,0,100", "--detach"])).code).toBe(
+      0,
+    );
+    doc = JSON.parse(read(join(dir, "alukit.json")));
+    expect(doc.connections).toEqual({});
+    // A quarter turn about Z through b2's end a: exact numbers.
+    const t = await capture([
+      "rotate",
+      dir,
+      "--ids",
+      "b2",
+      "--axis",
+      "z",
+      "--deg",
+      "90",
+      "--about",
+      "1000,-100,100",
+    ]);
+    expect(t.code, t.err).toBe(0);
+    doc = JSON.parse(read(join(dir, "alukit.json")));
+    expect(doc.bars.b2).toEqual({ a: [1000, -100, 100], b: [300, -100, 100] });
+    expect((await capture(["fmt", "--check", dir])).code).toBe(0);
+    // Usage errors name the option.
+    const bad = await capture(["move", dir, "--ids", "b1", "--axis", "z"]);
+    expect(bad.code).toBe(2);
+    expect(bad.err).toContain("--axis goes with alukit rotate");
+    expect(
+      (
+        await capture([
+          "rotate",
+          dir,
+          "--ids",
+          "b1",
+          "--axis",
+          "w",
+          "--deg",
+          "9",
+          "--about",
+          "0,0,0",
+        ])
+      ).err,
+    ).toContain("--axis w: give x, y or z");
+  });
+
   it("reads a batch from a file and from standard input; --as tags the source", async () => {
     const { root, dir } = await g01();
     const file = join(root, "batch.json");

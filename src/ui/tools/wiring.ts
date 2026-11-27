@@ -33,7 +33,7 @@ import {
   rayPlane,
   through,
 } from "../../viewer/workplane.ts";
-import { dryRun } from "../client/dryrun.ts";
+import type { DryRun } from "../client/dryrun.ts";
 import { cornerKey, cornersOf } from "../corners.ts";
 import { select, selection } from "../focus.ts";
 import { chord, describeKeys, onKey } from "../keys.ts";
@@ -42,7 +42,11 @@ import { palette } from "../palette.ts";
 import { type CommandOutcome, model, sendCommands, summary } from "../store.ts";
 import { viewer } from "../viewport/viewer.ts";
 import { frameBatch, pickRefusal, placeCommand, placeFrom, runOf } from "./commands.ts";
-import { jointWords, touchesBars } from "./joint.ts";
+import { createGestures } from "./drag.ts";
+import { createEndHandles } from "./handles.ts";
+import { type JointWords, jointWords, touchesBars } from "./joint.ts";
+import { createMoveTool } from "./mover.ts";
+import { type Cmd, createPreviewer } from "./preview.ts";
 import {
   activeTool,
   CORNER_RULES,
@@ -96,14 +100,6 @@ const VALUE_START = /^[0-9.\-+([=]$/;
 /** Enter on a typed length with neither a pointer direction nor a locked axis (review M2). */
 export const NO_DIRECTION = "Which way? Point, or press → ← ↑";
 
-/**
- * How long the pointer rests before the joint preview dry-runs a gesture whose end is in open
- * space, ms; a snap onto another bar asks sooner. S1 measured a dry run at 144–167 ms on 1,008
- * bars: it is asked when the gesture rests or snaps, never on every pointer move (S5.6).
- */
-const PAUSE_MS = 250;
-const SNAP_MS = 60;
-
 /** The marker a snap's kind and reference draw (C §5.3): a face centre and a part's datum apart. */
 function markerOf(s: Snap): MarkerKind {
   if (s.kind !== "point") return s.kind;
@@ -151,6 +147,9 @@ export interface Tools {
 export function createTools(viewer: Viewer): Tools {
   let targets: SnapTargets = { points: [], lines: [] };
   let pointer: ToolPointer | undefined;
+  /** Drag gestures (drag.ts): the end handles in Select, and Move. */
+  const gestures = createGestures(viewer);
+  const ends = createEndHandles(viewer, gestures);
   const params = () => model.peek()?.derived.params ?? {};
   const typedNow = (): Typed => parseTyped(typed.peek(), params());
 
@@ -163,6 +162,8 @@ export function createTools(viewer: Viewer): Tools {
       // The section plane's far side is not drawn, so nothing there snaps.
       hidden: viewer.clipped,
     });
+  /** The Move tool (mover.ts), on the same drag machinery as the end handles. */
+  const mover = createMoveTool(viewer, gestures, { snap: snapAt });
   /** The text by the pointer, and the machine label of what it is on (see `hint`). */
   const show = (e: ToolPointer | undefined, text: string | undefined, snap?: string) => {
     hint.value =
@@ -199,11 +200,18 @@ export function createTools(viewer: Viewer): Tools {
   let current: Snap | undefined;
   /** The last bar's end b, which Space chains the next bar from (U29). */
   let lastEnd: DrawPoint | undefined;
-  /** The rule Tab flipped the previewed joint to, for this gesture only (S5.6). */
-  let flip: CornerRule | undefined;
+  /**
+   * The joint preview (S5.6), shared with the end handles and Move (preview.ts): the gesture
+   * dry-run when it rests or snaps, its words by the end; Tab flips the rule for this gesture.
+   */
+  const joint = createPreviewer(
+    viewer,
+    () => activeTool.peek() === "draw",
+    () => drawOptions.peek().prefer,
+  );
 
   /** The rule the gesture's joints follow: Tab's, else the command bar's, else the project's. */
-  const preferNow = (): CornerRule | undefined => flip ?? drawOptions.peek().prefer;
+  const preferNow = (): CornerRule | undefined => joint.flipped ?? drawOptions.peek().prefer;
 
   /**
    * The end Enter or a click would commit: a typed length along the direction under the pointer
@@ -225,10 +233,11 @@ export function createTools(viewer: Viewer): Tools {
     return t.kind === "empty" ? end : undefined;
   }
 
-  /** The gesture's batch, as it would commit now. */
+  /** The gesture's batch, as it would commit now (with a corner rule: as Tab would flip it). */
   function gestureCommands(
     end: DrawEnd,
-  ): { cmd: string; args: Record<string, unknown> }[] | undefined {
+    prefer: CornerRule | undefined = preferNow(),
+  ): Cmd[] | undefined {
     const start = drawState.peek().start;
     const bar = palette.peek().bar;
     if (!start || !bar) return undefined;
@@ -241,97 +250,38 @@ export function createTools(viewer: Viewer): Tools {
       anchor: o.anchor,
       roll: o.roll,
       autoConnect: o.autoConnect,
-      prefer: preferNow(),
+      prefer,
     });
   }
 
-  // The joint preview (S5.6): the gesture dry-run when it rests or snaps, its words by the end.
-  let jointTimer: ReturnType<typeof setTimeout> | undefined;
-  let jointWanted: string | undefined;
-  function clearJoint(): void {
-    if (jointTimer) clearTimeout(jointTimer);
-    jointTimer = undefined;
-    jointWanted = undefined;
-    if (jointPreview.peek()) jointPreview.value = undefined;
-    viewer.setLabel("joint", undefined);
+  /** What the drawn bar's dry run says: who runs through and which cuts move (joint.ts). */
+  function drawnWords(r: DryRun): JointWords | undefined {
+    if (!r.ok) return undefined;
+    const bar = r.created.find((id) => /^b\d+$/.test(id));
+    if (!bar) return undefined;
+    const w = jointWords(r, bar);
+    // Nothing joins and nothing moves: open space, nothing to say.
+    if (!w.joins && Object.keys(r.effects.cuts).length === 0) return undefined;
+    return w;
   }
+
   function scheduleJoint(end: DrawEnd | undefined): void {
-    const cmds = end && drawOptions.peek().autoConnect ? gestureCommands(end) : undefined;
     const start = drawState.peek().start;
     const m = model.peek();
     // Open space: neither point of the stroke is where autoConnect could join, so its dry run
     // would say nothing (joint.ts, touchesBars). Judged by where the points are, not how the end
     // was found: a typed or grid end can land on a bar's end without snapping to it.
     const open = !m || !start || !end || !(touchesBars(m, start.p) || touchesBars(m, end.p));
-    if (!end || !cmds || open) {
-      clearJoint();
+    if (!end || open || !drawOptions.peek().autoConnect) {
+      joint.ask(undefined);
       return;
     }
-    const key = JSON.stringify(cmds);
-    if (key === jointWanted) return;
-    // What was shown is about another gesture now.
-    if (jointPreview.peek()) jointPreview.value = undefined;
-    viewer.setLabel("joint", undefined);
-    jointWanted = key;
-    if (jointTimer) clearTimeout(jointTimer);
-    const prefer = preferNow();
-    jointTimer = setTimeout(
-      () => void askJoint(key, cmds, end, prefer),
-      end.how === "snap" || end.how === "meet" ? SNAP_MS : PAUSE_MS,
-    );
-  }
-  async function askJoint(
-    key: string,
-    cmds: { cmd: string; args: Record<string, unknown> }[],
-    end: DrawEnd,
-    prefer: CornerRule | undefined,
-  ): Promise<void> {
-    const t0 = performance.now();
-    const r = await dryRun(cmds);
-    const ms = Math.round(performance.now() - t0);
-    // Only the answer for the gesture as it stands now is shown.
-    if (key !== jointWanted || activeTool.peek() !== "draw") return;
-    if (!r.ok || !r.value.ok) return;
-    const bar = r.value.created.find((id) => /^b\d+$/.test(id));
-    if (!bar) return;
-    const w = jointWords(r.value, bar);
-    // Nothing joins and nothing moves: open space, nothing to say.
-    if (!w.joins && Object.keys(r.value.effects.cuts).length === 0) return;
-    jointPreview.value = { key, at: end.p, text: w.text, prefer, shape: w.shape, ms };
-    viewer.setLabel("joint", end.p, w.joins ? `${w.text} · Tab: flip` : w.text);
-  }
-
-  /** Tab: the next corner rule that gives the previewed joint another arrangement. */
-  async function flipJoint(): Promise<void> {
-    const j = jointPreview.peek();
-    const end = drawEnd();
-    if (!j || !end) return;
-    const m = model.peek();
-    const base = (j.prefer ??
-      (m?.defaults.corner as CornerRule | undefined) ??
-      "vertical") as CornerRule;
-    const from = CORNER_RULES.indexOf(base);
-    for (let i = 1; i < CORNER_RULES.length; i++) {
-      const rule = CORNER_RULES[(from + i) % CORNER_RULES.length] as CornerRule;
-      const saved = flip;
-      flip = rule;
-      const cmds = gestureCommands(end);
-      flip = saved;
-      if (!cmds) return;
-      const r = await dryRun(cmds);
-      if (jointPreview.peek() !== j) return;
-      if (!r.ok || !r.value.ok) continue;
-      const bar = r.value.created.find((id) => /^b\d+$/.test(id)) ?? "";
-      const w = jointWords(r.value, bar);
-      if (w.shape === j.shape) continue;
-      flip = rule;
-      const key = JSON.stringify(gestureCommands(end));
-      jointWanted = key;
-      jointPreview.value = { key, at: end.p, text: w.text, prefer: rule, shape: w.shape, ms: j.ms };
-      viewer.setLabel("joint", end.p, `${w.text} · Tab: flip`);
-      return;
-    }
-    viewer.setLabel("joint", end.p, `${j.text} · no other arrangement here`);
+    joint.ask({
+      commands: (prefer) => gestureCommands(end, prefer ?? preferNow()),
+      at: end.p,
+      soon: end.how === "snap" || end.how === "meet",
+      words: drawnWords,
+    });
   }
 
   function drawPreview(e: ToolPointer | undefined): void {
@@ -342,7 +292,7 @@ export function createTools(viewer: Viewer): Tools {
     const end = drawEnd();
     if (!bar) {
       viewer.setOverlay({});
-      clearJoint();
+      joint.ask(undefined);
       show(e, "no bar in the palette: arm one in the parts bin or the catalog");
       return;
     }
@@ -383,9 +333,8 @@ export function createTools(viewer: Viewer): Tools {
     const cmds = gestureCommands(end);
     if (!cmds) return;
     drawState.value = {};
-    flip = undefined;
     current = undefined;
-    clearJoint();
+    joint.reset();
     viewer.setOverlay({});
     if (drawOptions.peek().lock) drawOptions.value = { ...drawOptions.peek(), lock: undefined };
     used();
@@ -549,7 +498,7 @@ export function createTools(viewer: Viewer): Tools {
       return true;
     }
     if (k === "Tab" && !e.shiftKey && jointPreview.value) {
-      void flipJoint();
+      void joint.flip();
       return true;
     }
     const LOCKS: Readonly<Record<string, Axis>> = { ArrowRight: "x", ArrowLeft: "y", ArrowUp: "z" };
@@ -594,9 +543,8 @@ export function createTools(viewer: Viewer): Tools {
     }
     if (drawState.value.start || drawOptions.value.lock) {
       drawState.value = {};
-      flip = undefined;
       drawOptions.value = { ...drawOptions.value, lock: undefined };
-      clearJoint();
+      joint.reset();
       refresh();
       return true;
     }
@@ -1057,6 +1005,7 @@ export function createTools(viewer: Viewer): Tools {
 
   const handlers: Readonly<Record<ToolName, ToolHandler | undefined>> = {
     select: undefined,
+    move: mover.handler,
     draw,
     frame,
     connect,
@@ -1085,12 +1034,14 @@ export function createTools(viewer: Viewer): Tools {
   });
 
   const offTool = activeTool.subscribe((t) => {
+    gestures.cancel();
+    // A press is a drag's before the camera's: the end handles' in Select.
+    viewer.setGrab(t === "select" ? ends.grab : t === "move" ? mover.grab : undefined);
     drawState.value = {};
     typed.value = "";
     current = undefined;
-    flip = undefined;
     framePointer = {};
-    clearJoint();
+    joint.reset();
     viewer.setLabel("frame", undefined);
     pickingPlane.value = false;
     hint.value = undefined;
@@ -1218,6 +1169,21 @@ export function createTools(viewer: Viewer): Tools {
   }
 
   const offKeys = [
+    // A drag on (an end handle, Move) takes its keys first: Esc, Enter, Tab, a typed value.
+    // Move with a selection and no drag on: a value typed moves it from the keyboard (D-UX-17).
+    onKey(
+      "tool",
+      (e) =>
+        !chord(e) &&
+        activeTool.peek() === "move" &&
+        !gestures.live() &&
+        e.key.length === 1 &&
+        /^[0-9.\-+([=]$/.test(e.key) &&
+        mover.startFromKeyboard() &&
+        gestures.key(e),
+      51,
+    ),
+    onKey("tool", (e) => !chord(e) && gestures.key(e), 50),
     onKey("tool", (e) => !chord(e) && gestureKey(e)),
     onKey("app", (e) => !chord(e) && shortcutKey(e)),
     describeKeys({
@@ -1233,6 +1199,28 @@ export function createTools(viewer: Viewer): Tools {
           keys: ["Esc"],
           does: "Step back one level: what is typed, the last pick, the gesture, the tool, then the selection",
         },
+      ],
+    }),
+    describeKeys({
+      id: "moving",
+      title: "While moving (D)",
+      order: 15,
+      rows: [
+        {
+          keys: ["D"],
+          does: "Move: drag the selection or a bar, or click a base point, then where it goes",
+        },
+        {
+          keys: ["0–9", "Enter"],
+          does: "Type the distance (along the lock or the way you dragged), x, y, z, or [x, y, z]",
+        },
+        { keys: ["→", "←", "↑"], does: "Lock the move to X, Y or Z (again, or ↓, to free it)" },
+        { keys: ["Shift"], does: "Hold to move freely, snapping to nothing" },
+        {
+          keys: ["Alt"],
+          does: "Hold to free what joins the selection to the rest, instead of it following",
+        },
+        { keys: ["Tab"], does: "Flip the previewed joint where a moved end lands on a bar" },
       ],
     }),
     describeKeys({
@@ -1266,15 +1254,24 @@ export function createTools(viewer: Viewer): Tools {
       offTool();
       offTyped();
       offFrame();
-      clearJoint();
+      joint.reset();
+      ends.dispose();
+      mover.dispose();
+      gestures.dispose();
+      viewer.setGrab(undefined);
       viewer.setLabel("frame", undefined);
       viewer.setTool(undefined);
     },
     fieldKey(e) {
+      if (gestures.live()) {
+        if (e.key === "Enter") return gestures.enter();
+        if (e.key === "Escape") return gestures.back();
+        return e.key === "Tab" ? gestures.key(e) : false;
+      }
       if (e.key === "Enter") return enter();
       if (e.key === "Escape") return back();
       if (e.key === "Tab" && !e.shiftKey && jointPreview.peek()) {
-        void flipJoint();
+        void joint.flip();
         return true;
       }
       return false;

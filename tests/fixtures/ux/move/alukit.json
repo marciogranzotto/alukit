@@ -1,0 +1,24 @@
+{
+  "schema": "alukit.project/1",
+  "name": "Move",
+  "catalogs": ["../../catalogs/test"],
+  "ids": { "b": 4, "c": 1, "p": 1 },
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } }
+  },
+  "params": {
+    "D": "150"
+  },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [1000, 0, 0], "label": "rail" },
+    "b2": { "a": [1000, 0, 0], "b": [1000, 600, 0], "label": "rail butted on b1" },
+    "b3": { "a": [500, 600, 0], "b": [500, 300, 0], "label": "free brace" },
+    "b4": { "a": [200, 300, 0], "b": [200, 300, 400], "label": "free post" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"] }
+  },
+  "parts": {
+    "p1": { "item": "test:BRK-40", "on": { "bar": "b1", "at_mm": 300, "face": "+y" }, "label": "bracket on the rail" }
+  }
+}
