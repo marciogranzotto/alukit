@@ -25,6 +25,7 @@ import {
   skipBatch,
   withoutVanished,
 } from "./remove.ts";
+import { barsLike, chosenOption, replaceBatch } from "./replace.ts";
 import { endWords, entityName, refKind } from "./words.ts";
 
 /**
@@ -143,6 +144,31 @@ describe("the length field", () => {
   });
 });
 
+describe("Replace profile", () => {
+  it("finds the bars like one: the same item and options, a copy standing for its template", () => {
+    // base-frame/cli: the posts b1–b4 and the rails b7–b10 are TS40, anodised by the default.
+    expect(barsLike(frame, "b7")).toEqual(["b1", "b2", "b3", "b4", "b7", "b8", "b9", "b10"]);
+    expect(barsLike(frame, "b5")).toEqual(["b5", "b6"]);
+    // The cart's slat copies are b26's: b26 stands for them.
+    expect(barsLike(cart, "b26@1")).toContain("b26");
+    expect(barsLike(cart, "b26@1").some((id) => id.includes("@"))).toBe(false);
+  });
+
+  it("writes the new item, its options picked, and drops the options it had", () => {
+    expect(replaceBatch(frame, ["b7"], "test:TS40E", {})).toEqual([
+      { cmd: "setBar", args: { id: "b7", set: { item: "test:TS40E" } } },
+    ]);
+    expect(replaceBatch(frame, ["b5"], "test:TS40", { finish: "black" })).toEqual([
+      { cmd: "setBar", args: { id: "b5", set: { item: "test:TS40", opt: { finish: "black" } } } },
+    ]);
+    // The project's default is left to the default.
+    expect(replaceBatch(frame, ["b5"], "test:TS40", { finish: "" })).toEqual([
+      { cmd: "setBar", args: { id: "b5", set: { item: "test:TS40", opt: { finish: null } } } },
+    ]);
+    expect(chosenOption(frame, "b7", "finish")).toBe("");
+  });
+});
+
 describe("Delete's plan (D-UX-13)", () => {
   it("sorts the selection so referrers go first, and leaves out what is no entity", () => {
     expect(removalOrder(["b1", "c3", "b9", "p2", "n4", "pt1"])).toEqual([
@@ -227,7 +253,7 @@ describe("a corner's arrangements (S5.5)", () => {
       expect(c).toMatchObject({ state: "joined", through: "b2", ends: ["b2.b", "b3.a"] });
       expect(cannotArrange(m, c)).toBeUndefined();
       expect(takeOut(m, [c])).toEqual([
-        { cmd: "removeEntity", args: { id: (c.connections[0] as string) } },
+        { cmd: "removeEntity", args: { id: c.connections[0] as string } },
       ]);
       const answers = await Promise.all(
         RULES.map(async (rule) => ({ rule, dry: await h.dry(arrangeBatch(m, [c], rule)) })),

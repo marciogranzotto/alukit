@@ -100,7 +100,10 @@ export function keptConnector(m: Model, corner: Corner): { connector?: string; q
 }
 
 /** The fields a butt taken out whole carries that `autoConnect` does not write again. */
-export function lostFields(m: Model, corners: readonly Corner[]): { id: string; fields: string[] }[] {
+export function lostFields(
+  m: Model,
+  corners: readonly Corner[],
+): { id: string; fields: string[] }[] {
   const keep = new Set(["type", "through", "ends", "connector", "qty"]);
   const written = connections(m);
   return takeOut(m, corners)
@@ -144,7 +147,10 @@ function planOf(dry: DryRun & { ok: true }): { through: string; ends: string[] }
   const last = dry.results[dry.results.length - 1];
   const info = last?.info as { through?: unknown; ends?: unknown } | undefined;
   if (!info || typeof info.through !== "string" || !Array.isArray(info.ends)) return undefined;
-  return { through: info.through, ends: info.ends.filter((e): e is string => typeof e === "string") };
+  return {
+    through: info.through,
+    ends: info.ends.filter((e): e is string => typeof e === "string"),
+  };
 }
 
 /** What a bar is called at a corner: Post, Rail X, Rail Y, or by its id when that is not enough. */
@@ -157,7 +163,12 @@ function roleAt(m: Model, corner: Corner, bar: string): string {
 }
 
 /** How a butting bar meets the through bar: a post stands on a rail, or a rail sits on a post. */
-function meets(m: Model, corner: Corner, through: string, end: string): "stands" | "sits" | "butts" {
+function meets(
+  m: Model,
+  corner: Corner,
+  through: string,
+  end: string,
+): "stands" | "sits" | "butts" {
   const [bar, e] = end.split(".") as [string, "a" | "b"];
   if (axisOf(barDir(m, bar)) !== "z" || axisOf(barDir(m, through)) === "z") return "butts";
   const d = m.derived.bars[bar];

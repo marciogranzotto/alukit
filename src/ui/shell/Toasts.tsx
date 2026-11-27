@@ -85,7 +85,9 @@ function NoticeToast() {
 
 function StepToastView({ t }: { t: StepToast }) {
   const top = summary.value?.undo;
-  const undoable = !t.own && top?.rev === t.rev && summary.value?.status.readOnly !== true;
+  // The person's own step is toasted only when it removed something or moved a cut: Delete's
+  // "removed at once, with an Undo toast" (D-UX-13) is this button.
+  const undoable = top?.rev === t.rev && summary.value?.status.readOnly !== true;
   return (
     <div
       class={`toast step${t.own ? " own" : " other"}`}

@@ -152,9 +152,9 @@ export function axisOf(d: V3 | undefined): "x" | "y" | "z" | undefined {
 }
 
 /** What a bar is by the way it runs: a post stands, a rail lies along X or Y, any other a bar. */
-export function barRole(m: Model, id: string): "post" | "rail" | "bar" {
+export function barRole(m: Model, id: string): "post" | "rail along X" | "rail along Y" | "bar" {
   const a = axisOf(barDir(m, id));
-  return a === "z" ? "post" : a === "x" || a === "y" ? "rail" : "bar";
+  return a === "z" ? "post" : a === "x" ? "rail along X" : a === "y" ? "rail along Y" : "bar";
 }
 
 /** An entity in words: `bar b7 (top rail, left)`, `butt c1`, `pattern copy b26@2`. */
