@@ -74,7 +74,7 @@ import {
   mmPerPx,
 } from "./gizmo.ts";
 import { Overlay, type OverlayState } from "./overlay.ts";
-import { hitOn } from "./pick.ts";
+import { boxTakes, hitOn, type ScreenRect } from "./pick.ts";
 import type { P2, Ray } from "./snap.ts";
 import type { Hex, ViewTheme } from "./theme.ts";
 import { type DocView, fromThree, isStandard, viewFrom } from "./views.ts";
@@ -1329,20 +1329,26 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
   }
 
-  /** Entities whose body lies wholly inside a screen rectangle (window selection). */
-  function inside(x0: number, y0: number, x1: number, y1: number): string[] {
+  /**
+   * What a box drawn on the screen takes (E-UX-10): as a window, the entities whose body lies
+   * wholly inside it; as a crossing, those whose body's outline touches it (`boxTakes`). A body
+   * with a corner behind the camera is never wholly inside; a crossing reads the corners in front.
+   */
+  function boxed(rect: ScreenRect, mode: "window" | "crossing"): string[] {
     if (!model) return [];
     const r = renderer.domElement.getBoundingClientRect();
     const toWorld = world.matrixWorld;
     const v = new Vector3();
-    const within = (pts: readonly (readonly [number, number, number])[]) =>
-      pts.every(([a, b, c]) => {
+    const within = (pts: readonly (readonly [number, number, number])[]) => {
+      const seen: P2[] = [];
+      let behind = false;
+      for (const [a, b, c] of pts) {
         v.set(a, b, c).applyMatrix4(toWorld).project(camera);
-        if (v.z < -1 || v.z > 1) return false;
-        const sx = r.left + ((v.x + 1) / 2) * r.width;
-        const sy = r.top + ((1 - v.y) / 2) * r.height;
-        return sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1;
-      });
+        if (v.z < -1 || v.z > 1) behind = true;
+        else seen.push([r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height]);
+      }
+      return mode === "window" && behind ? false : boxTakes(seen, rect, mode);
+    };
     const out: string[] = [];
     for (const [id, bar] of Object.entries(model.bars)) {
       const view = model.display.bars[id];
@@ -1490,6 +1496,8 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     if (!down?.box) return;
     const cr = container.getBoundingClientRect();
     rectEl.hidden = false;
+    // Right to left is a crossing, drawn dashed; left to right a window, drawn solid (E-UX-10).
+    rectEl.classList.toggle("crossing", e.clientX < down.x);
     rectEl.style.left = `${Math.min(down.x, e.clientX) - cr.left}px`;
     rectEl.style.top = `${Math.min(down.y, e.clientY) - cr.top}px`;
     rectEl.style.width = `${Math.abs(e.clientX - down.x)}px`;
@@ -1533,11 +1541,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       controls.enabled = true;
       if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
       if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) {
-        const ids = inside(
-          Math.min(d.x, e.clientX),
-          Math.min(d.y, e.clientY),
-          Math.max(d.x, e.clientX),
-          Math.max(d.y, e.clientY),
+        const ids = boxed(
+          {
+            x0: Math.min(d.x, e.clientX),
+            y0: Math.min(d.y, e.clientY),
+            x1: Math.max(d.x, e.clientX),
+            y1: Math.max(d.y, e.clientY),
+          },
+          e.clientX < d.x ? "crossing" : "window",
         );
         selectCb(ids, additive ? "add" : "replace");
         return;

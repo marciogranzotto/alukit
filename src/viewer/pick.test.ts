@@ -5,7 +5,7 @@ import { scratchFixtures } from "#core/testing.ts";
 import type { BarJson, V3 } from "../mesh/model.ts";
 import type { Model } from "../ui/model.ts";
 import { viewOf } from "../ui/testing.ts";
-import { barHit, hitOn } from "./pick.ts";
+import { barHit, boxTakes, convexHull, hitOn } from "./pick.ts";
 import { faceLocal, findSnap, type P2, type Ray, snapTargets } from "./snap.ts";
 
 /**
@@ -94,5 +94,108 @@ describe("what the view hides", () => {
     expect(findSnap(targets, o)?.label).toBe("b1 -y face centre");
     const hidden = findSnap(targets, { ...o, skip: new Set(["b1"]) });
     expect(hidden?.label ?? "").not.toMatch(/\bb1\b/);
+  });
+});
+
+describe("a box's window and crossing tests (E-UX-10, E2.3)", () => {
+  const rect = { x0: 100, y0: 100, x1: 200, y1: 200 };
+  // A diagonal bar's outline on the screen, as its corners project: a thin slanted strip.
+  const strip: P2[] = [
+    [40, 260],
+    [50, 270],
+    [260, 60],
+    [250, 50],
+  ];
+
+  it("a window takes what lies wholly inside it", () => {
+    expect(
+      boxTakes(
+        [
+          [120, 120],
+          [180, 120],
+          [150, 180],
+        ],
+        rect,
+        "window",
+      ),
+    ).toBe(true);
+    expect(
+      boxTakes(
+        [
+          [120, 120],
+          [250, 120],
+          [150, 180],
+        ],
+        rect,
+        "window",
+      ),
+    ).toBe(false);
+    expect(boxTakes(strip, rect, "window")).toBe(false);
+  });
+
+  it("a crossing takes what it touches: a corner inside, an edge across, or the box inside it", () => {
+    // An outline crossing the box with no corner inside it, either way: its edges cross.
+    expect(boxTakes(strip, rect, "crossing")).toBe(true);
+    expect(
+      boxTakes(
+        [
+          [120, 120],
+          [250, 120],
+          [150, 180],
+        ],
+        rect,
+        "crossing",
+      ),
+    ).toBe(true);
+    // A big outline round the whole box.
+    expect(
+      boxTakes(
+        [
+          [0, 0],
+          [400, 0],
+          [400, 400],
+          [0, 400],
+        ],
+        rect,
+        "crossing",
+      ),
+    ).toBe(true);
+    // Beside it, and a slanted strip that passes its corner by.
+    expect(
+      boxTakes(
+        [
+          [210, 100],
+          [300, 100],
+          [300, 200],
+        ],
+        rect,
+        "crossing",
+      ),
+    ).toBe(false);
+    expect(
+      boxTakes(
+        [
+          [190, 20],
+          [200, 30],
+          [300, 130],
+          [290, 120],
+        ],
+        rect,
+        "crossing",
+      ),
+    ).toBe(false);
+  });
+
+  it("the outline is the hull of the projected corners, whatever their order", () => {
+    expect(
+      convexHull([
+        [0, 0],
+        [10, 10],
+        [10, 0],
+        [0, 10],
+        [5, 5],
+      ]),
+    ).toHaveLength(4);
+    expect(convexHull([[3, 3]])).toEqual([[3, 3]]);
   });
 });
