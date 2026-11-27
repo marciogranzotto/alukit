@@ -1,5 +1,40 @@
+import { distToBoundary, insidePolygon } from "#core/project-items/geometry.ts";
 import type { Vec2 } from "#core/section-properties.ts";
 import { cosDeg, sinDeg } from "#core/trig.ts";
+
+/**
+ * How far a drawn section's core may sit from its hole, on the radius (§3.5): a vector outline is
+ * its stroke's centre line, and a round hole is drawn as a polygon whose sides cut inside the
+ * circle. Forseti's farthest, PF45-12's 19-sided Ø6.5 cores, are 0.061 inside.
+ */
+export const CORE_SLACK_MM = 0.1;
+
+/**
+ * Problems with a drawn section's cores: each is a hole of the outline, its centre inside the hole
+ * and the hole's inscribed circle about that centre its diameter, within `CORE_SLACK_MM` on the
+ * radius. So a core cannot be declared in solid metal, or in a cavity wider than its bore.
+ */
+export function coreProblems(
+  cores: readonly { at_mm: Vec2; d_mm: number }[],
+  holes: readonly (readonly Vec2[])[],
+): string[] {
+  const out: string[] = [];
+  cores.forEach((c, i) => {
+    const at = `core ${i} at (${c.at_mm[0]}, ${c.at_mm[1]})`;
+    const hole = holes.find((h) => insidePolygon(c.at_mm, h));
+    if (!hole) {
+      out.push(`${at} is in no hole of the outline`);
+      return;
+    }
+    const r = distToBoundary(c.at_mm, hole);
+    if (Math.abs(r - c.d_mm / 2) > CORE_SLACK_MM) {
+      out.push(
+        `${at}: its hole's inscribed circle there is Ø${(2 * r).toFixed(3)}, not its Ø${c.d_mm} (more than ${CORE_SLACK_MM} mm off on the radius)`,
+      );
+    }
+  });
+  return out;
+}
 
 /**
  * Arc flattening for generated outlines: a fixed step of `ARC_STEP_DEG`. The error is then

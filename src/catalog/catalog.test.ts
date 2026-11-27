@@ -2,6 +2,7 @@ import { copyFile, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { sectionProperties } from "#core/section-properties.ts";
+import { buildSection } from "./link.ts";
 import { BUILTIN_DIR } from "./open.ts";
 import { reportJson } from "./report.ts";
 import { at, checkTest, fixtureCopy, patchJson } from "./testing.ts";
@@ -339,6 +340,60 @@ describe("computed against published (design §3.6)", () => {
     });
     const { report } = await checkTest(root);
     expect(codes({ report })).toEqual(["mismatch", "traced-area"]);
+  });
+});
+
+describe("a drawn section's cores (§3.5, §5.5)", () => {
+  /** The built-in 40x40 básico outline, copied into the test catalog with the given cores. */
+  async function withCores(cores: unknown) {
+    const root = await fixtureCopy();
+    const file = join(root, "test/sections/PF40-C.json");
+    await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), file);
+    await patchJson(file, (d) => {
+      d.id = "PF40-C";
+      d.cores = cores;
+      for (const g of d.grooves as { type: string }[]) g.type = "c8";
+    });
+    return checkTest(root);
+  }
+
+  it("are holes of the outline: the centre bore and the corner holes of the 40x40 básico", async () => {
+    // p. 16: Ø13.7 at the centre and Ø5 at (±15.5, ±15.5), "31" between the corner holes.
+    const { report, set } = await withCores([
+      { at_mm: [0, 0], d_mm: 13.7 },
+      { at_mm: [15.5, 15.5], d_mm: 5 },
+    ]);
+    expect(report.diagnostics).toEqual([]);
+    const ls = set.get("section", "test:PF40-C", "test")?.value;
+    if (!ls) throw new Error("PF40-C did not load");
+    const b = buildSection(set, ls);
+    expect("cores" in b && b.cores).toEqual([
+      { at_mm: [0, 0], d_mm: 13.7 },
+      { at_mm: [15.5, 15.5], d_mm: 5 },
+    ]);
+  });
+
+  it("refuses a core in solid metal, or one its hole is not the size of", async () => {
+    // (19, 19) is in the wall outside the corner hole; the corner hole's inscribed circle about
+    // (15.5, 15.5) is Ø4.97, not Ø8.
+    const { report } = await withCores([
+      { at_mm: [19, 19], d_mm: 5 },
+      { at_mm: [15.5, 15.5], d_mm: 8 },
+    ]);
+    expect(report.diagnostics.map((d) => [d.code, d.entity, d.message])).toEqual([
+      [
+        "section-invalid",
+        "test:sections/PF40-C",
+        "core 0 at (19, 19) is in no hole of the outline",
+      ],
+      [
+        "section-invalid",
+        "test:sections/PF40-C",
+        expect.stringMatching(
+          /^core 1 at \(15\.5, 15\.5\): its hole's inscribed circle there is Ø4\.9\d\d, not its Ø8 \(more than 0\.1 mm off on the radius\)$/,
+        ),
+      ],
+    ]);
   });
 });
 

@@ -13,6 +13,7 @@ import {
   type GrooveDims,
   type SectionCore,
 } from "./sections/generators/index.ts";
+import { coreProblems } from "./sections/geometry.ts";
 
 /**
  * Several loaded catalogs, linked (design §3.1): references resolve across them, a catalog id
@@ -325,8 +326,9 @@ export interface BuiltSection {
   datums: Record<string, Vec2>;
   /**
    * Its cores, where an end tap is cut (§5.5), in section coordinates: a generator's, where its
-   * params give them (a `tslot`'s `bores`). Absent when not known: a drawn or traced section's
-   * holes do not say which is a core, and a box has none drawn.
+   * params give them (a `tslot`'s `bores`), or a drawn section's `cores`, each checked to be one
+   * of its holes. Absent when not known: a drawn section's holes alone do not say which is a core,
+   * and a box has none drawn.
    */
   cores?: readonly SectionCore[];
 }
@@ -408,6 +410,8 @@ export function buildSection(
   } catch (e) {
     return { problems: [e instanceof Error ? e.message : String(e)] };
   }
+  const problems = coreProblems(s.cores ?? [], draw.holes);
+  if (problems.length > 0) return { problems };
   return {
     id: s.id,
     fidelity: s.fidelity,
@@ -417,5 +421,6 @@ export function buildSection(
     bbox_mm: s.bbox_mm,
     grooves: s.grooves ?? [],
     datums: s.datums ?? {},
+    ...(s.cores ? { cores: s.cores } : {}),
   };
 }
