@@ -45,7 +45,7 @@ in the gitignored `internal/session-notes.md`.*
 | Docs: README, guide, notes index, design-vs-built | **done**, merged `f242435` (20:04), pushed | Real screenshot made by `alukit snapshot` (`docs/images/cart-iso.png`). 17 design-vs-built entries. |
 | M4c: close the design-vs-built feature gaps | **done**, merged (20:53), pushed | variant switcher, export button, clipping plane, Open items / Params / Decisions tabs, pivot and face in the connect tool, `catalog search` / `import` |
 | Full acceptance (§13), internal | **ran** (20:40): the four numeric tests pass; overall **fail** on two model gaps | Cut list: 214 pieces, largest difference 0.05 mm. Mass: within 0.09 % once the record's own errors are set aside. Cost: every vendor line to the cent on a frozen lock. Counts: pass. Every exception is an error in the record. Fails on A1 and A3, below. |
-| Gap A3: face contact on real section faces | running (Opus, worktree), launched 20:50 | golden G29 |
+| Gap A3: face contact on real section faces | **done**, merged (21:40), pushed | Golden G29. Note: `docs/notes/a3-face-contact.md`. |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -321,3 +321,16 @@ in the gitignored `internal/session-notes.md`.*
     grew with the fixture set, and G30–G32 pushed it over under load.
   - Fixed by splitting them into one test per fixture (separate commit), not by raising the
     timeout. Gate PASS, 651 tests.
+- **21:37**: Gap A3 fixed (6 commits, failing tests first).
+  - **Root cause:** a layer was only its bounding box. Contact, the fastener's walk (each layer's
+    depth) and hole placement all used the box's four sides.
+  - Inner faces (straight runs of the outline's outer ring off its sides) now count; holes don't,
+    and T-slot grooved sides stay their bounding plane.
+  - **A hidden second bug, now fixed:** the grip through an angle used its 76.2 box, not its
+    6.35 leg (116.20 instead of 46.35). No fixture had an angle layer, so nothing caught it.
+  - G29 pins the inner leg, the outer face, a 0.1 mm gap (an error, and fine with `gaps_mm`), an
+    across offset, and a channel's inner flange.
+  - Derive cost: +0.5 ms on a 42-connection angle frame; the cart is unchanged.
+- **21:40**: Merged. Three conflicts, all keep-both: the notes index, the golden list (G29 + G30–G32)
+  and `fastenings.ts` imports. The gate passed with 674 tests; every golden holds on the merged
+  code.
