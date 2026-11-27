@@ -1,0 +1,93 @@
+{
+  "case": "G48",
+  "rule": "a butt screw through the through bar into a tap in the butting end bears its head on the bar's far face round the hole F2 made, where that hole's axis leaves the bar (F2 drills a side hole square to its face); where F2 makes no hole, the screw meeting the side off square, no head is seated and F2's error stands (after the round-3 acceptance, F7)",
+  "design": "A plain 80 x 80 block, a 40x40 post on its top, an M8 x 110 (dk 13) up through a Ø9 hole into a bush in the post's core: the hole through the block at 100, the head on its bottom face, 100 % of its Ø9-Ø13 annulus. A brace square to the block's side: the hole through the side, the head on the opposite side, 100 %. A brace rising 30° onto the side: F2 refuses the side hole, a connection error, and no head is seated (draft 2.3 seated one at 100 % on the far side, along the end's normal, where the screw's line would have left the block by its bottom at y -29.28). Through a 40x40 rail: the head on its bottom face over the 8.18 opening, 46.05 %, a fit warning",
+  "expect": {
+    "heads": {
+      "c1": [
+        {
+          "end": "b2.a",
+          "side": "head",
+          "item": "test-qc:QSCR-M8x110",
+          "on": "b1 -y",
+          "d_in_mm": 9,
+          "d_out_mm": 13,
+          "bearing_pct": 100
+        }
+      ]
+    },
+    "ops": {
+      "b1": [{ "op": "hole", "face": "+y", "from": "a", "at": 100, "d": 9, "by": "c1" }]
+    },
+    "warnings": [],
+    "recipes": { "test-qc:QJ1": 1 },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "a brace square to the block's side",
+      "patch": { "bars": { "b2": { "a": [100, 40, 0], "b": [100, 540, 0] } } },
+      "expect": {
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "side": "head",
+              "item": "test-qc:QSCR-M8x110",
+              "on": "b1 -x",
+              "d_in_mm": 9,
+              "d_out_mm": 13,
+              "bearing_pct": 100
+            }
+          ]
+        },
+        "ops": {
+          "b1": [{ "op": "hole", "face": "+x", "from": "a", "at": 100, "d": 9, "by": "c1" }]
+        },
+        "warnings": [],
+        "recipes": { "test-qc:QJ1": 1 },
+        "errors": []
+      }
+    },
+    {
+      "name": "a brace 30° off the block's side",
+      "patch": {
+        "bars": {
+          "b2": {
+            "a": [100, 40, 0],
+            "b": [100, 906.0254037844386, 500],
+            "ends": { "a": { "cut": "angle" } }
+          }
+        }
+      },
+      "expect": {
+        "heads": { "c1": [] },
+        "ops": { "b1": [] },
+        "recipes": { "test-qc:QJ1": 1 },
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "through a 40x40 rail",
+      "patch": { "bars": { "b1": { "item": "test-qc:Q40" }, "b2": { "a": [100, 0, 20] } } },
+      "expect": {
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "side": "head",
+              "item": "test-qc:QSCR-M8x110",
+              "on": "b1 -y",
+              "d_in_mm": 9,
+              "d_out_mm": 13,
+              "bearing_pct": 46.05
+            }
+          ]
+        },
+        "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+        "recipes": { "test-qc:QJ1": 1 },
+        "errors": []
+      }
+    }
+  ]
+}

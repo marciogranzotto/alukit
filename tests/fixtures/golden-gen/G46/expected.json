@@ -1,0 +1,145 @@
+{
+  "case": "G46",
+  "rule": "a hole a connector requires in the butting bar's side takes positions, the cores it serves: at each it stands from_end_mm in from the end, square to the face of the butting bar's box nearest the position (ties to the first of +y, -y, +x, -x), over the position; a blind hole that does not reach its position, a position off the end, or a mount off the joint's plane makes none, a connection error. A connector in a recipe's fastener set sits at each hole of its mount and brings its own machining there; with no position a hole stays on +y at the centre line (after the round-3 acceptance, X7)",
+  "design": "An 80x80 post on an 80x80 sill, a quick connector's Ø18 x 28 cross hole 25 from the end in each of two diagonal cores (-20, -20) and (20, 20): on face -y 20.00 across the other way, and on face +y 20.00 across, each 20 in from its face and 8 past its core. The same from two quick connectors in a recipe's set, at its two holes. One as sold on a 40x40 post: +y at the centre line. A 40x80 post's cores (0, -20) and (0, 20): faces -y and +y, no offset. A hole 15 deep: it stops 5 short of the core, an error, no hole. A position (50, 0) off the 80x80 end, a mount whose plane is not the joint's: an error each, no hole",
+  "expect": {
+    "ops": {
+      "b2": [
+        {
+          "op": "hole",
+          "face": "-y",
+          "from": "a",
+          "at": 25,
+          "across": -20,
+          "d": 18,
+          "depth": 28,
+          "by": "c1"
+        },
+        {
+          "op": "hole",
+          "face": "+y",
+          "from": "a",
+          "at": 25,
+          "across": 20,
+          "d": 18,
+          "depth": 28,
+          "by": "c1"
+        }
+      ]
+    },
+    "lines": {
+      "test-qc:Q80": [
+        {
+          "count": 1,
+          "cut_mm": 960,
+          "machining": [
+            "Ø18.00 hole 25.00 mm from end a on face +y, 20.00 across, 28.00 deep",
+            "Ø18.00 hole 25.00 mm from end a on face -y, -20.00 across, 28.00 deep"
+          ]
+        },
+        { "count": 1, "cut_mm": 600 }
+      ]
+    },
+    "recipes": { "test-qc:QH-2": 1 },
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "a quick connector in each of the recipe's two holes",
+      "patch": { "connections": { "c1": { "connector": "test-qc:QC-2" } } },
+      "expect": {
+        "ops": {
+          "b2": [
+            {
+              "op": "hole",
+              "face": "-y",
+              "from": "a",
+              "at": 25,
+              "across": -20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            },
+            {
+              "op": "hole",
+              "face": "+y",
+              "from": "a",
+              "at": 25,
+              "across": 20,
+              "d": 18,
+              "depth": 28,
+              "by": "c1"
+            }
+          ]
+        },
+        "hardware": { "test-qc:QC40": 2 },
+        "recipes": { "test-qc:QC-2": 1 },
+        "errors": []
+      }
+    },
+    {
+      "name": "as sold, in a 40x40's core",
+      "patch": {
+        "bars": {
+          "b1": { "item": "test-qc:Q40" },
+          "b2": { "item": "test-qc:Q40", "a": [300, 0, 20] }
+        },
+        "connections": { "c1": { "connector": "test-qc:QC40" } }
+      },
+      "expect": {
+        "ops": {
+          "b2": [
+            { "op": "hole", "face": "+y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+          ]
+        },
+        "hardware": { "test-qc:QC40": 1 },
+        "errors": []
+      }
+    },
+    {
+      "name": "a 40x80's two cores",
+      "patch": {
+        "bars": { "b2": { "item": "test-qc:Q4080" } },
+        "connections": { "c1": { "connector": "test-qc:QC-4080" } }
+      },
+      "expect": {
+        "ops": {
+          "b2": [
+            { "op": "hole", "face": "-y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" },
+            { "op": "hole", "face": "+y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+          ]
+        },
+        "hardware": { "test-qc:QC40": 2 },
+        "recipes": { "test-qc:QC-4080": 1 },
+        "errors": []
+      }
+    },
+    {
+      "name": "too shallow to reach the core",
+      "patch": { "connections": { "c1": { "connector": "test-qc:QH-SHORT" } } },
+      "expect": {
+        "ops": { "b2": [] },
+        "recipes": { "test-qc:QH-SHORT": 1 },
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b2"] }]
+      }
+    },
+    {
+      "name": "a position off the end",
+      "patch": { "connections": { "c1": { "connector": "test-qc:QH-OFF" } } },
+      "expect": {
+        "ops": { "b2": [] },
+        "recipes": { "test-qc:QH-OFF": 1 },
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b2"] }]
+      }
+    },
+    {
+      "name": "a mount off the joint's plane",
+      "patch": { "connections": { "c1": { "connector": "test-qc:QC-2-TILTED" } } },
+      "expect": {
+        "ops": { "b2": [] },
+        "recipes": { "test-qc:QC-2-TILTED": 1 },
+        "errors": [{ "code": "connection", "entity": "c1" }]
+      }
+    }
+  ]
+}

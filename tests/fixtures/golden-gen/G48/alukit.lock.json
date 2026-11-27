@@ -1,0 +1,27 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test-qc": { "hash": "sha256:13ff1f88fbd0dc4ca75b591ee469bb68f9ef7276e1c1b250841dd73ce23c1821", "name": "Quick connector test catalog (synthetic)", "vendor": "test-qc-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-qc:Q40": { "hash": "sha256:56227e4f1b2800639686fce3c86bb517e6be9dd632d55332b0030b1988912470", "item": { "kind": "bar", "name": "Profile 40x40, a centre core (synthetic)", "material": "al", "prov": { "src": "est", "note": "synthetic test data for an access hole at its connector's core, a connector's own domed head under a groove's lips, and a butt screw's far-face seat; the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, not a vendor's item" }, "shape": "tslot", "section": "Q40", "system": "s40q", "mass_kg_per_m": 1.5 } },
+    "test-qc:QBLOCK-80": { "hash": "sha256:e505e6f72eca918223f44a9c529c6f8bcbb3d896d84e3501fc5fde4e31178c8b", "item": { "kind": "bar", "name": "Plain bar 80 x 80, no system (synthetic)", "material": "al", "prov": { "src": "est", "note": "synthetic test data for an access hole at its connector's core, a connector's own domed head under a groove's lips, and a butt screw's far-face seat; the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, not a vendor's item" }, "shape": "flat", "section": "QBLOCK-80" } },
+    "test-qc:QBUSH": { "hash": "sha256:0b0952bfb77e462fa7ec57285990fb18c0463e138018ec6167ffb735218bb4e5", "item": { "kind": "fastener", "name": "Reducing bush M16 outside, M8 inside (synthetic)", "prov": { "src": "est", "note": "synthetic test data for an access hole at its connector's core, a connector's own domed head under a groove's lips, and a butt screw's far-face seat; the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, not a vendor's item" }, "subtype": "insert", "thread": "M8" } },
+    "test-qc:QJ1": { "hash": "sha256:122a67a439a9b4313b2aa6313467dc4814ca2f62ad4105cbcb88cf1639b7e29b", "item": { "kind": "connector", "name": "A screw through the through bar into a bush in the butting bar's core (synthetic)", "prov": { "src": "est", "note": "synthetic test data for an access hole at its connector's core, a connector's own domed head under a groove's lips, and a butt screw's far-face seat; the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, not a vendor's item" }, "subtype": "end-connector", "fits": ["s40q"], "recipe": true, "mounts": [{ "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] }, "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }], "fasteners": { "s40q": [{ "item": "QBUSH", "qty": 1 }, { "item": "QSCR-M8x110", "qty": 1 }] } }], "requires": [{ "op": "end-tap", "on": "butting", "thread": "M16" }, { "op": "through-hole", "on": "through", "d_mm": 9 }] } },
+    "test-qc:QSCR-M8x110": { "hash": "sha256:a78db9cb85569990364d9ff2fcf8688fe0844c96492f0b3c7bd1941c273d8edc", "item": { "kind": "fastener", "name": "Socket head cap screw M8x110 (synthetic)", "prov": { "src": "est", "note": "synthetic test data for an access hole at its connector's core, a connector's own domed head under a groove's lips, and a butt screw's far-face seat; the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, not a vendor's item" }, "subtype": "screw", "thread": "M8", "length_mm": 110, "dims": { "dk_mm": 13, "k_mm": 8 } } }
+  },
+  "offers": {},
+  "sections": {
+    "test-qc:Q40": { "hash": "sha256:bf9a39c4bea45d73c74c8b4ad380b5cda46b38aea7cd0713e7f230c6a0bb0e06", "section": { "schema": "alukit.section/1", "id": "Q40", "fidelity": "parametric", "props_ok": false, "generator": "tslot", "params": { "w_mm": 40, "h_mm": 40, "groove": "c8q", "bores": [{ "at_mm": [0, 0], "d_mm": 13.7 }] } } },
+    "test-qc:QBLOCK-80": { "hash": "sha256:18258cd3c2db4edb3fbff06324314db3fa086c47065b0608c8d783f86c4e15e9", "section": { "schema": "alukit.section/1", "id": "QBLOCK-80", "fidelity": "parametric", "props_ok": true, "generator": "flat", "params": { "b_mm": 80, "t_mm": 80 } } }
+  },
+  "materials": {
+    "test-qc:al": { "hash": "sha256:0f2c491bb49ace41658fc2f0b33c2ebe288af52522a3cc7500d3fdd515deaa6c", "material": { "name": "Aluminium (synthetic)", "density_kg_per_m3": 2700 } }
+  },
+  "grooves": {
+    "test-qc:c8q": { "hash": "sha256:261ad0c95655e8ad7b3d3f82454f6779dba3c6d49679727ad5d7c2358cd98aca", "groove": { "opening_mm": 8.18, "lip_mm": 3.79, "depth_mm": 9.99, "undercut_mm": 22.01, "taper_from_mm": 7.03, "bottom_mm": 12.24, "class": "standard" } }
+  },
+  "systems": {
+    "test-qc:s40q": { "hash": "sha256:9df1b80282c741f2c9c7799939e91edcf2ef414ac416335b5d473317255388a1", "system": { "type": "tslot", "series_mm": 40, "groove": "c8q" } }
+  }
+}

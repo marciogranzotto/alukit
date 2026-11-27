@@ -141,12 +141,14 @@ const Hole = z.strictObject({
 });
 
 /** What a joint recipe (a connector with no body) cannot have: the fields that describe a body. */
-const BODY_FIELDS = ["mass_kg", "bbox_mm", "datums", "body", "mesh"] as const;
+const BODY_FIELDS = ["mass_kg", "bbox_mm", "datums", "body", "mesh", "dims"] as const;
 
 /**
  * Positions in the joint's plane (acceptance gap A8): `[x, y]` in the section of the bar the
  * connector sits on (a butting bar, a spliced bar), from its box centre, as the cut list states an
- * end tap's or an end hole's place. One op, or one splice tap, at each.
+ * end tap's or an end hole's place. One op, or one splice tap, at each. A hole in the butting
+ * bar's side stands over its position, `from_end_mm` in from the end (after the round-3
+ * acceptance, X7).
  */
 const Positions = z
   .array(Vec2)
@@ -218,6 +220,9 @@ export const ConnectorItem = z
       )
       .optional(),
     requires: z.array(Requirement).optional().describe("machining on the joined bars"),
+    dims: Quantities.optional().describe(
+      "published dimensions under the standard's letters. A connector whose dims give a head (dk_mm or dw_mm) has a head of its own, a quick connector's pin's, seated in the through bar as a butt screw's head is: k_mm its height, rf_mm the radius of a domed top, d_mm the shank under it (after the round-3 acceptance, X8)",
+    ),
     spacer_mm: Valued.optional(),
     overhang_mm: Valued.optional().describe(
       "how far a butting end face may reach past the face it bears on before a connection warning (after acceptance run 4)",
@@ -267,10 +272,11 @@ export const ConnectorItem = z
   });
 
 /**
- * A requirement's positions (acceptance gap A8). They lie in the joint's plane, so they place an
- * end tap and a hole in the through bar, not a hole in the butting bar's side (that one stands
- * `from_end_mm` in from its end). `at_holes` names a mount with holes whose plane is the joint's:
- * square to the connector's z, so each hole's x and y are its place.
+ * A requirement's positions (acceptance gap A8). They lie in the joint's plane: they place an end
+ * tap, a hole in the through bar, and, after the round-3 acceptance (X7), a hole in the butting
+ * bar's side over the core or tap it serves, `from_end_mm` in from the end. `at_holes` names a
+ * mount with holes whose plane is the joint's: square to the connector's z, so each hole's x and y
+ * are its place.
  */
 function requirementIssues(
   c: { mounts?: { plane: { normal: readonly number[] }; holes?: unknown[] }[] },
@@ -284,14 +290,6 @@ function requirementIssues(
       code: "custom",
       path: [...path, "at_holes"],
       message: "give at_mm or at_holes, not both",
-    });
-  }
-  const placed = r.at_mm !== undefined || r.at_holes !== undefined;
-  if (placed && r.op !== "end-tap" && r.on !== "through") {
-    ctx.addIssue({
-      code: "custom",
-      path: [...path, r.at_mm ? "at_mm" : "at_holes"],
-      message: `positions lie in the joint's plane; a ${r.op} on the butting bar's side stands from_end_mm in from its end and takes none`,
     });
   }
   if (r.at_holes === undefined) return;

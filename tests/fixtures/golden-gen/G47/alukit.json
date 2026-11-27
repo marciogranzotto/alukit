@@ -1,0 +1,15 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G47",
+  "catalogs": ["../../catalogs/test-qc"],
+  "defaults": {
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "item": "test-qc:Q40", "a": [0, 0, 0], "b": [600, 0, 0], "label": "a 40x40 rail, its top groove under the post" },
+    "b2": { "item": "test-qc:Q40", "a": [300, 0, 20], "b": [300, 0, 520], "label": "a 40x40 post on it, a quick connector in its centre core" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"], "connector": "test-qc:QC40" }
+  }
+}

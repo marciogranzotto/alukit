@@ -2866,12 +2866,13 @@
       "code": "CN40-01",
       "brand": "Forseti",
       "url": "https://loja.forsetisolucoes.com.br/produto/conector-rapido-90-p-perfis-base-30-40-45-e-50/",
+      "docs": [{ "ref": "pdf:catalogo_forsetiA4.pdf#p24" }],
       "fits": ["s40-c8"],
       "prov": {
         "src": "src",
         "ref": "url:https://loja.forsetisolucoes.com.br/produto/conector-rapido-90-p-perfis-base-30-40-45-e-50/",
         "read": "2026-11-26",
-        "note": "no mounting model yet: no frame, mounts or fastener sets; `fits` is read from the product's name or its variation's profile attribute"
+        "note": "`fits` is read from the product's name or its variation's profile attribute"
       }
     },
     "CN40-02": {

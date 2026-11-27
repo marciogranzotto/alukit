@@ -373,6 +373,12 @@ export interface HeadSeat {
 export interface ButtHead extends HeadSeat {
   end: string;
   at?: readonly [number, number];
+  /**
+   * Under a groove's lips (after the round-3 acceptance, X8): the depth left between the head's
+   * top and the groove's floor, and the least room between the head and the chamber's wall, per
+   * side, over the head's height (where the groove gives them).
+   */
+  room?: { depth?: number; side?: number };
 }
 
 /** A face connection's contacts and fastenings (§4.5). */

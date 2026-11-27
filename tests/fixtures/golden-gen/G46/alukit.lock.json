@@ -1,0 +1,23 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test-qc": { "hash": "sha256:13ff1f88fbd0dc4ca75b591ee469bb68f9ef7276e1c1b250841dd73ce23c1821", "name": "Quick connector test catalog (synthetic)", "vendor": "test-qc-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-qc:Q80": { "hash": "sha256:191a8f8a83ca48d79653f1bfd68a382f61f746dd5403d93c935857f0b6e04cae", "item": { "kind": "bar", "name": "Profile 80x80, four cores (synthetic)", "material": "al", "prov": { "src": "est", "note": "synthetic test data for an access hole at its connector's core, a connector's own domed head under a groove's lips, and a butt screw's far-face seat; the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, not a vendor's item" }, "shape": "tslot", "section": "Q80", "system": "s40q", "mass_kg_per_m": 4.5 } },
+    "test-qc:QH-2": { "hash": "sha256:67dc2fda253a657b40cf9a04f9fa061bdfcfd2756400417f8c59aec65c1ee0ca", "item": { "kind": "connector", "name": "The two cross holes alone, at the diagonal cores (synthetic)", "prov": { "src": "est", "note": "synthetic test data for an access hole at its connector's core, a connector's own domed head under a groove's lips, and a butt screw's far-face seat; the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, not a vendor's item" }, "subtype": "end-connector", "fits": ["s40q"], "recipe": true, "requires": [{ "op": "access-hole", "on": "butting", "d_mm": 18, "depth_mm": 28, "from_end_mm": 25, "at_mm": [[-20, -20], [20, 20]] }] } }
+  },
+  "offers": {},
+  "sections": {
+    "test-qc:Q80": { "hash": "sha256:e978b960432a3a1e764c3f020e230088a11e77bd3599a150b2efcdcbcd0117f3", "section": { "schema": "alukit.section/1", "id": "Q80", "fidelity": "parametric", "props_ok": false, "generator": "tslot", "params": { "w_mm": 80, "h_mm": 80, "groove": "c8q", "grooves": [{ "face": "-y", "at_mm": -20 }, { "face": "-y", "at_mm": 20 }, { "face": "+x", "at_mm": -20 }, { "face": "+x", "at_mm": 20 }, { "face": "+y", "at_mm": -20 }, { "face": "+y", "at_mm": 20 }, { "face": "-x", "at_mm": -20 }, { "face": "-x", "at_mm": 20 }], "bores": [{ "at_mm": [-20, -20], "d_mm": 13.7 }, { "at_mm": [20, -20], "d_mm": 13.7 }, { "at_mm": [-20, 20], "d_mm": 13.7 }, { "at_mm": [20, 20], "d_mm": 13.7 }] } } }
+  },
+  "materials": {
+    "test-qc:al": { "hash": "sha256:0f2c491bb49ace41658fc2f0b33c2ebe288af52522a3cc7500d3fdd515deaa6c", "material": { "name": "Aluminium (synthetic)", "density_kg_per_m3": 2700 } }
+  },
+  "grooves": {
+    "test-qc:c8q": { "hash": "sha256:261ad0c95655e8ad7b3d3f82454f6779dba3c6d49679727ad5d7c2358cd98aca", "groove": { "opening_mm": 8.18, "lip_mm": 3.79, "depth_mm": 9.99, "undercut_mm": 22.01, "taper_from_mm": 7.03, "bottom_mm": 12.24, "class": "standard" } }
+  },
+  "systems": {
+    "test-qc:s40q": { "hash": "sha256:9df1b80282c741f2c9c7799939e91edcf2ef414ac416335b5d473317255388a1", "system": { "type": "tslot", "series_mm": 40, "groove": "c8q" } }
+  }
+}

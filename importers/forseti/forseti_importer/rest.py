@@ -7,7 +7,9 @@ item ids follow M2a's rule (the SKU, less a pack tail); one variation is one ite
 differs by pack (or, for sheets, by size, which is an offer option).
 
 Nothing here models geometry: connectors, brackets and plates carry the systems they fit and no
-mounting model yet (layer 2 adds that, by hand).
+mounting model yet (layer 2 adds that, by hand). A connector `tables.MODELLED_CONNECTORS` names is
+modelled in layer 2 already: it lists the catalogue pages that draw it and does not say it has no
+model.
 """
 
 from __future__ import annotations
@@ -207,6 +209,9 @@ def one(b, p: dict, x: dict, kind: str, subtype: str | None, a: dict[str, str], 
     if b.brand(p):
         it["brand"] = b.brand(p)
     it["url"] = p["permalink"]
+    modelled = kind == "connector" and iid in tables.MODELLED_CONNECTORS
+    if modelled:
+        it["docs"] = [{"ref": f"pdf:{tables.PDF}#p{pg}"} for pg in tables.MODELLED_CONNECTORS[iid]]
     desc = store.text(p.get("description"))
 
     if kind in ("connector", "accessory") or (kind == "fastener" and subtype in ("t-nut", "hammer-screw")):
@@ -249,10 +254,11 @@ def one(b, p: dict, x: dict, kind: str, subtype: str | None, a: dict[str, str], 
             it["dims"] = dict(sorted(dims.items()))
     it["prov"] = b.shop_prov(p)
     if kind == "connector":
-        # Layer 2 gives a connector its frame, mounts and fastener sets, by hand; until then it
-        # has none, and says so where a reader of the item looks.
-        it["prov"]["note"] = ("no mounting model yet: no frame, mounts or fastener sets; "
-                              "`fits` is read from the product's name or its variation's profile attribute")
+        # Layer 2 gives a connector its frame, mounts and fastener sets, or its machining and its
+        # own head, by hand; until then it has none, and says so where a reader of the item looks.
+        fits_note = "`fits` is read from the product's name or its variation's profile attribute"
+        it["prov"]["note"] = (fits_note if modelled else
+                              f"no mounting model yet: no frame, mounts or fastener sets; {fits_note}")
     if options:
         it["options"] = {k: [v] for k, v in options.items()}
     b.item(iid, it)

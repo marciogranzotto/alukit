@@ -223,6 +223,11 @@ sets do not say where each part goes.
 31. **Seats are output with the butt** (`butts.<id>.heads`: end, tap position, the bearing part, the
     face, the annulus and its percentage), and the golden check compares them (`heads`).
 
+*Revised 2026-11-27* ([`x7-x8-f7.md`](x7-x8-f7.md)): a far-face head is seated only where F2 made
+the hole, on that hole's axis, and none where F2 refuses it (F7, decisions 18–20); a connector's own
+head is seated too, and a head that gives `rf_mm` is checked as a dome, not a cylinder; a head under
+the lips reports its room (X8, decisions 10–16).
+
 **Golden G43** (`by_hand.py`, band integrals of a disc across the opening): under the lips 45.87 %
 and 10.20 deep; on the 5.5 seat 15.70, 3.45 past 12.25; on the 2 seat 12.20; a Ø16 head in the 14.5
 chamber; 3 and 10 off the groove's centre; through the rail 45.87 %, on a washer 53.74 %.

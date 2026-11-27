@@ -384,6 +384,17 @@ ITEM_PAGES = {
     "CT100-888": [35],
 }
 
+#: Connectors of the rest of the shop (M2b) that layer 2 models by hand in families/, each with the
+#: catalogue pages that draw it: the build lists them in the item's `docs`, and does not write the
+#: "no mounting model yet" note, which the family file would contradict. The quick connector for
+#: base 40 (the shop's "Conector Rápido 90°", the catalogue's "Conector Universal", CNX0-01 on
+#: p. 24): its cross hole and its pin's head are in families/quick-connectors.json (after the
+#: round-3 acceptance, X7 and X8). Its other bases are not modelled: the depth of their holes and
+#: their heads are not read yet.
+MODELLED_CONNECTORS: dict[str, list[int]] = {
+    "CN40-01": [24],
+}
+
 # --- Material ----------------------------------------------------------------------------------
 
 #: Catalogue p. 6: "LIGA: 6063 (DIN AlMgSi 0,5)", "TRATAMENTO TÉRMICO: T5", density, modulus.
