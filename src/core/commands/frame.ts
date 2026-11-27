@@ -102,6 +102,18 @@ export const addFrame: CommandDef<AddFrameArgs> = {
     const rings = new Set<Ring>(a.rings ?? RINGS);
     const doc = ctx.state.doc;
 
+    // The bars' item: the one given, else the project's default bar. A bar may be written with no
+    // item (derive says so), but a frame of them has no section, so no end to butt: autoConnect
+    // would refuse its first corner as if nothing met there.
+    const ref = a.item ?? defaultItem(doc);
+    if (ref === undefined) {
+      return refuse(
+        "item",
+        "the frame's bars name no item, and defaults.bar.item is not set: give item, or set the project's default bar first",
+        { field: "item" },
+      );
+    }
+
     if (a.params) {
       const params = isObject(doc.params) ? doc.params : {};
       const taken = ["W", "D", "H"].filter((n) => Object.hasOwn(params, n));
@@ -191,9 +203,8 @@ export const addFrame: CommandDef<AddFrameArgs> = {
     if (!run.ok) return run;
 
     // The size must leave every bar a length: a rail that butts loses a profile at each end.
-    const ref = a.item ?? defaultItem(doc);
-    const found = ref ? makeContext(run.state, ctx.env).items().item(ref) : undefined;
-    if (found?.ok && found.bar) {
+    const found = makeContext(run.state, ctx.env).items().item(ref);
+    if (found.ok && found.bar) {
       const [[bx0, by0], [bx1, by1]] = found.bar.section.bbox_mm;
       const s = len(Math.max(bx1 - bx0, by1 - by0));
       if (Math.min(W, D, H) <= 2 * s) {

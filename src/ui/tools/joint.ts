@@ -1,4 +1,7 @@
+import { TOL } from "#core/tolerances.ts";
+import type { V3 } from "../../mesh/model.ts";
 import type { DryRunEffects, DryRunResult } from "../client/dryrun.ts";
+import type { Model } from "../model.ts";
 
 /**
  * The joint preview's words (S5.6, U4): what a drawn bar's dry run says its ends would do, before
@@ -8,6 +11,32 @@ import type { DryRunEffects, DryRunResult } from "../client/dryrun.ts";
  * the ends that butt on it), the lengths from the dry run's effects. Pure: the draw tool's wiring
  * asks the dry run and shows the words by the end. Owner: S5.
  */
+
+const dist = (a: V3, b: V3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+/**
+ * Whether a point of a stroke can join anything in the drawn model: a bar end within the core's
+ * length tolerance, or a bar whose design line passes the point between its ends. These are the
+ * places `autoConnect` looks (src/core/commands/geometry.ts, `connectAt`), pattern copies left
+ * out as it leaves them; it also skips an end a connection already claims, so this may say yes
+ * where the dry run then joins nothing, never no where it would join. The joint preview asks no
+ * dry run for a stroke neither of whose points touches the model (integration-decisions.md):
+ * open space, whatever way the end was found, typed and grid ends included.
+ */
+export function touchesBars(m: Model, p: V3): boolean {
+  for (const [id, b] of Object.entries(m.derived.bars)) {
+    if (id.includes("@") || !b.a || !b.b) continue;
+    if (dist(b.a, p) <= TOL.len || dist(b.b, p) <= TOL.len) return true;
+    const d: V3 = [b.b[0] - b.a[0], b.b[1] - b.a[1], b.b[2] - b.a[2]];
+    const n = Math.hypot(d[0], d[1], d[2]);
+    if (n <= TOL.len) continue;
+    const s = ((p[0] - b.a[0]) * d[0] + (p[1] - b.a[1]) * d[1] + (p[2] - b.a[2]) * d[2]) / n;
+    if (s <= TOL.len || s >= n - TOL.len) continue;
+    const foot: V3 = [b.a[0] + (d[0] * s) / n, b.a[1] + (d[1] * s) / n, b.a[2] + (d[2] * s) / n];
+    if (dist(foot, p) <= TOL.len) return true;
+  }
+  return false;
+}
 
 /** A length as the preview says it: two decimals only when needed. */
 const len = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(2));

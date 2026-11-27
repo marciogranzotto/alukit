@@ -200,6 +200,8 @@ and C's [rendering spec](visual-design.md#5-the-3d-view-rendering-spec). Labels 
     270.6 kB),
     which crosses Vite's 1,000 kB advice; the build still passes. Splitting the viewer's code into
     its own chunk is a later change, not S3's.
+    *Done in the integration pass: three.js in two chunks, flows loaded on first use, no raised
+    limit ([integration-decisions.md](integration-decisions.md) 1–12).*
 
 ## The live update (after merging S1)
 

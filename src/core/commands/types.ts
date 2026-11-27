@@ -64,6 +64,13 @@ export interface CommandEnv {
    * cannot resolve (§7.2).
    */
   catalogs?: CatalogPlaces;
+  /**
+   * A derive the caller already holds for a state, by identity, or undefined to let the command
+   * derive. States are immutable, so one derive serves every command that runs on the same
+   * state: a corner's arrangements (src/core/corners/arrange.ts) run each rule from the state
+   * the butts left, and derive it once for all of them.
+   */
+  derived?: (state: State) => Derived | undefined;
 }
 
 /** Where a catalog the document newly names may come from (§3.1, §7.2). */

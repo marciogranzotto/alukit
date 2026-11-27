@@ -8,6 +8,7 @@ import type { CatalogSet } from "#catalog/link.ts";
 import { bomJson } from "#core/bom/format.ts";
 import { CHECK_SCHEMA } from "#core/check/check.ts";
 import { checkedBom, checkedCutList, checkedMachining, checkedOrder } from "#core/check/outputs.ts";
+import { arrangementsText, arrangeQuery } from "#core/corners/arrange.ts";
 import { cutListJson } from "#core/cutlist/format.ts";
 import { isDate } from "#core/dates.ts";
 import { derivedJson, jsonText } from "#core/derive/output.ts";
@@ -35,6 +36,8 @@ import { contentStamp, verified, verifyRevision } from "#core/revision/revision.
 import { packageVersion } from "#core/version.ts";
 import { projectGlb } from "../export/project.ts";
 import {
+  type BuiltinCatalog,
+  builtinCatalogs,
   CATALOG_SCHEMA,
   type CatalogEntry,
   catalogIndex,
@@ -83,6 +86,7 @@ import { viewModel } from "./view.ts";
  * | `GET /api/order`, `/api/costs` `[?as_of=YYYY-MM-DD]` | as `alukit order` and `costs --format json`, from the lock; today by default |
  * | `GET /api/machining` | as `alukit machining --format json`: the custom parts' holes, the machined bars |
  * | `GET /api/problems` `[?as_of=YYYY-MM-DD]` | as `alukit problems --json` (`alukit.problems/1`): the check and the order's reasons, grouped by consequence |
+ * | `GET /api/arrangements?at=x,y,z[&at=…][&rule=…]` | as `alukit arrangements --json` (`alukit.arrangements/1`): every corner rule's arrangement of the corners at those points, from one dry run per rule that shares the butts' removal and its derive; writes nothing |
  * | `GET /api/export/glb` | as `alukit export glb`, byte for byte: the model as binary glTF, to download |
  * | `GET /api/revisions` | the saved revisions (§4.13) and the current state's content hash |
  * | `POST /api/revisions` | `{ name, as_of? }`: saves a revision of what the server holds |
@@ -274,6 +278,11 @@ interface Ctx {
   problems: { rev: number; text: Map<string, string> } | undefined;
   /** The catalog browser's index, built once per opening of the catalogs and lock. */
   catalog: CatalogIndex | undefined;
+  /**
+   * The built-in catalogs, opened the first time `/api/catalog` is asked, once per server: they
+   * ship with AluKit and do not change while it runs, unlike the project's own (opened afresh).
+   */
+  builtins: () => Promise<BuiltinCatalog[]>;
   /** The saved revisions, each file read once while it stays the same. */
   revisions: RevisionIndex;
   /** The current state's content hash (§4.13's stamp), once per revision. */
@@ -529,6 +538,22 @@ async function api(
         sendJson(res, 200, text, snap.rev);
         return;
       }
+      case "/api/arrangements": {
+        // As `alukit arrangements --json` prints it (S5.5): every corner rule's arrangement of
+        // the corners at the points named, in one request that shares the derive between rules.
+        const q = arrangeQuery(query.getAll("at"), query.getAll("rule"));
+        if ("error" in q) {
+          sendJson(res, 400, { ok: false, message: q.error });
+          return;
+        }
+        const a = await p.arrangements(q);
+        if (!a.ok) {
+          sendJson(res, 409, a, a.rev);
+          return;
+        }
+        sendJson(res, 200, arrangementsText(a.rev, { corners: a.corners, rules: a.rules }), a.rev);
+        return;
+      }
       case "/api/export/glb": {
         // As `alukit export glb` writes it (§9), through the same function: the same bytes.
         const snap = snapshotFor(p, query, res);
@@ -589,6 +614,8 @@ async function api(
           }),
           count: entries.length,
           tree: catalogTree(entries),
+          // Every built-in catalog, named by the document or not, so settings can add one.
+          builtins: await ctx.builtins(),
         });
         return;
       }
@@ -821,6 +848,7 @@ export async function openSession(options: SessionOptions): Promise<Session> {
   const token = newToken();
   // No request passes the gate before the server listens: port 0 is no request's Host.
   let port = 0;
+  let builtins: Promise<BuiltinCatalog[]> | undefined;
   const ctx: Ctx = {
     root: options.distDir,
     port: () => port,
@@ -829,6 +857,17 @@ export async function openSession(options: SessionOptions): Promise<Session> {
     model: undefined,
     problems: undefined,
     catalog: undefined,
+    builtins: () => {
+      const got = builtins ?? builtinCatalogs(dir, options.builtinDir);
+      if (got !== builtins) {
+        builtins = got;
+        // A failure is not remembered: the next request opens them again.
+        got.catch(() => {
+          if (builtins === got) builtins = undefined;
+        });
+      }
+      return got;
+    },
     revisions: new RevisionIndex(dir),
     stamp: undefined,
     streams: new Set(),

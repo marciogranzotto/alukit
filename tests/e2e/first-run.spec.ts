@@ -22,6 +22,7 @@ test.afterEach(async () => {
 });
 
 interface Doc {
+  catalogs?: string[];
   currency?: string;
   bars?: Record<string, unknown>;
   defaults?: { bar?: unknown; cutting?: { kerf_mm?: number } };
@@ -150,12 +151,21 @@ test("project settings save what changed as one setProject step", async ({ page 
   const form = page.getByTestId("settings-form");
   await form.getByTestId("settings-currency").fill("EUR");
   await form.getByTestId("settings-kerf").fill("2.5");
+  // The built-in catalogs the project does not name are offered by name; one click adds one.
+  const offered = form.getByTestId("settings-catalogs").locator("li[data-builtin]");
+  await expect(offered).toHaveCount(2);
+  expect(
+    await offered.evaluateAll((els) => els.map((e) => e.getAttribute("data-builtin"))),
+  ).toEqual(["ref-hiwin", "std"]);
+  await form.getByTestId("settings-catalog-add-std").click();
+  await expect(offered).toHaveCount(1);
   await form.getByTestId("settings-save").click();
   await waitDrawn(page, 1);
   await expect(page.getByTestId("settings")).toBeHidden();
   const d = await doc();
   expect(d.currency).toBe("EUR");
   expect(d.defaults?.cutting?.kerf_mm).toBe(2.5);
+  expect(d.catalogs).toEqual(["forseti", "std"]);
   expect(await logLength()).toBe(1);
   await expect(page.getByTestId("undo")).toHaveText(
     `Undo · you: ${await lastStepWords(served.dir)}`,

@@ -6,8 +6,8 @@ import { StatusGlyph } from "./common/StatusGlyph.tsx";
 import { onKey } from "./keys.ts";
 import { openSheet } from "./sheets/registry.ts";
 import { helpOpen } from "./shell/Help.tsx";
+import { settingsOpen } from "./shell/open.ts";
 import { readiness } from "./shell/readiness.ts";
-import { settingsOpen } from "./shell/Settings.tsx";
 import { showStart } from "./shell/start.ts";
 import { requestRedo, requestUndo, stepLabel } from "./shell/Undo.tsx";
 import {

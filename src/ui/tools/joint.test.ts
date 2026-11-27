@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { jointWords } from "./joint.ts";
+import type { Model } from "../model.ts";
+import { jointWords, touchesBars } from "./joint.ts";
 
 /** The joint preview's words (S5.6): what a drawn bar's dry run says auto-connect will do. */
 
@@ -67,5 +68,31 @@ describe("joint preview", () => {
       "b2",
     );
     expect(w).toMatchObject({ text: "no joint: the ends stay open · cut 600", joins: false });
+  });
+});
+
+describe("where a stroke can join (touchesBars)", () => {
+  const m = {
+    derived: {
+      bars: {
+        b1: { a: [0, 0, 0], b: [0, 0, 900] },
+        "b2@1": { a: [500, 0, 0], b: [500, 0, 900] },
+      },
+    },
+  } as unknown as Model;
+
+  it("is a bar's end, or its line between the ends, within the core's 0.01 mm", () => {
+    expect(touchesBars(m, [0, 0, 900])).toBe(true);
+    expect(touchesBars(m, [0, 0.005, 900])).toBe(true);
+    expect(touchesBars(m, [0, 0, 450])).toBe(true);
+    expect(touchesBars(m, [0, 0.02, 450])).toBe(false);
+    // On the line, past the end: autoConnect finds nothing there either.
+    expect(touchesBars(m, [0, 0, 950])).toBe(false);
+    expect(touchesBars(m, [300, 0, 900])).toBe(false);
+  });
+
+  it("leaves pattern copies out, as autoConnect does", () => {
+    expect(touchesBars(m, [500, 0, 900])).toBe(false);
+    expect(touchesBars(m, [500, 0, 450])).toBe(false);
   });
 });

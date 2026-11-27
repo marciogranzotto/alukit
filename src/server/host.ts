@@ -9,6 +9,7 @@ import { applyBatchLive, type CommandResult } from "#core/commands/apply.ts";
 import { type DryEffects, effectsOf } from "#core/commands/dry.ts";
 import { History, type LogEntry, type Step, stepText, stepWords } from "#core/commands/history.ts";
 import type { CatalogPlaces, CommandEnv, State } from "#core/commands/types.ts";
+import { type Arrangements, arrange } from "#core/corners/arrange.ts";
 import { localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
@@ -21,8 +22,10 @@ import { projectText } from "#core/project/canonical.ts";
 import { gitStamp } from "#core/project/git.ts";
 import { catalogPlaces, DOCUMENT, openLiveCatalogs } from "#core/project/open.ts";
 import { parseProject } from "#core/project/parse.ts";
+import type { CornerRule } from "#core/project/schema.ts";
 import { keepRejected, readDocument, readLock, writeAtomic } from "#core/project/store.ts";
 import { type SaveResult, saveRevision } from "#core/revision/files.ts";
+import type { V3 } from "#core/vec.ts";
 
 /**
  * The server owns the document (design §7.1, review M1). One `ProjectHost` per project holds the
@@ -148,6 +151,11 @@ export type DryRunAnswer =
       effects: DryEffects;
     }
   | { ok: false; kind: "refused"; failed: unknown; rev: number }
+  | { ok: false; kind: "read-only"; status: Status; rev: number };
+
+/** The corners' arrangements (S5.5): every rule's, against `rev`; or why there are none. */
+export type ArrangementsAnswer =
+  | ({ ok: true; rev: number } & Arrangements)
   | { ok: false; kind: "read-only"; status: Status; rev: number };
 
 export type HistoryAnswer =
@@ -419,6 +427,37 @@ export class ProjectHost {
         diagnostics: deltaOf(this.snap, after),
         effects: effectsOf(this.snap.derived, after.derived, r.results),
       };
+    });
+  }
+
+  /**
+   * Every corner rule's arrangement of the corners at these points (S5.5, `arrange`): one
+   * request in the command queue against the revision after every step queued before it, the
+   * files read first, as a dry run is; it writes, logs and broadcasts nothing. The catalogs are
+   * opened once, and the rules share the derive of the state the corners' butts leave.
+   */
+  arrangements(req: {
+    at: readonly V3[];
+    rules?: readonly CornerRule[];
+  }): Promise<ArrangementsAnswer> {
+    return this.run(async () => {
+      await this.takeInFiles();
+      const rev = this.rev;
+      if (this.statusValue.readOnly) {
+        return { ok: false, kind: "read-only", status: this.statusValue, rev };
+      }
+      const now = await openLiveCatalogs(this.dir, this.state.doc, this.opts.builtinDir);
+      this.adoptCatalogs(now);
+      const a = await arrange({
+        state: this.state,
+        derived: this.snap.derived,
+        at: req.at,
+        ...(req.rules ? { rules: req.rules } : {}),
+        env: this.env(now.set),
+        open: async (catalogs) =>
+          (await openLiveCatalogs(this.dir, { catalogs }, this.opts.builtinDir)).set,
+      });
+      return { ok: true, rev, ...a };
     });
   }
 

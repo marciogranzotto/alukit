@@ -272,7 +272,7 @@ S2 ([s2-decisions.md](s2-decisions.md)) changed these contracts. Each adds, exce
   connection…" at its foot.
 - **Requested from S1**: `/api/catalog` listing the built-in catalogs (`builtins: [{ id, name,
   vendor, profiles }]`), so the start card and settings can add one with one click (D-UX-6). Until
-  then they take a built-in id typed in Project settings.
+  then they take a built-in id typed in Project settings. *Done in the integration pass (below).*
 
 ## S5 changes
 
@@ -320,3 +320,36 @@ marked **moved**, which §5.4 asked for.
 - **Toasts** (S2's `shell/Toasts.tsx`, cross-edited): the person's own step's toast offers "Undo
   it" too (D-UX-13).
 - **`src/ui/testing.ts`**: `hostOf(dir)`, dry runs on a scratch project for unit tests.
+
+## Integration changes
+
+The integration pass ([integration-decisions.md](integration-decisions.md)) changed these
+contracts. Each adds, except the moves marked **moved**.
+
+- **Moved: the sheets register in one place.** `src/ui/tables/index.ts` registers all six sheets
+  (`registerSheet` as before); a sheet's module no longer registers itself. Every body but the cut
+  list's is `lazy(() => import(…))`, and the badges, which the rail shows before a sheet loads,
+  are `src/ui/tables/badges.tsx` (`PiecesBadge`, `LinesBadge`, `OrderBadge`, `ProblemsBadge`, and
+  `blocks` and `thingsToResolve`, which Order & costs reads too). A new sheet registers there.
+- **`lazy(load)`** (`src/ui/lazy.tsx`): a component that loads its module on first render, renders
+  nothing until then and an error with a reload hint if the load fails; `.preload()` starts the
+  load early. The corner inspector and Project settings load through it.
+- **Moved: `settingsOpen`** is `src/ui/shell/open.ts`'s, so opening settings loads no settings
+  code. `Settings.tsx` no longer exports it.
+- **The example** (`shell/example.ts`): `loadExample()` reads the skill's text on demand; the start
+  card no longer imports it.
+- **`GET /api/arrangements?at=x,y,z[&at=…][&rule=…]`** answers `alukit.arrangements/1`: the corners
+  (`at`, `ends`, `butts`) and per rule `{ rule, ok, commands, plans, effects }` or `{ rule, ok:
+  false, commands, failed }`, with `rev`; 400 on a bad query, 409 when read-only. Its client is
+  `src/ui/client/arrangements.ts` (`fetchArrangements(at, rules?)`); `alukit arrangements` prints
+  the same JSON with `--json`. The core is `src/core/corners/arrange.ts` (`arrange`), and the batch
+  builders `src/core/corners/batch.ts` (`CORNER_RULES`, `takeOut`, `keptConnector`, `lostFields`,
+  `arrangeBatch`), which `inspector/arrangements.ts` now wraps instead of keeping its own; its
+  `RULES` is `CORNER_RULES`, and `arrangementsOf(m, corner, answers)` reads the rule answers.
+- **`CommandEnv.derived?(state)`** (`src/core/commands/types.ts`): a derive to reuse for a state the
+  caller already derived; `makeContext` asks it first. Only `arrange` sets it.
+- **`/api/catalog`** adds `builtins: [{ id, name, vendor?, items, bars, tslot }]`, every built-in
+  catalog (S2's request, with `bars` for `profiles`). Project settings read it.
+- **The joint preview** asks only when an end of the stroke touches a bar (`touchesBars(m, p)` in
+  `tools/joint.ts`).
+- **`src/ui/testing.ts`**: `hostOf(dir).arrange(at)`, the arrangements of a scratch project.

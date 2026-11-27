@@ -40,7 +40,7 @@ export function makeContext(state: State, env: CommandEnv): CommandContext {
       return items;
     },
     derived() {
-      derived ??= derive(state.doc, base());
+      derived ??= env.derived?.(state) ?? derive(state.doc, base());
       return derived;
     },
   };

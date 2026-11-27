@@ -5,6 +5,7 @@ import { EntityChips } from "../common/EntityChip.tsx";
 import { cornerKey } from "../corners.ts";
 import { select, selection } from "../focus.ts";
 import { plural } from "../format.ts";
+import { lazy } from "../lazy.tsx";
 import type { Model } from "../model.ts";
 import { ProblemList, ProblemRow } from "../problems/ProblemRow.tsx";
 import { problemList } from "../problems/source.ts";
@@ -13,7 +14,6 @@ import { model } from "../store.ts";
 import { resolveTargets } from "../targets.ts";
 import { drawnCorners } from "../viewport/viewer.ts";
 import { BarFields, ReplaceForm } from "./BarFields.tsx";
-import { CornerInspector } from "./CornerInspector.tsx";
 import { DeleteButton, DeleteFlow } from "./Delete.tsx";
 import { BarDerived, Item, OtherDerived, ProjectItem } from "./Derived.tsx";
 import { PointedField, pointedFor } from "./Fields.tsx";
@@ -127,6 +127,12 @@ function ItemBody({ m, id }: { m: Model; id: string }) {
     </>
   );
 }
+
+/**
+ * The corner inspector (S5.5), with its arrangements: a chunk of its own, fetched the first time
+ * a corner is selected (lazy.tsx).
+ */
+const CornerInspector = lazy(() => import("./CornerInspector.tsx").then((m) => m.CornerInspector));
 
 const OTHER_WORDS: Partial<Record<RefKind, string>> = {
   "open-item": "An open item: resolve it in Problems.",

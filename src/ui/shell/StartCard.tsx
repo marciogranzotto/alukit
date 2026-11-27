@@ -1,6 +1,5 @@
 import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useState } from "preact/hooks";
-import skill from "../../../skills/alukit/SKILL.md?raw";
 import type { CatalogTree, ItemCard, ListedEntry } from "../../server/catalog.ts";
 import { get } from "../api.ts";
 import { OptionSelects } from "../catalog/Card.tsx";
@@ -12,11 +11,16 @@ import { money, plural } from "../format.ts";
 import { onKey } from "../keys.ts";
 import type { Model } from "../model.ts";
 import { optionFields, pickedOptions } from "../options.ts";
-import { busy, type CommandOutcome, model, sendCommands, summary } from "../store.ts";
+import { busy, type CommandOutcome, model, sendCommands, summary, tell } from "../store.ts";
 import { drawState } from "../tools/state.ts";
-import { exampleBatch, exampleOf, whyNotExample } from "./example.ts";
+import {
+  type Example as ExampleData,
+  exampleBatch,
+  loadExample,
+  whyNotExample,
+} from "./example.ts";
 import { GUIDE_URL, helpOpen } from "./Help.tsx";
-import { settingsOpen } from "./Settings.tsx";
+import { settingsOpen } from "./open.ts";
 import { dismissStart, frameWay, startShown } from "./start.ts";
 
 /**
@@ -101,7 +105,7 @@ function ProjectStrip({ m, cats }: { m: Model; cats: Catalogs | undefined }) {
           >
             Add one in Project settings
           </button>
-          : a built-in catalog's id, or a folder inside the project.
+          : pick a built-in catalog, or name a folder inside the project.
         </span>
       )}
       <Errors outcome={outcome} />
@@ -281,18 +285,18 @@ function FirstBar({ m, catalogsKey }: { m: Model; catalogsKey: string }) {
 // ---------------------------------------------------------------------------------------------
 // The example (D-UX-25)
 
-let parsed: ReturnType<typeof exampleOf> | undefined;
-/** The skill's example, parsed once. */
-function example() {
-  parsed ??= exampleOf(skill);
-  return parsed;
-}
-
 function Example({ m }: { m: Model }) {
   const [outcome, setOutcome] = useState<CommandOutcome>();
   const why = whyNotExample(m.doc);
   const load = async () => {
-    const r = await sendCommands(exampleBatch(example(), m.doc), "load the example", {
+    let example: ExampleData;
+    try {
+      example = await loadExample();
+    } catch (e) {
+      tell(`the example did not load: ${(e as Error).message}`, true);
+      return;
+    }
+    const r = await sendCommands(exampleBatch(example, m.doc), "load the example", {
       strict: true,
       inline: true,
     });

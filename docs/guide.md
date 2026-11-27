@@ -218,9 +218,15 @@ verify one), the theme and `?`. **Export GLB** downloads the variant shown as `a
 writes it.
 
 An empty project opens with the **start card**: the catalogs it can draw from, the currency, and
-the ways in: **Draw the first bar** (a size, the profile and its finish, which become the default
-bar, then three steps that tick as you draw) or **Load the example** (the skill's work table, as
-one step). `Esc` closes it; **Show the start card** in help brings it back.
+three ways in: **A box frame** (the box frame tool's form, below, made as one step), **Draw the
+first bar** (a size, the profile and its finish, which become the default bar, then three steps
+that tick as you draw) or **Load the example** (the skill's work table, as one step). `Esc` closes
+it; **Show the start card** in help brings it back.
+
+**Project settings** (the Project menu, or **Settings…** in the project panel) edit the name, the
+catalogs, the currency, the price basis and exchange rates, the default bar, the cutting
+allowances, the corner rule and the order rules, saved as one step. The built-in catalogs the project does not name are
+listed with their counts and an **Add** button; a folder inside the project is added by its path.
 
 When another source edits the project (an agent through the CLI, a hand edit, another tab), a
 toast says who and what, with **Show** and **Undo it**; the outline marks what it made, "new ·
@@ -228,36 +234,73 @@ claude", until your next step. Your own step gets a toast when it did more than 
 that auto-connect moved, an entity removed. A refused command says why where you made it, or in a
 toast with the whole message, **Copy** and **Select the places** it names.
 
+The tools are a column on the 3D view's left edge, each with its key on a cap; a tool that cannot
+be used now is disabled and says why.
+
 | Tool | Key | How |
 |---|---|---|
-| Select | `V` | click to pick, Ctrl or Cmd-click to toggle, Shift-drag a box, `Esc` clears |
+| Select | `V` | click to pick, Ctrl or Cmd-click to toggle, Shift-drag a box; `Delete` or `Backspace` deletes the selection, listing first what else goes |
 | Draw bar | `B` | click a start, then click an end, or type a length and press `Enter` |
-| Connect | `C` | pick a through bar and the ends that butt, two ends for a miter or splice, or two or more bars for a face joint, then apply. A face joint takes a fastening (none, bolt, T-nut, screw) with its fastener, stack and stations; a pivot takes a station on a face as its base, then the ends it carries, and a hinge |
-| Place part | `P` | click a face or groove; type the distance from an end; roll in quarter turns |
-| Pattern | button | take the selection as the template, click the bar to repeat along, give pitch and count |
+| Box frame | `G` | click the corner, type `1000, 600` and `Enter` (or click the far corner), then the height and `Enter` |
+| Connect | `C` | pick a through bar and the ends that butt, two ends for a miter or splice, or two or more bars for a face joint, then apply. A face joint takes a fastening (none, bolt, T-nut, screw) with its fastener, stack and stations; a pivot takes a station on a face as its base, then the ends it carries, and a hinge. A pick the type cannot take is left out, and the tip says why |
+| Place part | `P` | click a face or groove: the part goes there, one step. Type a distance first to place it that far from the nearer end |
+| Pattern | `X` | take the selection as the template, click the bar to repeat along, give pitch and count |
 | Measure | `M` | two snapped points: the distance and its components |
 
-While drawing:
+`Esc` steps back one level at a time: what is typed, the last pick, the gesture, the tool, then
+the selection. `Ctrl/Cmd+Z` undoes the last step, and `Shift` with it redoes.
+
+**The command bar** at the foot of the 3D view shows the tool, what it asks next, the value you
+type and what it comes to, and the tool's options. Start typing a number (or `[`, `(`, a sign)
+and it goes there; start with `=` to begin with a param. A value is an expression of the
+project's params with `mm`, `cm` or `m`: `1.2m`, `W / 2 + 20`, `-300`. A value that reads a param
+is written as the expression, so the param keeps driving it.
+
+**Drawing a bar.** Click a start point (or type `[x, y, z]` and `Enter`, or select a corner and
+press `Enter`), then click the end or type a length and `Enter`; a click while a length is typed
+draws that length toward the pointer. While drawing:
 
 - The point snaps to nodes, bar ends, face and groove centre lines, face centres, the datums and
   face centres of parts, and the grid (10 mm).
-- The line follows the world X, Y or Z axis nearest your pointer; hold **Shift** to leave the
-  axes and move freely in the work plane.
-- Type digits for a length (`Backspace` edits it) and press `Enter`; once you type, nothing pulls
-  the line.
-- `R` rolls the section a quarter turn; `A` cycles the anchor (centre, corners, faces, datums).
+- The line follows the world X, Y or Z axis nearest your pointer. `→ ← ↑` lock it to X, Y or Z
+  (again, or `↓`, frees it); hold **Shift** to leave the axes and move freely in the work plane.
+- Once you type, nothing pulls the line.
+- `R` rolls the section a quarter turn; `A` cycles the anchor (centre, corners, faces, datums), or
+  click a dot on the section in the command bar.
 - `W` sets the work plane to a face: press it, then click a bar's face; press it again for the
   ground. The plane defaults to the ground.
-- *Auto-connect* (a check box of the tool, on by default) butts each end that meets another bar.
-  Switch it off when you want to join the ends yourself with Connect.
-- `Esc` cancels the gesture, then returns to Select. `Ctrl/Cmd+Z` undoes the last step, and
-  `Shift` with it redoes.
+- `Space` draws the next bar from the last one's end.
+- With **Join ends** on (the command bar's check box, on by default), when the end closes on
+  another bar the preview says what the joint will do ("will butt on b1 · cut 580 · b1 800 →
+  820"), and `Tab` flips which bar runs through. **Corners** sets the corner rule for every bar
+  drawn until you change it. Switch Join ends off to join the ends yourself with Connect.
 
-Views: the toolbar has Iso, Top, Front, Side, Left, Back and Bottom, `O` toggles perspective and
-orthographic, `F` fits the selection (or everything). **Section** cuts the view with a plane
-square to X, Y or Z: move it with its slider, **Flip** shows the other side. It changes only
-what you see; clicks and snaps ignore what it hides. Anything the tools do not cover is one
-`alukit do` away.
+**A box frame.** `G`, click the corner, type `1000, 600` and `Enter` (or click the far corner),
+type the height and `Enter`: four posts, a base and a top ring, every corner butted, as one step.
+The form beside the inspector (and on the start card) sets the rings, a shelf, the corner rule,
+the connector, and whether W, D and H become params; it shows the cut lengths before you make it.
+
+**Placing a part.** Click a face or a groove: the part goes there, one step. Type a distance first
+to place it that far from the nearer end. A pattern's copies take no parts: place it on the
+template.
+
+**The inspector** edits the selection in place: a bar's length (which moves end b along the bar,
+and says "driven by H: edit H" when a param sets it), its item (**Replace**, for this bar, the
+selected ones or all like it), its finish and options. Select a corner (its marker in the view,
+or its row under Joints in the outline) for the **corner inspector**: each way the bars there can
+meet, which bar runs through and the cut lengths each gives, the current one marked "now".
+**Apply** rearranges the corner as one step; **Apply to n matching corners** does the same at
+every corner built the same way. `alukit arrangements <dir> --at x,y,z` gives the same answer from
+a terminal.
+
+Views: the toolbar has Iso, Top, Front and Side (the gizmo in the corner turns to the others),
+**Orthographic**, and **Fit**; `O` toggles perspective and orthographic, `F` fits the selection (or
+everything). **Section** cuts the view with a plane square to X, Y or Z: move it with its slider,
+**Flip** shows the other side. It changes only what you see; clicks and snaps ignore what it
+hides. **Joints** marks every corner by its state (a disc joined, a ring open, a cross failed),
+**Problems** badges the bodies a problem names, and **Colour by item** colours each item as the
+BOM's swatch does, with a legend. In Select, hovering a body tints it and names it. Anything the
+tools do not cover is one `alukit do` away.
 
 Every gesture is one step in the history. The sheets hold the outputs described next; Order &
 costs has a date for the staleness of prices. Problems lists what stands between the project and

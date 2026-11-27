@@ -1,11 +1,13 @@
 import type { CatalogSet } from "#catalog/link.ts";
+import { BUILTIN_DIR, builtinIds } from "#catalog/open.ts";
 import { isValuedObject, num } from "#catalog/schema/common.ts";
 import type { Item } from "#catalog/schema/items.ts";
-import { type CatalogEntry, localId } from "#catalog/search.ts";
+import { type CatalogEntry, localId, sellsTslot } from "#catalog/search.ts";
 import { compareIds } from "#core/ids.ts";
 import { catalogItems, type ItemSource, type OfferInfo } from "#core/items.ts";
 import type { Lock } from "#core/lock/schema.ts";
 import { lockItems } from "#core/lock/source.ts";
+import { openLiveCatalogs } from "#core/project/open.ts";
 import { PROJECT_ITEM } from "#core/project/parse.ts";
 import type { ProjectItem } from "#core/project/schema.ts";
 import type { ResolvedProjectItem } from "#core/project-items/resolve.ts";
@@ -91,6 +93,43 @@ export function catalogTree(entries: readonly CatalogEntry[]): CatalogTree[] {
         });
       return { vendor, count: ks.reduce((n, k) => n + k.count, 0), kinds: ks };
     });
+}
+
+/**
+ * A built-in catalog as Project settings and the start card offer it (S2, D-UX-6): its id (what
+ * a document names), name and vendor, how many items and bars it holds, and whether it sells
+ * T-slot profile, which `alukit new`'s notice asks too (D-UX-7).
+ */
+export interface BuiltinCatalog {
+  id: string;
+  name: string;
+  vendor?: string;
+  items: number;
+  bars: number;
+  tslot: boolean;
+}
+
+/** Each built-in catalog, opened alone as `alukit new` opens them, in id order. */
+export async function builtinCatalogs(
+  dir: string,
+  builtinDir: string = BUILTIN_DIR,
+): Promise<BuiltinCatalog[]> {
+  const out: BuiltinCatalog[] = [];
+  for (const id of await builtinIds(builtinDir)) {
+    const { set } = await openLiveCatalogs(dir, { catalogs: [id] }, builtinDir);
+    const c = set.catalogs.get(id);
+    if (!c) continue;
+    const items = [...c.items.values()];
+    out.push({
+      id,
+      name: c.name,
+      ...(c.vendor ? { vendor: c.vendor } : {}),
+      items: items.length,
+      bars: items.filter((li) => li.item.kind === "bar").length,
+      tslot: sellsTslot(set, [id]),
+    });
+  }
+  return out;
 }
 
 /** A section drawn small: its outline and holes, coarsened to a hundredth of its size. */

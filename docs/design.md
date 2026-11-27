@@ -21,9 +21,8 @@ below as dvb), so that the design again describes the system as built. A recorde
 proved the better choice is now the rule; a feature v1 does not have is stated as a **v1 limit**,
 with the version that takes it up. Calls left for the owner's review are marked *open* (§14, call 6
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
-40–44; call 6 has since been decided, under "UX redesign, S1" below). Changed text is marked *2.3*. The build was not changed for this draft, except as "After
-acceptance run 2", "After acceptance run 3", "After acceptance run 4" and "After the alternative
-frame's acceptance" below record. Notes are cited by
+40–44; call 6 has since been decided, under "UX redesign, S1" below). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "UX redesign, integration". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -395,6 +394,53 @@ tests written first and a golden case worked by an independent hand script
 - §12: the round's gaps row. No golden value or fixture diagnostic moved; the Forseti end-to-end
   test's heads now warn (38.75 %), and the cart's machining sheet lists each line's machining
   (x9, golden values).
+
+### UX redesign, integration
+
+Streams S2 to S5 of the [UX plan](ux/plan.md) rebuilt the app (the shell, the 3D view, the visual
+system and the sheets, the tools and the inspector), and an integration pass joined them. §8 now
+states the result; the stream notes keep the detail: [`ux/s2-decisions.md`](ux/s2-decisions.md)
+to [`ux/s5-decisions.md`](ux/s5-decisions.md) (cited as "s2" to "s5") and
+[`ux/integration-decisions.md`](ux/integration-decisions.md) ("int"). No golden value or derived
+output moved, nor the GLB's bytes (s3 10).
+
+- §8 Layout: **the parts bin over the outline**, the catalog wide over the left column and the
+  view, the tool rail and the command bar on the view, the status bar under it, the inspector
+  with the project panel, and **the sheets** (Cut list, BOM, Machining, Order & costs, Problems,
+  Records) in place of the drawer's ten tabs (D-UX-1 to D-UX-5; s2 1–6, 18).
+- §8: **a step in words** ("Undo · claude: add bar b35"), the question before undoing another
+  source's step, "Step n", toasts for another source's step, refusals where they happened, the
+  readiness pill from the problem list (D-UX-3, D-UX-14, D-UX-20; s2 12–16).
+- §8: **the start card** (a box frame, the first bar by size, profile and finish, the example) and
+  **Project settings** as one `setProject`, offering the built-in catalogs by name (D-UX-6,
+  D-UX-25; s2 7–11; int 20–22). §7.1: `GET /api/catalog` lists the built-in catalogs.
+- §8 Tools: **the command bar and typed values** (expressions with units; a param keeps driving
+  what reads it), `Esc` one level at a time, the arrow-key locks, `Space` to chain, a start typed
+  or taken from the selection, the box frame tool `G`, Pattern on `X`, place on the click, and
+  Connect's pick checks and full diagnostics (D-UX-5, D-UX-8, D-UX-16 to D-UX-18; s5 1–24).
+- §8 Tools: **the joint preview** from a dry run of the gesture, flipped with `Tab`, asked only
+  when an end touches a bar (D-UX-11; s5 10–12; int 18). **Delete** lists a cascade before it
+  happens (D-UX-13; s5 29–32).
+- §8: **the inspector edits in place**, never overwriting what a param drives; **a corner** is
+  where ends meet, with its arrangements per corner rule, applied as one step, to one corner or
+  every matching one (D-UX-9, D-UX-10; s3 1–5; s5 25–28, 34–39).
+- §7.1, §7.3: **`GET /api/arrangements` and `alukit arrangements`**, every rule for a set of
+  corners in one call, sharing the derive: 244 ms against 670 ms for the four dry runs it replaces
+  on 1,018 bars (int 13–17).
+- §8 Rendering: the visual spec's lights, fog and background, outline and detail edges from the
+  section, light edges on a dark body, a selection that cannot hide, hover, joint markers and
+  problem badges, colour by item, the ground and the gizmo (D-UX-23; s3 6–23). A revision's old
+  model is disposed after the frame that draws the new one, so the live update links no shader
+  program again (s3 27–29).
+- §8: **the visual system** (s4): tokens for a dark and a light theme, IBM Plex bundled, number
+  formats, one table system with "Selection only", and each sheet's contents (D-UX-21, D-UX-22).
+- §8: **code loading**: three.js in two chunks of its own, 176 kB smaller once camera-controls
+  is installed with only the classes it uses; the flows only some sessions open load on first use;
+  no chunk passes 500 kB, so the build raises no limit (int 1–12).
+- §8 Targets: the bars' frame rate is measured on an M1 Max (s3 24, 25); the rest stays *not
+  verified*.
+- §6: **`addFrame` refuses a frame with no item** (none given, no default bar), saying so; it
+  refused at its first corner as if no bar end met there (int 26).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -2105,7 +2151,10 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   `params: true` it writes W, D and H as params and the frame's points from them, refusing when
   one of those names is taken. It is made of `setParam`, `addBar` and `autoConnect`, run in
   order inside it, so the corner rule stays in one place; it refuses a size that leaves a rail
-  no length, and a shelf that is not between the rings ([s1](ux/s1-decisions.md) 20–23).
+  no length, and a shelf that is not between the rings ([s1](ux/s1-decisions.md) 20–23), and
+  (*2.3*, after the integration) a frame with no item, neither given nor the project's default
+  bar, whose bars would have no section and so no end to butt
+  ([int](ux/integration-decisions.md) 26).
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
   moves (`cuts`, before and after), the bars it adds with their cuts, what it removes, and the ends
@@ -2173,6 +2222,15 @@ Agents work at this level of meaning, so they never compute cut lengths by hand.
 - **A dry run** (*2.3*, §6) is `dryRun: true` on `POST /api/commands`: it is queued like a step
   and answers `alukit.do/1` with `dry: true`, but nothing is written, logged or broadcast, and no
   `id` is remembered.
+- **A corner's arrangements** (*2.3*, §4.5, §8) are `GET /api/arrangements?at=x,y,z`, any number
+  of `at` and optionally `rule`: for each corner rule, the batch that takes the corners' butts out
+  and joins each corner by that rule, run as one dry run, with each corner's through bar and
+  butting ends and the dry run's effects. The rules share the catalogs, the butts taken out and
+  the derive of what that leaves, so four rules cost about one dry run and a third (measured: 244
+  against 670 ms for four dry runs on 1,018 bars; [integration](ux/integration-decisions.md)
+  13–17). It answers what `alukit arrangements --json` prints.
+- **`GET /api/catalog`** lists the built-in catalogs besides the project's (*2.3*): each one's id,
+  name, item and bar counts, and whether it sells T-slot profile, so the app adds one by name.
 
 Two paths keep a tab and the file in step, the event stream and the watcher; draft 1 had four
 (review m16).
@@ -2216,6 +2274,7 @@ source in the log.
 | `alukit serve <dir>` | runs the project's server and opens the tab |
 | `alukit check <dir> [--frozen]` | validates, derives and runs the checks; non-zero exit on an error |
 | `alukit problems <dir> [--variant v] [--as-of d] [--json]` (*2.3*) | the problem list (§5.5); non-zero exit when one blocks the order or is an error |
+| `alukit arrangements <dir> --at x,y,z [--at …] [--rule r]… [--json]` (*2.3*) | a corner's arrangements (§7.1, §8): per corner rule, the bar that runs through, the cut lengths that move and the batch that applies it, or why the rule is refused; writes nothing; exit 1 when the project cannot be read |
 | `alukit cutlist` / `bom` / `machining` / `order` / `costs <dir> [--variant v] [--format md\|csv\|json]` | the outputs; `machining` (*2.3*) has no CSV; `order` and `costs` take `--as-of YYYY-MM-DD` (*2.3*); `order` exits non-zero when blocked |
 | `alukit derive <dir> --json [--select <paths>]` | the derived model, for report builders (`alukit.derived/1`, with its own JSON Schema). `--select` (*2.3*) takes dotted paths, `*` for every member, commas to merge (`bars.*.cut_mm,params`), and keeps the model's shape; a path the model lacks is an error |
 | `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context |
@@ -2258,67 +2317,147 @@ live. An MCP server comes only if the CLI proves insufficient (review m2).
 
 ## 8. Viewer and UI
 
+*2.3*: the UX redesign ([`ux/plan.md`](ux/plan.md)) rebuilt the app in five streams and an
+integration pass. This section states the result; the stream notes keep the detail and the
+measurements, cited by decision number: [s2](ux/s2-decisions.md) (the shell),
+[s3](ux/s3-decisions.md) (the 3D view), [s4](ux/s4-decisions.md) (the visual system and the
+sheets), [s5](ux/s5-decisions.md) (the tools and the inspector) and
+[int](ux/integration-decisions.md). D-UX-n are the plan's decisions.
+
 ### Layout
 
 | Area | Holds |
 |---|---|
-| Top bar | project, variant, undo and redo (naming the step), revision, export. The read-only banner is a bar of its own under it (*2.3*) |
-| Left | catalog browser (vendor › kind › family, search, item cards with a section thumbnail, fidelity and key data; options and offers) and the project tree (bars, connections, parts, patterns; by tag or kind) |
-| Centre | the 3D viewport: perspective or orthographic, standard views (iso, top, front, side, left, back, bottom), a section clipping plane, grid |
-| Right | properties of the selection. Every number has a provenance popover; derived values (cut length, end angles, mass, price) are read-only |
-| Bottom drawer | Cut list · Machining (*2.3*) · BOM · Order (status per supplier) · Costs · Checks · Open items · Params · Decisions · Log |
+| Top bar | the Project menu (settings, revisions, Export GLB, help, the start card), the variant shown, undo and redo naming whose step they take back, the order's readiness, the revision ("Saved as …" or "Not saved"), the theme and help (*2.3*). The read-only banner is a bar of its own under it (*2.3*) |
+| Left | the parts bin over the outline (*2.3*). The bin holds what is armed, the items the project uses, and those pinned or armed lately; the outline is one tree of bars, joints by corner, parts, patterns, runs and points, by kind or by tag, each row in words with its problem mark. The catalog browser (vendor › kind › family, search, item cards with a section thumbnail, fidelity and key data; options and offers) opens wide over the left column and the viewport (`/`; *2.3*) |
+| Centre | the 3D viewport: perspective or orthographic, standard views (iso, top, front, side; *2.3*: and the gizmo's six ends), a section clipping plane, the ground. *2.3*: the tool rail on its left edge, the view controls on top, the command bar at its foot while a tool is active, and the status bar under it |
+| Right | the active tool's form (Connect, Pattern, the box frame), then the inspector (*2.3*): the selection's properties, edited in place; a corner's arrangements; with nothing selected, the project panel (First steps, the project's summary, its params). Every number has a provenance popover; derived values (cut length, end angles, mass, price) are computed, never typed |
+| Bottom | the sheets (*2.3*): Cut list · BOM · Machining · Order & costs · Problems · Records, each tab with its badge. The checks and open items are in Problems, the decisions and the log in Records, the params in the project panel. `T` collapses them, `Shift+T` maximizes them over the viewport, which keeps its size under them |
 
 As built (*2.3*):
 
+- **A step reads as "who: what"** (s2 12–15). Undo names the step it takes back ("Undo · claude:
+  add bar b35") and asks once before taking back another source's step (D-UX-14); the app says
+  "Step n" where the CLI and JSON keep `rev` (D-UX-20). Another source's step shows a toast with
+  Show and Undo it, a pulse in the scene and a "new" mark in the outline; the person's own step
+  gets a toast only when it changed more than it made (a cut moved, something removed). A refusal
+  shows where it happened: under the form that sent it, else in a toast with its whole text.
+- **Readiness** is one signal, the problem list's (§5.5): the top bar's pill (Ready to order,
+  Blocked · n things to resolve, Nothing to order) opens Order & costs (D-UX-3; s2 16).
 - **The variant switch** shows only when the document has variants, its first entry the default
-  (or "as written"). Every view derives the variant shown: the model, the drawer's outputs, the
-  export. Edits still go to the document as written, since a variant is a derivation of it (§4.10);
-  a point drawn on a variant's geometry is stored as the numbers it snapped to.
-- **The revision** reads its name when a saved revision's content hash equals the current state's,
-  else "unsaved"; its panel saves one and verifies any (§4.13). **Export** writes the GLB of the
-  variant shown, the CLI's bytes.
+  (or "as written"). Every view derives the variant shown: the model, the sheets, the export.
+  Edits still go to the document as written, since a variant is a derivation of it (§4.10), and a
+  strip says so while a variant other than the default is shown (D-UX-19; s2 17); a point drawn
+  on a variant's geometry is stored as the numbers it snapped to.
+- **The revision** reads "Saved as <name>" when a saved revision's content hash equals the current
+  state's, else "Not saved"; its panel saves one and verifies any (§4.13). **Export** writes the
+  GLB of the variant shown, the CLI's bytes.
 - **The section plane** is square to X, Y or Z, moved by a slider across the model's extent, and
   hides one side. It is a view setting, like the camera: no step, and picks and snaps ignore what
   it hides.
 - **The catalog browser** shows the catalogs the document names (and items the lock pins that no
   named catalog holds), and the project's own items under the vendor `project`, read only. A
   family is a bar's system or shape, a part's subtype, a carriage's rail system, a generic item's
-  category.
-- **The drawer's tabs** settle on the revision the scene shows; Order, Costs and Machining fetch
-  when shown, keeping an older answer dimmed until the new one arrives, and say what the CLI says.
-  Open items, Params and Decisions edit through one command batch each, so undo takes an edit back
-  as one step.
-- **v1 limits** (v1.1): the properties panel does not edit an existing connection, and dragging an
-  existing node or bar end is not built (gestures are clicks; §7.1's rule for a drag stands).
+  category. A bar of the size a query writes ranks first, the kinds follow the active tool, and a
+  card arms its item, adds it to the bin, replaces the selection's item, or makes it the default
+  bar (s1 3; s2 6).
+- **The sheets** settle on the revision the scene shows; Order & costs and Machining fetch when
+  shown, keeping an older answer dimmed until the new one arrives, and say what the CLI says. One
+  table system: a row hovers and selects what it names, and "Selection only" filters every sheet
+  by the selection (s4). Open items, params and decisions edit through one command batch each, so
+  undo takes an edit back as one step. An empty project's sheets start collapsed and open once,
+  on the cut list, when there is something to cut (s2 3).
+- **Show** selects what a problem or a row names, frames it keeping the camera's direction,
+  pulses it and opens its outline rows; for a problem it dims the rest until `Esc` (s2 4, 22; s3
+  14, 16, 30).
+- **The start card**, on an empty project: the catalogs and the currency, and three ways in, a
+  box frame, the first bar (a size, a profile of that size, its finish, written as `defaults.bar`
+  in one step) and the skill's example as one step (D-UX-6, D-UX-25; s2 7–10). **Project
+  settings** save as one `setProject` and list the built-in catalogs the project does not name,
+  to add by name (s2 11; int 20–22).
+- **Keys** are described where they are bound, and help lists them; single-key shortcuts can be
+  turned off (WCAG 2.1.4; s2 20, 21; s5 24).
+- **The look** (s4): design tokens for a dark and a light theme, the light one when the system
+  asks unless chosen (snapshots dark; D-UX-21); IBM Plex bundled as files under the CSP
+  (D-UX-22); numbers in the CLI's digits, thousands grouped with a narrow space, units in the
+  column head.
+- **Read-only** lists every error with its entity and field, and a did-you-mean for a field the
+  format does not know; restore asks first and names the copy it keeps (D-UX-15; s2 23, 24).
+- **Code loading** (int 1–12): the page loads the app and three.js, in three chunks; each sheet
+  but the cut list, project settings, the corner inspector and the example load the first time
+  they open, from the server's origin under its `default-src 'self'`. No chunk passes Vite's
+  500 kB advice.
+- **v1 limits** (v1.1): the inspector does not edit a face or pivot connection (a butt is
+  rearranged through its corner), and dragging an existing node or bar end is not built (gestures
+  are clicks; §7.1's rule for a drag stands).
 
 ### Tools
 
-- **Select**: click or box select, or by tag.
-- **Draw bar** (any bar item: profile, tube, rod, rail):
-  1. Click a snap point.
+*2.3*: the tools are a rail with their keys on caps; a tool that cannot be used is disabled and
+says why (s5 21). **The command bar** (D-UX-5) shows the tool, what it asks next, the value typed
+and what it comes to, and the tool's options. A value is the document's expression grammar
+(§4.9) with `mm`, `cm` or `m` after a number; one that reads a param is written as typed, so the
+param keeps driving it, any other as the number it comes to (D-UX-17; s5 1–4). A value-starting
+key over the view moves the keyboard into the bar; `=` starts a value with a param. `Esc` steps
+back one level: what is typed, the last pick, the gesture, the tool, then the selection (D-UX-18;
+s5 9).
+
+- **Select** (`V`): click or box select, or by tag. *2.3*: **Delete** goes at once when its dry
+  run removes only the selection; otherwise a dialog lists what else goes and what changes first,
+  and the step is sent strict (D-UX-13; s5 29–32).
+- **Draw bar** (`B`; any bar item: profile, tube, rod, rail):
+  1. Click a snap point (*2.3*: or type `[x, y, z]`, or press Enter at a selected corner, node or
+     bar end; s5 8).
   2. The line follows the axis, inferred X, Y or Z: the world axis through the start whose screen
      image passes nearest the pointer. Shift frees it within the **work plane** (review m11).
      *2.3*: the work plane is the ground (world XY) by default, moved to the start point; `W`
      then a click on a bar sets it to that face's plane, and `W` again returns to the ground.
      Draft 2's default, the plane through the start point facing the view's dominant axis,
      changes as the camera turns, which made the drawn point unpredictable. Which default to keep
-     is open (call 32). `W` takes a bar's face only in v1, not a part's (v1.1).
+     is open (call 32). `W` takes a bar's face only in v1, not a part's (v1.1). *2.3*: `→ ← ↑`
+     lock the line to X, Y or Z until pressed again (s5 6).
   3. Type a length and press Enter. Once digits are typed nothing pulls the line toward a snap
-     (*2.3*).
-  4. R rolls the section; A cycles the anchor. The item comes from the palette.
+     (*2.3*); a click while a value is typed commits the value, toward the pointer (s5 5).
+     `Space` draws the next bar from the last one's end (s5 7).
+  4. R rolls the section; A cycles the anchor. The item comes from the palette (*2.3*: the bin's
+     armed bar, the project's `defaults.bar` to start with).
   5. The gesture commits as one batch (*2.3*): `addBar`, then, with auto-connect on, an
      `autoConnect` with `optional: true` at each end (§4.5, §6). Points are written as the document would: a node by id, another bar's end as it
      is written (params kept), a point on a line as a station, anything else as coordinates.
-- **Connect**: pick a through bar and butting ends (`butt`), two ends (`miter`, `splice`), a
-  face and the ends it carries (`pivot`), or two or more layers, head to nut (`face`, resting or
-  fastened, with every field §4.5 gives it; *2.3*). A pivot is one batch with the `setBar` of
-  each carried end. The panel shows a missing field before anything is sent, the command's
-  refusal, and derive's new diagnostics on the new connection.
-- **Place part**: on a face or groove, at a distance typed from either end, with a roll in
-  quarter turns. A part at a world pose is placed by command in v1.
-- **Pattern**: select the template, pick the bar (or type a bar or run), type pitch and count. A
-  pattern by a direction or by offsets is written by command in v1.
-- **Measure**: two snapped points, the distance and its components.
+  6. *2.3*: **the joint preview** (D-UX-11; s5 10–12). When an end touches a bar, 60 ms after it
+     snaps there or 250 ms after the gesture last changed, the gesture is dry-run as it would
+     commit, and the words say who runs through and which cuts move ("will butt on b1 · cut 580 ·
+     b1 800 → 820"); `Tab` flips to the next corner rule that gives another arrangement. While
+     neither end touches a bar nothing is asked (int 18).
+- **Box frame** (`G`; *2.3*, D-UX-8): the corner, then W and D, then H, each clicked or typed, as
+  one `addFrame` (§6). Its form, also the start card's, sets the rings, a shelf, the corner rule,
+  the connector and whether W, D and H become params, and shows the cut lengths from a dry run
+  (s5 14, 15).
+- **Connect** (`C`): pick a through bar and butting ends (`butt`), two ends (`miter`,
+  `splice`), a face and the ends it carries (`pivot`), or two or more layers, head to nut (`face`,
+  resting or fastened, with every field §4.5 gives it; *2.3*). A pivot is one batch with the
+  `setBar` of each carried end. The panel shows a missing field before anything is sent, the
+  command's refusal, and every diagnostic the step added, the new connection's first (*2.3*,
+  s5 18). *2.3*: a pick the type cannot take is left out, with the reason by the pointer (s5 19).
+- **Place part** (`P`): on a face or groove, committed on the click (*2.3*, D-UX-16); a distance
+  typed first counts from the nearer end; a roll in quarter turns. A part at a world pose is
+  placed by command in v1. A pattern copy takes no parts (s5 16, 17).
+- **Pattern** (`X`, *2.3*): select the template, pick the bar (or type a bar or run), type pitch
+  and count. A pattern by a direction or by offsets is written by command in v1.
+- **Measure** (`M`): two snapped points, the distance and its components.
+
+**The inspector** (*2.3*; s5 25–28) edits in place. A bar's new length moves end b along the bar,
+written as numbers; a coordinate a param drives says "driven by H: edit H" and is never
+overwritten, and an end at a reference is read-only, saying what sets it. **Replace** (this bar,
+the selected ones, all like it) and the finish edit the item, each one step.
+
+**A corner** (*2.3*, D-UX-10) is where bar ends meet within the core's length tolerance, or an end
+meets another bar's line; it is not an entity, and its key is its point (s3 1–4). Its marker in
+the view and its row in the outline select it, and the inspector shows its **arrangements**
+(D-UX-9): per corner rule, the bar that runs through and the cut lengths it gives, from one
+`GET /api/arrangements` (§7.1; int 13–17). **Apply** is one strict step that takes the corner's
+butts out and joins it by that rule, keeping the connector; **Apply to n matching corners** does
+the same at every corner built the same way (s5 34–39).
 
 Snap targets are nodes, bar ends, stations on face and groove centre lines and on each bar's
 **design line** (*2.3*: a station with no face lies on it, §4.3), face centres, every placed
@@ -2336,8 +2475,21 @@ selection; fitting keeps the view's direction, since `fitToBox` turns it to the 
   (§3.5), as an `InstancedMesh` scaled along the axis, for bars with square ends.
 - A bar with an angled end gets its own geometry: each outline vertex of the prism moves along
   the axis to the end plane, which is exact and cheap.
-- Edges are one merged line buffer for all bars, rebuilt per derive; `EdgesGeometry` cannot be
-  instanced (review m11).
+- Edges are merged line buffers (*2.3*: one per section), rebuilt per derive; `EdgesGeometry`
+  cannot be instanced (review m11). *2.3* (s3 7–9): the section gives them once, as outline edges (the end
+  rings and the silhouette's creases) and detail edges (slot lips, chambers, holes), the detail
+  fading in as a face grows on the screen; a dark body takes light edges; selection, hover,
+  ghosting and colour by item rewrite only the changed bars' vertex colours, never a buffer.
+- *2.3*: the look is the visual spec's (s3 6, 11): sky and key lights, low ambient, linear fog
+  into a gradient background, in both themes; bodies drawn behind their edges by a polygon
+  offset. A selection cannot hide: its bodies take the selection's tint keeping their shading,
+  and its outline is drawn again with no depth test. Hover picks once a frame, joint markers
+  first (s3 12, 13).
+- *2.3*: joint markers (a disc joined, a ring open, a cross failed) and problem badges (an octagon
+  for what blocks or errs, a triangle for a warning) are screen-sized points lifted toward the
+  eye, so a corner inside its bars still shows; snap glyphs have a shape per meaning, in the
+  tool's colour (s3 17, 18; s5 22). Colour by item takes the BOM's swatches, with a legend
+  (s3 22). The ground fits the model; the gizmo is HTML over the canvas (s3 20, 21).
 - Holes are markers, not booleans, in v1: a rod of the drill's diameter through the material,
   with a wider one for a countersink or counterbore. Hardware uses simple parametric meshes, or a
   GLB per item where one exists. A face connection's fasteners are drawn on their axes; a butt's
@@ -2346,13 +2498,19 @@ selection; fitting keeps the view's direction, since `fitToBox` turns it to the 
   fidelity on hover. **v1 limit** (*2.3*): placeholders are translucent and outlined, without
   hatching, which waits for a texture (v1.1).
 - The scene renders on demand (a camera move, a model, a selection, a resize), and fits the
-  camera to the first model only (*2.3*).
-- Meshes are built by `src/mesh/`, which the viewer and the GLB writer share (§9).
+  camera to the first model only (*2.3*). *2.3*: a revision's old model is disposed after the
+  frame that draws the new one, so no shader program is released and linked again; on
+  SwiftShader that took the live update from about 1.1 s to under 20 ms (s3 27–29).
+- Meshes are built by `src/mesh/`, which the viewer and the GLB writer share (§9). The GLB keeps
+  its own palette: the redesign did not move its bytes (s3 10).
 
 ### Targets
 
 1,000 bars and 5,000 hardware items at 60 fps on an M-series Mac. A full derive under 50 ms for
-1,000 bars; incremental derive comes later if needed. *Not verified* (review 1 §9).
+1,000 bars; incremental derive comes later if needed. *2.3*: the bars are measured (s3 24, 25): on
+an M1 Max a 1,000-bar lattice holds 60 Hz orbiting and hovering, with 0.25 to 1.9 ms of CPU a
+frame in `renderer.render` and 0.2 to 0.6 ms a hover pick. The hardware items and the derive time
+are *not verified* (review 1 §9).
 
 ## 9. Exports
 

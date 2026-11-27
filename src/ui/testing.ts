@@ -1,3 +1,5 @@
+import type { V3 } from "#core/vec.ts";
+import type { ArrangementsAnswer } from "./client/arrangements.ts";
 import type { DryRun } from "./client/dryrun.ts";
 import type { Model } from "./model.ts";
 
@@ -30,11 +32,13 @@ export async function viewOf(dir: string, ...batches: readonly unknown[][]): Pro
 /**
  * A scratch project held open as the server holds it, for tests that ask what a step would do:
  * `view()` is the drawn view model, `dry(commands)` a dry run as the app's client reads it
- * (src/ui/client/dryrun.ts), `apply(commands)` a step. Close it when done.
+ * (src/ui/client/dryrun.ts), `arrange(at)` the corners' arrangements as `GET /api/arrangements`
+ * answers them (src/ui/client/arrangements.ts), `apply(commands)` a step. Close it when done.
  */
 export async function hostOf(dir: string): Promise<{
   view(): Model;
   dry(commands: readonly unknown[]): Promise<DryRun>;
+  arrange(at: readonly V3[]): Promise<ArrangementsAnswer>;
   apply(commands: readonly unknown[]): Promise<void>;
   close(): Promise<void>;
 }> {
@@ -49,6 +53,11 @@ export async function hostOf(dir: string): Promise<{
       const read = dryRunOf(a.ok ? 200 : 422, JSON.parse(JSON.stringify(a)));
       if (!read.ok) throw new Error(read.why);
       return read.value;
+    },
+    async arrange(at) {
+      const a = await host.arrangements({ at });
+      if (!a.ok) throw new Error(`read-only: ${JSON.stringify(a.status)}`);
+      return JSON.parse(JSON.stringify({ rev: a.rev, corners: a.corners, rules: a.rules }));
     },
     async apply(commands) {
       const r = await host.commands({ commands: commands as never, source: "test" });

@@ -47,6 +47,11 @@ export const USAGE = {
     "    the check and the order's reasons as one list in words, grouped by what they hold up,",
     "    each with its fixes (alukit.problems/1); exit 1 when one blocks the order or is an error",
   ],
+  arrangements: [
+    "alukit arrangements <dir> --at x,y,z [--at x,y,z]... [--rule vertical|x|y|first]... [--json]",
+    "    where bar ends meet at those points, each corner rule's arrangement: which bar runs",
+    "    through and the cut lengths it gives, and the batch that applies it; writes nothing",
+  ],
   do: [
     "alukit do <dir> '<json>' | -f <file> | -  [--json] [--as <name>|agent:<name>] [--dry-run]",
     "    apply a batch of commands atomically, from an argument, a file or stdin; --dry-run",

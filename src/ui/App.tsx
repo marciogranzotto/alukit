@@ -6,14 +6,15 @@ import { keepPalette, startPalette } from "./catalog/state.ts";
 import { showKey } from "./focus.ts";
 import { Inspector } from "./inspector/Inspector.tsx";
 import { listenKeys, onKey } from "./keys.ts";
+import { lazy } from "./lazy.tsx";
 import { Outline } from "./outline/Outline.tsx";
 import { activeSheet, sheetsOpen } from "./sheets/registry.ts";
 import { Sheets } from "./sheets/Sheets.tsx";
 import { Help } from "./shell/Help.tsx";
+import { settingsOpen } from "./shell/open.ts";
 import { isNumber, readPref, writePref } from "./shell/prefs.ts";
 import { wirePresence } from "./shell/presence.ts";
 import { LastGood, NoAccess, ReadOnlyBanner } from "./shell/ReadOnly.tsx";
-import { Settings } from "./shell/Settings.tsx";
 import { Splitter } from "./shell/Splitter.tsx";
 import { Coach, StartCard } from "./shell/StartCard.tsx";
 import { StatusBar } from "./shell/StatusBar.tsx";
@@ -30,6 +31,9 @@ import { connectTools } from "./tools/wiring.ts";
 import { Viewport } from "./viewport/Viewport.tsx";
 // The sheets, which register themselves with the container (sheets/registry.ts).
 import "./tables/index.ts";
+
+/** Project settings, a chunk of its own, fetched the first time it opens (lazy.tsx). */
+const Settings = lazy(() => import("./shell/Settings.tsx").then((m) => m.Settings));
 
 /**
  * The app's layout (docs/ux/plan.md §1, D-UX-1, D-UX-2, S2.1): the top bar and its banners; then
@@ -171,7 +175,7 @@ export function App() {
         <Sheets />
       </div>
       <Help />
-      <Settings />
+      {settingsOpen.value && <Settings />}
       <UndoConfirm />
     </div>
   );

@@ -255,10 +255,20 @@ describe("a corner's arrangements (S5.5)", () => {
       expect(takeOut(m, [c])).toEqual([
         { cmd: "removeEntity", args: { id: c.connections[0] as string } },
       ]);
-      const answers = await Promise.all(
-        RULES.map(async (rule) => ({ rule, dry: await h.dry(arrangeBatch(m, [c], rule)) })),
-      );
-      const { list, refused } = arrangementsOf(m, c, answers);
+      // One request answers every rule, in RULES order, as a dry run of that rule's batch would.
+      const got = await h.arrange([c.at]);
+      expect(got.rev).toBe(m.rev);
+      expect(got.corners).toEqual([{ at: c.at, ends: c.ends, butts: c.connections }]);
+      expect(got.rules.map((r) => r.rule)).toEqual([...RULES]);
+      for (const r of got.rules) {
+        const batch = arrangeBatch(m, [c], r.rule);
+        const dry = await h.dry(batch);
+        if (!r.ok || !dry.ok) throw new Error(`${r.rule} was refused`);
+        expect(r.commands).toEqual(batch);
+        expect(r.effects).toEqual(dry.effects);
+        expect(r.plans).toEqual([{ at: c.at, ...(dry.results.at(-1)?.info as object) }]);
+      }
+      const { list, refused } = arrangementsOf(m, c, got.rules);
       expect(refused).toEqual([]);
       // vertical (no post: the lowest id), y and first all give b2; x gives b3.
       expect(list.map((a) => [a.title, a.rules, a.current])).toEqual([

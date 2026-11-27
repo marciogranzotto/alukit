@@ -14,6 +14,8 @@ export async function editCommand(cmd: EditCommand, argv: readonly string[], io:
       return (await import("./check.ts")).checkCommand(argv, io);
     case "problems":
       return (await import("./problems.ts")).problemsCommand(argv, io);
+    case "arrangements":
+      return (await import("./arrangements.ts")).arrangementsCommand(argv, io);
     case "do":
       return (await import("./do.ts")).doCommand(argv, io);
     case "add":

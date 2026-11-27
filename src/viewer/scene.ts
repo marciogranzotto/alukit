@@ -1,6 +1,4 @@
 import CameraControls from "camera-controls";
-// camera-controls needs three's classes installed once.
-import * as THREE from "three";
 import {
   Box3,
   BufferAttribute,
@@ -9,20 +7,28 @@ import {
   DoubleSide,
   EdgesGeometry,
   Float32BufferAttribute,
+  FrontSide,
   Group,
   InstancedMesh,
   LineBasicMaterial,
+  LineLoop,
   LineSegments,
+  type Material,
   Matrix4,
   Mesh,
   MeshLambertMaterial,
   type Object3D,
   OrthographicCamera,
   PerspectiveCamera,
+  Plane,
+  Quaternion,
   Raycaster,
   Scene,
+  Sphere,
+  Spherical,
   Vector2,
   Vector3,
+  Vector4,
   WebGLRenderer,
 } from "three";
 import {
@@ -52,8 +58,12 @@ import type { P2, Ray } from "./snap.ts";
 import type { Hex, ViewTheme } from "./theme.ts";
 import { type DocView, fromThree, isStandard, viewFrom } from "./views.ts";
 
+// camera-controls needs three's classes installed once. Only the ones it uses, as its README's
+// subset: handing it three's whole namespace keeps every export of three in the bundle, since a
+// bundler cannot tell which ones the namespace's reader takes (measured: 176 kB more of three,
+// 793 kB against 618 kB; docs/ux/integration-decisions.md).
 CameraControls.install({
-  THREE: THREE as unknown as Parameters<typeof CameraControls.install>[0]["THREE"],
+  THREE: { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster },
 });
 
 /** What the scene holds, for the test hook and the status line. */
@@ -467,7 +477,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   // place, so moving it recompiles nothing.
 
   let section: SectionPlane | undefined;
-  const clipPlane = new THREE.Plane();
+  const clipPlane = new Plane();
   const clipPlanes = [clipPlane];
   const sectionMaterial = new LineBasicMaterial({
     color: theme.tool,
@@ -475,7 +485,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     opacity: 0.8,
     fog: false,
   });
-  const sectionLine = new THREE.LineLoop(new BufferGeometry(), sectionMaterial);
+  const sectionLine = new LineLoop(new BufferGeometry(), sectionMaterial);
   sectionLine.name = "section outline";
   sectionLine.raycast = () => {};
   sectionLine.visible = false;
@@ -497,7 +507,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   function clipMaterials(): void {
     const planes = section ? clipPlanes : null;
     content.traverse((o) => {
-      const m = (o as { material?: THREE.Material | THREE.Material[] }).material;
+      const m = (o as { material?: Material | Material[] }).material;
       for (const x of Array.isArray(m) ? m : m ? [m] : []) x.clippingPlanes = planes;
     });
     for (const m of [capMaterial, sideMaterial, outlineMaterial, detailMaterial, xrayMaterial]) {
@@ -695,7 +705,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
         transparent: translucent,
         opacity: translucent ? theme.translucent : 1,
         depthWrite: !translucent,
-        side: translucent ? DoubleSide : THREE.FrontSide,
+        side: translucent ? DoubleSide : FrontSide,
       });
       const frame = placed.matrix;
       const mesh = new Mesh(geometry, material);
@@ -806,7 +816,7 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
     };
 
     // What depends on the model's size: the fog's depth, the ground, the markers' lift.
-    const sphere = modelBox().getBoundingSphere(new THREE.Sphere());
+    const sphere = modelBox().getBoundingSphere(new Sphere());
     radius = Math.max(sphere.radius, 200);
     const wb = worldBox();
     ground.fit({ x0: wb.min.x, y0: wb.min.y, x1: wb.max.x, y1: wb.max.y });

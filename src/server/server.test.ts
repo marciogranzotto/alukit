@@ -419,6 +419,48 @@ describe("the order and the costs (§5.4, §4.11)", () => {
     expect((await text(r, "api/problems?variant=nope")).status).toBe(400);
   });
 
+  it("answers a corner's arrangements as alukit arrangements --json, byte for byte (S5.5)", async () => {
+    const f = await fixture();
+    const frame = join(f.dir, "..", "..", "base-frame", "cli");
+    // Headless first, before a server owns the folder: revision 0, the files as read.
+    const cli = await capture(["arrangements", frame, "--json", "--at", "0,0,900"]);
+    expect(cli.code).toBe(0);
+    const r = await serve({ ...f, dir: frame });
+    const served = await text(r, "api/arrangements?at=0,0,900");
+    expect(served).toMatchObject({ status: 200, rev: "0" });
+    expect(served.body).toBe(`${cli.out}\n`);
+    // Every rule, in order, each what a dry run of its own batch answers; nothing is written.
+    const a = JSON.parse(served.body) as {
+      corners: unknown[];
+      rules: { rule: string; ok: boolean; commands: unknown[]; effects: unknown }[];
+    };
+    expect(a.corners).toEqual([{ at: [0, 0, 900], ends: ["b1.b", "b5.a", "b7.a"], butts: ["c1"] }]);
+    expect(a.rules.map((x) => [x.rule, x.ok])).toEqual([
+      ["vertical", true],
+      ["x", true],
+      ["y", true],
+      ["first", true],
+    ]);
+    for (const x of a.rules) {
+      const dry = await api(r, "api/commands", {
+        commands: x.commands,
+        source: "ui",
+        dryRun: true,
+      });
+      expect(dry.body.effects, x.rule).toEqual(x.effects);
+    }
+    expect((await api(r, "api/log")).body.entries).toEqual([]);
+    // With the server running, the CLI asks it.
+    const through = await capture(["arrangements", frame, "--json", "--at", "0,0,900"]);
+    expect(`${through.out}\n`).toBe(served.body);
+    // Only the rules asked for, in the order asked.
+    const two = JSON.parse((await text(r, "api/arrangements?at=0,0,900&rule=y&rule=x")).body);
+    expect(two.rules.map((x: { rule: string }) => x.rule)).toEqual(["y", "x"]);
+    for (const bad of ["", "?at=0,0", "?at=0,0,a", "?at=0,0,900&rule=diagonal"]) {
+      expect((await text(r, `api/arrangements${bad}`)).status, bad).toBe(400);
+    }
+  });
+
   it("answers the machining sheet as alukit machining --format json, byte for byte", async () => {
     const f = await fixture();
     const cart = join(f.dir, "..", "..", "cart");
