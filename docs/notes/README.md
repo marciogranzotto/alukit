@@ -20,3 +20,4 @@ cite them as "m4a decision 13". Where the build differs from the design, see
 | [`m4b-decisions.md`](m4b-decisions.md) | M4b, drawing with the mouse: the base-frame oracle, draw/connect/place/pattern/measure, snapping, the work plane, the catalog browser, cameras and `snapshot` |
 | [`m5-decisions.md`](m5-decisions.md) | M5: variants, diff, revisions and their stamps, the GLB writer and its shared mesh modules, the agent skill |
 | [`m6-decisions.md`](m6-decisions.md) | M6: project items (plates, bent angles, generic items, placeholders), hole features, mass formulas, the machining sheet, gap G-B |
+| [`a3-face-contact.md`](a3-face-contact.md) | gap A3: face connections on a section's real outline faces (an angle's or a channel's inner faces), the fastener's walk, grip and holes through them, golden case G29 |
