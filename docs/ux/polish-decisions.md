@@ -60,7 +60,9 @@ test, a run or the CLI says so), **read** (from the code), **inferred**. After-s
    default and the frame chooses another, the frame's butts name their own.
 4. **Joined with is required when the project names no default.** "Nothing" is a choice to make,
    not a default to fall into: an unnoticed default of nothing is how the review's frame read
-   "Ready to order" with nothing to join it.
+   "Ready to order" with nothing to join it. It is offered only while the project names no
+   default: a butt with no connector takes the default (derive's `connector ??
+   defaults.butt.connector`), so with one, "Nothing" could not be honoured.
 5. **The start card writes nothing until something is made.** The profile becomes `defaults.bar`
    in the frame's step or in "Draw the first bar"'s, not when it is chosen, so a person who looks
    and closes the card leaves no step; and nothing at all when it is the default already.

@@ -223,12 +223,15 @@ export function FrameForm({
     const e = [...connectors.fit, ...connectors.other].find((x) => x.id === defaultButt);
     return e ? connectorLabel(e) : defaultButt;
   })();
-  const lead = [
-    defaultButt
-      ? { value: "", label: `the project's default: ${chosenName}` }
-      : { value: "", label: "Choose how the corners are joined…" },
-    { value: JOIN_NONE, label: "Nothing: I will join them myself" },
-  ];
+  // "Nothing" only while the project names no default: a butt that names no connector takes the
+  // default (derive's `connector ?? defaults.butt.connector`), so with one it cannot be honoured.
+  const joint = defaultButt && o.joint === JOIN_NONE ? "" : o.joint;
+  const lead = defaultButt
+    ? [{ value: "", label: `the project's default: ${chosenName}` }]
+    : [
+        { value: "", label: "Choose how the corners are joined…" },
+        { value: JOIN_NONE, label: "Nothing: I will join them myself" },
+      ];
   const profileText = bar
     ? `${bar.name}${bar.opt ? ` ${optionsText(bar.opt)}` : ""}`
     : hasDefault
@@ -262,13 +265,13 @@ export function FrameForm({
           id="frame-joint"
           testid="frame-joint"
           label="How the frame's corners are joined: a connector that fits the bar, or nothing"
-          value={o.joint}
+          value={joint}
           systems={systems}
           lead={lead}
           disabled={busy.value}
           onChange={(v) => setOptions({ joint: v })}
         />
-        {o.joint !== JOIN_NONE && (o.joint !== "" || defaultButt) && (
+        {joint !== JOIN_NONE && (joint !== "" || defaultButt) && (
           <label title="Connectors at each butting end">
             ×{" "}
             <input

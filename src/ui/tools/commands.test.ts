@@ -358,4 +358,18 @@ describe("box frame (S5.7, BE-6)", () => {
     // "Nothing: I will join them myself" is an explicit choice: addFrame alone.
     expect(frameBatch({ ...draft }, opts, bar40, bare, { W: 1200 })).toEqual({ commands: [frame] });
   });
+
+  it("with a project default, a butt cannot name nothing: the frame takes the default", () => {
+    // A butt with no connector takes the default (derive's `connector ?? defaults.butt`), so the
+    // form offers no "Nothing" then, and a "Nothing" left from before writes no connector.
+    const withDefault = { hasDefaultBar: false, defaultButt: "x:CT" };
+    expect(frameBatch({ ...draft }, opts, bar40, withDefault, { W: 1200 })).toEqual({
+      commands: [frame],
+    });
+    // Another connector than the default: the frame's butts name it themselves.
+    const other = { ...opts, joint: "x:CN" };
+    expect(frameCommand({ ...draft }, other, bar40, withDefault, { W: 1200 })).toMatchObject({
+      args: { connector: "x:CN" },
+    });
+  });
 });
