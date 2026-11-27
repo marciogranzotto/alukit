@@ -3,16 +3,13 @@ import { cli, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
 
 /**
  * The other tools of M4b (design §8): place part on a face, pattern the selection along a bar,
- * measure between snap points, and the camera's orthographic and standard views and fit to
- * selection, on the CLI-built base frame. Each edit is one revision, checked with the CLI.
+ * measure between snap points, on the CLI-built base frame, each edit one revision, checked
+ * with the CLI; and the tools' snap points on the project's own items (§4.8), on the cart.
  */
 
 type V3 = [number, number, number];
 
 let served: Served;
-test.beforeEach(async () => {
-  served = await serve("base-frame/cli");
-});
 test.afterEach(async () => {
   await served.stop();
 });
@@ -41,6 +38,7 @@ async function derivedParts(dir: string): Promise<Record<string, { item: string;
 
 test("places a part on a face, patterns it along a bar, and measures", async ({ page }) => {
   test.setTimeout(120_000);
+  served = await serve("base-frame/cli");
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await openTab(page, served, 0);
@@ -78,51 +76,29 @@ test("places a part on a face, patterns it along a bar, and measures", async ({ 
   expect(errors).toEqual([]);
 });
 
-test("looks from standard views, orthographic or not, and fits to the selection", async ({
+test("the tools snap to the project's own items: a placeholder's face centre and origin", async ({
   page,
 }) => {
+  served = await serve("cart");
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
   await openTab(page, served, 0);
-  const settle = async () => {
-    let last = "";
-    for (let i = 0; i < 100; i++) {
-      const now = JSON.stringify(await screen(page, [0, 0, 0]));
-      if (now === last) return;
-      last = now;
-      await page.waitForTimeout(120);
-    }
+  const clickOn = async (p: [number, number, number], says: RegExp) => {
+    const at = await page.evaluate((q) => window.__alukit?.screen(q), p);
+    if (!at) throw new Error(`${p} is not on the screen`);
+    await page.mouse.move(at[0], at[1], { steps: 4 });
+    await expect
+      .poll(async () => (await page.evaluate(() => window.__alukit?.tool()))?.hint ?? "", {
+        timeout: 2000,
+      })
+      .toMatch(says);
+    await page.mouse.click(at[0], at[1]);
   };
-  // Top, orthographic: world X to the right, Y up the screen.
-  await page.getByTestId("projection").click();
-  await expect(page.getByTestId("projection")).toHaveText("Ortho");
-  await page.getByTestId("view-top").click();
-  await settle();
-  const o = await screen(page, [0, 0, 0]);
-  const x = await screen(page, [1200, 0, 0]);
-  const y = await screen(page, [0, 600, 0]);
-  const z = await screen(page, [0, 0, 900]);
-  expect(x[0] - o[0]).toBeGreaterThan(100);
-  expect(Math.abs(x[1] - o[1])).toBeLessThan(1);
-  expect(o[1] - y[1]).toBeGreaterThan(50);
-  // Orthographic, looking straight down: height does not move a point.
-  expect(Math.hypot(z[0] - o[0], z[1] - o[1])).toBeLessThan(1);
-  // The ratio of the frame's sides is kept: an orthographic projection.
-  expect((x[0] - o[0]) / (o[1] - y[1])).toBeCloseTo(2, 2);
-
-  // Front: X to the right, Z up.
-  await page.getByTestId("view-front").click();
-  await settle();
-  const fo = await screen(page, [0, 0, 0]);
-  const fz = await screen(page, [0, 0, 900]);
-  expect(fo[1] - fz[1]).toBeGreaterThan(50);
-  expect(Math.abs(fz[0] - fo[0])).toBeLessThan(1);
-
-  // Fit to one base rail: it then spans most of the viewport's width.
-  await page.getByTestId("tree").locator('[data-id="b9"]').click();
-  const before = (await screen(page, [1200, 0, 100]))[0] - (await screen(page, [0, 0, 100]))[0];
-  await page.getByTestId("fit").click();
-  await settle();
-  const after = (await screen(page, [1200, 0, 100]))[0] - (await screen(page, [0, 0, 100]))[0];
-  const box = await page.getByTestId("viewport").boundingBox();
-  expect(after).toBeGreaterThanOrEqual(before);
-  expect(after).toBeGreaterThan((box?.width ?? 0) * 0.7);
+  // Measure the gear motor p8 (a placeholder at a world pose, box 120 x 90 x 110 from its
+  // origin): from its top face's centre down to its origin.
+  await page.getByTestId("tool-measure").click();
+  await clickOn([900, 580, 238], /^p8 \+z face centre$/);
+  await clickOn([900, 580, 128], /^p8 origin$/);
+  await expect(page.getByTestId("measure-result")).toContainText("110.00 mm");
+  expect(errors).toEqual([]);
 });

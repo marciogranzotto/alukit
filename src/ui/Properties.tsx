@@ -1,6 +1,8 @@
 import { useState } from "preact/hooks";
+import { selection } from "./focus.ts";
 import type { Model } from "./model.ts";
-import { model, selection } from "./store.ts";
+import { ProjectPanel } from "./shell/ProjectPanel.tsx";
+import { model } from "./store.ts";
 
 /**
  * Properties of the selection (design §8, right): the entity's fields as written, its derived
@@ -336,12 +338,8 @@ export function Properties() {
   const m = model.value;
   const sel = [...selection.value];
   if (!m) return <div class="panel-empty">No model yet.</div>;
-  if (sel.length === 0)
-    return (
-      <div class="panel-empty">
-        Select a bar, part or connection: click it, Shift-drag a box, or pick it in the tree.
-      </div>
-    );
+  // Nothing selected: the project panel (D-UX-4), S2's, in the inspector's place.
+  if (sel.length === 0) return <ProjectPanel />;
   if (sel.length > 1) {
     return (
       <div class="props" data-testid="properties">

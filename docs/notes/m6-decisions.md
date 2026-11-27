@@ -100,7 +100,8 @@ with how), **read**, **inferred**.
 | 32 | Holes are marked, not cut. Each hole is a dark rod of its drill's diameter through the material, or as deep as a blind hole, from its face. A countersink or counterbore adds a wider rod as deep as itself. Each rod stands 0.5 mm proud of the face, so it shows. They are one `InstancedMesh`; a pick selects the part, and selection does not recolour them | A cut needs CSG, and the shop works from the sheet, not the picture. **Verified**: `mesh.test.ts`, the cart's rods against the sheet's holes, and by eye on a two-bar scratch project with p6–p8 |
 | 33 | Test hook: `stats()` adds `plates`, `bentAngles`, `placeholders` and `holes` (holes marked, not rods) | M4a decision 39. The rendering test checks one body per placed part from `alukit derive --json` and the holes from `alukit machining` |
 
-**Test expectations changed by the merge.** `tests/e2e/canvas.spec.ts` checked that the cart drew
+**Test expectations changed by the merge.** `tests/e2e/canvas.spec.ts` (since UX S0, `view.spec.ts`
+and `inspector.spec.ts`) checked that the cart drew
 3 parts, and that a box over the viewport selected 42 entities. It now draws 6 parts (the three
 carriages, plus M6's p6, p7 and p8, all placed), and the box selects 45. The 39 bars are
 unchanged. No unit or server test hard-coded a cart count, and the `/api/order` test reads

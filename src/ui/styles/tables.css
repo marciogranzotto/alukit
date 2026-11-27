@@ -1,0 +1,178 @@
+/*
+ * What the sheets hold: the tables, their links and statuses, diagnostics, and the record forms
+ * (open items, params, decisions). Owner: S4.
+ */
+
+.record-form,
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 8px 0 4px;
+}
+
+.inline-form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.record-form input,
+.inline-form input {
+  background: var(--bg-well);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 2px 4px;
+  font: inherit;
+}
+
+.record-form input.wide {
+  flex: 1 1 24ch;
+  min-width: 16ch;
+}
+
+/* Before .diagnostics, whose margin wins on a list that is both. */
+.form-errors {
+  flex-basis: 100%;
+  margin: 2px 0;
+}
+
+/* A sheet's badge on its tab (registry.ts's `badge`): today the checks' error count */
+.badge {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--blocked);
+  color: var(--status-ink);
+  font-size: var(--fs-tiny);
+}
+
+.drawer-body h4 {
+  margin: 10px 0 4px;
+  font-size: var(--fs-body);
+}
+
+table.grid {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+table.grid th,
+table.grid td {
+  border-bottom: 1px solid var(--line);
+  padding: 2px 8px 2px 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+table.grid th {
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+table.grid td.n {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sources {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+}
+
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--act);
+  cursor: pointer;
+}
+
+.link.selected {
+  color: var(--sel);
+}
+
+.diagnostics {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0;
+}
+
+.diagnostics li {
+  padding: 1px 0;
+}
+
+.diagnostics .sev {
+  display: inline-block;
+  min-width: 4ch;
+  font-size: var(--fs-tiny);
+  text-transform: uppercase;
+}
+
+.diagnostics .error .sev,
+tr.error {
+  color: var(--blocked);
+}
+
+.diagnostics .warn .sev,
+tr.warn {
+  color: var(--warn);
+}
+
+.diagnostics .code {
+  color: var(--text-2);
+}
+
+.status {
+  font-size: var(--fs-tiny);
+  font-weight: 600;
+  padding: 0 5px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+}
+
+.status.READY {
+  color: var(--ready);
+}
+
+.status.BLOCKED {
+  color: var(--blocked);
+}
+
+.stale {
+  opacity: 0.55;
+}
+
+.stamp {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+}
+
+.as-of input {
+  font: inherit;
+  color: inherit;
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 0 4px;
+}
+
+table.grid th.n {
+  text-align: right;
+}
+
+table.grid.totals {
+  width: auto;
+}
+
+table.grid.totals td,
+table.grid.totals th {
+  padding-right: 24px;
+}
+
+table.grid tr.total td {
+  font-weight: 600;
+}

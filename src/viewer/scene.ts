@@ -43,9 +43,10 @@ import { HOLE_SEGMENTS, holeMarks, partMesh } from "../mesh/items.ts";
 import type { BarJson, MeshInput, V3, ViewSection } from "../mesh/model.ts";
 import { fastenerMatrix, holeMatrix, partShape } from "../mesh/place.ts";
 import { rodMesh } from "../mesh/solids.ts";
-import { barColour, COLOURS, partColour, TRANSLUCENT_OPACITY } from "../mesh/style.ts";
+import { finishTone, partTone } from "../mesh/style.ts";
 import { Overlay, type OverlayState } from "./overlay.ts";
 import type { P2, Ray } from "./snap.ts";
+import type { ViewTheme } from "./theme.ts";
 import { type DocView, fromThree, isStandard, viewFrom } from "./views.ts";
 
 CameraControls.install({
@@ -107,6 +108,25 @@ export interface ToolHandler {
   leave?(): void;
 }
 
+/** A corner as the view draws it (D-UX-10; src/ui/corners.ts derives the rest of it). */
+export interface CornerMarker {
+  key: string;
+  at: V3;
+  state: "joined" | "open" | "failed";
+  /** The bar that runs through, when one does. */
+  through?: string;
+}
+
+/** A problem drawn on the entities it is about (S3.7). */
+export interface ProblemBadge {
+  ids: string[];
+  severity: "block" | "error" | "warn";
+}
+
+/**
+ * The viewer's API. The methods after `stats` are the UX redesign's (docs/ux/plan.md §5.3):
+ * today they do nothing, and S3 makes each work (the task named on it), keeping its signature.
+ */
 export interface Viewer {
   canvas: HTMLCanvasElement;
   setModel(m: MeshInput): void;
@@ -144,6 +164,28 @@ export interface Viewer {
   /** The model's extent along a world axis (mm): the section plane's range. */
   extent(axis: SectionPlane["axis"]): [number, number];
   stats(): ViewerStats;
+  /** Tints the bodies the pointer, a row or a chip is over (S3.2). */
+  setHover(ids: ReadonlySet<string>): void;
+  /** Called with the entity under the pointer in Select, or undefined off every body (S3.2). */
+  onHover(cb: (id?: string) => void): void;
+  /** Ghosts every body but `keep`; undefined ends it (S3.6). */
+  setGhost(keep: ReadonlySet<string> | undefined): void;
+  /** Pulses the bodies, to draw the eye to them (S3.6). */
+  pulse(ids: ReadonlySet<string>): void;
+  /** Fits the camera to a box in world coordinates (Z up, mm), keeping its direction (S3.6). */
+  fitBox(box: [V3, V3]): void;
+  /** Draws a marker at each corner, by its state (S3.5). */
+  setCorners(c: readonly CornerMarker[]): void;
+  /** Draws each problem on its entities, by group (S3.7). */
+  setProblemBadges(b: readonly ProblemBadge[]): void;
+  /** Colours bars by their finish (today's look) or by their item, from the swatches (S3.10). */
+  setColourBy(mode: "finish" | "item", swatches?: ReadonlyMap<string, number>): void;
+  /** Draws with another theme's colours (S3.12). */
+  setTheme(t: ViewTheme): void;
+  /** Calls back after each frame drawn, for DOM overlays that follow the scene; returns the undo. */
+  onRender(cb: () => void): () => void;
+  /** A tool's label at a world point (S5's joint preview); undefined `at` takes it away (S3.8). */
+  setLabel(key: string, at: V3 | undefined, text?: string): void;
   dispose(): void;
 }
 
@@ -165,9 +207,10 @@ function geometryOf(d: MeshData): BufferGeometry {
 /**
  * The 3D viewport (design §8). The world is right-handed with Z up (§2); three.js is Y up, so the
  * conversion happens here and nowhere else: everything of ours lives under `world`, rotated −90°
- * about X. It renders on demand: after a camera move, a model, a selection or a resize.
+ * about X. It renders on demand: after a camera move, a model, a selection or a resize. It draws
+ * with the colours of `theme` (src/viewer/theme.ts).
  */
-export function createViewer(container: HTMLElement): Viewer {
+export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
   const renderer = new WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   // The section plane clips the model's materials only, not the grid or the tools' overlay.
@@ -175,14 +218,14 @@ export function createViewer(container: HTMLElement): Viewer {
   container.appendChild(renderer.domElement);
 
   const scene = new Scene();
-  scene.background = new Color(COLOURS.background);
+  scene.background = new Color(theme.background[0]);
   const world = new Group();
   world.name = "world (Z up)";
   world.rotation.x = -Math.PI / 2;
   scene.add(world);
 
   // The ground grid lies in the world XY plane: GridHelper is built in XZ, so tip it onto XY.
-  const grid = new GridHelper(4000, 40, 0x59636e, 0x2c3238);
+  const grid = new GridHelper(4000, 40, theme.grid.centre, theme.grid.line);
   grid.rotation.x = Math.PI / 2;
   world.add(grid);
   world.add(new AxesHelper(300)); // X red, Y green, Z blue (up)
@@ -190,15 +233,16 @@ export function createViewer(container: HTMLElement): Viewer {
   const content = new Group();
   content.name = "model";
   world.add(content);
-  const overlay = new Overlay();
+  const overlay = new Overlay(theme);
   world.add(overlay.group);
   world.updateMatrixWorld(true);
 
-  scene.add(new AmbientLight(0xffffff, 0.9));
-  const sun = new DirectionalLight(0xffffff, 1.8);
+  const lights = theme.lights;
+  scene.add(new AmbientLight(lights.ambient.colour, lights.ambient.intensity));
+  const sun = new DirectionalLight(lights.key.colour, lights.key.intensity);
   sun.position.set(800, 1500, 600);
   scene.add(sun);
-  const fill = new DirectionalLight(0xffffff, 0.6);
+  const fill = new DirectionalLight(lights.fill.colour, lights.fill.intensity);
   fill.position.set(-900, 400, -700);
   scene.add(fill);
 
@@ -268,7 +312,7 @@ export function createViewer(container: HTMLElement): Viewer {
   const clipPlane = new THREE.Plane();
   const clipPlanes = [clipPlane];
   const outlineMaterial = new LineBasicMaterial({
-    color: COLOURS.highlight,
+    color: theme.tool,
     transparent: true,
     opacity: 0.8,
   });
@@ -360,7 +404,7 @@ export function createViewer(container: HTMLElement): Viewer {
       drawable.push([id, bar, view.section]);
       edgeFloats += unitOf(view.section, section).edges.length;
       if (!squareEnds(bar)) continue;
-      const key = `${view.section}\u0000${barColour(bar)}`;
+      const key = `${view.section}\u0000${finishTone(bar)}`;
       const g = groups.get(key) ?? { section, sid: view.section, bars: [] };
       g.bars.push([id, bar]);
       groups.set(key, g);
@@ -369,7 +413,8 @@ export function createViewer(container: HTMLElement): Viewer {
     // Square bars: one InstancedMesh per section and colour (§8).
     for (const g of groups.values()) {
       const unit = unitOf(g.sid, g.section);
-      const material = new MeshLambertMaterial({ color: 0xffffff });
+      // White, so each instance is drawn in its own colour.
+      const material = new MeshLambertMaterial();
       const mesh = new InstancedMesh(unit.geometry, material, g.bars.length);
       mesh.name = `bars ${g.sid}`;
       const ids: string[] = [];
@@ -382,7 +427,7 @@ export function createViewer(container: HTMLElement): Viewer {
             m.display.bars[id] as NonNullable<MeshInput["display"]["bars"][string]>,
           ),
         );
-        const c = barColour(bar);
+        const c = theme.body[finishTone(bar)];
         mesh.setColorAt(i, new Color(c));
         ids.push(id);
         colours.push(c);
@@ -401,7 +446,7 @@ export function createViewer(container: HTMLElement): Viewer {
       const view = m.display.bars[id] as NonNullable<MeshInput["display"]["bars"][string]>;
       const unit = unitOf(sid, m.display.sections[sid] as ViewSection);
       const geometry = angledGeometry(unit.geometry, bar, view);
-      const colour = barColour(bar);
+      const colour = theme.body[finishTone(bar)];
       const material = new MeshLambertMaterial({ color: colour });
       const mesh = new Mesh(geometry, material);
       mesh.name = id;
@@ -427,9 +472,9 @@ export function createViewer(container: HTMLElement): Viewer {
     const edgeGeometry = new THREE.BufferGeometry();
     edgeGeometry.setAttribute("position", new Float32BufferAttribute(edges, 3));
     const edgeMaterial = new LineBasicMaterial({
-      color: COLOURS.edge,
+      color: theme.edge.colour,
       transparent: true,
-      opacity: 0.6,
+      opacity: theme.edge.opacity,
     });
     const lines = new LineSegments(edgeGeometry, edgeMaterial);
     lines.name = "edges";
@@ -449,22 +494,22 @@ export function createViewer(container: HTMLElement): Viewer {
     /** Each hole's rod, placed in the world: the part's frame times the rod's in it. */
     const marks: { id: string; matrix: Mat4 }[] = [];
     const partEdges = new LineBasicMaterial({
-      color: COLOURS.edge,
+      color: theme.edge.colour,
       transparent: true,
-      opacity: 0.6,
+      opacity: theme.edge.opacity,
     });
-    const placeholderEdges = new LineBasicMaterial({ color: COLOURS.placeholderEdge });
+    const placeholderEdges = new LineBasicMaterial({ color: theme.edge.placeholder });
     owned.push(partEdges, placeholderEdges);
     for (const [id, p] of Object.entries(m.parts)) {
       const placed = partShape(p, m.display.parts[id]);
       if (!placed) continue;
       const { shape, translucent } = placed;
       const geometry = geometryOf(partMesh(placed));
-      const colour = partColour(placed);
+      const colour = theme.body[partTone(placed)];
       const material = new MeshLambertMaterial({
         color: colour,
         transparent: translucent,
-        opacity: translucent ? TRANSLUCENT_OPACITY : 1,
+        opacity: translucent ? theme.translucent : 1,
         depthWrite: !translucent,
         side: translucent ? DoubleSide : THREE.FrontSide,
       });
@@ -503,16 +548,16 @@ export function createViewer(container: HTMLElement): Viewer {
     // Hole markers: one InstancedMesh, dark whatever the selection; a pick selects the part.
     if (marks.length > 0) {
       const geometry = geometryOf(rodMesh(HOLE_SEGMENTS));
-      const material = new MeshLambertMaterial({ color: 0xffffff });
+      const material = new MeshLambertMaterial();
       const mesh = new InstancedMesh(geometry, material, marks.length);
       mesh.name = "holes";
       const ids: string[] = [];
       const colours: number[] = [];
       marks.forEach(({ id, matrix }, i) => {
         mesh.setMatrixAt(i, new Matrix4().fromArray(matrix));
-        mesh.setColorAt(i, new Color(COLOURS.hole));
+        mesh.setColorAt(i, new Color(theme.body.hole));
         ids.push(id);
-        colours.push(COLOURS.hole);
+        colours.push(theme.body.hole);
       });
       mesh.instanceMatrix.needsUpdate = true;
       mesh.computeBoundingSphere();
@@ -526,16 +571,16 @@ export function createViewer(container: HTMLElement): Viewer {
     const fs = m.display.fasteners;
     if (fs.length > 0) {
       const geometry = geometryOf(rodMesh());
-      const material = new MeshLambertMaterial({ color: 0xffffff });
+      const material = new MeshLambertMaterial();
       const mesh = new InstancedMesh(geometry, material, fs.length);
       mesh.name = "fasteners";
       const ids: string[] = [];
       const colours: number[] = [];
       fs.forEach((f, i) => {
         mesh.setMatrixAt(i, new Matrix4().fromArray(fastenerMatrix(f)));
-        mesh.setColorAt(i, new Color(COLOURS.fastener));
+        mesh.setColorAt(i, new Color(theme.body.fastener));
         ids.push(f.connection);
-        colours.push(COLOURS.fastener);
+        colours.push(theme.body.fastener);
       });
       mesh.instanceMatrix.needsUpdate = true;
       mesh.computeBoundingSphere();
@@ -560,8 +605,8 @@ export function createViewer(container: HTMLElement): Viewer {
   }
 
   function paint(): void {
-    const sel = new Color(COLOURS.selected);
-    const hi = new Color(COLOURS.highlight);
+    const sel = new Color(theme.selection);
+    const hi = new Color(theme.tool);
     const colourOf = (id: string, own: number) =>
       highlight.has(id) ? hi : selection.has(id) ? sel : new Color(own);
     for (const g of instanced) {
@@ -958,6 +1003,18 @@ export function createViewer(container: HTMLElement): Viewer {
       return [b.min.getComponent(i), b.max.getComponent(i)];
     },
     stats: () => ({ ...counts }),
+    // The UX redesign's methods (see the Viewer interface): no-ops until S3 builds them.
+    setHover() {},
+    onHover() {},
+    setGhost() {},
+    pulse() {},
+    fitBox() {},
+    setCorners() {},
+    setProblemBadges() {},
+    setColourBy() {},
+    setTheme() {},
+    onRender: () => () => {},
+    setLabel() {},
     dispose() {
       cancelAnimationFrame(frame);
       observer.disconnect();

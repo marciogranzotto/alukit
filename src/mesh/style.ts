@@ -1,9 +1,12 @@
 import type { BarJson } from "./model.ts";
 
 /**
- * How things look: one palette for the viewer and the GLB writer (design §8, §9), as sRGB hex
- * colours. A bar's colour follows its finish: black, another finish (anodised), or none (steel).
- * A part is blue, a project plate or bent angle tan (§4.8), and its holes dark.
+ * How things look in the GLB (design §9), as sRGB hex colours: the export's palette, which stays
+ * as it is whatever the app's theme (D-UX-24), so `alukit export glb` and the app's export keep
+ * their bytes. The viewer draws with the theme's colours instead (src/viewer/theme.ts, valued in
+ * src/ui/theme/tokens.ts); both colour bodies by the same tones, which this file decides.
+ * A bar's tone follows its finish: black, another finish (anodised), or none (steel). A part is
+ * blue, a project plate or bent angle tan (§4.8), and its holes dark.
  */
 
 export const COLOURS = {
@@ -26,13 +29,27 @@ export const COLOURS = {
 /** The opacity of a translucent part: a placeholder, or an item with no box (a marker). */
 export const TRANSLUCENT_OPACITY = 0.35;
 
+/** A bar's tone, by its finish: black, another finish (anodised), or none (steel). */
+export type FinishTone = "anodised" | "black" | "steel";
+
+export function finishTone(bar: Pick<BarJson, "opt">): FinishTone {
+  if (bar.opt.finish === "black") return "black";
+  if (bar.opt.finish !== undefined) return "anodised";
+  return "steel";
+}
+
+/** A part's tone: one of the project's own shapes (custom), or any other part. */
+export type PartTone = "custom" | "part";
+
+export function partTone(p: { shape?: unknown }): PartTone {
+  return p.shape ? "custom" : "part";
+}
+
 /** A part's colour: a project shape's, or any other part's. */
 export function partColour(p: { shape?: unknown }): number {
-  return p.shape ? COLOURS.custom : COLOURS.part;
+  return COLOURS[partTone(p)];
 }
 
 export function barColour(bar: Pick<BarJson, "opt">): number {
-  if (bar.opt.finish === "black") return COLOURS.black;
-  if (bar.opt.finish !== undefined) return COLOURS.anodised;
-  return COLOURS.steel;
+  return COLOURS[finishTone(bar)];
 }

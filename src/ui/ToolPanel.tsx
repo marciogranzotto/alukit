@@ -1,17 +1,9 @@
 import { signal } from "@preact/signals";
-import type { Projection, SectionPlane, Viewer } from "../viewer/scene.ts";
-import { STANDARD_VIEWS } from "../viewer/views.ts";
 import { GROUND } from "../viewer/workplane.ts";
 import { Diagnostics, Errors, newDiagnostics } from "./Feedback.tsx";
-import {
-  applyCommands,
-  busy,
-  type CommandOutcome,
-  model,
-  selection,
-  sendCommands,
-  summary,
-} from "./store.ts";
+import { selection } from "./focus.ts";
+import { palette } from "./palette.ts";
+import { applyCommands, busy, type CommandOutcome, model, sendCommands, summary } from "./store.ts";
 import {
   activeTool,
   type ConnectPick,
@@ -20,14 +12,12 @@ import {
   connectPicks,
   connectType,
   drawOptions,
-  drawState,
   type FaceOptions,
   faceOptions,
   hint,
   measured,
   measureState,
   type PivotOptions,
-  palette,
   patternCommand,
   patternState,
   pickingPlane,
@@ -38,115 +28,15 @@ import {
   runOf,
   TOOLS,
   type ToolName,
-  typed,
+  toolPrompt,
   workPlane,
 } from "./tools.ts";
 
 /**
- * The tool bar over the viewport (design §8: tools; standard views, perspective or orthographic,
- * fit to selection) and the active tool's panel, above the properties.
+ * The tools' parts of the screen (design §8): the tool buttons (the viewport's `left` slot), the
+ * tip by the pointer and the help line over the viewport (its `bottom` slot), and the active
+ * tool's panel, above the inspector.
  */
-
-/** The viewer, once the viewport has made it: the tool bar's view buttons drive its camera. */
-export const viewer = signal<Viewer | undefined>(undefined);
-export const projection = signal<Projection>("perspective");
-/** The section clipping plane (§8), when it is on. */
-export const sectionPlane = signal<SectionPlane | undefined>(undefined);
-/** The plane as last set, so turning the section on again puts it back. */
-let lastSection: SectionPlane | undefined;
-
-function setSection(s: SectionPlane | undefined): void {
-  if (s) lastSection = s;
-  sectionPlane.value = s;
-  viewer.value?.setSection(s);
-}
-
-/** A plane across the middle of the model, square to an axis, on the whole millimetre. */
-function middleSection(v: Viewer, axis: SectionPlane["axis"], flip = false): SectionPlane {
-  const [lo, hi] = v.extent(axis);
-  return { axis, at_mm: Math.round((lo + hi) / 2), flip };
-}
-
-/**
- * The section plane's controls: on or off, the axis it is square to, where along it (dragging
- * the slider moves the cut), and which side it keeps. It changes the view only.
- */
-function SectionTools() {
-  const v = viewer.value;
-  const s = sectionPlane.value;
-  // Re-rendered with each model, whose box gives the slider's range.
-  void model.value;
-  return (
-    <>
-      <button
-        type="button"
-        class={s ? "tb on" : "tb"}
-        data-testid="section"
-        aria-pressed={s !== undefined}
-        title="Section plane: cut the view square to an axis (the document is unchanged)"
-        disabled={!v}
-        onClick={() => {
-          if (!v) return;
-          if (s) setSection(undefined);
-          else setSection(lastSection ?? middleSection(v, "x"));
-        }}
-      >
-        Section
-      </button>
-      {s && v && (
-        <span class="section-tools" data-testid="section-tools">
-          {(["x", "y", "z"] as const).map((a) => (
-            <button
-              type="button"
-              key={a}
-              class={s.axis === a ? "tb on" : "tb"}
-              data-testid={`section-${a}`}
-              title={`Square to ${a.toUpperCase()}`}
-              onClick={() => setSection(middleSection(v, a, s.flip))}
-            >
-              {a.toUpperCase()}
-            </button>
-          ))}
-          <SectionSlider v={v} s={s} />
-          <button
-            type="button"
-            class="tb"
-            data-testid="section-flip"
-            title="Keep the other side"
-            onClick={() => setSection({ ...s, flip: !s.flip })}
-          >
-            Flip
-          </button>
-        </span>
-      )}
-    </>
-  );
-}
-
-function SectionSlider({ v, s }: { v: Viewer; s: SectionPlane }) {
-  const [lo, hi] = v.extent(s.axis);
-  const min = Math.floor(Math.min(lo, s.at_mm));
-  const max = Math.ceil(Math.max(hi, s.at_mm));
-  return (
-    <label class="tb section-at" title={`Where the plane cuts, along ${s.axis.toUpperCase()}`}>
-      <input
-        type="range"
-        class="section-range"
-        data-testid="section-at"
-        min={min}
-        max={max}
-        step={1}
-        value={s.at_mm}
-        onInput={(e) =>
-          setSection({ ...s, at_mm: Number((e.currentTarget as HTMLInputElement).value) })
-        }
-      />{" "}
-      <span class="num">
-        {s.axis} {s.at_mm} mm
-      </span>
-    </label>
-  );
-}
 
 const TOOL_TEXT: Readonly<Record<ToolName, [string, string]>> = {
   select: ["Select", "V"],
@@ -157,21 +47,11 @@ const TOOL_TEXT: Readonly<Record<ToolName, [string, string]>> = {
   measure: ["Measure", "M"],
 };
 
-const VIEW_TEXT: Readonly<Record<string, string>> = {
-  iso: "Iso",
-  top: "Top",
-  front: "Front",
-  right: "Side",
-  left: "Left",
-  back: "Back",
-  bottom: "Bottom",
-};
-
-export function Toolbar() {
-  const v = viewer.value;
+/** A button per tool; the active one is on. */
+export function ToolButtons() {
   const readOnly = summary.value?.status.readOnly === true;
   return (
-    <div class="toolbar" data-testid="toolbar">
+    <>
       {TOOLS.map((t) => {
         const [text, key] = TOOL_TEXT[t];
         return (
@@ -190,49 +70,12 @@ export function Toolbar() {
           </button>
         );
       })}
-      <span class="sep" />
-      {STANDARD_VIEWS.filter((n) => ["iso", "top", "front", "right"].includes(n)).map((n) => (
-        <button
-          type="button"
-          class="tb"
-          key={n}
-          data-testid={`view-${n}`}
-          title={`${VIEW_TEXT[n]} view`}
-          onClick={() => v?.setView(n, undefined, true)}
-        >
-          {VIEW_TEXT[n]}
-        </button>
-      ))}
-      <button
-        type="button"
-        class="tb"
-        data-testid="projection"
-        title="Perspective or orthographic (O)"
-        onClick={() => {
-          const next = projection.value === "perspective" ? "orthographic" : "perspective";
-          v?.setProjection(next);
-          projection.value = next;
-        }}
-      >
-        {projection.value === "perspective" ? "Persp" : "Ortho"}
-      </button>
-      <button
-        type="button"
-        class="tb"
-        data-testid="fit"
-        title="Fit to the selection, or to everything (F)"
-        onClick={() => v?.fitSelection(selection.value)}
-      >
-        Fit
-      </button>
-      <span class="sep" />
-      <SectionTools />
-    </div>
+    </>
   );
 }
 
 /** The text by the pointer: what it snaps to, the length, what is typed. */
-export function Hint() {
+function Hint() {
   const h = hint.value;
   if (!h) return null;
   return (
@@ -243,6 +86,20 @@ export function Hint() {
     >
       {h.text}
     </div>
+  );
+}
+
+/** Over the viewport: the tip by the pointer, and what the mouse does in the active tool. */
+export function ToolOverlay() {
+  return (
+    <>
+      <Hint />
+      <div class="viewport-help">
+        {activeTool.value === "select"
+          ? "drag: orbit · right-drag: pan · wheel: zoom · Shift-drag: box select"
+          : "click: pick · drag: orbit · Esc: back to select"}
+      </div>
+    </>
   );
 }
 
@@ -272,7 +129,6 @@ function PaletteLine({ which }: { which: "bar" | "part" }) {
 function DrawPanel() {
   const o = drawOptions.value;
   const bar = palette.value.bar;
-  const { start, end } = drawState.value;
   const anchors = bar?.anchors ?? ["c"];
   return (
     <div class="tool-panel" data-testid="panel-draw">
@@ -333,9 +189,7 @@ function DrawPanel() {
         )}
       </p>
       <p class="tool-status" data-testid="draw-status">
-        {!start
-          ? "click a start point"
-          : `from ${start.label}${end ? ` to ${end.label}` : ""}${typed.value ? ` · length ${typed.value}` : ""}`}
+        {toolPrompt.value}
       </p>
       <p class="hint-text">
         The line follows X, Y or Z; Shift frees it in the work plane. Type a length and press Enter,
@@ -607,14 +461,7 @@ function ConnectPanel() {
           <option value="face">face</option>
         </select>
       </div>
-      <p class="hint-text">
-        {type === "pivot"
-          ? "Click a face for the base, then near each end the pivot carries."
-          : type === "face"
-            ? "Click the layers in order, head to nut: bars along their middle, or plates."
-            : "Click a bar near an end to pick that end, along its middle to pick the bar."}{" "}
-        Click again to drop a pick.
-      </p>
+      <p class="hint-text">{toolPrompt.value}</p>
       {type === "face" ? (
         <LayerList picks={picks} />
       ) : (
@@ -677,7 +524,7 @@ function PlacePanel() {
     <div class="tool-panel" data-testid="panel-place">
       <h3>Place part</h3>
       <PaletteLine which="part" />
-      <p class="hint-text">Click a face or a groove of a bar; then set the distance from an end.</p>
+      <p class="hint-text">{toolPrompt.value}</p>
       {st && (
         <>
           <p>
@@ -776,7 +623,7 @@ function PatternPanel() {
           use selection
         </button>
       </p>
-      <p class="hint-text">Click the bar to repeat along (or type a bar or run).</p>
+      <p class="hint-text">{toolPrompt.value}</p>
       <div class="tp-row">
         {field("along", "along")}
         {field("pitch", "pitch mm")}

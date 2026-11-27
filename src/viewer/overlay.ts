@@ -15,13 +15,15 @@ import {
 } from "three";
 import { sectionGeometry } from "../mesh/bars.ts";
 import type { V3, ViewSection } from "../mesh/model.ts";
+import type { ViewTheme } from "./theme.ts";
 import type { WorkPlane } from "./workplane.ts";
 
 /**
  * What the tools draw over the model (design §8): the snap indicator, the line being drawn and
  * the axis it follows, a translucent preview of the bar, picked ends, and the work plane when it
  * is not the ground. Everything is in world coordinates (Z up), under the scene's world root, and
- * drawn on top of the model.
+ * drawn on top of the model, in the theme's colours (`ViewTheme.overlay`; the plane in its tool
+ * colour).
  */
 
 export type MarkerKind = "point" | "line" | "grid" | "free" | "pick";
@@ -50,14 +52,6 @@ export interface OverlayState {
   plane?: WorkPlane | undefined;
 }
 
-const MARKER: Readonly<Record<MarkerKind, number>> = {
-  point: 0x4ade80,
-  line: 0x38bdf8,
-  grid: 0x9aa4ae,
-  free: 0xe5e7eb,
-  pick: 0xff9f1c,
-};
-const AXIS_COLOUR = { x: 0xef4444, y: 0x22c55e, z: 0x3b82f6 } as const;
 const GUIDE_MM = 100_000;
 
 function onTop<T extends { renderOrder: number }>(o: T): T {
@@ -86,20 +80,23 @@ export class Overlay {
   private readonly pins: Points;
   private readonly plane: LineSegments;
   private ghost: { mesh: Mesh; key: string } | undefined;
-  private readonly ghostMaterial = new MeshBasicMaterial({
-    color: 0xffb454,
-    transparent: true,
-    opacity: 0.35,
-    depthWrite: false,
-  });
+  private readonly ghostMaterial: MeshBasicMaterial;
+  private readonly colours: ViewTheme["overlay"];
 
-  constructor() {
+  constructor(theme: ViewTheme) {
+    this.colours = theme.overlay;
+    this.ghostMaterial = new MeshBasicMaterial({
+      color: theme.overlay.ghost,
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+    });
     this.group.name = "overlay";
     this.marker = onTop(new Points(new BufferGeometry(), this.markerMaterial));
     this.line = onTop(
       new Line(
         new BufferGeometry(),
-        new LineBasicMaterial({ color: 0xffffff, depthTest: false, transparent: true }),
+        new LineBasicMaterial({ color: theme.overlay.line, depthTest: false, transparent: true }),
       ),
     );
     this.guide = onTop(new Line(new BufferGeometry(), this.guideMaterial));
@@ -111,7 +108,7 @@ export class Overlay {
           sizeAttenuation: false,
           depthTest: false,
           transparent: true,
-          color: MARKER.pick,
+          color: theme.overlay.marker.pick,
         }),
       ),
     );
@@ -119,7 +116,7 @@ export class Overlay {
       new LineSegments(
         new BufferGeometry(),
         new LineBasicMaterial({
-          color: 0x38bdf8,
+          color: theme.tool,
           transparent: true,
           opacity: 0.35,
           depthTest: false,
@@ -136,7 +133,7 @@ export class Overlay {
 
   set(s: OverlayState): void {
     setPositions(this.marker, s.marker ? [s.marker.p] : []);
-    if (s.marker) this.markerMaterial.color = new Color(MARKER[s.marker.kind]);
+    if (s.marker) this.markerMaterial.color = new Color(this.colours.marker[s.marker.kind]);
     setPositions(this.line, s.line ? [s.line.a, s.line.b] : []);
     if (s.guide) {
       const e: V3 = s.guide.axis === "x" ? [1, 0, 0] : s.guide.axis === "y" ? [0, 1, 0] : [0, 0, 1];
@@ -146,7 +143,7 @@ export class Overlay {
         [p[0] + e[0] * GUIDE_MM, p[1] + e[1] * GUIDE_MM, p[2] + e[2] * GUIDE_MM],
       ]);
       this.guide.computeLineDistances();
-      this.guideMaterial.color = new Color(AXIS_COLOUR[s.guide.axis]);
+      this.guideMaterial.color = new Color(this.colours.axis[s.guide.axis]);
     } else setPositions(this.guide, []);
     setPositions(this.pins, s.pins ?? []);
     setPositions(this.plane, s.plane ? planeGrid(s.plane) : []);

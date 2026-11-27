@@ -1,0 +1,111 @@
+/*
+ * The design tokens (docs/ux/plan.md §5.3; docs/ux/contracts.md). Every colour the stylesheets
+ * use is one of these; no other file writes a colour literal. The names are the contract between
+ * the streams; their values may change (S4), their names may not. Until S4 sets the new palette,
+ * each holds today's value, so several names share one.
+ *
+ * Tokens after "Today's roles" are the S0 additions: roles today's styles have that the §5.3
+ * list does not name. They keep the S0 split free of any visible change.
+ */
+
+:root {
+  /* Surfaces */
+  --bg-app: #1b1f24;
+  --bg-panel: #22272e;
+  --bg-raised: #2a3038;
+  --bg-well: #1b1f24;
+
+  /* Lines */
+  --line: #373e47;
+  --line-strong: #373e47;
+
+  /* Text */
+  --text-1: #c9d1d9;
+  --text-2: #8b949e;
+  --text-3: #8b949e;
+
+  /* The selection: amber */
+  --sel: #ff9f1c;
+  --sel-text: #ffd7a1;
+  --sel-ink: #201304;
+
+  /* Actions: links, primary buttons */
+  --act: #6cb6ff;
+  --act-fill: #22272e;
+
+  /* What a tool is building (the 3D view's picks, previews and section outline) */
+  --tool: #38bdf8;
+
+  /* Statuses */
+  --ready: #57ab5a;
+  --blocked: #f47067;
+  --warn: #e0b341;
+  --info: #6cb6ff;
+
+  /* Type */
+  --font-sans: system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+  --fs-display: 24px;
+  --lh-display: 28px;
+  --fs-title: 18px;
+  --lh-title: 24px;
+  --fs-figure: 15px;
+  --lh-figure: 1.4;
+  --fs-body: 13px;
+  --lh-body: 1.4;
+  --fs-small: 12px;
+  --lh-small: 1.4;
+
+  /* Spacing: not yet used by today's styles (S4 and the owning streams adopt it) */
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 6px;
+  --sp-4: 8px;
+  --sp-5: 12px;
+  --sp-6: 16px;
+  --sp-7: 24px;
+  --sp-8: 32px;
+
+  /* Radii and elevation */
+  --radius-control: 4px;
+  --radius-card: 4px;
+  --shadow-float: 0 4px 16px rgb(0 0 0 / 0.4);
+
+  /* Row heights: today's rows size to their content */
+  --row-h-cut: auto;
+  --row-h-order: auto;
+  --row-h-table: auto;
+  --row-h-compact: auto;
+
+  /* Focus: today's is the browser's own ring; this one is not yet used (S2.16) */
+  --focus-ring: 2px solid var(--act);
+
+  /* Today's roles (S0 additions) */
+  /* The active tool's outline, the active tab's underline, the active tool panel's title */
+  --mark-active: #ff9f1c;
+  /* The active tool's label, the catalog filter chosen, the item armed in the palette */
+  --mark-active-text: #ffd7a1;
+  /* A primary action's border (Restore last good, Set as palette) */
+  --act-line: #ff9f1c;
+  /* A selected row's fill */
+  --sel-wash: #4d3a17;
+  /* The read-only banner: its fill, its text and its hint */
+  --blocked-wash: #4a2323;
+  --blocked-ink: #ffd8d3;
+  --blocked-ink-2: #e7b6b0;
+  /* Text on a status fill (a tab's error count) */
+  --status-ink: #1b1f24;
+  /* The tip by the pointer, over the canvas */
+  --bg-tip: rgb(15 18 22 / 0.88);
+  /* The smallest text: pills, counts, stamps, the tip */
+  --fs-tiny: 11px;
+  /* Document literals (code) */
+  --fs-mono: 12px;
+  --lh-mono: 1.3;
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  /* S4.11: the light theme's values. Until then the app has one theme, dark. */
+}

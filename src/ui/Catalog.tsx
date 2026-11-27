@@ -1,8 +1,9 @@
 import { useEffect, useState } from "preact/hooks";
 import type { CatalogTree, ItemCard, ListedEntry, Thumb } from "../server/catalog.ts";
 import { get } from "./api.ts";
+import { type PaletteItem, palette } from "./palette.ts";
 import { model } from "./store.ts";
-import { activeTool, type PaletteItem, palette } from "./tools.ts";
+import { activeTool } from "./tools.ts";
 
 /**
  * The catalog browser (design §8, left): vendor › kind › family, a search, item cards with a
