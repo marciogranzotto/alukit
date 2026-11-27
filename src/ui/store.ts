@@ -1,19 +1,28 @@
 import { signal } from "@preact/signals";
+import type { ProblemsAnswer } from "#core/problems/types.ts";
 import { ApiError, adoptToken, download, get, post, readEvents } from "./api.ts";
+import { extendHook } from "./hook.ts";
 import type { Diagnostic, LogEntry, Model, Summary } from "./model.ts";
 
 /**
  * The tab's state (design §7.1: a tab holds no unsaved state). The server's revision, status and
  * undo and redo steps arrive on the event stream; the model of a revision is fetched once per
  * revision. Every edit is a request to the server, whose answer comes back as the next event.
+ * The selection lives in focus.ts, with the hover and Show; it is re-exported here.
  */
+
+export { select, selection } from "./focus.ts";
 
 export type Connection = "connecting" | "live" | "lost" | "no-token" | "refused";
 
 export const connection = signal<Connection>("connecting");
 export const summary = signal<Summary | undefined>(undefined);
 export const model = signal<Model | undefined>(undefined);
-export const selection = signal<ReadonlySet<string>>(new Set());
+/**
+ * The problems of the drawn revision (`alukit.problems/1`), once something asks for them: S2.6
+ * fetches them each revision through src/ui/client/problems.ts. Until BE-3 lands nothing does.
+ */
+export const problems = signal<ProblemsAnswer | undefined>(undefined);
 export const log = signal<LogEntry[]>([]);
 /** The order's date (`as_of`), when the person picked one; the server's today otherwise. */
 export const asOf = signal<string | undefined>(undefined);
@@ -314,15 +323,7 @@ export const undo = () => send("/api/undo", { source: "ui" }, "undo");
 export const redo = () => send("/api/redo", { source: "ui" }, "redo");
 export const restore = () => send("/api/restore", {}, "restore");
 
-export function select(ids: readonly string[], mode: "replace" | "toggle" | "add"): void {
-  if (mode === "replace") {
-    selection.value = new Set(ids);
-    return;
-  }
-  const next = new Set(selection.value);
-  for (const id of ids) {
-    if (mode === "toggle" && next.has(id)) next.delete(id);
-    else next.add(id);
-  }
-  selection.value = next;
-}
+extendHook({
+  rev: () => summary.value?.rev,
+  readOnly: () => summary.value?.status.readOnly === true,
+});

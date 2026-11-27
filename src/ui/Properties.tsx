@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
+import { selection } from "./focus.ts";
 import type { Model } from "./model.ts";
-import { model, selection } from "./store.ts";
+import { model } from "./store.ts";
 
 /**
  * Properties of the selection (design §8, right): the entity's fields as written, its derived

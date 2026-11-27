@@ -108,6 +108,25 @@ export interface ToolHandler {
   leave?(): void;
 }
 
+/** A corner as the view draws it (D-UX-10; src/ui/corners.ts derives the rest of it). */
+export interface CornerMarker {
+  key: string;
+  at: V3;
+  state: "joined" | "open" | "failed";
+  /** The bar that runs through, when one does. */
+  through?: string;
+}
+
+/** A problem drawn on the entities it is about (S3.7). */
+export interface ProblemBadge {
+  ids: string[];
+  severity: "block" | "error" | "warn";
+}
+
+/**
+ * The viewer's API. The methods after `stats` are the UX redesign's (docs/ux/plan.md §5.3):
+ * today they do nothing, and S3 makes each work (the task named on it), keeping its signature.
+ */
 export interface Viewer {
   canvas: HTMLCanvasElement;
   setModel(m: MeshInput): void;
@@ -145,6 +164,28 @@ export interface Viewer {
   /** The model's extent along a world axis (mm): the section plane's range. */
   extent(axis: SectionPlane["axis"]): [number, number];
   stats(): ViewerStats;
+  /** Tints the bodies the pointer, a row or a chip is over (S3.2). */
+  setHover(ids: ReadonlySet<string>): void;
+  /** Called with the entity under the pointer in Select, or undefined off every body (S3.2). */
+  onHover(cb: (id?: string) => void): void;
+  /** Ghosts every body but `keep`; undefined ends it (S3.6). */
+  setGhost(keep: ReadonlySet<string> | undefined): void;
+  /** Pulses the bodies, to draw the eye to them (S3.6). */
+  pulse(ids: ReadonlySet<string>): void;
+  /** Fits the camera to a box in world coordinates (Z up, mm), keeping its direction (S3.6). */
+  fitBox(box: [V3, V3]): void;
+  /** Draws a marker at each corner, by its state (S3.5). */
+  setCorners(c: readonly CornerMarker[]): void;
+  /** Draws each problem on its entities, by group (S3.7). */
+  setProblemBadges(b: readonly ProblemBadge[]): void;
+  /** Colours bars by their finish (today's look) or by their item, from the swatches (S3.10). */
+  setColourBy(mode: "finish" | "item", swatches?: ReadonlyMap<string, number>): void;
+  /** Draws with another theme's colours (S3.12). */
+  setTheme(t: ViewTheme): void;
+  /** Calls back after each frame drawn, for DOM overlays that follow the scene; returns the undo. */
+  onRender(cb: () => void): () => void;
+  /** A tool's label at a world point (S5's joint preview); undefined `at` takes it away (S3.8). */
+  setLabel(key: string, at: V3 | undefined, text?: string): void;
   dispose(): void;
 }
 
@@ -962,6 +1003,18 @@ export function createViewer(container: HTMLElement, theme: ViewTheme): Viewer {
       return [b.min.getComponent(i), b.max.getComponent(i)];
     },
     stats: () => ({ ...counts }),
+    // The UX redesign's methods (see the Viewer interface): no-ops until S3 builds them.
+    setHover() {},
+    onHover() {},
+    setGhost() {},
+    pulse() {},
+    fitBox() {},
+    setCorners() {},
+    setProblemBadges() {},
+    setColourBy() {},
+    setTheme() {},
+    onRender: () => () => {},
+    setLabel() {},
     dispose() {
       cancelAnimationFrame(frame);
       observer.disconnect();

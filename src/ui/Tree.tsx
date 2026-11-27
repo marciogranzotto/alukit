@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
+import { select, selection } from "./focus.ts";
 import type { Model } from "./model.ts";
-import { model, select, selection } from "./store.ts";
+import { model } from "./store.ts";
 
 /**
  * The project tree (design §8, left): bars, runs, connections, parts, patterns and nodes, by kind

@@ -1,6 +1,6 @@
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import { nextIdNumber } from "#core/ids.ts";
-import type { V3, ViewSection } from "../mesh/model.ts";
+import type { V3 } from "../mesh/model.ts";
 import {
   barCommands,
   type DrawEnd,
@@ -17,14 +17,20 @@ import type { MarkerKind } from "../viewer/overlay.ts";
 import type { ToolHandler, ToolPointer, Viewer } from "../viewer/scene.ts";
 import { findSnap, type Snap, type SnapTargets, snapTargets } from "../viewer/snap.ts";
 import { facePlane, GROUND, gridSnap, rayFace, type WorkPlane } from "../viewer/workplane.ts";
+import { select, selection } from "./focus.ts";
+import { extendHook } from "./hook.ts";
+import { chord, onKey } from "./keys.ts";
 import type { Model } from "./model.ts";
-import { applyCommands, model, selection } from "./store.ts";
+import { type PaletteItem, palette } from "./palette.ts";
+import { applyCommands, model, summary } from "./store.ts";
+import { viewer } from "./viewport/viewer.ts";
 
 /**
  * The tools of the viewport (design §8, Tools): draw bar, connect, place part, pattern and
  * measure; select is no tool. Each turns pointer and key events into one batch of commands
  * (§7.1), sent with source `ui`; the next revision comes back on the event stream. What a tool
- * shows (its state, the hint by the pointer) lives in signals the panels read.
+ * shows (its state, the hint by the pointer, its prompt) lives in signals the panels read. The
+ * palette they draw and place with is palette.ts's.
  */
 
 export const TOOLS = ["select", "draw", "connect", "place", "pattern", "measure"] as const;
@@ -40,20 +46,6 @@ export const TOOL_KEYS: Readonly<Record<string, ToolName>> = {
 
 export const activeTool = signal<ToolName>("select");
 
-/** An item chosen in the catalog browser (§8: "set as palette"). */
-export interface PaletteItem {
-  id: string;
-  kind: string;
-  name: string;
-  opt?: Readonly<Record<string, string>>;
-  /** A bar's section, for the draw tool's preview and anchors. */
-  section?: ViewSection;
-  anchors?: readonly string[];
-}
-
-/** What the draw tool draws with (a bar item) and the place tool places (any other item). */
-export const palette = signal<{ bar?: PaletteItem; part?: PaletteItem }>({});
-
 export const drawOptions = signal<{ roll: number; anchor: string; autoConnect: boolean }>({
   roll: 0,
   anchor: "c",
@@ -65,8 +57,20 @@ export const workPlane = signal<WorkPlane>(GROUND);
 /** Waiting for a click on a face to set the work plane. */
 export const pickingPlane = signal(false);
 
-/** The text by the pointer: what it snaps to, the length, what is typed. */
-export const hint = signal<{ x: number; y: number; text: string } | undefined>(undefined);
+/**
+ * The text by the pointer: what it snaps to, the length, what is typed. `snap` is the machine
+ * label of what the pointer is on, as the active tool resolves it, which the text words for the
+ * person and may change; tests and agents read `snap` (`__alukit.tool().snap`):
+ *
+ * - draw: the point or end under the pointer: `grid (0, 0, 0)`, `end b1.b`, `on b1 at 100`,
+ *   `b9 +y face centre`, `+z 450` (along an axis from the start), `typed 900`, `free in …`;
+ * - connect: the pick a click makes, `bar b5`, `end b1.b`, `part p6`; a pivot's base station;
+ * - place and measure: the station or point, `b9 +y face at 300`, `p8 origin`;
+ * - pattern: the bar to repeat along, `bar b9`.
+ */
+export const hint = signal<{ x: number; y: number; text: string; snap?: string } | undefined>(
+  undefined,
+);
 /** A length being typed (§8: type a length and press Enter). */
 export const typed = signal("");
 
@@ -151,6 +155,68 @@ export const patternState = signal<{
 }>({ template: [], pitch: "150", count: "3" });
 
 export const measureState = signal<{ a?: Snap; b?: Snap }>({});
+
+/**
+ * What the active tool asks the person to do next, in words: the tool panels show it today, the
+ * status bar (S2.7) will. Empty when the tool asks nothing (select, measure).
+ */
+export const toolPrompt = computed<string>(() => {
+  switch (activeTool.value) {
+    case "draw": {
+      const { start, end } = drawState.value;
+      if (!start) return "click a start point";
+      return `from ${start.label}${end ? ` to ${end.label}` : ""}${typed.value ? ` · length ${typed.value}` : ""}`;
+    }
+    case "connect":
+      return `${
+        connectType.value === "pivot"
+          ? "Click a face for the base, then near each end the pivot carries."
+          : connectType.value === "face"
+            ? "Click the layers in order, head to nut: bars along their middle, or plates."
+            : "Click a bar near an end to pick that end, along its middle to pick the bar."
+      } Click again to drop a pick.`;
+    case "place":
+      return "Click a face or a groove of a bar; then set the distance from an end.";
+    case "pattern":
+      return "Click the bar to repeat along (or type a bar or run).";
+    default:
+      return "";
+  }
+});
+
+declare module "./hook.ts" {
+  interface AlukitHook {
+    /**
+     * The active tool, its draw options, the gesture's points, the text by the pointer and the
+     * machine label of what the pointer is on (`hint`'s `snap`).
+     */
+    tool(): {
+      name: string;
+      anchor: string;
+      roll: number;
+      start?: string;
+      end?: string;
+      hint?: string;
+      snap?: string;
+    };
+  }
+}
+
+extendHook({
+  tool: () => {
+    const { start, end } = drawState.value;
+    const h = hint.value;
+    return {
+      name: activeTool.value,
+      anchor: drawOptions.value.anchor,
+      roll: drawOptions.value.roll,
+      ...(start ? { start: start.label } : {}),
+      ...(end ? { end: end.label } : {}),
+      ...(h ? { hint: h.text } : {}),
+      ...(h?.snap !== undefined ? { snap: h.snap } : {}),
+    };
+  },
+});
 
 // ---------------------------------------------------------------------------------------------
 
@@ -383,12 +449,14 @@ export function patternCommand(s: {
 // ---------------------------------------------------------------------------------------------
 
 export interface Tools {
-  /** A key the active tool takes; true when it did. */
-  key(e: KeyboardEvent): boolean;
   dispose(): void;
 }
 
-/** Wires the tools to a viewer: the active tool gets the viewport's pointer. */
+/**
+ * Wires the tools to a viewer: the active tool gets the viewport's pointer, and the keys (keys.ts)
+ * its gesture's keys first, then the tool shortcuts: a tool's letter, and Esc to leave the tool
+ * or, in select, to clear the selection.
+ */
 export function createTools(viewer: Viewer): Tools {
   let targets: SnapTargets = { points: [], lines: [] };
   let pointer: ToolPointer | undefined;
@@ -414,8 +482,12 @@ export function createTools(viewer: Viewer): Tools {
       // The section plane's far side is not drawn, so nothing there snaps.
       hidden: viewer.clipped,
     });
-  const show = (e: ToolPointer | undefined, text: string | undefined) => {
-    hint.value = e && text ? { x: e.clientX, y: e.clientY, text } : undefined;
+  /** The text by the pointer, and the machine label of what it is on (see `hint`). */
+  const show = (e: ToolPointer | undefined, text: string | undefined, snap?: string) => {
+    hint.value =
+      e && text
+        ? { x: e.clientX, y: e.clientY, text, ...(snap !== undefined ? { snap } : {}) }
+        : undefined;
   };
 
   /** W: the next click on a bar sets the work plane to the face it hits (§8, review m11). */
@@ -473,7 +545,7 @@ export function createTools(viewer: Viewer): Tools {
     ]
       .filter((x) => x !== undefined)
       .join(" · ");
-    show(e, text);
+    show(e, text, what);
   }
 
   async function commitBar(end: DrawEnd): Promise<void> {
@@ -641,7 +713,7 @@ export function createTools(viewer: Viewer): Tools {
           pins: pins(),
           marker: snap ? { p: snap.p, kind: markerOf(snap) } : undefined,
         });
-        show(e, snap ? `base: ${snap.label}` : "click a face for the pivot's base");
+        show(e, snap ? `base: ${snap.label}` : "click a face for the pivot's base", snap?.label);
         return;
       }
       const pick = connectPickAt(e);
@@ -649,7 +721,8 @@ export function createTools(viewer: Viewer): Tools {
         pins: pins(),
         marker: pick ? { p: pick.p, kind: "pick" } : undefined,
       });
-      show(e, pick ? `${pick.kind === "end" ? "end" : pick.kind} ${pick.ref}` : undefined);
+      const picked = pick ? `${pick.kind} ${pick.ref}` : undefined;
+      show(e, picked, picked);
     },
     click(e) {
       if (pickingBase()) {
@@ -717,7 +790,7 @@ export function createTools(viewer: Viewer): Tools {
         marker: snap ? { p: snap.p, kind: markerOf(snap) } : undefined,
         pins: placeState.value.station ? [placeState.value.station.p] : [],
       });
-      show(e, snap?.label);
+      show(e, snap?.label, snap?.label);
     },
     click(e) {
       const snap = snapAt(e, onFaces);
@@ -746,10 +819,8 @@ export function createTools(viewer: Viewer): Tools {
     move(e) {
       pointer = e;
       const hit = viewer.pickAt(e.clientX, e.clientY);
-      show(
-        e,
-        hit && !hit.id.includes("@") && hit.id.startsWith("b") ? `along ${hit.id}` : undefined,
-      );
+      const along = hit && !hit.id.includes("@") && hit.id.startsWith("b") ? hit.id : undefined;
+      show(e, along ? `along ${along}` : undefined, along ? `bar ${along}` : undefined);
     },
     click(e) {
       const hit = viewer.pickAt(e.clientX, e.clientY);
@@ -774,7 +845,7 @@ export function createTools(viewer: Viewer): Tools {
         pins: [a?.p, b?.p].filter((p): p is V3 => p !== undefined),
         line: a && to && !b ? { a: a.p, b: to.p } : a && b ? { a: a.p, b: b.p } : undefined,
       });
-      show(e, snap?.label);
+      show(e, snap?.label, snap?.label);
     },
     click(e) {
       const snap = snapAt(e) ?? gridSnap(rayAt(e), workPlane.value);
@@ -818,26 +889,47 @@ export function createTools(viewer: Viewer): Tools {
     viewer.setTool(handlers[t]);
   });
 
-  return {
-    key(e) {
-      if (activeTool.value === "draw") return drawKey(e);
-      if (e.key === "Escape") {
-        if (
-          activeTool.value === "connect" &&
-          (connectPicks.value.length > 0 || pivotOptions.value.base)
-        ) {
-          connectPicks.value = [];
-          pivotOptions.value = { ...pivotOptions.value, base: undefined };
-          return true;
-        }
-        if (activeTool.value === "measure" && measureState.value.a) {
-          measureState.value = {};
-          return true;
-        }
+  /** A key the active tool's gesture takes. */
+  function gestureKey(e: KeyboardEvent): boolean {
+    if (activeTool.value === "draw") return drawKey(e);
+    if (e.key === "Escape") {
+      if (
+        activeTool.value === "connect" &&
+        (connectPicks.value.length > 0 || pivotOptions.value.base)
+      ) {
+        connectPicks.value = [];
+        pivotOptions.value = { ...pivotOptions.value, base: undefined };
+        return true;
       }
-      return false;
-    },
+      if (activeTool.value === "measure" && measureState.value.a) {
+        measureState.value = {};
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Esc leaves the tool, or in select clears the selection; a tool's letter picks it. */
+  function shortcutKey(e: KeyboardEvent): boolean {
+    if (e.key === "Escape") {
+      if (activeTool.value !== "select") activeTool.value = "select";
+      else select([], "replace");
+      return true;
+    }
+    const t = TOOL_KEYS[e.key.toLowerCase()];
+    if (!t || summary.value?.status.readOnly === true) return false;
+    activeTool.value = t;
+    return true;
+  }
+
+  const offKeys = [
+    onKey("tool", (e) => !chord(e) && gestureKey(e)),
+    onKey("app", (e) => !chord(e) && shortcutKey(e)),
+  ];
+
+  return {
     dispose() {
+      for (const off of offKeys) off();
       offModel();
       offPicks();
       offPivot();
@@ -845,6 +937,20 @@ export function createTools(viewer: Viewer): Tools {
       offTool();
       viewer.setTool(undefined);
     },
+  };
+}
+
+/** Wires the tools to the viewport's viewer while there is one; returns the undo. */
+export function connectTools(): () => void {
+  let tools: Tools | undefined;
+  const off = viewer.subscribe((v) => {
+    tools?.dispose();
+    tools = v ? createTools(v) : undefined;
+  });
+  return () => {
+    off();
+    tools?.dispose();
+    tools = undefined;
   };
 }
 
