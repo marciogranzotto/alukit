@@ -5,11 +5,9 @@ import { dryRun } from "../client/dryrun.ts";
 import { Errors } from "../Feedback.tsx";
 import { select, selection } from "../focus.ts";
 import { plural } from "../format.ts";
-import { chord, describeKeys, onKey } from "../keys.ts";
 import type { Model } from "../model.ts";
 import { Dialog } from "../shell/Dialog.tsx";
 import { busy, type CommandOutcome, model, sendCommands, summary, tell } from "../store.ts";
-import { activeTool } from "../tools/state.ts";
 import {
   type CopyRef,
   copyMembers,
@@ -187,14 +185,6 @@ async function confirm(a: Asking): Promise<void> {
   };
 }
 
-/** Delete or Backspace in Select, with something selected: plain keys only. */
-export function deleteKey(e: KeyboardEvent): boolean {
-  if (chord(e) || (e.key !== "Delete" && e.key !== "Backspace")) return false;
-  if (activeTool.peek() !== "select" || selection.peek().size === 0) return false;
-  void startDelete();
-  return true;
-}
-
 /** What a changed entity loses: the members of its lists that named what goes. */
 function loses(m: Model, id: string, removed: ReadonlySet<string>): string[] {
   const w = written(m, id);
@@ -329,29 +319,10 @@ export function DeleteButton({ label = "Delete" }: { label?: string }) {
 }
 
 /**
- * Delete's key, its line in the help, and its dialog: mounted once, by the inspector, for as
- * long as the app is shown.
+ * Delete's dialog: mounted once, by the inspector, for as long as the app is shown. Its keys and
+ * its line in the help are the `delete` action's (inspector/actions.ts).
  */
 export function DeleteFlow() {
-  useEffect(() => {
-    const offs = [
-      onKey("app", deleteKey),
-      describeKeys({
-        id: "editing",
-        title: "Editing",
-        order: 30,
-        rows: [
-          {
-            keys: ["Delete", "Backspace"],
-            does: "Delete the selection in Select; what else goes is listed first",
-          },
-        ],
-      }),
-    ];
-    return () => {
-      for (const off of offs) off();
-    };
-  }, []);
   // A dialog left open over a selection that changed under it closes.
   useEffect(() => {
     if (asking.peek()) asking.value = undefined;

@@ -163,6 +163,20 @@ export interface Grab {
   busy(): boolean;
 }
 
+/**
+ * What is under the pointer (docs/ux/editing-audit.md §7.3): the entity, where its body was hit,
+ * in world coordinates, the outward normal there, and on a bar the face (a side of its placed
+ * box, or an end, `a` or `b`) and the station along it, both found from the derived model, as
+ * snapping finds them.
+ */
+export interface Hit {
+  id: string;
+  p: V3;
+  normal: V3;
+  face?: "+x" | "-x" | "+y" | "-y" | "a" | "b";
+  station?: { bar: string; at_mm: number };
+}
+
 /** A corner as the view draws it (D-UX-10; src/ui/corners.ts derives the rest of it). */
 export interface CornerMarker {
   key: string;

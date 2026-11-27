@@ -1,19 +1,21 @@
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
-import { describeKeys, keyHelp, letterKeys, onKey, setLetterKeys } from "../keys.ts";
+import { helpSections } from "../actions/registry.ts";
+import { describeKeys, type KeyHelpRow, letterKeys, onKey, setLetterKeys } from "../keys.ts";
 import { Dialog } from "./Dialog.tsx";
 import { showStart } from "./start.ts";
 
 /**
- * Help (`?`; docs/ux/plan.md S2.13, D-UX-18; U22, U65): every key, as the regions that bind them
- * describe them (keys.ts `describeKeys`), what the snap names by the pointer mean, the guide, the
- * start card again, and the switch that turns single-character shortcuts off (WCAG 2.1.4). The
- * top bar's `?` button opens it too, so it is reachable with the shortcuts off. Owner: S2.
+ * Help (`?`; docs/ux/plan.md S2.13, D-UX-18; U22, U65): every key, from the action registry (each
+ * action's keys, then the keys the regions describe that are not actions: a gesture's, a tool's
+ * letter; src/ui/actions/registry.ts `helpSections`), what the snap names by the pointer mean,
+ * the guide, the start card again, and the switch that turns single-character shortcuts off
+ * (WCAG 2.1.4). The top bar's `?` button opens it too, so it is reachable with the shortcuts off.
+ * Owner: E2.
  *
- * Some keys are bound by modules whose owners have not described them yet (the views): this
- * module describes them meanwhile. Each section goes when its owner describes its own keys
- * (docs/ux/contracts.md, "S2 changes"); the tools and the drawing gesture describe theirs
- * (src/ui/tools/wiring.ts, S5).
+ * Some keys are bound by modules whose owners have not described them yet (O, undo, help): this
+ * module describes them meanwhile. Each line goes when its key becomes an action or its owner
+ * describes it (docs/ux/contracts.md, "S2 changes"); F is the `fit` action's.
  */
 
 export const helpOpen = signal(false);
@@ -27,10 +29,7 @@ function describeOthers(): () => void {
       id: "view",
       title: "View",
       order: 50,
-      rows: [
-        { keys: ["F"], does: "Fit the view to the selection, or to everything" },
-        { keys: ["O"], does: "Switch between perspective and orthographic" },
-      ],
+      rows: [{ keys: ["O"], does: "Switch between perspective and orthographic" }],
     }),
     describeKeys({
       id: "app",
@@ -61,13 +60,32 @@ const SNAPS: readonly [string, string][] = [
   ["free", "nowhere in particular: Shift-drawing, or nothing near"],
 ];
 
+/** A row's keys: each chord's caps joined by +, its alternatives after "or". */
+function Caps({ row }: { row: KeyHelpRow }) {
+  const chord = (keys: readonly string[]) =>
+    keys.map((k, i) => (
+      <span key={k}>
+        {i > 0 && " + "}
+        <kbd>{k}</kbd>
+      </span>
+    ));
+  return (
+    <>
+      {chord(row.keys)}
+      {(row.or ?? []).map((keys) => (
+        <span key={keys.join("+")}> or {chord(keys)}</span>
+      ))}
+    </>
+  );
+}
+
 function HelpDialog() {
   return (
     <Dialog title="Keys and help" onClose={() => (helpOpen.value = false)} testid="help" wide>
       <div class="help-grid">
         <section aria-labelledby="help-keys">
           <h3 id="help-keys">Keys</h3>
-          {keyHelp.value.map((s) => (
+          {helpSections.value.map((s) => (
             <div key={s.id} class="help-section">
               <h4>{s.title}</h4>
               <table class="help-keys">
@@ -75,12 +93,7 @@ function HelpDialog() {
                   {s.rows.map((r) => (
                     <tr key={r.keys.join("+")}>
                       <th scope="row">
-                        {r.keys.map((k, i) => (
-                          <span key={k}>
-                            {i > 0 && " + "}
-                            <kbd>{k}</kbd>
-                          </span>
-                        ))}
+                        <Caps row={r} />
                       </th>
                       <td>{r.does}</td>
                     </tr>

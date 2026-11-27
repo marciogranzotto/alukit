@@ -131,6 +131,8 @@ export function listenKeys(target: Window = window): () => void {
 /** One line of the help: the keys, as written on their caps, and what they do. */
 export interface KeyHelpRow {
   keys: readonly string[];
+  /** Other keys that do the same, each its own caps (Delete, or Backspace). */
+  or?: readonly (readonly string[])[];
   does: string;
 }
 
@@ -144,7 +146,10 @@ export interface KeyHelpSection {
   rows: readonly KeyHelpRow[];
 }
 
-/** The sections described so far, by order. */
+/**
+ * The sections described so far, by order. The help shows them through the action registry's
+ * `helpSections` (src/ui/actions/registry.ts), which puts the actions' keys first.
+ */
 export const keyHelp = signal<readonly KeyHelpSection[]>([]);
 
 /** Describes a region's keys for the help; returns the undo. */

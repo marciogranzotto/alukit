@@ -5,6 +5,7 @@ import { selection } from "../focus.ts";
 import { Icon, type IconName } from "../icons/Icons.tsx";
 import { chord, onKey } from "../keys.ts";
 import { model } from "../store.ts";
+import { viewActions } from "./actions.ts";
 import {
   colourBy,
   type JointMarkers,
@@ -42,14 +43,11 @@ function toggleProjection(v: Viewer | undefined): void {
   projection.value = next;
 }
 
-/** F fits the selection (or everything), O switches the projection. */
+/** O switches the projection. F, which fits, is the `fit` action's (viewport/actions.ts). */
 function viewKey(e: KeyboardEvent): boolean {
-  if (chord(e)) return false;
-  const k = e.key.toLowerCase();
-  if (k !== "f" && k !== "o") return false;
+  if (chord(e) || e.key.toLowerCase() !== "o") return false;
   const v = viewer.value;
-  if (k === "f") v?.fitSelection(selection.value);
-  else if (v) toggleProjection(v);
+  if (v) toggleProjection(v);
   return true;
 }
 
@@ -211,7 +209,12 @@ function Toggle({
  */
 export function ViewControls() {
   const v = viewer.value;
-  useEffect(() => onKey("app", viewKey), []);
+  useEffect(() => {
+    const offs = [onKey("app", viewKey), viewActions()];
+    return () => {
+      for (const off of offs) off();
+    };
+  }, []);
   return (
     <>
       <fieldset class="tb-group" aria-label="View">
