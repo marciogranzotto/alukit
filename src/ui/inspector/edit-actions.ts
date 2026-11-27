@@ -2,11 +2,12 @@ import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { type Action, type ActionContext, registerAction } from "../actions/registry.ts";
 import { select } from "../focus.ts";
+import type { Model } from "../model.ts";
 import { busy, type CommandOutcome, sendCommands } from "../store.ts";
 import { readOnly } from "./Fields.tsx";
 import { explodeEdit } from "./pattern.ts";
 import type { Edit } from "./rows.tsx";
-import { connectionType, copyOf, patternOf, refKind } from "./words.ts";
+import { connectionType, copyOf, isObject, patternOf, refKind, written } from "./words.ts";
 
 /**
  * The connection, pattern and part actions (docs/ux/editing-audit.md E5.6, E-UX-1): Edit a
@@ -143,10 +144,26 @@ const EXPLODE: Action = {
   },
 };
 
-/** The part the context is about: one placed part, not a copy. */
+/**
+ * Whether a part's item can be replaced from the catalog: a part of the document (not a copy) of a
+ * catalog item, on a station or at a pose. A project item is the document's own, edited where it
+ * is written; an unplaced line is a count, not a body in the view.
+ */
+export function replaceable(m: Model, id: string): boolean {
+  const w = written(m, id);
+  return (
+    refKind(m, id) === "part" &&
+    isObject(w) &&
+    typeof w.item === "string" &&
+    !w.item.startsWith("project:") &&
+    w.unplaced !== true
+  );
+}
+
+/** The part the context is about: one whose item the catalog can replace. */
 function onePart(c: ActionContext): string | undefined {
   const id = one(c);
-  return id && refKind(c.m, id) === "part" ? id : undefined;
+  return id && replaceable(c.m, id) ? id : undefined;
 }
 
 const REPLACE_PART: Action = {

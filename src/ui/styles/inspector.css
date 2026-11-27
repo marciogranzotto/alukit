@@ -80,6 +80,13 @@ table.kv.fields td {
   vertical-align: middle;
 }
 
+/* The value takes the room the label leaves, and no more: a select sized by long options (a list
+   of labelled bars) is held to it by its max-width instead of widening the table past the panel */
+table.kv.fields td {
+  width: 100%;
+  max-width: 0;
+}
+
 .insp-select {
   max-width: 100%;
   min-height: 24px;
@@ -284,4 +291,45 @@ table.kv .btn {
   width: 16em;
   max-width: 100%;
   text-overflow: ellipsis;
+}
+
+/* A face joint's form in the inspector (E5.1): the Connect tool's, as its panel draws it */
+.face-edit {
+  margin: var(--sp-2) 0;
+  padding: var(--sp-3);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+
+.face-edit input,
+.face-edit select {
+  background: var(--bg-well);
+  color: var(--text-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 1px 4px;
+  max-width: 9em;
+}
+
+.face-edit input[type="checkbox"] {
+  max-width: none;
+}
+
+.face-edit input:disabled {
+  opacity: 0.6;
+}
+
+/* A list the form writes whole (the stack): the row's width, so what is kept can be read */
+.face-edit label.wide {
+  display: flex;
+  flex: 1;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.face-edit input.wide {
+  flex: 1;
+  max-width: none;
+  min-width: 0;
 }
