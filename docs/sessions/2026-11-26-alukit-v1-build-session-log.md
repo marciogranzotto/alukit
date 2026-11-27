@@ -122,7 +122,7 @@ anything, and each has a default in place.
 | UX redesign, phase 3, S0: shared contracts | **done**, merged (04:33), pushed | `docs/ux/contracts.md`; no visible change (32 app states pixel-compared) |
 | UX S4: visual system and sheets | **done**, merged (05:27), pushed | Tokens at WCAG 2.2 AA in both themes, IBM Plex bundled (OFL), one table system, the order's verdict strip with an action per blocker, Problems grouped by consequence. `docs/ux/s4-decisions.md` |
 | UX S1: core, server, CLI | **done**, merged (06:11), pushed | The problem model (`/api/problems`, `alukit problems`), dry run, `addFrame`, the corner rule (call 6 decided), `setProject`, steps in words, restore keeping what it overwrites, and the plain bugs. No golden value moved. `docs/ux/s1-decisions.md` |
-| UX S3: 3D view | running (Opus, worktree), launched 04:35 | |
+| UX S3: 3D view | **built** (06:29); merge **held**: it regresses the live update 10× (06:41); back with its agent for a root-cause fix | `docs/ux/s3-decisions.md` |
 | UX S2: app shell and IA | running (Opus, worktree), launched 05:30 | S5 tools follows S3 | task flows and IA; heuristics and first run; visual design and 3D readability |
 | F2: end-hole axis, butt end-face coverage, head seats | **done**, merged (03:30), pushed | Goldens G35–G37. Note: `docs/notes/f2-joint-geometry.md`. |
 | X1–X3, X5, X6 plus F2a/F2b: blind fasteners, a butt's stack of bodies, plain bars held by a drilled-hole screw, taps over groove openings, sleeves through both walls, head sizes from standards, butt screws seat-checked | **done**, merged (05:00), pushed | Goldens G39–G45; calls 45–51. Note: `docs/notes/x1-x3-f2ab.md`. |
@@ -752,3 +752,12 @@ anything, and each has a default in place.
   - On a 1,008-bar project, problems take 23 ms (2–3 ms cached), and a dry run of one bar and joint 144–167 ms. So S5's previews should dry-run on snap or after a pause, not on every pointer move.
   - A top-ring-only frame gives the skill's worked example byte for byte.
 - **06:11**: S1 merged. Two conflicts, both sections each side had added (the design changelog and `contracts.md`), so both were kept. The regenerated skill docs matched. Gate PASS, 946 tests.
+- **06:29**: S3 finished (S3.1–S3.13).
+  - Sky/ground and camera lights, fog, outline and detail edges, a selection that shows through what covers it, hover labels.
+  - Joint markers from corners computed in the browser, Show in 3D with a stepping callout, and a gizmo.
+  - The GLB export is byte-identical.
+  - The bundle grew to 1,001 kB and now trips Vite's size warning: code splitting is queued for the integration pass.
+- **06:36**: The merge's gate failed `live.spec` (a CLI edit shown in two tabs within 1 s).
+  - Third time, so measured rather than re-run. Interleaved A/B runs at the same load (34–42): before S3, 78 / 92 / 138 ms; with S3, 905 / 989 ms when passing, and 5 of 7 runs failing.
+  - S3's view draws on demand (no idle render loop), so the cost is in the update path.
+  - A real regression against design §12's 1 s requirement. The unpushed merge was taken back out of `main`, and S3's agent is finding and fixing the cause. The test stays as it is.
