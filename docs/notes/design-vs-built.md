@@ -25,6 +25,10 @@ from the sources rather than from a note.*
 | 15 | §4.10 | A swap replaces an item | A swap replaces an item in entities and `defaults`; `order`, `costs` and `price_bands` keep naming what they name. A swapped bar keeps only the options its new item has (each dropped one is an info) | [m5](m5-decisions.md) 5, 6 |
 | 16 | §5.5 | `placeholder` blocks "its own line, under unsourced" | It holds only the group that holds the placeholder's line (the unsourced group, or the supplier it names); an unpriced placeholder gives no `missing-price` besides | [m6](m6-decisions.md) 16 |
 | 17 | §4.8 | Project items are described alongside catalog items | They hold numbers, not expressions (a parametric plate is a catalog item). Plates and bent angles default to supplier `local`; placeholders and generic items with no supplier go to the unsourced group | [m6](m6-decisions.md) 3, 4 |
+| 18 | §3.4 | A connector fits the joined bars' systems | Fit is judged by role: a butting bar by its system; the through bar by its system, or by its bore when a chosen fastener set sets a sleeve in it. A connector may be a joint recipe (`recipe: true`): no body, not bought, listed apart in the BOM | [acceptance-gaps](acceptance-gaps.md) A1, A2 |
+| 19 | §3.4, §4.5 | A connector's hole in the through bar goes where the butting bar meets it | For a butt through the through bar's end, into that end face along its axis: an `end-hole` op with its offset from the section's centre | [acceptance-gaps](acceptance-gaps.md) A4 |
+| 20 | §4.5 | Where a sleeve passes a wall, the wall's hole takes the sleeve's outside diameter | The hole clears the sleeve: ISO 273 medium for a shank of its outside diameter, or the diameter plus the sleeve's `clearance_mm` | [acceptance-gaps](acceptance-gaps.md) A7 |
+| 21 | §4.10, §4.11 | Entities take `only_in` and `not_in`; `covers.services_on` names one supplier | Cost lines take `only_in` and `not_in` too; `services_on` takes one supplier or a list | [acceptance-gaps](acceptance-gaps.md) A5, A6 |
 
 ## The three that matter most
 
