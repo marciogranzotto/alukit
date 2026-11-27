@@ -117,9 +117,10 @@ SYSTEMS = {
     (40, 8): ("s40-c8", "c8-40", "Base 40, canal 8"),
     (45, 10): ("s45-c10", "c10-45", "Base 45, canal 10"),
     (45, 8): ("s45-c8", "c8-45", "Base 45, canal sextavado M8"),
-    # The 50x50 (p. 20) draws no section the build can read. The shop says it uses canal 8 fixings
-    # and mixes with bases 40 and 45, so it takes base 40's measured canal-8 groove: an assumption,
-    # said in the system's name and in the section's note.
+    # The 50x50 (p. 20) is drawn as a raster image with its own groove printed in it (TRACES): the
+    # traced section's groove_dims hold it (its depth is 14.5 where base 40's is 10). The shop says
+    # it uses canal 8 fixings and mixes with bases 40 and 45, so its groove type, the interface its
+    # T-nuts fit by, is base 40's measured canal-8 groove: an assumption, said in the system's name.
     (50, 8): ("s50-c8", "c8-40", "Base 50, canal 8 (groove of base 40 assumed)"),
 }
 
@@ -161,7 +162,10 @@ OWN_GROOVES: dict[str, dict] = {
     # 6.62 to 6.93, bottom 12.63 to 13.73, hook 14.55 to 14.83, wall 2.00 and 2.28. Against the
     # printed values an empty width reads 0.43 narrow and an edge where material ends going in
     # reads 0.22 deep: bottom +0.43, hook -0.43, wall -0.22; the taper's start is a corner and is
-    # taken as read.
+    # taken as read. Its traced outline (TRACES) is the section while it is accepted, and its own
+    # groove is then measured on the trace (taper from 7.15, bottom 13.34, hook 14.33, wall 1.85,
+    # each within these ranges or overlapping them); these readings are the envelope's, should the
+    # trace be left out.
     "PF40-02": {
         "page": 17, "xref": 189,
         "printed": {"opening_mm": 8.1, "lip_mm": 4, "depth_mm": 10, "undercut_mm": 22},
@@ -287,9 +291,11 @@ PROFILES: dict[str, dict] = {
     # - `page`: the catalogue page that draws the profile, or None.
     # - `bore`: None when the core is not known. `bores` defaults to one bore at the centre.
     # - `approx`: what the envelope leaves out; it goes into the section's note.
+    # p. 10 draws the 20x20 V-slot as a vector path (104 segments, the page's bottom half), where
+    # M2b read a raster image: its outline is exact. "Ø5 (M6)" is printed under it.
     "PF20-11": {
-        "page": 10, "w": 20, "h": 20, "bore": 5,
-        "approx": "p. 10 prints the core Ø5 (M6); the shop's description gives a 4,6 mm centre for M5",
+        "page": 10, "w": 20, "h": 20, "drawn": (20, 20), "outline": "bottom", "bore": 5,
+        "cores": {5: 1},
     },
     "PF20-11C": {
         "page": None, "w": 20, "h": 20, "bore": 4.6, "printed": None,
@@ -396,6 +402,113 @@ CORE_MATCH_MM = 0.15
 #: CORE_GRID_SLACK_MM from it; the farthest is 0.015 (PF40-03's corner holes).
 CORE_GRID_MM = 0.1
 CORE_GRID_SLACK_MM = 0.03
+
+# --- Traced sections ------------------------------------------------------------------------------
+
+#: The profiles whose page draws them as raster images, traced (fidelity `traced`, design §3.5;
+#: forseti_importer/trace.py, docs/notes/forseti-traced-sections.md). Each entry:
+#:
+#: - `page`, `xref`: the image; `use`: its soft mask ("auto", where it has one) or its grey levels
+#:   ("image"); `crop` (x0, y0, x1, y1 in the layer's pixels) and `open_px` (a morphological
+#:   opening) take out the dimensions some images draw into themselves.
+#: - `drawn`: the drawing's width and height, as `PROFILES` gives a vector outline's.
+#: - `printed`: the groove dimensions the page prints, which calibrate the image (its scale and its
+#:   outline stroke's margin) at `calibrate` (default: every groove of the section) and become the
+#:   section's own groove dimensions as printed; `scans`: other printed dimensions, each read along
+#:   a line through a point in the section frame (`trace.scan`).
+#: - `printed_only`: groove dimensions the page prints to a feature `measure_groove` does not take
+#:   the same way, each (value, why): the section's own as printed, but not calibrated on, since
+#:   fitting the stroke's margin to them would bias it.
+#: - `faces`: the faces with a groove, where not all four have one.
+#:
+#: A trace becomes the section only within TRACE_TOLERANCE of the published area and inertias;
+#: otherwise the section stays a parametric envelope and its note gives the trace's errors.
+#: Printed dimensions not used (their meaning is not certain from the drawing) are said in each
+#: comment. Bores are not used: on the four vector-checked rasters the drawn bores read 0.1 to
+#: 0.2 mm under their printed diameter; a traced section's cores are snapped to the printed bore.
+TRACES: dict[str, dict] = {
+    # p. 11 prints "6" (the short face's opening and, bottom right, the lip's span), "1,8" (the lip),
+    # "12", "20" (the cores' pitch) and "40"; the opening and the lip calibrate.
+    "PF20-12": {"page": 11, "xref": 109, "drawn": (40, 20),
+                "printed": {"opening_mm": 6, "lip_mm": 1.8}},
+    # p. 10 draws PF20-01, the 20x20 the shop sells as PF20-21 (the table is PF20-01's): "8" over the
+    # top groove's opening; "6" from the bottom face to the left groove's lower edge ((20 - 8) / 2),
+    # "8" the core block. "14,1" is the bottom chamber where its diagonal webs meet the lips' inner
+    # face: its vector extension lines end on the lip there, at image x 19.90 and 75.00 px. The
+    # "20"'s lines land within 0.1 px of the image's true edges (its silhouette's less the stroke's
+    # margin), but the image's chamber walls at the lip are at about 19.2 and 76.2 px, 0.5 mm wider
+    # in all (the trace's widest is 14.66). The image and the dimension laid over it disagree there,
+    # so 14,1 is the section's undercut as printed and does not calibrate.
+    "PF20-21": {"page": 10, "xref": 88, "use": "image", "drawn": (20, 20),
+                "printed": {"opening_mm": 8},
+                "printed_only": {"undercut_mm": (14.1, "the image draws the chamber about 0.5 mm wider "
+                                                 "at the lips than the dimension laid over it, whose "
+                                                 "extension lines land inside the image's chamber "
+                                                 "walls there")}},
+    # p. 13: "8,1" (the left groove's opening), "18" (the top groove's undercut), "2" (the bottom
+    # lip); "5,1" runs from the top face to the corner cell's floor.
+    "PF30-01": {"page": 13, "xref": 137, "drawn": (30, 30),
+                "printed": {"opening_mm": 8.1, "lip_mm": 2, "undercut_mm": 18}},
+    # p. 13, below it: the face-plate variant. Its top face is a plate over a sheet channel, so it
+    # has three grooves; "8,10" is the left groove's opening. "5", "7,50", "4,10", "6,70", "2" and
+    # "15" place the plate and the bottom lips' ends.
+    "PF30-01F": {"page": 13, "xref": 135, "use": "image", "drawn": (30, 30), "faces": ["-y", "+x", "-x"],
+                 "printed": {"opening_mm": 8.1}},
+    # p. 14: the corner variant, plates on the top and right faces; "8,10" is the left groove's
+    # opening.
+    "PF30-01C": {"page": 14, "xref": 151, "use": "image", "drawn": (30, 30), "faces": ["-y", "-x"],
+                 "printed": {"opening_mm": 8.1}},
+    # p. 15: the rounded variant, drawn with its dimensions in the image (a JPEG): "8,10" is the left
+    # groove's opening; "7,10", "6,50", "2,00", "2,30", "4,00" and "4,10" place the sheet slot by the
+    # arc's end.
+    "PF30-01R": {"page": 15, "xref": 163, "use": "image", "open_px": 1, "drawn": (30, 30),
+                 "faces": ["-y", "-x"], "printed": {"opening_mm": 8.1},
+                 "calibrate": [{"face": "-x", "at_mm": 0}]},
+    # p. 12, as p. 13's 30x30.
+    "PF30-11": {"page": 12, "xref": 117, "drawn": (30, 30),
+                "printed": {"opening_mm": 8.1, "lip_mm": 2, "undercut_mm": 18}},
+    # p. 17 (OWN_GROOVES has where each is printed).
+    "PF40-02": {"page": 17, "xref": 189, "use": "image", "drawn": (80, 40),
+                "printed": {"opening_mm": 8.1, "lip_mm": 4, "depth_mm": 10, "undercut_mm": 22}},
+    # p. 17: drawn with each face closed by its cover, so its grooves are read behind them: the lip
+    # ("4") beside each opening, 1.6 mm out from it, and the undercut ("22") 5.5 mm deep, half way
+    # between the lip and where the 40x40 básico's chamber starts to taper (7.03).
+    "PF40-04": {"page": 17, "xref": 191, "drawn": (40, 40), "printed": {}, "calibrate": [],
+                "scans": [{"what": f"lip beside the opening on {f}", "along": a, "at": p, "printed": 4}
+                          for f, a, p in [("+y", "y", (5.6, 18.2)), ("-y", "y", (-5.6, -18.2)),
+                                          ("+x", "x", (18.2, 5.6)), ("-x", "x", (-18.2, -5.6))]]
+                + [{"what": f"undercut behind the cover on {f}", "along": a, "at": p, "printed": 22}
+                   for f, a, p in [("+y", "x", (0, 14.5)), ("-y", "x", (0, -14.5)),
+                                   ("+x", "y", (14.5, 0)), ("-x", "y", (-14.5, 0))]]},
+    # p. 18: "10" (the top groove's opening), "5,8" (the lip), "13,3" (the depth), "22" (the bottom
+    # undercut); "12" on the left spans the hooks' ends.
+    "PF45-01": {"page": 18, "xref": 211, "drawn": (45, 45),
+                "printed": {"opening_mm": 10, "lip_mm": 5.8, "depth_mm": 13.3, "undercut_mm": 22}},
+    # p. 19: "8,30" (the opening), "4,50" (the lip), "16,50" (the depth), "13,50" (the undercut);
+    # "1,50" is the face wall and "12,75" places the corner cells.
+    "PF45-11": {"page": 19, "xref": 225, "use": "image", "drawn": (45, 45),
+                "printed": {"opening_mm": 8.3, "lip_mm": 4.5, "depth_mm": 16.5, "undercut_mm": 13.5}},
+    # p. 20, its dimensions drawn in the image: "4" (the lip), "10" (the depth), "22" (the
+    # undercut), as OWN_GROOVES has them; cropped as `read-groove` crops it, and opened.
+    "PF40-03B": {"page": 20, "xref": 238, "use": "image", "crop": (85, 108, 350, 372), "open_px": 1,
+                 "drawn": (80, 80), "printed": {"lip_mm": 4, "depth_mm": 10, "undercut_mm": 22}},
+    # p. 20, its dimensions drawn in the image: "8,30" (the left groove's opening), "22,00" (its
+    # undercut), "4,00" (the bottom lip) and "14,50" (the bottom groove's depth from the face).
+    "PF50-01": {"page": 20, "xref": 240, "use": "image", "crop": (100, 94, 276, 271), "open_px": 1,
+                "drawn": (50, 50),
+                "printed": {"opening_mm": 8.3, "lip_mm": 4, "depth_mm": 14.5, "undercut_mm": 22}},
+}
+
+#: A trace becomes the section only this close to the published area (design §3.5: 2 %) and
+#: inertias (4 %: on the vector-checked rasters a trace's inertia error was up to 2.1 times its
+#: area error, an edge's error weighing by its distance from the axis squared).
+TRACE_TOLERANCE = {"area": 0.02, "inertia": 0.04}
+#: The largest error of the fitted margin on the four rasters drawn under vector outlines (PF40-00,
+#: PF40-01, PF40-03, PF45-12: 0.011 mm); a trace's stated uncertainty includes it.
+TRACE_METHOD_MM = 0.011
+#: A traced core's bore is snapped to the printed diameter when it reads within this of it (mm),
+#: and the trace is refused otherwise.
+TRACE_CORE_MM = 0.5
 
 #: Grooves: one centred on each series cell along each face (a 40x80 has two on each long face
 #: and one on each short face), as every profile drawn on pp. 11–21 shows.
