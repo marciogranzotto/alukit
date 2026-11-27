@@ -303,15 +303,6 @@
   border-bottom-color: var(--mark-active);
 }
 
-.badge {
-  margin-left: 4px;
-  padding: 0 5px;
-  border-radius: 8px;
-  background: var(--blocked);
-  color: var(--status-ink);
-  font-size: var(--fs-tiny);
-}
-
 .drawer-body {
   overflow: auto;
   padding: 6px 10px;

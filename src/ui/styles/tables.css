@@ -38,6 +38,16 @@
   margin: 2px 0;
 }
 
+/* A sheet's badge on its tab (registry.ts's `badge`): today the checks' error count */
+.badge {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--blocked);
+  color: var(--status-ink);
+  font-size: var(--fs-tiny);
+}
+
 .drawer-body h4 {
   margin: 10px 0 4px;
   font-size: var(--fs-body);

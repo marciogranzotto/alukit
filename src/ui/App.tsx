@@ -1,20 +1,23 @@
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { Catalog } from "./Catalog.tsx";
-import { Drawer } from "./Drawer.tsx";
 import { listenKeys, onKey } from "./keys.ts";
 import { Properties } from "./Properties.tsx";
+import { Sheets } from "./sheets/Sheets.tsx";
 import { redo, summary, undo } from "./store.ts";
 import { ToolButtons, ToolOverlay, ToolPanel } from "./ToolPanel.tsx";
 import { NoAccess, ReadOnlyBanner, TopBar } from "./TopBar.tsx";
 import { Tree } from "./Tree.tsx";
 import { activeTool, connectTools } from "./tools.ts";
 import { Viewport } from "./viewport/Viewport.tsx";
+// The sheets, which register themselves with the container (sheets/registry.ts).
+import "./tables/index.ts";
+import "./records/Params.tsx";
 
 /**
  * The app's layout (design §8): the top bar and its banners, the left column (the project tree or
  * the catalog), the viewport with the tools in its slots, the tool panel above the properties on
- * the right, and the drawer below. It installs the keys (keys.ts) and wires the tools to the
+ * the right, and the sheets below. It installs the keys (keys.ts) and wires the tools to the
  * viewport's viewer while it is shown. Owner: S2.
  */
 
@@ -80,7 +83,7 @@ export function App() {
           <Properties />
         </aside>
       </div>
-      <Drawer />
+      <Sheets />
     </div>
   );
 }
