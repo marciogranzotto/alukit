@@ -1,0 +1,67 @@
+{
+  "schema": "alukit.family/1",
+  "family": "quick-connectors",
+  "prov": {
+    "src": "src",
+    "ref": "pdf:catalogo_forsetiA4.pdf#p24",
+    "read": "2026-11-26",
+    "note": "the base-40 quick connector (the shop's \"Conector Rápido 90°\", the catalogue's \"Conector Universal\", CNX0-01 on p. 24): a pin in the butting bar's core, untapped, its head under the through bar's groove lips, held by a cross bush in a hole in the butting bar's side over the pin's core, through which its set screw is turned (Allen 6). The head's diameter and the neck under it are the table's A and B for CN40-01; its height and its dome are not printed, and are measured on the page's vector drawing of the pin. The hole is the shop page's and the machining article's. The requirement stands at the connector's own core: a recipe that places connectors at a two-core end's cores (a connector in its fastener set at each hole of its mount) brings one hole to each"
+  },
+  "review": {
+    "by": "a second reader (agent)",
+    "date": "2026-11-27",
+    "note": "the head measured again on the same vector paths, independently: scale 2.3567 pt/mm from ØA, height 4.48, rim 2.01, dome a circular arc of radius 17.51 (rms 0.011 mm; an ellipse fits worse, rms 0.061); ØB and ØD drawn 0.22 and 0.19 over their printed values"
+  },
+  "items": {
+    "CN40-01": {
+      "dims": {
+        "dk_mm": { "v": 18, "src": "src", "note": "A: the pin's head" },
+        "d_mm": {
+          "v": 7.8,
+          "src": "src",
+          "note": "B: the neck under the head, which passes the groove's opening"
+        },
+        "k_mm": {
+          "v": 4.48,
+          "src": "est",
+          "low": 4.3,
+          "high": 4.7,
+          "note": "not printed: the head's height, flat underside to the dome's apex, measured on the vector drawing of the pin on p. 24 and scaled by its ØA (18): a 2.01 rim and a 2.47 dome. The drawing's other diameters stand up to 0.21 off their printed values (ØB drawn 8.01 for 7.8, ØD 11.19 for 11), so the reading is taken as ±0.2"
+        },
+        "rf_mm": {
+          "v": 17.5,
+          "src": "est",
+          "note": "not printed: the radius of the head's domed top, a circle fitted to the drawn arc on p. 24 (rms 0.01 mm), scaled by its ØA (18)"
+        }
+      },
+      "requires": [
+        {
+          "op": "access-hole",
+          "on": "butting",
+          "d_mm": {
+            "v": 18,
+            "src": "src",
+            "ref": "url:https://loja.forsetisolucoes.com.br/produto/conector-rapido-90-p-perfis-base-30-40-45-e-50/",
+            "read": "2026-11-26",
+            "note": "\"Necessita furo de … 18mm (40×40, 45×45 e 50×50)\"; the table's E (the bush) is 18"
+          },
+          "depth_mm": {
+            "v": 28,
+            "src": "src",
+            "ref": "url:https://www.forsetisolucoes.com.br/index.php?route=noticia/tudo-sobre-usinagem-para-conectores-rapidos",
+            "read": "2026-11-27",
+            "note": "\"Ø18mm x 28mm - Base 40 - 40x40 Leve, Básico e Fechado, 40x80 e 80x80\""
+          },
+          "from_end_mm": {
+            "v": 25,
+            "src": "src",
+            "ref": "url:https://loja.forsetisolucoes.com.br/produto/conector-rapido-90-p-perfis-base-30-40-45-e-50/",
+            "read": "2026-11-26",
+            "note": "\"com distância de 25mm da face do perfil ao centro do furo\"; the machining article: \"à 25mm da face no centro do perfil\""
+          },
+          "note": "the cross bush's hole, in the butting bar's side over the core the pin is in; which face is not stated, so a hole at a position goes in from the face nearest it"
+        }
+      ]
+    }
+  }
+}

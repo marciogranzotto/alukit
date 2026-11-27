@@ -1,0 +1,15 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G46",
+  "catalogs": ["../../catalogs/test-qc"],
+  "defaults": {
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "item": "test-qc:Q80", "a": [0, 0, 0], "b": [600, 0, 0], "label": "an 80x80 sill" },
+    "b2": { "item": "test-qc:Q80", "a": [300, 0, 40], "b": [300, 0, 1000], "label": "an 80x80 post on its top face, a quick connector in each of two diagonal cores" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"], "connector": "test-qc:QH-2" }
+  }
+}

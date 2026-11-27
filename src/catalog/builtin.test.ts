@@ -173,13 +173,46 @@ describe("Forseti (design §12, M2b done-when)", () => {
     expect(Object.keys(kinds).sort()).toEqual(
       ["accessory", "bar", "carriage", "connector", "fastener", "generic", "panel"].sort(),
     );
-    // A connector the build modelled says it has no mounting model yet.
+    // A connector the build modelled says it has no mounting model yet; one layer 2 models with
+    // its machining and its own head (the quick connector, after the round-3 acceptance) does not.
     for (const [id, li] of cat.items) {
-      if (li.item.kind !== "connector" || li.item.mounts) continue;
+      if (li.item.kind !== "connector" || li.item.mounts || li.item.requires) continue;
       expect(li.item.prov.note, `${id} does not say it has no mounting model`).toMatch(
         /no mounting model yet/,
       );
     }
+    const qc = cat.items.get("CN40-01")?.item;
+    expect(qc?.kind).toBe("connector");
+    if (qc?.kind !== "connector") return;
+    expect(qc.prov.note).not.toMatch(/no mounting model/);
+    expect(qc.docs).toEqual([{ ref: "pdf:catalogo_forsetiA4.pdf#p24" }]);
+  });
+
+  it("models the base-40 quick connector's cross hole and head from Forseti's published data", async () => {
+    const { set } = await check("forseti");
+    const li = set.catalogs.get("forseti")?.items.get("CN40-01");
+    const qc = li?.item;
+    if (qc?.kind !== "connector") throw new Error("CN40-01 is not a connector");
+    const v = (x: unknown) => (typeof x === "number" ? x : (x as { v: number }).v);
+    const [hole] = qc.requires ?? [];
+    expect(qc.requires).toHaveLength(1);
+    expect({
+      op: hole?.op,
+      on: hole?.on,
+      d: v(hole?.d_mm),
+      depth: v(hole?.depth_mm),
+      from_end: v(hole?.from_end_mm),
+    }).toEqual({ op: "access-hole", on: "butting", d: 18, depth: 28, from_end: 25 });
+    const dims = Object.fromEntries(Object.entries(qc.dims ?? {}).map(([k, x]) => [k, v(x)]));
+    expect(dims).toEqual({ dk_mm: 18, d_mm: 7.8, k_mm: 4.48, rf_mm: 17.5 });
+    // What is printed is read; what is measured off the drawing is an estimate.
+    const src = (k: string) => (qc.dims?.[k] as { src?: string } | undefined)?.src;
+    expect([src("dk_mm"), src("d_mm"), src("k_mm"), src("rf_mm")]).toEqual([
+      "src",
+      "src",
+      "est",
+      "est",
+    ]);
   });
 
   it.skipIf(!snapshot || !existsSync(snapshot ?? ""))(

@@ -142,9 +142,10 @@ describe("a connector's machining at positions (§3.4, §5.3, acceptance gap A8)
     expect(
       issues([{ op: "end-tap", on: "butting", thread: "M8", at_holes: 0, at_mm: [[0, 0]] }]),
     ).toEqual(["give at_mm or at_holes, not both"]);
-    expect(issues([{ op: "access-hole", on: "butting", d_mm: 7, at_mm: [[0, 0]] }])).toEqual([
-      "positions lie in the joint's plane; a access-hole on the butting bar's side stands from_end_mm in from its end and takes none",
-    ]);
+    // A hole in the butting bar's side takes positions too, the cores it serves (after the
+    // round-3 acceptance, X7; it took none before, so a two-core end put both holes in one place).
+    expect(issues([{ op: "access-hole", on: "butting", d_mm: 7, at_mm: [[0, 0]] }])).toEqual([]);
+    expect(issues([{ op: "access-hole", on: "butting", d_mm: 7, at_holes: 0 }])).toEqual([]);
     expect(issues([{ op: "through-hole", on: "through", d_mm: 9, at_holes: 1 }])).toEqual([
       "no mounts[1]",
     ]);

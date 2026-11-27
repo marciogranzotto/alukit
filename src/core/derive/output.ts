@@ -245,6 +245,8 @@ export function derivedJson(d: Derived, stamp: { lock?: string } = {}): Record<s
                   d_in_mm: len(h.d_in),
                   d_out_mm: len(h.d_out),
                   bearing_pct: len(100 * h.bearing),
+                  ...(h.room?.depth !== undefined ? { depth_room_mm: len(h.room.depth) } : {}),
+                  ...(h.room?.side !== undefined ? { side_room_mm: len(h.room.side) } : {}),
                 })),
               }
             : {}),

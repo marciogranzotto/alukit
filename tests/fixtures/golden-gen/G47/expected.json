@@ -1,0 +1,133 @@
+{
+  "case": "G47",
+  "rule": "a connector whose dims give a head (a quick connector's pin, in the butting bar's core) seats it as a butt screw's head is seated: with no through-hole at its place, under the lips of the near face's groove, where its shank must pass the opening, the lip and its height the groove's depth, and its head, Ø dk to its rim and a spherical cap of radius rf above, the chamber at every depth it reaches; a head with no rf is a cylinder. derive gives the room left in depth and per side (after the round-3 acceptance, X8)",
+  "design": "A 40x40 post on a 40x40 rail's top groove (opening 8.18, lip 3.79, depth 9.99, undercut 22.01 narrowing from 7.03 deep to 12.24 at the floor), a quick connector in its core: Ø18, a Ø7.8 shank, 4.48 high, its top a dome of radius 17.5 rising 2.49 over a 1.99 rim. Its top reaches 8.27, 1.72 above the floor; its rim's edge stands 5.78 deep, in the undercut, 2.01 from the wall each side, the least anywhere; it bears on 54.41 % of its Ø7.8-Ø18 annulus, no warning. Taken as a cylinder Ø18 x 4.48, its top edge meets the taper where the chamber is 17.92: a fit error. 3 off the groove's centre the shank misses the opening; 10 off, no groove; a fit error each. Two in an 80x80's diagonal cores: the same seat at each. A screw with the same domed head into a tap: 57.84 % of its Ø9-Ø18 annulus, the same room; as a cylinder, the error",
+  "expect": {
+    "heads": {
+      "c1": [
+        {
+          "end": "b2.a",
+          "side": "head",
+          "item": "test-qc:QC40",
+          "on": "b1 +y (under its lips)",
+          "d_in_mm": 7.8,
+          "d_out_mm": 18,
+          "bearing_pct": 54.41,
+          "depth_room_mm": 1.72,
+          "side_room_mm": 2.01
+        }
+      ]
+    },
+    "ops": {
+      "b2": [
+        { "op": "hole", "face": "+y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+      ]
+    },
+    "hardware": { "test-qc:QC40": 1 },
+    "warnings": [],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "its head as a cylinder",
+      "patch": { "connections": { "c1": { "connector": "test-qc:QC40-CYL" } } },
+      "expect": {
+        "heads": { "c1": [] },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "3 off the groove's centre",
+      "patch": { "bars": { "b2": { "a": [300, 3, 20], "b": [300, 3, 520] } } },
+      "expect": {
+        "heads": { "c1": [] },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "off the groove",
+      "patch": { "bars": { "b2": { "a": [300, 10, 20], "b": [300, 10, 520] } } },
+      "expect": {
+        "heads": { "c1": [] },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    },
+    {
+      "name": "two in an 80x80's diagonal cores",
+      "patch": {
+        "bars": {
+          "b1": { "item": "test-qc:Q80" },
+          "b2": { "item": "test-qc:Q80", "a": [300, 0, 40], "b": [300, 0, 540] }
+        },
+        "connections": { "c1": { "connector": "test-qc:QC-2" } }
+      },
+      "expect": {
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "at_mm": [-20, -20],
+              "side": "head",
+              "item": "test-qc:QC40",
+              "on": "b1 +y (under its lips)",
+              "d_in_mm": 7.8,
+              "d_out_mm": 18,
+              "bearing_pct": 54.41,
+              "depth_room_mm": 1.72,
+              "side_room_mm": 2.01
+            },
+            {
+              "end": "b2.a",
+              "at_mm": [20, 20],
+              "side": "head",
+              "item": "test-qc:QC40",
+              "on": "b1 +y (under its lips)",
+              "d_in_mm": 7.8,
+              "d_out_mm": 18,
+              "bearing_pct": 54.41,
+              "depth_room_mm": 1.72,
+              "side_room_mm": 2.01
+            }
+          ]
+        },
+        "hardware": { "test-qc:QC40": 2 },
+        "warnings": [],
+        "recipes": { "test-qc:QC-2": 1 },
+        "errors": []
+      }
+    },
+    {
+      "name": "a screw with the same domed head into a tap",
+      "patch": { "connections": { "c1": { "connector": "test-qc:QJ-DOME" } } },
+      "expect": {
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "side": "head",
+              "item": "test-qc:QSCR-DOME",
+              "on": "b1 +y (under its lips)",
+              "d_in_mm": 9,
+              "d_out_mm": 18,
+              "bearing_pct": 57.84,
+              "depth_room_mm": 1.72,
+              "side_room_mm": 2.01
+            }
+          ]
+        },
+        "warnings": [],
+        "recipes": { "test-qc:QJ-DOME": 1 },
+        "errors": []
+      }
+    },
+    {
+      "name": "the screw's head as a cylinder",
+      "patch": { "connections": { "c1": { "connector": "test-qc:QJ-FLAT" } } },
+      "expect": {
+        "heads": { "c1": [] },
+        "recipes": { "test-qc:QJ-FLAT": 1 },
+        "errors": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }]
+      }
+    }
+  ]
+}

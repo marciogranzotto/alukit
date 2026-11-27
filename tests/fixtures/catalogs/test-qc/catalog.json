@@ -1,0 +1,300 @@
+{
+  "schema": "alukit.catalog/1",
+  "id": "test-qc",
+  "name": "Quick connector test catalog (synthetic)",
+  "vendor": "test-qc-vendor",
+  "currency": "BRL",
+  "prov": {
+    "src": "est",
+    "note": "synthetic test data for an access hole at its connector's core, a connector's own domed head under a groove's lips, and a butt screw's far-face seat; the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, not a vendor's item"
+  },
+  "materials": {
+    "al": {
+      "name": "Aluminium (synthetic)",
+      "density_kg_per_m3": 2700
+    }
+  },
+  "grooves": {
+    "c8q": {
+      "opening_mm": 8.18,
+      "lip_mm": 3.79,
+      "depth_mm": 9.99,
+      "undercut_mm": 22.01,
+      "taper_from_mm": 7.03,
+      "bottom_mm": 12.24,
+      "class": "standard"
+    }
+  },
+  "systems": {
+    "s40q": { "type": "tslot", "series_mm": 40, "groove": "c8q" }
+  },
+  "items": {
+    "Q40": {
+      "kind": "bar",
+      "name": "Profile 40x40, a centre core (synthetic)",
+      "shape": "tslot",
+      "section": "Q40",
+      "system": "s40q",
+      "material": "al",
+      "mass_kg_per_m": 1.5
+    },
+    "Q4080": {
+      "kind": "bar",
+      "name": "Profile 40x80, two cores (synthetic)",
+      "shape": "tslot",
+      "section": "Q4080",
+      "system": "s40q",
+      "material": "al",
+      "mass_kg_per_m": 2.5
+    },
+    "Q80": {
+      "kind": "bar",
+      "name": "Profile 80x80, four cores (synthetic)",
+      "shape": "tslot",
+      "section": "Q80",
+      "system": "s40q",
+      "material": "al",
+      "mass_kg_per_m": 4.5
+    },
+    "QBLOCK-80": {
+      "kind": "bar",
+      "name": "Plain bar 80 x 80, no system (synthetic)",
+      "shape": "flat",
+      "section": "QBLOCK-80",
+      "material": "al"
+    },
+    "QC40": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "A quick connector: a pin in the butting bar's core, its domed head under the through bar's lips, a cross bush in a hole over the core (synthetic)",
+      "fits": ["s40q"],
+      "mass_kg": 0.06,
+      "dims": { "dk_mm": 18, "d_mm": 7.8, "k_mm": 4.48, "rf_mm": 17.5 },
+      "requires": [
+        { "op": "access-hole", "on": "butting", "d_mm": 18, "depth_mm": 28, "from_end_mm": 25 }
+      ]
+    },
+    "QC40-CYL": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "The same quick connector, its head given as a cylinder (no rf) (synthetic)",
+      "fits": ["s40q"],
+      "mass_kg": 0.06,
+      "dims": { "dk_mm": 18, "d_mm": 7.8, "k_mm": 4.48 },
+      "requires": [
+        { "op": "access-hole", "on": "butting", "d_mm": 18, "depth_mm": 28, "from_end_mm": 25 }
+      ]
+    },
+    "QC-2": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Two quick connectors, in two diagonal cores (synthetic)",
+      "fits": ["s40q"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [
+            { "at_mm": [-20, -20, 0], "d_mm": 13.7 },
+            { "at_mm": [20, 20, 0], "d_mm": 13.7 }
+          ],
+          "fasteners": { "s40q": [{ "item": "QC40", "qty": 1 }] }
+        }
+      ]
+    },
+    "QC-4080": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Two quick connectors, in a 40x80's two cores (synthetic)",
+      "fits": ["s40q"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, -20, 0], "d_mm": 13.7 }, { "at_mm": [0, 20, 0], "d_mm": 13.7 }],
+          "fasteners": { "s40q": [{ "item": "QC40", "qty": 1 }] }
+        }
+      ]
+    },
+    "QC-2-TILTED": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "Two quick connectors on a mount whose plane is not the joint's (synthetic)",
+      "fits": ["s40q"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [-1, 0, 0] },
+          "holes": [
+            { "at_mm": [0, -20, 20], "d_mm": 13.7 },
+            { "at_mm": [0, 20, 20], "d_mm": 13.7 }
+          ],
+          "fasteners": { "s40q": [{ "item": "QC40", "qty": 1 }] }
+        }
+      ]
+    },
+    "QBRACKET": {
+      "kind": "connector",
+      "subtype": "bracket",
+      "name": "A bracket with a screw in each hole (synthetic)",
+      "fits": ["s40q"],
+      "mass_kg": 0.05,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [10, 0, 0], "d_mm": 9 }],
+          "fasteners": { "s40q": [{ "item": "QSCR-M8x110", "qty": 1 }] }
+        }
+      ]
+    },
+    "QNEST-BRACKET": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "A recipe holding a bracket in its set (synthetic)",
+      "fits": ["s40q"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": { "s40q": [{ "item": "QBRACKET", "qty": 1 }] }
+        }
+      ]
+    },
+    "QH-2": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "The two cross holes alone, at the diagonal cores (synthetic)",
+      "fits": ["s40q"],
+      "recipe": true,
+      "requires": [
+        {
+          "op": "access-hole",
+          "on": "butting",
+          "d_mm": 18,
+          "depth_mm": 28,
+          "from_end_mm": 25,
+          "at_mm": [[-20, -20], [20, 20]]
+        }
+      ]
+    },
+    "QH-SHORT": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "A cross hole too shallow to reach its core (synthetic)",
+      "fits": ["s40q"],
+      "recipe": true,
+      "requires": [
+        {
+          "op": "access-hole",
+          "on": "butting",
+          "d_mm": 18,
+          "depth_mm": 15,
+          "from_end_mm": 25,
+          "at_mm": [[20, 20]]
+        }
+      ]
+    },
+    "QH-OFF": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "A cross hole at a position off the butting end (synthetic)",
+      "fits": ["s40q"],
+      "recipe": true,
+      "requires": [
+        {
+          "op": "access-hole",
+          "on": "butting",
+          "d_mm": 18,
+          "depth_mm": 28,
+          "from_end_mm": 25,
+          "at_mm": [[50, 0]]
+        }
+      ]
+    },
+    "QBUSH": {
+      "kind": "fastener",
+      "subtype": "insert",
+      "name": "Reducing bush M16 outside, M8 inside (synthetic)",
+      "thread": "M8"
+    },
+    "QSCR-M8x110": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "Socket head cap screw M8x110 (synthetic)",
+      "thread": "M8",
+      "length_mm": 110,
+      "dims": { "dk_mm": 13, "k_mm": 8 }
+    },
+    "QSCR-DOME": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "A screw with the quick connector's domed head, Ø18 (synthetic)",
+      "thread": "M8",
+      "length_mm": 30,
+      "dims": { "dk_mm": 18, "k_mm": 4.48, "rf_mm": 17.5 }
+    },
+    "QSCR-FLAT": {
+      "kind": "fastener",
+      "subtype": "screw",
+      "name": "The same screw, its head given as a cylinder (synthetic)",
+      "thread": "M8",
+      "length_mm": 30,
+      "dims": { "dk_mm": 18, "k_mm": 4.48 }
+    },
+    "QJ-DOME": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "The domed-head screw in the through bar's groove, into a bush in the butting bar's core (synthetic)",
+      "fits": ["s40q"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "s40q": [{ "item": "QBUSH", "qty": 1 }, { "item": "QSCR-DOME", "qty": 1 }]
+          }
+        }
+      ],
+      "requires": [{ "op": "end-tap", "on": "butting", "thread": "M16" }]
+    },
+    "QJ-FLAT": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "The cylinder-head screw in the through bar's groove, into a bush in the butting bar's core (synthetic)",
+      "fits": ["s40q"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "s40q": [{ "item": "QBUSH", "qty": 1 }, { "item": "QSCR-FLAT", "qty": 1 }]
+          }
+        }
+      ],
+      "requires": [{ "op": "end-tap", "on": "butting", "thread": "M16" }]
+    },
+    "QJ1": {
+      "kind": "connector",
+      "subtype": "end-connector",
+      "name": "A screw through the through bar into a bush in the butting bar's core (synthetic)",
+      "fits": ["s40q"],
+      "recipe": true,
+      "mounts": [
+        {
+          "plane": { "point_mm": [0, 0, 0], "normal": [0, 0, -1] },
+          "holes": [{ "at_mm": [0, 0, 0], "d_mm": 9 }],
+          "fasteners": {
+            "s40q": [{ "item": "QBUSH", "qty": 1 }, { "item": "QSCR-M8x110", "qty": 1 }]
+          }
+        }
+      ],
+      "requires": [
+        { "op": "end-tap", "on": "butting", "thread": "M16" },
+        { "op": "through-hole", "on": "through", "d_mm": 9 }
+      ]
+    }
+  }
+}

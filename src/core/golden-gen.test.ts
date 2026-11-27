@@ -104,12 +104,17 @@ interface Expect {
     string,
     {
       end: string;
+      /** Where the case gives it: the tap's or the connector's place (X8). */
+      at_mm?: number[];
       side: string;
       item: string;
       on: string;
       d_in_mm: number;
       d_out_mm: number;
       bearing_pct: number;
+      /** Where the case gives them: the room under the lips, in depth and per side (X8). */
+      depth_room_mm?: number;
+      side_room_mm?: number;
     }[]
   >;
   /**
@@ -207,15 +212,21 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
     expect(got, `${label}: ${id}'s seats`).toEqual(seats);
   }
   for (const [id, heads] of Object.entries(want.heads ?? {})) {
-    const got = (d.butts.get(id)?.heads ?? []).map((h) => ({
-      end: h.end,
-      side: h.side,
-      item: h.item,
-      on: h.on,
-      d_in_mm: r2(h.d_in),
-      d_out_mm: r2(h.d_out),
-      bearing_pct: r2(100 * h.bearing),
-    }));
+    const got = (d.butts.get(id)?.heads ?? []).map((h, i) => {
+      const w = heads[i] ?? {};
+      return {
+        end: h.end,
+        ...("at_mm" in w ? { at_mm: h.at ? [r2(h.at[0]), r2(h.at[1])] : [0, 0] } : {}),
+        side: h.side,
+        item: h.item,
+        on: h.on,
+        d_in_mm: r2(h.d_in),
+        d_out_mm: r2(h.d_out),
+        bearing_pct: r2(100 * h.bearing),
+        ...("depth_room_mm" in w ? { depth_room_mm: r2(h.room?.depth ?? Number.NaN) } : {}),
+        ...("side_room_mm" in w ? { side_room_mm: r2(h.room?.side ?? Number.NaN) } : {}),
+      };
+    });
     expect(got, `${label}: ${id}'s screw heads`).toEqual(heads);
   }
   for (const [id, seats] of Object.entries(want.seats ?? {})) {
@@ -409,7 +420,7 @@ function check(d: Derived, items: ItemSource, want: Expect, label: string): void
 const dirs = subdirs(join(FIXTURES, "golden-gen"));
 
 describe("golden generation cases (design §4.6)", () => {
-  it("has one fixture per case G22–G26 and G29–G45", () => {
+  it("has one fixture per case G22–G26 and G29–G48", () => {
     expect(dirs.map((d) => basename(d))).toEqual([
       "G22",
       "G23",
@@ -433,6 +444,9 @@ describe("golden generation cases (design §4.6)", () => {
       "G43",
       "G44",
       "G45",
+      "G46",
+      "G47",
+      "G48",
     ]);
   });
 
