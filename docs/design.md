@@ -641,6 +641,38 @@ folded in.
   snap, a typed value or a rest (e3 5, 11; **measured**: at most 4 dry runs in 60 pointer moves).
   Call 94.
 
+### 3D editing, E5
+
+Stream E5 of the [editing audit](ux/editing-audit.md) makes what was made editable in the
+inspector ([`ux/e5-decisions.md`](ux/e5-decisions.md), cited as "e5"): connections, live patterns,
+parts and a corner's joint. No command is new; each edit is a merge patch through `setConnection`,
+`setPattern` or `setPart`, or `explodePattern`, sent as `alukit do` sends it, one step each.
+The document and the outputs do not change; one command check is fixed (the last bullet). §8's
+text takes these in when the editing round is folded in.
+
+- §8 Inspector: **a face joint's fields edit**, in the Connect tool's own form filled from the
+  joint, as one `setConnection` of what changed; a field written in a form the form cannot show
+  (a sleeve in the stack) is kept as written. Its layers are re-picked in Connect, which offers to
+  replace the joint's (E-UX-14; e5 19–22). Lifts §8's v1 limit that only a butt edits. Call 100.
+- §8 Inspector: **a pivot's base, axis and hinge, a mitre's and a splice's connector, quantity
+  and gap, a butt's spacer and through end** edit, each row its own step and its own refusal; a
+  connector is chosen among those that join that way (e5 1–3, 14–16). Call 104.
+- §8 Inspector: **the face each butting end's cross holes go in from** (§4.5 `hole_faces`), one
+  face per end or AluKit's choice; a face per hole shows in words (e5 17, 18). Call 102.
+- §8 Inspector: **a live pattern's along, pitch, count, offsets and skips edit**, and **Explode**
+  is one step that selects what it made; the Pattern tool's pitch takes expressions and params as
+  typed, as every length does (the audit's D5; E-UX-13; e5 4–8). Call 103.
+- §8 Inspector: **a part's Replace, its groove and its offset** (e5 23–25).
+- §8 Corner inspector: **a corner of two ends lists the mitre and the splice derive accepts**
+  beside the butts, from the same answer; Apply to matching corners asks derive to judge them all
+  first; Flip stays which bar runs through (E1.4; e5 9–13). Call 101.
+- §8: **Edit, Change connector, Explode and Replace part are actions**, in the menu; a joint
+  marker's menu offers its one joint's Edit and Change connector (e5 26–28).
+- §6: **a command accepts `bore` in a sleeve's `len_mm`**, as §4.5 and derive read it; every
+  command that wrote a face joint with a sleeve cut to `bore` was refused, the cart's c23's edits
+  among them. The schema names the names a field's expression binds besides the params
+  (`exprNames`), and the check reads them there; `bore` elsewhere is still not a param (e5 29).
+
 ## Draft 2.2 — what changed (2026-11-26)
 
 - **A shoe mitred square to a strut (gap G-A; §4.5, §16).** A plane's `normal` may name a bar:
@@ -3640,6 +3672,28 @@ reasons. Marking the room is the run's own change, in its project.
     keys reach it before an outline row's own handler, never before a text field's, a dialog's or
     a menu's (e3 13, 17).
 
+
+100. *New in 2.3, 3D editing E5, open.* A face joint is edited in the Connect tool's own form, and
+     the edit sends the difference between what that form writes for the joint as filled and as
+     edited, as one merge patch, so a field the person did not touch, or one the form cannot hold
+     (a sleeve in the stack, a rail-hole selection), stays as written; fastening "none" removes the
+     stations, fastener and stack, which a resting contact cannot have. Its layers change only by
+     re-picking them in Connect, whose Apply then replaces the joint's. The alternative, a field
+     per row, would pass through joints derive refuses (e5 19–22).
+101. *New in 2.3, 3D editing E5, open.* A corner's mitre and splice are listed beside its butts only
+     where two ends meet; applying one to the matching corners needs the same profiles at their ends
+     too, and derive's dry run of all of them, before the step. Flip changes which bar runs through
+     and never steps into or out of a joint (e5 9–13).
+102. *New in 2.3, 3D editing E5, open.* The inspector names a cross hole's face as one face per
+     butting end, or leaves it to AluKit; a face per hole stays a hand or CLI edit, shown in words,
+     since the holes' positions are derive's and the app does not hold them (e5 17, 18).
+103. *New in 2.3, 3D editing E5, open.* A pattern's count may be edited down to 1, the schema's
+     minimum, though the tool makes patterns of 2 or more; Explode selects every entity it made,
+     connections included (e5 5, 8).
+104. *New in 2.3, 3D editing E5, open.* A connection's connector is chosen among the catalog's
+     connectors that join that way: a splice's among splices, a pivot's among hinges, a mitre's
+     among all of them, since no subtype names one. A pivot's base is edited on a face only, as
+     Connect picks it (e5 14, 15).
 
 ## 15. Review 1 resolution
 

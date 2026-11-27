@@ -49,17 +49,23 @@ export function schemaErrors(
   });
 }
 
-/** An expression's own problems: its syntax, and names that are not params. */
+/**
+ * An expression's own problems: its syntax, and names that are neither params nor `names`, those
+ * its field binds itself (a sleeve's `bore`, §4.5).
+ */
 export function exprErrors(
   doc: RawDoc,
   src: string,
   entity: string,
   field: string,
+  names: readonly string[] = [],
 ): CommandError[] {
   try {
     const ast = parseExpr(src);
     const params = isObject(doc.params) ? doc.params : {};
-    const unknown = [...freeNames(ast)].filter((n) => !Object.hasOwn(params, n)).sort();
+    const unknown = [...freeNames(ast)]
+      .filter((n) => !Object.hasOwn(params, n) && !names.includes(n))
+      .sort();
     return unknown.map((n) => ({
       code: "expr",
       entity,
@@ -106,8 +112,8 @@ export function checkEntity(ctx: CommandContext, doc: RawDoc, id: string): Comma
     }
   }
 
-  const visit = (src: string, path: readonly PathKey[]) => {
-    errors.push(...exprErrors(doc, src, id, pathText(path)));
+  const visit = (src: string, path: readonly PathKey[], names: readonly string[] = []) => {
+    errors.push(...exprErrors(doc, src, id, pathText(path), names));
   };
   if (kind === "checks") {
     for (const k of ["value", "limit", "expr"]) {

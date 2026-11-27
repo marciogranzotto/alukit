@@ -349,10 +349,13 @@ export function references(doc: RawDoc): Ref[] {
   return out;
 }
 
-/** Every expression of the document, with who holds it: entities, then params. */
+/**
+ * Every expression of the document, with who holds it: entities, then params; and the names its
+ * field binds besides the params (a sleeve's `bore`).
+ */
 export function documentExprs(
   doc: RawDoc,
-  visit: (src: string, from: string, field: string) => void,
+  visit: (src: string, from: string, field: string, names: readonly string[]) => void,
 ): void {
   for (const id of allIds(doc)) {
     const kind = kindOf(id) as Kind;
@@ -360,18 +363,20 @@ export function documentExprs(
     if (kind === "checks") {
       if (isObject(v)) {
         for (const k of ["value", "limit", "expr"])
-          if (typeof v[k] === "string") visit(v[k] as string, id, k);
+          if (typeof v[k] === "string") visit(v[k] as string, id, k, []);
       }
       continue;
     }
     if (kind === "items") continue;
-    visitExprs(v, entityJsonSchema(kind), (src, path) => visit(src, id, pathText(path)));
+    visitExprs(v, entityJsonSchema(kind), (src, path, names) =>
+      visit(src, id, pathText(path), names),
+    );
   }
   const root = projectJsonSchema();
   const params = isObject(doc.params) ? doc.params : {};
   for (const [name, p] of Object.entries(params)) {
-    visitExprs(p, propertySchema(propertySchema(root, "params"), name), (src, path) =>
-      visit(src, `params/${name}`, pathText(path)),
+    visitExprs(p, propertySchema(propertySchema(root, "params"), name), (src, path, names) =>
+      visit(src, `params/${name}`, pathText(path), names),
     );
   }
 }
@@ -379,8 +384,9 @@ export function documentExprs(
 /** Who reads a param: entities and other params whose expressions name it. */
 export function paramReaders(doc: RawDoc, name: string): { from: string; field: string }[] {
   const out: { from: string; field: string }[] = [];
-  documentExprs(doc, (src, from, field) => {
-    if (from === `params/${name}`) return;
+  documentExprs(doc, (src, from, field, names) => {
+    // A name the field binds itself (a sleeve's `bore`) is not the param of that name.
+    if (from === `params/${name}` || names.includes(name)) return;
     try {
       if (freeNames(parseExpr(src)).has(name)) out.push({ from, field });
     } catch {

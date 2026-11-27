@@ -357,7 +357,10 @@ export const StackEntry = z.union([
       .describe(
         "both: the sleeve runs from the nut-side wall's outer face, so bore + 2t passes both walls; absent: from its inner face, in the bore",
       ),
-    len_mm: Expr,
+    // `bore` is bound in this expression only (§4.5); the command check reads `exprNames`.
+    len_mm: Expr.describe(
+      "its length: a number, or an expression that may read bore, the layer's inside depth along the fastener",
+    ).meta({ exprNames: ["bore"] }),
     clearance_mm: Expr.optional().describe(
       "the holes the sleeve passes: its outside diameter plus this; absent: ISO 273 medium for a shank of that diameter",
     ),

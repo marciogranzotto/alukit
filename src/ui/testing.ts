@@ -57,7 +57,9 @@ export async function hostOf(dir: string): Promise<{
     async arrange(at) {
       const a = await host.arrangements({ at });
       if (!a.ok) throw new Error(`read-only: ${JSON.stringify(a.status)}`);
-      return JSON.parse(JSON.stringify({ rev: a.rev, corners: a.corners, rules: a.rules }));
+      return JSON.parse(
+        JSON.stringify({ rev: a.rev, corners: a.corners, rules: a.rules, joints: a.joints }),
+      );
     },
     async apply(commands) {
       const r = await host.commands({ commands: commands as never, source: "test" });

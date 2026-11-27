@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   connectionCommand,
+  faceEditCommand,
+  faceOptionsOf,
   frameBatch,
   frameCommand,
   frameSizing,
@@ -163,6 +165,87 @@ describe("connect: pivots and fastened face joints (§4.5)", () => {
     expect(connectionCommand([bar("b5")], "face", { face })).toHaveProperty("why");
   });
 
+  /** The cart's c23, as written: a rod through five layers, a sleeve in the stack. */
+  const c23 = {
+    type: "face",
+    bars: ["b20", "b21", "b18", "b22", "b23"],
+    fastening: "bolt",
+    fastener: { bar: "test:M10-ROD", len_mm: 140 },
+    stack: [
+      "test-geo:NUT-M10",
+      "test-geo:WSH-M10",
+      { item: "test-geo:TUBE-18x2", inside: "b18", len_mm: "bore" },
+      "test-geo:WSH-M10",
+      "test-geo:NUT-M10",
+    ],
+    stations: { at_mm: [100, 200], across_mm: [-15, 15] },
+  };
+
+  it("fills the face form from a written joint; a field the form cannot show is kept as written (E5.1)", () => {
+    const { options, fixed } = faceOptionsOf(c23);
+    expect(options).toMatchObject({
+      fastening: "bolt",
+      fastener: "test:M10-ROD",
+      rod: true,
+      rodLen: "140",
+      at: "100, 200",
+      across: "-15, 15",
+      railHoles: false,
+      gaps: "",
+      tapDepth: "",
+    });
+    // A sleeve is an object in the stack, which the form's list of ids cannot hold.
+    expect(Object.keys(fixed)).toEqual(["stack"]);
+    expect(fixed.stack).toBe(
+      "test-geo:NUT-M10, test-geo:WSH-M10, a test-geo:TUBE-18x2 sleeve in b18, test-geo:WSH-M10, test-geo:NUT-M10",
+    );
+    // c35's stations are its rail's holes, every other one: shown, not edited.
+    const c35 = {
+      type: "face",
+      bars: ["r2", "r1"],
+      fastening: "tnut",
+      fastener: "test-gen:SCR-M5x25",
+      stack: ["test-gen:TNUT-M5"],
+      stations: { rail_holes: { along: "r2", every: 2, plus: ["first", "last", "joint"] } },
+    };
+    const f35 = faceOptionsOf(c35);
+    expect(f35.options).toMatchObject({ fastening: "tnut", stack: "test-gen:TNUT-M5" });
+    expect(f35.fixed).toEqual({ railHoles: "along r2, every 2, plus first, last, joint" });
+  });
+
+  it("sends only what changed, as one setConnection merge patch (E5.1)", () => {
+    const { options } = faceOptionsOf(c23);
+    expect(faceEditCommand("c23", c23, { ...options, at: "100, 200, 300" })).toEqual({
+      cmd: "setConnection",
+      args: { id: "c23", set: { stations: { at_mm: [100, 200, 300] } } },
+    });
+    expect(faceEditCommand("c23", c23, options)).toEqual({ same: true });
+    // A resting contact takes no stations, fastener or stack (derive's rule): all go, the
+    // sleeve the form could not show among them.
+    expect(faceEditCommand("c23", c23, { ...options, fastening: "none" })).toEqual({
+      cmd: "setConnection",
+      args: {
+        id: "c23",
+        set: { fastening: "none", fastener: null, stack: null, stations: null },
+      },
+    });
+    expect(faceEditCommand("c23", c23, { ...options, rodLen: "" })).toEqual({
+      why: "give the rod's length",
+    });
+    // New layers, re-picked in Connect, replace the joint's in the same step.
+    expect(
+      faceEditCommand("c23", c23, { ...options, gaps: "0, 0, 0, 0.5" }, [
+        "b20",
+        "b21",
+        "b18",
+        "b22",
+      ]),
+    ).toEqual({
+      cmd: "setConnection",
+      args: { id: "c23", set: { bars: ["b20", "b21", "b18", "b22"], gaps_mm: [0, 0, 0, 0.5] } },
+    });
+  });
+
   it("finds the run a bar is a piece of", () => {
     const doc = { runs: { r1: ["b11", "b12"], r2: { bars: ["b33", "b34"] } } };
     expect(runOf(doc, "b12")).toBe("r1");
@@ -216,6 +299,28 @@ describe("pattern", () => {
     expect(
       patternCommand({ template: ["p6"], along: "b9", pitch: "150", count: "1" }),
     ).toHaveProperty("why");
+  });
+
+  it("takes the pitch as typed: an expression over params stays one, units are mm (D5, D-UX-17)", () => {
+    const params = { W: 1200 };
+    const s = { template: ["p6"], along: "b9", count: "4" };
+    expect(patternCommand({ ...s, pitch: "W / 8" }, params)).toEqual({
+      cmd: "addPattern",
+      args: { template: ["p6"], along: "b9", pitch_mm: "W / 8", count: 4 },
+    });
+    // A value that reads no param is written as the number it comes to.
+    expect(patternCommand({ ...s, pitch: "15cm" }, params)).toMatchObject({
+      args: { pitch_mm: 150 },
+    });
+    expect(patternCommand({ ...s, pitch: "300 / 2" }, params)).toMatchObject({
+      args: { pitch_mm: 150 },
+    });
+    expect(patternCommand({ ...s, pitch: "V / 2" }, params)).toEqual({
+      why: 'the pitch: "V" is no param of this project',
+    });
+    expect(patternCommand({ ...s, pitch: "W - W" }, params)).toEqual({
+      why: "the pitch is a length in mm, not 0",
+    });
   });
 });
 

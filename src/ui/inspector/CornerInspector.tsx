@@ -10,11 +10,12 @@ import { busy, type CommandOutcome, sendCommands } from "../store.ts";
 import { drawnCorners } from "../viewport/viewer.ts";
 import {
   type Arrangement,
-  arrangeBatch,
+  arrangementBatch,
   arrangementsOf,
   type CornerRule,
   cannotArrange,
   directionRule,
+  type JointKind,
   joinOpenBatch,
   lostFields,
   matchingCorners,
@@ -29,7 +30,12 @@ import { barRole, connectionType, isObject, labelOf, listWords, pointWords } fro
  * from one request that dry-runs every corner rule (`GET /api/arrangements`). Apply to this
  * corner, or to every corner made like it, as one step; Flip to the next arrangement; join every
  * open corner at once. The request goes out when a corner is selected (and again when the drawn
- * revision moves), never per render, and an answer about another revision is dropped. Owner: S5.
+ * revision moves), never per render, and an answer about another revision is dropped.
+ *
+ * A corner of two ends lists the miter and the splice derive accepts beside the butts (E1.4, the
+ * editing audit's E5.5), from the same answer; one it refuses says why. Applying a joint to the
+ * matching corners asks the server to judge them first, since a joint's fit depends on the
+ * sections. Owner: E5.
  */
 
 type O = Record<string, unknown>;
@@ -49,7 +55,7 @@ type Arrangements =
       state: "done";
       rev: number;
       list: Arrangement[];
-      refused: { rule: CornerRule; why: string }[];
+      refused: { rule: CornerRule | JointKind; why: string }[];
       ms: number;
     }
   | { state: "error"; why: string };
@@ -74,7 +80,7 @@ function useArrangements(m: Model, corner: Corner, offered: boolean): Arrangemen
       }
       // About another revision than the one drawn: wait for that one's own answer.
       if (r.value.rev !== m.rev) return;
-      const { list, refused } = arrangementsOf(m, corner, r.value.rules);
+      const { list, refused } = arrangementsOf(m, corner, r.value.rules, r.value.joints);
       setA({ state: "done", rev: m.rev, list, refused, ms: Math.round(performance.now() - t0) });
     });
     return () => {
@@ -128,6 +134,7 @@ function ArrangementCard({
         class={`arrangement${chosen ? " chosen" : ""}${a.current ? " current" : ""}`}
         aria-pressed={chosen}
         data-testid="arrangement"
+        data-kind={a.kind}
         data-through={a.through}
         data-rules={a.rules.join(" ")}
         onClick={onChoose}
@@ -166,19 +173,45 @@ export function CornerInspector({ m, corner }: { m: Model; corner: Corner }) {
   }, [corner.key]);
   const all = drawnCorners.value;
   const list = found.state === "done" ? found.list : [];
-  const chosen = list.find((a) => a.through === choice) ?? list.find((a) => !a.current) ?? list[0];
+  const chosen = list.find((a) => a.key === choice) ?? list.find((a) => !a.current) ?? list[0];
   const matching = chosen ? matchingCorners(m, all, corner, chosen) : [];
   const flip = nextArrangement(list);
   const open = all.filter((c) => c.state === "open");
   const lost = lostFields(m, [corner]);
   const off = readOnly() || busy.value;
+  // A joint not offered at a corner of two ends, where one could be, says why.
+  const refusedJoints =
+    found.state === "done" && corner.ends.length === 2
+      ? found.refused.filter((r) => r.rule === "miter" || r.rule === "splice")
+      : [];
   const send = async (commands: { cmd: string; args?: unknown }[], what: string) => {
     setOutcome(undefined);
     setOutcome(await sendCommands(commands, what, { strict: true, inline: true }));
   };
-  /** Arranges corners by a rule: the batch the arrangements were dry-run with, as one step. */
-  const apply = (corners: readonly Corner[], rule: CornerRule, what: string) =>
-    void send(arrangeBatch(m, corners, rule), what);
+  /** Gives corners an arrangement: the batch the arrangements were dry-run with, as one step. */
+  const apply = (corners: readonly Corner[], a: Arrangement, what: string) =>
+    void send(arrangementBatch(m, corners, a), what);
+  /**
+   * A joint at every matching corner: the server dry-runs it at all of them first, and derive's
+   * error at any one refuses it, in derive's words; else its batch is applied as one step.
+   */
+  const applyJointAll = async (corners: readonly Corner[], kind: JointKind, what: string) => {
+    setOutcome(undefined);
+    const r = await fetchArrangements(
+      corners.map((c) => c.at),
+      [kind],
+    );
+    if (!r.ok) {
+      setOutcome({ ok: false, why: r.why, errors: [] });
+      return;
+    }
+    const j = r.value.joints.find((x) => x.kind === kind);
+    if (!j?.ok) {
+      setOutcome({ ok: false, why: j?.why ?? `no ${kind} was offered`, errors: [] });
+      return;
+    }
+    await send(j.commands, what);
+  };
 
   return (
     <div class="props corner" data-testid="properties" data-corner={corner.key}>
@@ -237,15 +270,23 @@ export function CornerInspector({ m, corner }: { m: Model; corner: Corner }) {
             <ul class="arrangements" data-ms={found.ms}>
               {list.map((a) => (
                 <ArrangementCard
-                  key={a.through}
+                  key={a.key}
                   a={a}
                   chosen={a === chosen}
-                  onChoose={() => setChoice(a.through)}
+                  onChoose={() => setChoice(a.key)}
                 />
               ))}
             </ul>
             {found.refused.length > 0 && list.length === 0 && (
               <p class="warn">{found.refused[0]?.why}</p>
+            )}
+            {list.length > 0 && refusedJoints.length > 0 && (
+              <p class="sub" data-testid="arrangements-refused">
+                {refusedJoints
+                  .map((r) => `No ${r.rule === "miter" ? "mitre" : "splice"} here: ${r.why}`)
+                  .join(". ")}
+                .
+              </p>
             )}
             {lost.length > 0 && (
               <p class="sub">
@@ -259,14 +300,10 @@ export function CornerInspector({ m, corner }: { m: Model; corner: Corner }) {
                 class="btn primary"
                 data-testid="arrangement-apply"
                 disabled={off || !chosen || chosen.current}
-                title="Rebuild this corner's butt by the arrangement chosen, as one step"
+                title="Rebuild this corner's joint by the arrangement chosen, as one step"
                 onClick={() =>
                   chosen &&
-                  apply(
-                    [corner],
-                    chosen.rules[0] as CornerRule,
-                    `${chosen.title.toLowerCase()} at ${corner.key}`,
-                  )
+                  apply([corner], chosen, `${chosen.title.toLowerCase()} at ${corner.key}`)
                 }
               >
                 Apply to this corner
@@ -277,19 +314,17 @@ export function CornerInspector({ m, corner }: { m: Model; corner: Corner }) {
                 data-testid="arrangement-apply-all"
                 disabled={off || !chosen || matching.length === 0}
                 title={
-                  chosen && directionRule(m, chosen) === undefined
+                  chosen?.kind === "butt" && directionRule(m, chosen) === undefined
                     ? "This arrangement follows bar ids, not a direction, so it has no match"
-                    : "Every corner where the same bars meet the same way, as one step"
+                    : chosen && chosen.kind !== "butt"
+                      ? "Every corner where the same profiles meet the same way, as one step, once derive accepts it at each"
+                      : "Every corner where the same bars meet the same way, as one step"
                 }
                 onClick={() => {
-                  const rule = chosen ? directionRule(m, chosen) : undefined;
-                  if (chosen && rule) {
-                    apply(
-                      matching,
-                      rule,
-                      `${chosen.title.toLowerCase()} at ${matching.length} corners`,
-                    );
-                  }
+                  if (!chosen) return;
+                  const what = `${chosen.title.toLowerCase()} at ${matching.length} corners`;
+                  if (chosen.kind !== "butt") void applyJointAll(matching, chosen.kind, what);
+                  else if (directionRule(m, chosen)) apply(matching, chosen, what);
                 }}
               >
                 Apply to {plural(matching.length, "matching corner")}
@@ -299,11 +334,8 @@ export function CornerInspector({ m, corner }: { m: Model; corner: Corner }) {
                 class="btn"
                 data-testid="arrangement-flip"
                 disabled={off || !flip}
-                title="The next arrangement, as one step"
-                onClick={() =>
-                  flip &&
-                  apply([corner], flip.rules[0] as CornerRule, `flip the corner at ${corner.key}`)
-                }
+                title="Another bar runs through: the next butt, as one step"
+                onClick={() => flip && apply([corner], flip, `flip the corner at ${corner.key}`)}
               >
                 Flip
               </button>
