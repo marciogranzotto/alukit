@@ -34,6 +34,9 @@ describe("the clients", () => {
         created: ["c3"],
         diagnostics: { new: [{ severity: "warn", code: "connection", message: "m" }] },
         effects,
+        results: [
+          { cmd: "autoConnect", created: ["c3"], removed: [], changed: ["b1"], info: { n: 1 } },
+        ],
       }),
     ).toEqual({
       ok: true,
@@ -43,6 +46,9 @@ describe("the clients", () => {
         created: ["c3"],
         diagnostics: [{ severity: "warn", code: "connection", message: "m" }],
         effects,
+        results: [
+          { cmd: "autoConnect", created: ["c3"], removed: [], changed: ["b1"], info: { n: 1 } },
+        ],
       },
     });
     const errors = [{ code: "referenced", message: "b1 is referred to by c1" }];
@@ -54,7 +60,12 @@ describe("the clients", () => {
       }),
     ).toEqual({
       ok: true,
-      value: { ok: false, why: "command 1 (removeEntity): b1 is referred to by c1", errors },
+      value: {
+        ok: false,
+        why: "command 1 (removeEntity): b1 is referred to by c1",
+        errors,
+        failed: { index: 0, cmd: "removeEntity" },
+      },
     });
     expect(
       dryRunOf(409, { ok: false, kind: "read-only", status: { message: "bad JSON" } }),

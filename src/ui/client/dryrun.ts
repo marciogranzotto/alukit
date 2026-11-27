@@ -25,8 +25,29 @@ export type DryRun =
       /** The diagnostics the step would add. */
       diagnostics: Diagnostic[];
       effects: DryRunEffects;
+      /**
+       * Each command's result, in order (`CommandResult`): what it would create, remove and
+       * change (a cascade's dropped list members are changes), and its own facts (`info`: an
+       * `addFrame`'s posts and rings, an `autoConnect`'s plan). Added by S5.
+       */
+      results: DryRunResult[];
     }
-  | { ok: false; why: string; errors: CommandError[] };
+  | {
+      ok: false;
+      why: string;
+      errors: CommandError[];
+      /** The command that refused: its 0-based index in the batch, and its name. Added by S5. */
+      failed?: { index: number; cmd?: string };
+    };
+
+/** One command's part of a dry run's answer (src/core/commands/apply.ts, `CommandResult`). */
+export interface DryRunResult {
+  cmd: string;
+  created: string[];
+  removed: string[];
+  changed: string[];
+  info?: unknown;
+}
 
 /** The server's answer to a dry run, as it sends it (`alukit.do/1` with `dry: true`). */
 interface Answer {
@@ -36,6 +57,7 @@ interface Answer {
   created?: string[];
   diagnostics?: { new: Diagnostic[] };
   effects?: DryRunEffects;
+  results?: Partial<DryRunResult>[];
   failed?: { index: number; cmd?: string; errors: CommandError[] };
   status?: { message?: string };
   message?: string;
@@ -52,13 +74,23 @@ export function dryRunOf(status: number, body: Answer): ClientAnswer<DryRun> {
         created: body.created ?? [],
         diagnostics: body.diagnostics.new,
         effects: body.effects,
+        results: (body.results ?? []).map((r) => ({
+          cmd: r.cmd ?? "",
+          created: r.created ?? [],
+          removed: r.removed ?? [],
+          changed: r.changed ?? [],
+          ...(r.info !== undefined ? { info: r.info } : {}),
+        })),
       },
     };
   }
   if (body.kind === "refused" && body.failed) {
     const { index, cmd, errors } = body.failed;
     const why = `command ${index + 1}${cmd ? ` (${cmd})` : ""}: ${errors.map((e) => e.message).join("; ")}`;
-    return { ok: true, value: { ok: false, why, errors } };
+    return {
+      ok: true,
+      value: { ok: false, why, errors, failed: { index, ...(cmd !== undefined ? { cmd } : {}) } },
+    };
   }
   const why =
     body.kind === "read-only"
