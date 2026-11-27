@@ -23,6 +23,7 @@ describe("joint preview", () => {
         effects: {
           cuts: { b1: [800, 820] },
           added: { b2: 580 },
+          parts: {},
           removed: [],
           claimed: ["b1.b", "b2.b"],
         },
@@ -38,6 +39,7 @@ describe("joint preview", () => {
         effects: {
           cuts: { b1: [800, 780] },
           added: { b2: 620 },
+          parts: {},
           removed: [],
           claimed: ["b1.b", "b2.b"],
         },
@@ -52,7 +54,13 @@ describe("joint preview", () => {
     const w = jointWords(
       {
         results: [bar, join("b1.b", ["b2.a"]), join("b3", ["b2.b"])],
-        effects: { cuts: {}, added: { b2: 560 }, removed: [], claimed: ["b2.a", "b2.b"] },
+        effects: {
+          cuts: {},
+          added: { b2: 560 },
+          parts: {},
+          removed: [],
+          claimed: ["b2.a", "b2.b"],
+        },
       },
       "b2",
     );
@@ -63,7 +71,7 @@ describe("joint preview", () => {
     const w = jointWords(
       {
         results: [bar, nothing, nothing],
-        effects: { cuts: {}, added: { b2: 600 }, removed: [], claimed: [] },
+        effects: { cuts: {}, added: { b2: 600 }, parts: {}, removed: [], claimed: [] },
       },
       "b2",
     );

@@ -9,7 +9,7 @@ import { applyBatchLive, type CommandResult } from "#core/commands/apply.ts";
 import { type DryEffects, effectsOf } from "#core/commands/dry.ts";
 import { History, type LogEntry, type Step, stepText, stepWords } from "#core/commands/history.ts";
 import type { CatalogPlaces, CommandEnv, State } from "#core/commands/types.ts";
-import { type Arrangements, arrange } from "#core/corners/arrange.ts";
+import { type Arrangements, arrange, type JointKind } from "#core/corners/arrange.ts";
 import { localDate } from "#core/dates.ts";
 import { type Derived, derive } from "#core/derive/derive.ts";
 import { type Diagnostic, sortDiagnostics } from "#core/diagnostics.ts";
@@ -439,6 +439,7 @@ export class ProjectHost {
   arrangements(req: {
     at: readonly V3[];
     rules?: readonly CornerRule[];
+    joints?: readonly JointKind[];
   }): Promise<ArrangementsAnswer> {
     return this.run(async () => {
       await this.takeInFiles();
@@ -453,6 +454,7 @@ export class ProjectHost {
         derived: this.snap.derived,
         at: req.at,
         ...(req.rules ? { rules: req.rules } : {}),
+        ...(req.joints ? { joints: req.joints } : {}),
         env: this.env(now.set),
         open: async (catalogs) =>
           (await openLiveCatalogs(this.dir, { catalogs }, this.opts.builtinDir)).set,

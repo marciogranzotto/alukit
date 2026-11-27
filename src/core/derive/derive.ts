@@ -121,6 +121,13 @@ export interface Derived {
   pivots: ReadonlyMap<string, PlacedPivot>;
   faces: ReadonlyMap<string, EndFace>;
   /**
+   * Per bar end (`b2.a`), the names of every provider that claims it (`c1`, `b2.ends.a.plane`),
+   * whether or not its plane resolved: an end whose claim fails falls back to its default plane
+   * (its `by` is the default) and is still claimed. What an end is joined by, for `autoConnect`,
+   * the unconnected ends and their fix (E-UX-12).
+   */
+  claims: ReadonlyMap<string, readonly string[]>;
+  /**
    * Per butt connection, each butting end's seat on the face it bears on (§4.5, after acceptance
    * run 4), in the order of its `ends`.
    */
@@ -216,6 +223,7 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
     runs,
     pivots,
     faces: s3.faces,
+    claims: s3.claims,
     butts,
     parts: gen.parts,
     fastenings: gen.fastenings,

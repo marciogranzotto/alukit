@@ -265,9 +265,9 @@ key the app has (measured).
 | # | Defect | Evidence | Cause | Stream |
 |---|---|---|---|---|
 | D1 | After a box frame from the start card, Draw says "no bar in the palette" and the bin "Draws: no profile yet", though the frame just set `defaults.bar`. A reload arms it | measured ([03](img/editing-audit/03-four-legs-replace.png)) | `startPalette` runs once, on the first model (`src/ui/App.tsx`). The frame form writes `defaults.bar` and never arms; the start card's "first bar" path does (`src/ui/shell/StartCard.tsx`). A default set later by settings or by an agent is missed the same way (read) | E2 |
-| D2 | An end that a butt claims, whose plane fell back to the default after an error, reads "open: nothing joins it, square" with a Join button | measured ([04](img/editing-audit/04-brace-angled-end.png)) | The end's words read the derived provider (`by: "default"` after the fallback), not the connection that claims it (inferred from `src/ui/inspector/words.ts`) | E4 |
-| D3 | `angled-end` is titled "A angled end problem at b13.a" and offers no fix | measured | `checkTitle` falls back to "A <code> problem" for codes without words (`src/core/problems/words.ts`); there is no fix for this code (`src/core/problems/problems.ts`) (read) | E1 |
-| D4 | A brace drawn corner to corner gets two `unconnected` warnings with the fix "Join with the default butt". The core refuses that fix: "only b13 meets at that point: nothing butts on it" | measured (`alukit problems`, `alukit do --dry-run`) | The corner's other ends are already claimed by the corner's butt, so `autoConnect` finds no partner. The fix is offered without asking the same rule (read) | E1 |
+| D2 | An end that a butt claims, whose plane fell back to the default after an error, reads "open: nothing joins it, square" with a Join button | measured ([04](img/editing-audit/04-brace-angled-end.png)) | The end's words read the derived provider (`by: "default"` after the fallback), not the connection that claims it (inferred from `src/ui/inspector/words.ts`). *E1 confirmed it is the UI's words; the core's half (the check and `autoConnect` taking such an end as open) is fixed (e1 2, 12)* | E4 |
+| D3 | `angled-end` is titled "A angled end problem at b13.a" and offers no fix | measured | `checkTitle` falls back to "A <code> problem" for codes without words (`src/core/problems/words.ts`); there is no fix for this code (`src/core/problems/problems.ts`) (read). *Fixed in E1: every code has words, and `angled-end` two fixes (e1 7–9)* | E1 |
+| D4 | A brace drawn corner to corner gets two `unconnected` warnings with the fix "Join with the default butt". The core refuses that fix: "only b13 meets at that point: nothing butts on it" | measured (`alukit problems`, `alukit do --dry-run`) | The corner's other ends are already claimed by the corner's butt, so `autoConnect` finds no partner. The fix is offered without asking the same rule (read). *Fixed in E1: the end butts on the corner's through bar, and the fix asks the same rule (e1 1–4)* | E1 |
 | D5 | The Pattern tool's pitch is `Number(text)`: no expression and no param, unlike every other typed value (D-UX-17) | read (`src/ui/tools/commands.ts`, `patternCommand`) | | E5 |
 | D6 | Design §8 says Select works "or by tag". In the app, tags only group the outline; selecting a tag's members takes a click per member | measured | A stale claim. E2.2 makes it true, and E2 corrects §8's wording when it lands | E2 |
 
@@ -705,7 +705,7 @@ hidden: Signal<ReadonlySet<string>>; isolated: Signal<ReadonlySet<string> | unde
 
 // src/core/query.ts (owner E1): pure, used by the app's selection verbs and `alukit query`
 similarTo(doc, derived, id, by: "item" | "tag"): string[];
-connectedTo(doc, derived, ids, opts?: { transitive?: boolean }): string[];
+connectedTo(doc, ids, opts?: { transitive?: boolean }): string[]; // as built: no derived (e1 11)
 ```
 
 ### 7.4 Who owns which files

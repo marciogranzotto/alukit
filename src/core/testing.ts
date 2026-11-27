@@ -30,6 +30,7 @@ export function fixtureProjects(): string[] {
     join(FIXTURES, "order"),
     join(FIXTURES, "base-frame", "empty"),
     join(FIXTURES, "base-frame", "cli"),
+    join(FIXTURES, "brace"),
   ];
 }
 

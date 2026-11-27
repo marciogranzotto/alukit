@@ -5,7 +5,7 @@ import { checkedOrder, modelOutputs, outputAccessors } from "../check/outputs.ts
 import { applyBatch } from "../commands/apply.ts";
 import type { RawDoc, State } from "../commands/types.ts";
 import { derive } from "../derive/derive.ts";
-import { sortDiagnostics } from "../diagnostics.ts";
+import { DIAGNOSTIC_CODES, sortDiagnostics } from "../diagnostics.ts";
 import { lockHash, pinLock } from "../lock/pin.ts";
 import { documentRefs } from "../lock/refs.ts";
 import { LockFile } from "../lock/schema.ts";
@@ -13,7 +13,8 @@ import { lockItems } from "../lock/source.ts";
 import { openLiveCatalogs } from "../project/open.ts";
 import { FIXTURES, mergePatch, readJson } from "../testing.ts";
 import { type ModelState, problemsAt } from "./problems.ts";
-import type { Problem, ProblemGroup } from "./types.ts";
+import type { Fix, Problem, ProblemGroup } from "./types.ts";
+import { checkTitle } from "./words.ts";
 
 /**
  * The problem model (BE-3) on the cart and on small edits of the order fixture and a fresh
@@ -224,5 +225,108 @@ describe("problems of a few edits", () => {
     const p = problemsAt((await model(ORDER, { bars: null, parts: null })).m, AS_OF);
     expect(p.order).toEqual({ status: "EMPTY", blocks: 0, warnings: 0 });
     expect(p.problems).toEqual([]);
+  });
+});
+
+describe("plain words for every diagnostic code (E1.3)", () => {
+  it.each([...DIAGNOSTIC_CODES])("%s has a title of its own", (code) => {
+    // DIAGNOSTIC_CODES lists every code a diagnostic can carry: the type of Diagnostic.code
+    // takes nothing else, so this sweeps them all.
+    const title = checkTitle(code, []);
+    const generic = new RegExp(`^an? ${code.replaceAll("-", " ")} problem`, "i");
+    expect(title).not.toMatch(generic);
+    expect(title).not.toBe("");
+  });
+});
+
+describe("the editing audit's brace (D3, D4; E1.3)", () => {
+  // The box frame of tests/fixtures/brace and a brace drawn into its back plane
+  // (src/core/brace.test.ts).
+  const BRACE = join(FIXTURES, "brace");
+  const brace = (a: number[], b: number[]) => ({ cmd: "addBar", args: { a, b, anchor: "+x" } });
+
+  /** The state after a batch on the frame, and its problems. */
+  async function edited(commands: object[]) {
+    const { s: s0 } = await model(BRACE);
+    const r = applyBatch(s0, commands, { today: AS_OF });
+    if (!r.ok) throw new Error(JSON.stringify(r.failed));
+    return { s: r.state, p: problemsAt(modelOf(r.state, [], 1), AS_OF) };
+  }
+  /** A fix applied as a dry run would apply it: the check's diagnostics after it. */
+  function dryRun(s: State, fix: Fix) {
+    if (fix.kind !== "commands") throw new Error(`${fix.label} is not a batch`);
+    const r = applyBatch(s, fix.commands, { today: AS_OF });
+    if (!r.ok) throw new Error(`${fix.label}: ${JSON.stringify(r.failed)}`);
+    return modelOf(r.state, [], 2).check.diagnostics;
+  }
+
+  it("offers to join the corner-to-corner brace's open ends, and the join works (D4)", async () => {
+    const { s, p } = await edited([brace([0, 600, 0], [1000, 600, 750])]);
+    const open = p.problems.filter((x) => x.code === "unconnected");
+    expect(open.map((x) => x.targets[0])).toEqual(["b13.a", "b13.b"]);
+    for (const problem of open) {
+      expect(problem.fixes.map((f) => f.label)).toEqual(["Join with the default butt"]);
+      const d = dryRun(s, problem.fixes[0] as Fix);
+      const end = problem.targets[0];
+      expect(d.filter((x) => x.code === "unconnected" && x.entity === end)).toEqual([]);
+      expect(d.filter((x) => x.severity === "error")).toEqual([]);
+    }
+  });
+
+  it("words an angled end the joint does not declare, with fixes that each clear it (D3)", async () => {
+    // Butts made by hand, as the Connect tool makes them: the ends' cuts are not declared.
+    const { s, p } = await edited([
+      brace([0, 600, 100], [1000, 600, 650]),
+      { cmd: "addConnection", args: { type: "butt", through: "b3", ends: ["b13.a"] } },
+      { cmd: "addConnection", args: { type: "butt", through: "b4", ends: ["b13.b"] } },
+    ]);
+    const angled = p.problems.filter((x) => x.code === "angled-end");
+    expect(angled.map((x) => [x.group, x.title])).toEqual([
+      ["blocks-order", "b13.a is cut at an angle it does not declare"],
+      ["blocks-order", "b13.b is cut at an angle it does not declare"],
+    ]);
+    expect(angled[0]?.detail).toBe(
+      "c9 cuts it at 28.81°: say how it is cut, on the face at that angle or square across the bar. Until then it is drawn square at its design point. It holds the order from test-vendor.",
+    );
+    for (const problem of angled) {
+      const end = problem.targets[0] as string;
+      const [bar, e] = end.split(".") as [string, string];
+      const set = (cut: string) => [
+        { cmd: "setBar", args: { id: bar, set: { ends: { [e]: { cut } } } } },
+      ];
+      expect(problem.fixes).toEqual([
+        { label: "Cut it on the face", kind: "commands", commands: set("angle") },
+        { label: "Cut it square", kind: "commands", commands: set("square") },
+      ]);
+      const other = end === "b13.a" ? "b13.b" : "b13.a";
+      for (const fix of problem.fixes) {
+        const left = dryRun(s, fix)
+          .filter((x) => x.severity === "error")
+          .map((x) => `${x.code} ${x.entity}`);
+        expect(left, fix.label).toEqual([`angled-end ${other}`]);
+      }
+    }
+  });
+
+  it("offers no join the default butt would refuse, and says why", async () => {
+    // b14's end a has a plane of its own where b13's end b meets it: nothing runs through there
+    // for b13 to butt on, so autoConnect would refuse the join.
+    const { p } = await edited([
+      { cmd: "addBar", args: { a: [200, 300, 0], b: [500, 300, 0] } },
+      {
+        cmd: "addBar",
+        args: {
+          a: [500, 300, 0],
+          b: [500, 500, 0],
+          ends: { a: { plane: { point: [500, 300, 0], normal: [0, 1, 0] } } },
+        },
+      },
+    ]);
+    const open = p.problems.find((x) => x.code === "unconnected") as Problem;
+    expect(open.targets[0]).toBe("b13.b");
+    expect(open.fixes).toEqual([]);
+    expect(open.detail).toBe(
+      "The ends meet with nothing to join them, and the default butt cannot join them here (only b13 meets at that point: nothing butts on it): add a connection there.",
+    );
   });
 });

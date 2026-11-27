@@ -86,7 +86,7 @@ import { viewModel } from "./view.ts";
  * | `GET /api/order`, `/api/costs` `[?as_of=YYYY-MM-DD]` | as `alukit order` and `costs --format json`, from the lock; today by default |
  * | `GET /api/machining` | as `alukit machining --format json`: the custom parts' holes, the machined bars |
  * | `GET /api/problems` `[?as_of=YYYY-MM-DD]` | as `alukit problems --json` (`alukit.problems/1`): the check and the order's reasons, grouped by consequence |
- * | `GET /api/arrangements?at=x,y,z[&at=…][&rule=…]` | as `alukit arrangements --json` (`alukit.arrangements/1`): every corner rule's arrangement of the corners at those points, from one dry run per rule that shares the butts' removal and its derive; writes nothing |
+ * | `GET /api/arrangements?at=x,y,z[&at=…][&rule=…]` | as `alukit arrangements --json` (`alukit.arrangements/1`): every corner rule's arrangement of the corners at those points, then a miter's and a splice's (`rule=miter`, `rule=splice`; *2.3*, E1.4), from one dry run each that shares the butts' removal and its derive; writes nothing |
  * | `GET /api/export/glb` | as `alukit export glb`, byte for byte: the model as binary glTF, to download |
  * | `GET /api/revisions` | the saved revisions (§4.13) and the current state's content hash |
  * | `POST /api/revisions` | `{ name, as_of? }`: saves a revision of what the server holds |
@@ -540,7 +540,8 @@ async function api(
       }
       case "/api/arrangements": {
         // As `alukit arrangements --json` prints it (S5.5): every corner rule's arrangement of
-        // the corners at the points named, in one request that shares the derive between rules.
+        // the corners at the points named, then a miter's and a splice's (E1.4), in one request
+        // that shares the derive between them.
         const q = arrangeQuery(query.getAll("at"), query.getAll("rule"));
         if ("error" in q) {
           sendJson(res, 400, { ok: false, message: q.error });
@@ -551,7 +552,12 @@ async function api(
           sendJson(res, 409, a, a.rev);
           return;
         }
-        sendJson(res, 200, arrangementsText(a.rev, { corners: a.corners, rules: a.rules }), a.rev);
+        sendJson(
+          res,
+          200,
+          arrangementsText(a.rev, { corners: a.corners, rules: a.rules, joints: a.joints }),
+          a.rev,
+        );
         return;
       }
       case "/api/export/glb": {

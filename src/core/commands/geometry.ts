@@ -15,9 +15,10 @@ import {
   Vec3Expr,
 } from "../project/schema.ts";
 import { TOL } from "../tolerances.ts";
-import { dist, type V3 } from "../vec.ts";
+import type { V3 } from "../vec.ts";
 import { allIds, getEntity, isObject, type Kind, kindOf, nextId, withEntity } from "./doc.ts";
 import { failed, requireEntity, withDoc } from "./helpers.ts";
+import { planJoin } from "./join.ts";
 import { type BarMap, mapBarFields, mapOps, mapStation, swapEnd } from "./maps.ts";
 import { len, minus, negate, plus } from "./numbers.ts";
 import { Refusal, type Rewriter, refusal, rewriteEntity } from "./rewrite.ts";
@@ -607,15 +608,28 @@ export const autoConnect: CommandDef<z.infer<typeof AutoConnect>> = {
   name: "autoConnect",
   group: "Connections",
   summary:
-    "add the default butt where bar ends meet: through the bar passing the point, else as prefer says (a vertical, else the lowest id, by default)",
+    "add the default butt where bar ends meet: through the bar passing the point, else as prefer says (a vertical, else the lowest id, by default), else through the bar a joined corner's butt runs through; an end cut at an angle declares it",
   args: AutoConnect,
   describe(_a, d) {
     if (d.created.length === 0) return undefined;
-    const { through, ends } = d.info as { through: string; ends: string[] };
-    return `join ${idList(ends)} to ${through}`;
+    const { through, ends, angled } = d.info as JoinInfo;
+    const cut =
+      angled === undefined
+        ? ""
+        : angled.length === ends.length
+          ? ", cut at an angle"
+          : `, ${idList(angled)} cut at an angle`;
+    return `join ${idList(ends)} to ${through}${cut}`;
   },
   apply: (ctx, a) => guard(() => connectAt(ctx, a)),
 };
+
+/** What `autoConnect` answers when it joins: `angled` only when it declared a cut. */
+interface JoinInfo {
+  through: string;
+  ends: string[];
+  angled?: string[];
+}
 
 /** The project's corner rule, `defaults.corner`, when the document gives a valid one. */
 function cornerDefault(doc: RawDoc): CornerRule | undefined {
@@ -642,45 +656,15 @@ function connectAt(ctx: CommandContext, a: z.infer<typeof AutoConnect>): Outcome
   }
   if (!P) return refuse("derive", `the point ${a.end ?? JSON.stringify(a.at)} does not derive`);
 
-  // Bar ends at the point that no provider claims yet.
-  const ends: string[] = [];
-  const passing: string[] = [];
-  for (const [id, b] of [...d.bars].sort(([x], [y]) => compareIds(x, y))) {
-    if (id.includes("@")) continue;
-    for (const e of ["a", "b"] as const) {
-      const pt = e === "a" ? b.placed.A : b.placed.B;
-      if (pt && dist(pt, P) <= TOL.len && b.ends[e].by === "default") ends.push(`${id}.${e}`);
-    }
-    const A = b.placed.A;
-    const t = b.placed.frame.t;
-    const s = (P[0] - A[0]) * t[0] + (P[1] - A[1]) * t[1] + (P[2] - A[2]) * t[2];
-    const foot: V3 = [A[0] + t[0] * s, A[1] + t[1] * s, A[2] + t[2] * s];
-    if (s > TOL.len && s < b.lengths.len - TOL.len && dist(foot, P) <= TOL.len) passing.push(id);
-  }
-  const atEnds = [...new Set(ends.map((e) => e.split(".")[0] as string))];
-  // Along a world axis: the other two components of the bar's direction vanish.
-  const along = (axis: 0 | 1 | 2) => (id: string) => {
-    const t = d.bars.get(id)?.placed.frame.t as V3;
-    return Math.hypot(...t.filter((_, i) => i !== axis)) < TOL.vert;
-  };
+  // The one rule, shared with the unconnected problem's fix (E-UX-12).
   const prefer = a.prefer ?? cornerDefault(ctx.state.doc) ?? "vertical";
-  // A bar passing the point runs through; else the bar the rule prefers; else today's rule.
-  const preferred = {
-    vertical: undefined,
-    first: atEnds[0],
-    x: atEnds.find(along(0)),
-    y: atEnds.find(along(1)),
-  };
-  const through = passing[0] ?? preferred[prefer] ?? atEnds.find(along(2)) ?? atEnds[0];
-  const butting = through ? ends.filter((e) => !e.startsWith(`${through}.`)) : [];
-  if (!through || butting.length === 0) {
-    const why = through
-      ? `only ${through} meets at that point: nothing butts on it`
-      : "no bar end meets at that point";
+  const join = planJoin(d, P, prefer);
+  if (!join.ok) {
     // The draw tool asks at every end it closes on; an end in the open is not a refusal there.
-    if (a.optional) return done(ctx.state, {}, { skipped: why });
-    return refuse("geometry", why);
+    if (a.optional) return done(ctx.state, {}, { skipped: join.why });
+    return refuse("geometry", join.why);
   }
+  const { through, ends, throughEnd, angled } = join.plan;
   const defaults =
     isObject(ctx.state.doc.defaults) && isObject(ctx.state.doc.defaults.butt)
       ? ctx.state.doc.defaults.butt
@@ -691,11 +675,24 @@ function connectAt(ctx: CommandContext, a: z.infer<typeof AutoConnect>): Outcome
   const conn = {
     type: "butt",
     through,
-    ends: butting,
+    ends,
+    ...(throughEnd !== undefined ? { through_end: throughEnd } : {}),
     ...(connector ? { connector } : {}),
     ...(qty !== undefined ? { qty } : {}),
   };
-  const doc = withEntity(c.doc, c.id, conn);
-  checkAll(ctx, doc, [c.id]);
-  return done(withDoc(ctx, doc), { created: [c.id] }, { through, ends: butting });
+  let doc = withEntity(c.doc, c.id, conn);
+  // An end the through bar cuts at an angle declares it in the same step (E-UX-11).
+  const changed: string[] = [];
+  for (const ref of angled) {
+    const [bar, e] = ref.split(".") as [string, "a" | "b"];
+    const spec = getEntity(doc, bar) as O;
+    const own = isObject(spec.ends) ? spec.ends : {};
+    const end = isObject(own[e]) ? own[e] : {};
+    doc = withEntity(doc, bar, { ...spec, ends: { ...own, [e]: { ...end, cut: "angle" } } });
+    if (!changed.includes(bar)) changed.push(bar);
+  }
+  changed.sort(compareIds);
+  checkAll(ctx, doc, [c.id, ...changed]);
+  const info: JoinInfo = { through, ends, ...(angled.length > 0 ? { angled } : {}) };
+  return done(withDoc(ctx, doc), { created: [c.id], changed }, info);
 }

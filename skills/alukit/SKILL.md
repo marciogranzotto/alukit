@@ -301,9 +301,10 @@ alukit check <dir> [--json] [--variant v] [--frozen]
 alukit problems <dir> [--json] [--variant v] [--as-of YYYY-MM-DD]
     the check and the order's reasons as one list in words, grouped by what they hold up,
     each with its fixes (alukit.problems/1); exit 1 when one blocks the order or is an error
-alukit arrangements <dir> --at x,y,z [--at x,y,z]... [--rule vertical|x|y|first]... [--json]
+alukit arrangements <dir> --at x,y,z [--at x,y,z]... [--rule vertical|x|y|first|miter|splice]... [--json]
     where bar ends meet at those points, each corner rule's arrangement: which bar runs
-    through and the cut lengths it gives, and the batch that applies it; writes nothing
+    through and the cut lengths it gives, and the batch that applies it; then a miter's and
+    a splice's of a corner's two ends, or why derive refuses one; writes nothing
 alukit do <dir> '<json>' | -f <file> | -  [--json] [--as <name>|agent:<name>] [--dry-run]
     apply a batch of commands atomically, from an argument, a file or stdin; --dry-run
     writes nothing and says what the step would do: diagnostics, ids, cut lengths that move
@@ -316,7 +317,9 @@ alukit move <dir> --ids <id,id,...> --by <dx,dy,dz> [--detach] [--dry-run] [--js
 alukit rotate <dir> --ids <id,id,...> --axis x|y|z --deg <deg> --about <x,y,z> [--detach] [--dry-run] [--json] [--as <name>]
     turn them about a world axis through a point (`transform`); exact at multiples of 90°
 alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]
-    entities by id, kind, tag:<t>, item:<ref>, or `<kind> of <id>`; bounded output
+    entities by id, kind, tag:<t>, item:<ref>, `<kind> of <id>`, like:<id> (its kind, item and
+    options), or connected:<ids> (the bars joined to them; connected*: the whole assembly);
+    bounded output
 alukit fmt <dir>... [--check]
     rewrite alukit.json and alukit.lock.json into canonical form; --check: exit 1 if one would change
 alukit lock update <dir> [--item <id>]... [--dry-run] [--json]
@@ -459,7 +462,7 @@ string; `<…>` is a string of that form; `?` marks an optional field.
 - **`setConnection`** (connections): change a connection's fields; its type may change when the result is valid
   - `id`: `string` — the entity to change
   - `set`: `{ <key>: any }` — fields to change, as a JSON merge patch (RFC 7396): null removes a field
-- **`autoConnect`** (connections): add the default butt where bar ends meet: through the bar passing the point, else as prefer says (a vertical, else the lowest id, by default)
+- **`autoConnect`** (connections): add the default butt where bar ends meet: through the bar passing the point, else as prefer says (a vertical, else the lowest id, by default), else through the bar a joined corner's butt runs through; an end cut at an angle declares it
   - `at` (optional): `<a node: n<number>> | [expr, expr, expr]` — the point where the draw tool closed
   - `end` (optional): `string` — or a bar end, at its design point
   - `connector` (optional): `string` — defaults.butt.connector when absent

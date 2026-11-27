@@ -17,7 +17,8 @@ import { usageOf } from "./project-usage.ts";
  * `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]` (design §7.3):
  * entities as written, bounded for an agent's context: at most `--limit` entities (50), each on
  * one line cut at 200 characters, or with `--summary` only counts and id ranges per kind.
- * `--fields` picks fields; a bar's `cut`, `len` and `centre` and a node's `pos` come from derive.
+ * `--fields` picks fields; a bar's `cut`, `len` and `centre` and a node's `pos` come from derive,
+ * as does what `like:<id>` compares (E1.5).
  */
 
 export const QUERY_SCHEMA = "alukit.query/1";
@@ -80,8 +81,11 @@ export async function queryCommand(argv: readonly string[], io: Io): Promise<num
     .map((f) => f.trim())
     .filter((f) => f !== "");
 
-  // Derive only when a derived field is asked for (it reads, and may create, the lock).
-  const wantsDerived = fields?.some((f) => Object.values(DERIVED).some((l) => l?.includes(f)));
+  // Derive only when a derived field, or what is like an entity, is asked for (it reads, and may
+  // create, the lock).
+  const wantsDerived =
+    /^like:/.test(selector.trim()) ||
+    fields?.some((f) => Object.values(DERIVED).some((l) => l?.includes(f)));
   let raw: unknown;
   let derived: Derived | undefined;
   if (wantsDerived) {
@@ -102,7 +106,7 @@ export async function queryCommand(argv: readonly string[], io: Io): Promise<num
     return 1;
   }
   const doc = raw as RawDoc;
-  const sel = select(doc, selector);
+  const sel = select(doc, selector, derived && (() => derived as Derived));
   if (!sel.ok) {
     io.err(`alukit query: ${sel.message}`);
     return 1;

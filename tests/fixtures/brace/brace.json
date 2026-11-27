@@ -1,0 +1,16 @@
+{
+  "commands": [
+    {
+      "cmd": "addBar",
+      "args": {
+        "item": "test:TS40",
+        "opt": { "finish": "anodised" },
+        "a": [0, 600, 0],
+        "b": [1000, 600, 750],
+        "anchor": "+x"
+      }
+    },
+    { "cmd": "autoConnect", "args": { "at": [0, 600, 0], "optional": true } },
+    { "cmd": "autoConnect", "args": { "at": [1000, 600, 750], "optional": true } }
+  ]
+}

@@ -1,6 +1,7 @@
 import { num } from "#catalog/schema/common.ts";
 import type { GrooveDim } from "#catalog/schema/groove.ts";
 import type { ConnectorItem, FastenerItem } from "#catalog/schema/items.ts";
+import type { DiagnosticCode } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
 import { type BarItemInfo, fullRef } from "../items.ts";
 import type { Connection, Face, HoleFaces } from "../project/schema.ts";
@@ -395,7 +396,7 @@ function heldBy(ctx: Ctx, joints: ReadonlyMap<string, Joint>): Map<string, Held>
     if (j.spec.type !== "butt" || j.spec.held_by === undefined) continue;
     const by = j.spec.held_by;
     const report = !j.copy;
-    const fail = (message: string, code = "connection"): void => {
+    const fail = (message: string, code: DiagnosticCode = "connection"): void => {
       if (report) ctx.d.error(code, id, `held_by: ${message}`, { field: "held_by", refs: [by] });
       out.set(id, { by, ok: false });
     };
@@ -539,11 +540,19 @@ class ConnectorGen {
     this.held = held;
   }
 
-  private error(code: string, message: string, extra: { field?: string; refs?: string[] } = {}) {
+  private error(
+    code: DiagnosticCode,
+    message: string,
+    extra: { field?: string; refs?: string[] } = {},
+  ) {
     if (this.report) this.ctx.d.error(code, this.id, message, extra);
   }
 
-  private warn(code: string, message: string, extra: { field?: string; refs?: string[] } = {}) {
+  private warn(
+    code: DiagnosticCode,
+    message: string,
+    extra: { field?: string; refs?: string[] } = {},
+  ) {
     if (this.report) this.ctx.d.warn(code, this.id, message, extra);
   }
 
