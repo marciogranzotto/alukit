@@ -1,6 +1,7 @@
 import { compareIds } from "#core/ids.ts";
 import { TOL } from "#core/tolerances.ts";
 import type { V3 } from "../mesh/model.ts";
+import { CORNER_PREFIX } from "../viewer/markers.ts";
 import type { CornerMarker } from "../viewer/scene.ts";
 import type { Model } from "./model.ts";
 
@@ -34,16 +35,14 @@ export interface Corner extends CornerMarker {
   connections: string[];
 }
 
-const PREFIX = "corner:";
-
-/** The selection's ref for a corner. */
+/** The selection's ref for a corner, as the viewer reports a marker's (`corner:<key>`). */
 export function cornerRef(key: string): string {
-  return `${PREFIX}${key}`;
+  return `${CORNER_PREFIX}${key}`;
 }
 
 /** The corner key a ref names, when it names a corner. */
 export function cornerKey(ref: string): string | undefined {
-  return ref.startsWith(PREFIX) ? ref.slice(PREFIX.length) : undefined;
+  return ref.startsWith(CORNER_PREFIX) ? ref.slice(CORNER_PREFIX.length) : undefined;
 }
 
 /** A coordinate as a key writes it: to 0.01 mm, no trailing zeros, no negative zero. */
@@ -91,6 +90,7 @@ const cellKey = (i: number, j: number, k: number) => `${i},${j},${k}`;
 function barGrid(m: Model): Map<string, string[]> {
   const grid = new Map<string, string[]>();
   for (const [id, b] of Object.entries(m.derived.bars)) {
+    if (!b.a || !b.b) continue;
     const lo = [0, 1, 2].map((i) => cellOf(Math.min(b.a[i] as number, b.b[i] as number) - TOL.len));
     const hi = [0, 1, 2].map((i) => cellOf(Math.max(b.a[i] as number, b.b[i] as number) + TOL.len));
     for (let i = lo[0] as number; i <= (hi[0] as number); i++)
@@ -145,6 +145,7 @@ export function cornersOf(m: Model): Corner[] {
   const bars = m.derived?.bars ?? {};
   const ends: End[] = [];
   for (const [id, b] of Object.entries(bars)) {
+    if (!b.a || !b.b || !b.ends) continue;
     for (const e of ["a", "b"] as const) {
       ends.push({ ref: `${id}.${e}`, bar: id, p: e === "a" ? b.a : b.b, by: b.ends[e].by });
     }

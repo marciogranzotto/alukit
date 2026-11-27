@@ -15,6 +15,7 @@ import {
 } from "three";
 import { sectionGeometry } from "../mesh/bars.ts";
 import type { V3, ViewSection } from "../mesh/model.ts";
+import type { Glyph, Glyphs } from "./look.ts";
 import type { ViewTheme } from "./theme.ts";
 import type { WorkPlane } from "./workplane.ts";
 
@@ -22,11 +23,31 @@ import type { WorkPlane } from "./workplane.ts";
  * What the tools draw over the model (design §8): the snap indicator, the line being drawn and
  * the axis it follows, a translucent preview of the bar, picked ends, and the work plane when it
  * is not the ground. Everything is in world coordinates (Z up), under the scene's world root, and
- * drawn on top of the model, in the theme's colours (`ViewTheme.overlay`; the plane in its tool
- * colour).
+ * drawn on top of the model, in the theme's colours (`ViewTheme.overlay`; the plane, the preview
+ * and the picks in its tool colour, which means "a tool is building this").
+ *
+ * A snap marker's shape says what it is on (D-UX-23, AutoCAD's AutoSnap), its colour and its
+ * name in the hint say it again: a filled square on a node or a bar's end (`point`), a triangle
+ * on a face's centre (`face`), a circled plus on a part's datum (`datum`), a diamond on a line
+ * (`line`), a cross on the grid (`grid`), an open ring in free space (`free`); a picked point is
+ * a dot (`pick`). Each has a dark ring, so it reads on any body.
  */
 
-export type MarkerKind = "point" | "line" | "grid" | "free" | "pick";
+export type MarkerKind = "point" | "face" | "datum" | "line" | "grid" | "free" | "pick";
+
+const GLYPH: Readonly<Record<MarkerKind, Glyph>> = {
+  point: "square",
+  face: "triangle",
+  datum: "datum",
+  line: "diamond",
+  grid: "plus",
+  free: "ring",
+  pick: "dot",
+};
+
+/** A snap marker's size, CSS pixels. */
+const MARKER_PX = 13;
+const PIN_PX = 11;
 
 export interface GhostBar {
   section: ViewSection;
@@ -62,12 +83,8 @@ function onTop<T extends { renderOrder: number }>(o: T): T {
 export class Overlay {
   readonly group = new Group();
   private readonly marker: Points;
-  private readonly markerMaterial = new PointsMaterial({
-    size: 11,
-    sizeAttenuation: false,
-    depthTest: false,
-    transparent: true,
-  });
+  private readonly markerMaterial: PointsMaterial;
+  private readonly lineMaterial: LineBasicMaterial;
   private readonly line: Line;
   private readonly guide: Line;
   private readonly guideMaterial = new LineDashedMaterial({
@@ -76,53 +93,66 @@ export class Overlay {
     depthTest: false,
     transparent: true,
     opacity: 0.7,
+    fog: false,
   });
   private readonly pins: Points;
+  private readonly pinMaterial: PointsMaterial;
   private readonly plane: LineSegments;
+  private readonly planeMaterial: LineBasicMaterial;
   private ghost: { mesh: Mesh; key: string } | undefined;
   private readonly ghostMaterial: MeshBasicMaterial;
-  private readonly colours: ViewTheme["overlay"];
+  private colours: ViewTheme["overlay"];
+  private kind: MarkerKind | undefined;
+  private last: OverlayState = {};
+  private readonly glyphs: Glyphs;
+  private readonly pixelRatio: () => number;
 
-  constructor(theme: ViewTheme) {
+  constructor(theme: ViewTheme, glyphs: Glyphs, pixelRatio: () => number) {
+    this.glyphs = glyphs;
+    this.pixelRatio = pixelRatio;
     this.colours = theme.overlay;
     this.ghostMaterial = new MeshBasicMaterial({
       color: theme.overlay.ghost,
       transparent: true,
       opacity: 0.35,
       depthWrite: false,
+      fog: false,
     });
     this.group.name = "overlay";
+    this.markerMaterial = new PointsMaterial({
+      size: MARKER_PX,
+      sizeAttenuation: false,
+      depthTest: false,
+      transparent: true,
+      fog: false,
+    });
     this.marker = onTop(new Points(new BufferGeometry(), this.markerMaterial));
-    this.line = onTop(
-      new Line(
-        new BufferGeometry(),
-        new LineBasicMaterial({ color: theme.overlay.line, depthTest: false, transparent: true }),
-      ),
-    );
+    this.lineMaterial = new LineBasicMaterial({
+      color: theme.overlay.line,
+      depthTest: false,
+      transparent: true,
+      fog: false,
+    });
+    this.line = onTop(new Line(new BufferGeometry(), this.lineMaterial));
     this.guide = onTop(new Line(new BufferGeometry(), this.guideMaterial));
-    this.pins = onTop(
-      new Points(
-        new BufferGeometry(),
-        new PointsMaterial({
-          size: 9,
-          sizeAttenuation: false,
-          depthTest: false,
-          transparent: true,
-          color: theme.overlay.marker.pick,
-        }),
-      ),
-    );
-    this.plane = onTop(
-      new LineSegments(
-        new BufferGeometry(),
-        new LineBasicMaterial({
-          color: theme.tool,
-          transparent: true,
-          opacity: 0.35,
-          depthTest: false,
-        }),
-      ),
-    );
+    this.pinMaterial = new PointsMaterial({
+      size: PIN_PX,
+      sizeAttenuation: false,
+      depthTest: false,
+      transparent: true,
+      color: theme.overlay.marker.pick,
+      map: glyphs.get("dot"),
+      fog: false,
+    });
+    this.pins = onTop(new Points(new BufferGeometry(), this.pinMaterial));
+    this.planeMaterial = new LineBasicMaterial({
+      color: theme.tool,
+      transparent: true,
+      opacity: 0.35,
+      depthTest: false,
+      fog: false,
+    });
+    this.plane = onTop(new LineSegments(new BufferGeometry(), this.planeMaterial));
     for (const o of [this.plane, this.guide, this.line, this.pins, this.marker]) {
       o.frustumCulled = false;
       o.raycast = () => {};
@@ -131,9 +161,30 @@ export class Overlay {
     this.set({});
   }
 
+  /** Draws with another theme's colours, keeping what is drawn. */
+  setTheme(t: ViewTheme): void {
+    this.colours = t.overlay;
+    this.ghostMaterial.color.setHex(t.overlay.ghost);
+    this.lineMaterial.color.setHex(t.overlay.line);
+    this.pinMaterial.color.setHex(t.overlay.marker.pick);
+    this.planeMaterial.color.setHex(t.tool);
+    this.set(this.last);
+  }
+
   set(s: OverlayState): void {
+    this.last = s;
+    const dpr = this.pixelRatio();
+    this.markerMaterial.size = MARKER_PX * dpr;
+    this.pinMaterial.size = PIN_PX * dpr;
     setPositions(this.marker, s.marker ? [s.marker.p] : []);
-    if (s.marker) this.markerMaterial.color = new Color(this.colours.marker[s.marker.kind]);
+    if (s.marker) {
+      this.markerMaterial.color = new Color(this.colours.marker[s.marker.kind]);
+      if (this.kind !== s.marker.kind) {
+        this.kind = s.marker.kind;
+        this.markerMaterial.map = this.glyphs.get(GLYPH[s.marker.kind]);
+        this.markerMaterial.needsUpdate = true;
+      }
+    }
     setPositions(this.line, s.line ? [s.line.a, s.line.b] : []);
     if (s.guide) {
       const e: V3 = s.guide.axis === "x" ? [1, 0, 0] : s.guide.axis === "y" ? [0, 1, 0] : [0, 0, 1];

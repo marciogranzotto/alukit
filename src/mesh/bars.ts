@@ -50,6 +50,146 @@ export function sectionEdges(unit: BufferGeometry): Float32Array {
   return out;
 }
 
+/**
+ * A section's edges split for drawing (docs/ux/visual-design.md §5.2), as segment end points in
+ * the unit extrusion's space (x, y, z ∈ {0, 1}):
+ *
+ * - `outline`: the outer ring at both ends; along the bar, a line at each corner of the section's
+ *   convex hull that is a crease, and where a flat outer face ends (a hull corner on the
+ *   section's box with a side along it). That last line is the silhouette of a rounded profile
+ *   from the standard views, whose corner arcs are too fine to be creases.
+ * - `detail`: every other crease along the bar (slot lips, inner chambers) and the holes' rings
+ *   at both ends.
+ *
+ * Together they hold every edge `sectionEdges` finds, plus the flat-face lines.
+ */
+export function sectionEdgeSets(s: ViewSection): { outline: Float32Array; detail: Float32Array } {
+  const outline: number[] = [];
+  const detail: number[] = [];
+  const ring = openRing(s.outline);
+  const hull = hullOf(ring);
+  const [[x0, y0], [x1, y1]] = boxOfRing(ring);
+  const eps = Math.max(x1 - x0, y1 - y0) * 1e-9 + 1e-9;
+  const onBox = (p: readonly [number, number]) =>
+    Math.abs(p[0] - x0) <= eps ||
+    Math.abs(p[0] - x1) <= eps ||
+    Math.abs(p[1] - y0) <= eps ||
+    Math.abs(p[1] - y1) <= eps;
+  /** Both ends on one side of the box: a flat outer face's edge. */
+  const alongBox = (p: readonly [number, number], q: readonly [number, number]) =>
+    (Math.abs(p[0] - x0) <= eps && Math.abs(q[0] - x0) <= eps) ||
+    (Math.abs(p[0] - x1) <= eps && Math.abs(q[0] - x1) <= eps) ||
+    (Math.abs(p[1] - y0) <= eps && Math.abs(q[1] - y0) <= eps) ||
+    (Math.abs(p[1] - y1) <= eps && Math.abs(q[1] - y1) <= eps);
+  const along = (out: number[], p: readonly [number, number]) =>
+    out.push(p[0], p[1], 0, p[0], p[1], 1);
+  const loops = (out: number[], r: readonly (readonly [number, number])[]) => {
+    for (const z of [0, 1]) {
+      r.forEach((p, i) => {
+        const q = r[(i + 1) % r.length] as readonly [number, number];
+        out.push(p[0], p[1], z, q[0], q[1], z);
+      });
+    }
+  };
+
+  loops(outline, ring);
+  ring.forEach((p, i) => {
+    const prev = ring[(i - 1 + ring.length) % ring.length] as readonly [number, number];
+    const next = ring[(i + 1) % ring.length] as readonly [number, number];
+    const crease = isCrease(prev, p, next);
+    const flatEnd = onBox(p) && alongBox(prev, p) !== alongBox(p, next);
+    if (hull.has(i) && (crease || flatEnd)) along(outline, p);
+    else if (crease) along(detail, p);
+  });
+  for (const h of s.holes) {
+    const r = openRing(h);
+    loops(detail, r);
+    r.forEach((p, i) => {
+      const prev = r[(i - 1 + r.length) % r.length] as readonly [number, number];
+      const next = r[(i + 1) % r.length] as readonly [number, number];
+      if (isCrease(prev, p, next)) along(detail, p);
+    });
+  }
+  return { outline: Float32Array.from(outline), detail: Float32Array.from(detail) };
+}
+
+/** A ring without its closing point, when it repeats the first. */
+function openRing(r: readonly (readonly [number, number])[]): (readonly [number, number])[] {
+  const first = r[0];
+  const last = r[r.length - 1];
+  const closed = r.length > 1 && first && last && first[0] === last[0] && first[1] === last[1];
+  return closed ? r.slice(0, -1) : [...r];
+}
+
+function boxOfRing(
+  r: readonly (readonly [number, number])[],
+): [[number, number], [number, number]] {
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const [x, y] of r) {
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x);
+    y1 = Math.max(y1, y);
+  }
+  return [
+    [x0, y0],
+    [x1, y1],
+  ];
+}
+
+/** Whether the outline turns by more than the edge angle at `p`: the side faces meet sharply. */
+function isCrease(
+  a: readonly [number, number],
+  p: readonly [number, number],
+  b: readonly [number, number],
+): boolean {
+  const ux = p[0] - a[0];
+  const uy = p[1] - a[1];
+  const vx = b[0] - p[0];
+  const vy = b[1] - p[1];
+  const lu = Math.hypot(ux, uy);
+  const lv = Math.hypot(vx, vy);
+  if (lu === 0 || lv === 0) return false;
+  const cos = (ux * vx + uy * vy) / (lu * lv);
+  return cos < Math.cos((EDGE_ANGLE_DEG * Math.PI) / 180);
+}
+
+/** The indices of a ring's strict convex hull corners (Andrew's monotone chain). */
+function hullOf(r: readonly (readonly [number, number])[]): Set<number> {
+  const idx = r
+    .map((_, i) => i)
+    .sort((i, j) => {
+      const p = r[i] as readonly [number, number];
+      const q = r[j] as readonly [number, number];
+      return p[0] - q[0] || p[1] - q[1];
+    });
+  const [[x0, y0], [x1, y1]] = boxOfRing(r);
+  const tol = Math.max(x1 - x0, y1 - y0) ** 2 * 1e-12;
+  const cross = (o: number, a: number, b: number) => {
+    const O = r[o] as readonly [number, number];
+    const A = r[a] as readonly [number, number];
+    const B = r[b] as readonly [number, number];
+    return (A[0] - O[0]) * (B[1] - O[1]) - (A[1] - O[1]) * (B[0] - O[0]);
+  };
+  const half = (order: number[]) => {
+    const out: number[] = [];
+    for (const i of order) {
+      while (
+        out.length >= 2 &&
+        cross(out[out.length - 2] as number, out[out.length - 1] as number, i) <= tol
+      )
+        out.pop();
+      out.push(i);
+    }
+    out.pop();
+    return out;
+  };
+  return new Set([...half(idx), ...half([...idx].reverse())]);
+}
+
 function dot(a: V3, b: V3): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
@@ -150,6 +290,8 @@ export function angledGeometry(unit: BufferGeometry, bar: BarJson, view: ViewBar
   const g = new BufferGeometry();
   g.setAttribute("position", new Float32BufferAttribute(out, 3));
   if (unit.index) g.setIndex(unit.index.clone());
+  // The unit's groups, its ends and its sides, so the ends can take their own material.
+  for (const x of unit.groups) g.addGroup(x.start, x.count, x.materialIndex);
   g.computeVertexNormals();
   g.computeBoundingSphere();
   return g;

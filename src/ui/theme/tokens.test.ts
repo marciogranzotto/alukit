@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { COLOURS as EXPORT } from "../../mesh/style.ts";
-import { COLOUR_TOKENS, COLOURS, viewTheme } from "./tokens.ts";
+import { COLOUR_TOKENS, COLOURS } from "./tokens.ts";
 
 /**
  * The tokens as numbers (tokens.ts) and as CSS (src/ui/styles/tokens.css) are one set of values,
@@ -53,23 +52,5 @@ describe("tokens", () => {
       "focus-ring",
     ];
     for (const n of names) expect(root.has(n), n).toBe(true);
-  });
-
-  // Today's look: S0 moved the viewer's colours here without changing one. S4 may change the
-  // display palette freely; the export's stays (D-UX-24), and this block then goes.
-  it("draws the 3D view in the colours it had before the tokens, which the export keeps", () => {
-    const t = viewTheme("dark");
-    expect(t.background).toEqual([EXPORT.background]);
-    expect(t.body).toEqual({
-      anodised: EXPORT.anodised,
-      black: EXPORT.black,
-      steel: EXPORT.steel,
-      part: EXPORT.part,
-      custom: EXPORT.custom,
-      hole: EXPORT.hole,
-      fastener: EXPORT.fastener,
-    });
-    expect(t.edge).toMatchObject({ colour: EXPORT.edge, placeholder: EXPORT.placeholderEdge });
-    expect([t.selection, t.tool]).toEqual([EXPORT.selected, EXPORT.highlight]);
   });
 });

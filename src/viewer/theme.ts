@@ -7,7 +7,8 @@ import type { MarkerKind } from "./overlay.ts";
  * in src/mesh/style.ts (D-UX-24), so a theme never moves an export's bytes.
  *
  * Colours are sRGB, as three.js takes a hex number: 0xRRGGBB. Owner: S3, which adds fields as
- * its tasks need them (tokens.ts gives each one a value).
+ * its tasks need them (tokens.ts gives each one a value). The look follows C's rendering spec
+ * (docs/ux/visual-design.md §5).
  */
 
 export type Hex = number;
@@ -18,15 +19,26 @@ export interface ViewLight {
 }
 
 export interface ViewTheme {
-  /** The background, top to bottom: one stop is a flat colour, two a gradient (S3.1). */
+  /** The background, top to bottom: one stop is a flat colour, two a vertical gradient. */
   background: readonly [Hex] | readonly [Hex, Hex];
-  /** Fog toward the background from `near` to `far` mm from the camera; none when absent. */
+  /**
+   * Depth fog toward `colour`, linear: it starts `near` model radii beyond the camera's target
+   * (negative: before it) and is whole `far` radii further on. None when absent.
+   */
   fog?: { colour: Hex; near: number; far: number } | undefined;
-  /** The ambient light and the two directional ones: the key light and the fill. */
-  lights: { ambient: ViewLight; key: ViewLight; fill: ViewLight };
+  /**
+   * The lights: a sky light (a hemisphere: tops lit in `colour`, undersides in `ground`), a key
+   * light that rides with the camera, above and to the left of the eye, and a low ambient.
+   */
+  lights: {
+    ambient: ViewLight;
+    key: ViewLight;
+    sky: ViewLight & { ground: Hex };
+  };
   /**
    * Bodies: a bar by its finish's tone (src/mesh/style.ts's `finishTone`), a part by its tone
-   * (`partTone`), the holes marked on the project's plates, the fasteners of face connections.
+   * (`partTone`), the holes marked on the project's plates, the fasteners of face connections,
+   * and `neutral`, an item's colour when the view is coloured by item and it has no swatch.
    */
   body: {
     anodised: Hex;
@@ -36,24 +48,49 @@ export interface ViewTheme {
     custom: Hex;
     hole: Hex;
     fastener: Hex;
+    neutral: Hex;
   };
+  /** A bar's cut faces (its ends), as factors on its side colour: a shade brighter, like sawn metal. */
+  cut: readonly [number, number, number];
   /** The opacity of a translucent part: a placeholder, or an item with no box (a marker). */
   translucent: number;
-  /** The lines along bodies' sharp edges, and a placeholder's outline. */
-  edge: { colour: Hex; opacity: number; placeholder: Hex };
+  /**
+   * The lines along bodies' edges. `colour` on a light body, `onDark` on a dark one (a black
+   * profile), so a silhouette shows against the body and the background alike. Outline edges
+   * (ends, silhouettes) at `outline` opacity; detail edges (slot lips, chambers) fade in with
+   * zoom up to `detail` in perspective, and stay at `opacity` in orthographic views. A
+   * placeholder's outline; a selected body's outline, and the x-ray of its hidden part.
+   */
+  edge: {
+    colour: Hex;
+    onDark: Hex;
+    opacity: number;
+    outline: number;
+    detail: number;
+    placeholder: Hex;
+    selected: Hex;
+    xray: number;
+  };
   /** The selection. */
   selection: Hex;
-  /** What a hovered body tints toward (S3.2). */
+  /** What a hovered body tints toward. */
   hover: Hex;
-  /** What a tool is building or has picked: its picks, the work plane, the section outline. */
+  /** What a tool is building or has picked: its picks, the preview, the work plane, the section outline. */
   tool: Hex;
-  /** The problem groups' colours, for badges in the view (S3.7). */
+  /** Status colours: joint markers (joined, open, failed) and problem badges (warn, blocked). */
   status: { ready: Hex; blocked: Hex; warn: Hex };
-  /** The ground grid: its centre lines and the others. */
-  grid: { centre: Hex; line: Hex };
-  /** The tools' overlay: the snap marker by kind, the axis guides, the line drawn, the preview. */
+  /**
+   * The ground grid: 100 mm lines, metre lines, and the world X and Y axes across it (at
+   * `axisOpacity`).
+   */
+  grid: { line: Hex; major: Hex; axis: { x: Hex; y: Hex }; axisOpacity: number };
+  /**
+   * The tools' overlay: the snap marker by kind, the dark ring round every marker, the axis
+   * guides (and the orientation gizmo's axes), the line drawn, the preview bar.
+   */
   overlay: {
     marker: Readonly<Record<MarkerKind, Hex>>;
+    ring: Hex;
     axis: { x: Hex; y: Hex; z: Hex };
     line: Hex;
     ghost: Hex;

@@ -64,52 +64,82 @@ export const COLOURS: Readonly<Record<Theme, Readonly<Record<ColourToken, number
 };
 
 /**
- * The 3D view's own colours, which no stylesheet uses: bodies by finish, edges, the grid, the
- * lights, the tools' overlay. Today's values, as the viewer drew them before the tokens.
+ * The 3D view's own colours, which no stylesheet uses: the background and its fog, the lights,
+ * bodies by finish, edges, the grid, the tools' overlay. C's rendering spec
+ * (docs/ux/visual-design.md §5.1 to §5.3), valued by S3 with its rendering; the export keeps its
+ * own palette (src/mesh/style.ts, D-UX-24). The light block is C's light viewport, for S4.11's
+ * switch.
  */
-const VIEW_DARK = {
-  body: {
-    anodised: 0xb9c3cd,
-    black: 0x3a3f46,
-    steel: 0x8d949c,
-    part: 0x6fa8dc,
-    custom: 0xc49a6c,
-    hole: 0x101316,
-    fastener: 0xc9a227,
+const BODY = {
+  anodised: 0xc4cbd2,
+  black: 0x4a5058,
+  steel: 0x9aa1a8,
+  part: 0x7f9fc2,
+  custom: 0xc9a27a,
+  hole: 0x15181c,
+  fastener: 0xc9a227,
+  neutral: 0x9aa1a8,
+} as const;
+
+const VIEW = {
+  dark: {
+    background: [0x2b3038, 0x1c2026],
+    fog: { colour: 0x23272e, near: -0.6, far: 4 },
+    lights: {
+      ambient: { colour: 0xffffff, intensity: 0.25 },
+      key: { colour: 0xffffff, intensity: 1.7 },
+      sky: { colour: 0xf2f5f8, ground: 0x4a4540, intensity: 1.9 },
+    },
+    edge: { colour: 0x5b6570, onDark: 0x9aa3ad, placeholder: 0xa9cdf0, selected: 0x8a4a00 },
+    grid: { line: 0x2c3138, major: 0x3a414a, axis: { x: 0xc8574f, y: 0x5d9a5b } },
+    overlay: { ring: 0x15181c, line: 0xffffff },
   },
-  translucent: 0.35,
-  edge: { colour: 0x15181c, opacity: 0.6, placeholder: 0xa9cdf0 },
-  /** What hover tints toward (S3.2, C's pale amber); nothing hovers today. */
-  hover: 0xffd29a,
-  grid: { centre: 0x59636e, line: 0x2c3238 },
-  lights: {
-    ambient: { colour: 0xffffff, intensity: 0.9 },
-    key: { colour: 0xffffff, intensity: 1.8 },
-    fill: { colour: 0xffffff, intensity: 0.6 },
-  },
-  overlay: {
-    marker: { point: 0x4ade80, line: 0x38bdf8, grid: 0x9aa4ae, free: 0xe5e7eb, pick: 0xff9f1c },
-    axis: { x: 0xef4444, y: 0x22c55e, z: 0x3b82f6 },
-    line: 0xffffff,
-    ghost: 0xffb454,
+  light: {
+    background: [0xeef1f4, 0xd3d9df],
+    fog: { colour: 0xe2e6ea, near: -0.6, far: 4 },
+    lights: {
+      ambient: { colour: 0xffffff, intensity: 0.3 },
+      key: { colour: 0xffffff, intensity: 1.5 },
+      sky: { colour: 0xffffff, ground: 0x6b665f, intensity: 1.7 },
+    },
+    edge: { colour: 0x2a3037, onDark: 0x9aa3ad, placeholder: 0x2a62b5, selected: 0x8a4a00 },
+    grid: { line: 0xd9dee3, major: 0xc2c9d0, axis: { x: 0xc8574f, y: 0x5d9a5b } },
+    overlay: { ring: 0x15181c, line: 0x1a1f26 },
   },
 } as const;
 
 /** What the 3D view draws with in a theme. */
 export function viewTheme(t: Theme): ViewTheme {
   const c = COLOURS[t];
+  const v = VIEW[t];
   return {
-    background: [c["bg-app"]],
-    lights: VIEW_DARK.lights,
-    body: VIEW_DARK.body,
-    translucent: VIEW_DARK.translucent,
-    edge: VIEW_DARK.edge,
+    background: v.background,
+    fog: v.fog,
+    lights: v.lights,
+    body: BODY,
+    cut: [1.12, 1.1, 1.04],
+    translucent: 0.35,
+    edge: { ...v.edge, opacity: 0.6, outline: 0.85, detail: 0.5, xray: 0.45 },
     selection: c.sel,
-    hover: VIEW_DARK.hover,
+    hover: 0xffd29a,
     tool: c.tool,
     status: { ready: c.ready, blocked: c.blocked, warn: c.warn },
-    grid: VIEW_DARK.grid,
-    overlay: VIEW_DARK.overlay,
+    grid: { ...v.grid, axisOpacity: 0.7 },
+    overlay: {
+      marker: {
+        point: 0x4ade80,
+        face: 0x4ade80,
+        datum: 0x4ade80,
+        line: c.tool,
+        grid: c["text-3"],
+        free: c["text-1"],
+        pick: c.tool,
+      },
+      ring: v.overlay.ring,
+      axis: { x: 0xef4444, y: 0x22c55e, z: 0x3b82f6 },
+      line: v.overlay.line,
+      ghost: c.tool,
+    },
   };
 }
 
