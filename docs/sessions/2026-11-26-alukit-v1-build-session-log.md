@@ -114,6 +114,7 @@ anything, and each has a default in place.
 | Gaps A9 (one through-fastener shared by two butting ends) and A8 (positions for a connector's machining) | **done**, merged (22:52), pushed | Goldens G33, G34. Note: `docs/notes/acceptance-gaps-2.md`; design 2.3, "After acceptance run 2". |
 | Acceptance run 3, internal | **PASS** (23:09) | Tests 1–4 pass with no exceptions; no AluKit failures. Design §13 records the verdict. |
 | v1 limits: the stamp on every output, `bbox()` over parts, end taps on cores | **done**, merged (00:17), pushed | Note: `docs/notes/v1-limits-closed.md`. |
+| Forseti sections: secondary cores, and the tap's thread against the core | running (Opus, worktree), launched 00:30 | |
 | Gaps A1, A2, A4–A7: connectors, recipes, end holes, cost lines per variant, multi-supplier covers, sleeve clearance | **done**, merged (21:31), pushed | Goldens G30–G32. Note: `docs/notes/acceptance-gaps.md`. |
 | Gap G-A: end bearing on a square-mitred shoe | **done** (17:15), merged, pushed `1d827cf` | Draft 2.1's claim was short. New rule: `ends.<x>.plane.normal` may name a bar (square to its axis). Golden case G27 is hand-checked. The design wording is still to fold in (see [`docs/notes/g-a-end-bearing.md`](../notes/g-a-end-bearing.md)). |
 | M4a viewer + server | **done**, merged `634fbf1` (18:30), pushed | All three Playwright done-when items pass: a CLI edit shows live in two tabs within 4–31 ms of the CLI exiting; an invalid direct edit makes both read-only; every 403 case, including browser cross-origin and DNS-rebinding attacks. The cart renders 39 bodies, matching derive. 362 tests on its branch. Calls: `docs/notes/m4a-decisions.md`. |
@@ -476,3 +477,15 @@ anything, and each has a default in place.
     stands. Design §13 and the internal report have a dated addendum, and the question went to
     the project's session.
 - **00:20**: Final report written (top of this log).
+- **00:25**: The reference project's session asked where AluKit's core positions come from.
+  - The coordinator checked the primary source: Forseti's catalogue drawings (pp. 17 and 20).
+  - They confirm the 80x80's four Ø13.7 (M16) cores at (±20, ±20) around an open centre channel,
+    and the 40x80's two around a central chamber. So the 18 errors stand as the record's question.
+  - They also show four Ø5 (M6) corner holes on both, which AluKit's parametric sections lack.
+    Their bores were set by the importer from the printed size, since the pages draw these
+    profiles as raster images.
+  - The answer went back to that session; the drawings also explain the "M16" (Ø13.7 is the M16
+    tap drill).
+- **00:30**: An Opus agent launched to complete every Forseti section's cores from the drawings
+  (through the importer, not by hand). It also makes the core check match a tap's thread to the
+  core's diameter: an M16 in a Ø5 hole is an error, M6 there is fine.
