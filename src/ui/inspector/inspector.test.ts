@@ -131,6 +131,9 @@ describe("words (U12, U18)", () => {
   });
 });
 
+/** A typed number as the length field reads it. */
+const n = (x: number) => ({ value: x, written: x });
+
 describe("the length field", () => {
   it("is driven by the param a post's height is written with", () => {
     // base-frame/cli's posts end at [0, 0, "H"]: H = 900 drives them.
@@ -140,9 +143,13 @@ describe("the length field", () => {
       params: ["H"],
       expr: "H",
     });
-    expect(lengthPatch(frame, "b1", 950)).toEqual({ why: "driven by H: edit it" });
+    expect(lengthPatch(frame, "b1", n(950))).toEqual({ why: "driven by H: edit it" });
     // The base rail b9 runs along x to W.
     expect(lengthMode(frame, "b9")).toMatchObject({ kind: "driven", params: ["W"] });
+    // The post's foot is a number: moving end a is not driven.
+    expect(lengthMode(frame, "b1", "a")).toEqual({ kind: "edit", len: 900, how: "coords" });
+    expect(lengthPatch(frame, "b1", n(950), "a")).toEqual({ set: { a: [0, 0, -50] } });
+    expect(lengthMode(frame, "b1", "middle")).toMatchObject({ kind: "driven", params: ["H"] });
   });
 
   it("moves end b along the bar when it is written as numbers, keeping the other coordinates", async () => {
@@ -152,12 +159,44 @@ describe("the length field", () => {
       { cmd: "addBar", args: { a: [0, 0, 0], b: { len_mm: 250, dir: "+x" } } },
     ]);
     expect(lengthMode(m, "b1")).toEqual({ kind: "edit", len: 800, how: "coords" });
-    expect(lengthPatch(m, "b1", 950)).toEqual({ set: { b: [100, 0, 950] } });
+    expect(lengthPatch(m, "b1", n(950))).toEqual({ set: { b: [100, 0, 950] } });
     // A diagonal 500 long: 3-4-5, so 1000 doubles both.
-    expect(lengthPatch(m, "b2", 1000)).toEqual({ set: { b: [600, 800, 0] } });
+    expect(lengthPatch(m, "b2", n(1000))).toEqual({ set: { b: [600, 800, 0] } });
     expect(lengthMode(m, "b3")).toEqual({ kind: "edit", len: 250, how: "free" });
-    expect(lengthPatch(m, "b3", 400)).toEqual({ set: { b: { len_mm: 400 } } });
-    expect(lengthPatch(m, "b3", 0)).toEqual({ why: "a length is a number above 0" });
+    expect(lengthPatch(m, "b3", n(400))).toEqual({ set: { b: { len_mm: 400 } } });
+    expect(lengthPatch(m, "b3", n(0))).toEqual({ why: "a length is a number above 0" });
+    // A free end b is counted from end a: only end b's length moves it.
+    expect(lengthMode(m, "b3", "a")).toEqual({
+      kind: "none",
+      why: "end b is a free length from end a: move end b",
+    });
+  });
+
+  it("binds a length to a param as typed (E-UX-16), from either end or the middle", async () => {
+    const m = await viewOf(await empty(), [
+      { cmd: "setParam", args: { name: "D", value: 600 } },
+      { cmd: "addBar", args: { a: [0, 0, 0], b: [0, 600, 0] } },
+      { cmd: "addBar", args: { a: [100, 0, 0], b: [100, 600, 0] } },
+      { cmd: "addBar", args: { a: [0, 0, 0], b: [300, 400, 0] } },
+      { cmd: "addBar", args: { a: [0, 0, 0], b: { len_mm: 250, dir: "+x" } } },
+    ]);
+    const D = { value: 600, written: "D" };
+    // `=D` on a side rail: its end b is D from end a's y, 0, so D itself.
+    expect(lengthPatch(m, "b1", D)).toEqual({ set: { b: [0, "D", 0] } });
+    expect(lengthPatch(m, "b4", D)).toEqual({ set: { b: { len_mm: "D" } } });
+    // End a moves instead: D back from end b.
+    expect(lengthPatch(m, "b2", D, "a")).toEqual({ set: { a: [100, "600 - D", 0] } });
+    // From the middle, y = 300: each end half the length from it.
+    expect(lengthPatch(m, "b2", n(400), "middle")).toEqual({
+      set: { a: [100, 100, 0], b: [100, 500, 0] },
+    });
+    expect(lengthPatch(m, "b2", D, "middle")).toEqual({
+      set: { a: [100, "300 - (D / 2)", 0], b: [100, "300 + (D / 2)", 0] },
+    });
+    // A diagonal can keep no expression in one coordinate: a number is asked for, as moveEnd asks.
+    expect(lengthPatch(m, "b3", D)).toEqual({
+      why: "D reads D, which b3 keeps only along a world axis: give a number",
+    });
   });
 
   it("says what sets it when end b is a reference", () => {

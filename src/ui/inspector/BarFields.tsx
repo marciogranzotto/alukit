@@ -10,11 +10,11 @@ import type { Model } from "../model.ts";
 import { optionFields } from "../options.ts";
 import { pointParam } from "../records/Params.tsx";
 import { busy } from "../store.ts";
-import { typedValue } from "../tools/typed.ts";
+import { typedNumber, typedValue } from "../tools/typed.ts";
 import { useReplaceAsked } from "./actions.ts";
 import { EndRows } from "./Ends.tsx";
 import { CommitInput, Row, RowErrors, readOnly, useSend, WordsRow } from "./Fields.tsx";
-import { lengthMode, lengthPatch } from "./length.ts";
+import { type LengthEnd, lengthMode, lengthPatch } from "./length.ts";
 import { barsLike, chosenOption, replaceBatch } from "./replace.ts";
 import { isObject, written } from "./words.ts";
 
@@ -47,39 +47,68 @@ export function useCard(id: string | undefined): ItemCard | undefined {
   return card;
 }
 
+/** Which end a typed length moves (E-UX-16): end b by default. */
+const LENGTH_ENDS: readonly { value: LengthEnd; text: string }[] = [
+  { value: "b", text: "moves end b" },
+  { value: "a", text: "moves end a" },
+  { value: "middle", text: "from the middle" },
+];
+
 function LengthRow({ m, id }: { m: Model; id: string }) {
-  const mode = lengthMode(m, id);
+  const [which, setWhich] = useState<LengthEnd>("b");
+  const mode = lengthMode(m, id, which);
   const { outcome, send } = useSend();
   // A typed length the field cannot take is said under it, as a refusal would be.
   const [bad, setBad] = useState<string>();
-  useEffect(() => setBad(undefined), [id]);
   const cut = m.derived.bars[id]?.cut_mm;
   const cutText = cut !== undefined ? <span class="sub"> · cut {mm(cut)}</span> : null;
+  const ends = isObject(written(m, id)) ? (
+    <select
+      class="insp-select"
+      data-testid="field-length-end"
+      aria-label="Which end a new length moves"
+      value={which}
+      onChange={(e) => {
+        setWhich((e.currentTarget as HTMLSelectElement).value as LengthEnd);
+        setBad(undefined);
+      }}
+    >
+      {LENGTH_ENDS.map((x) => (
+        <option key={x.value} value={x.value}>
+          {x.text}
+        </option>
+      ))}
+    </select>
+  ) : null;
   let body: preact.ComponentChildren;
   if (mode.kind === "edit") {
     body = (
       <>
         <CommitInput
-          label="Length, mm"
+          label={`Length, mm; ${LENGTH_ENDS.find((x) => x.value === which)?.text}`}
           testid="field-length"
           size={9}
           value={mm(mode.len).replace(/\.00$/, "")}
           onCommit={(text) => {
-            const p = lengthPatch(m, id, Number(text.trim()));
+            // D-UX-17: units and params, a leading `=` allowed; a param is written as typed.
+            const t = typedNumber(text.trim().replace(/^=\s*/, ""), m.derived.params);
+            const p = "why" in t ? t : lengthPatch(m, id, t, which);
             setBad("why" in p ? p.why : undefined);
             if ("set" in p) {
               void send([{ cmd: "setBar", args: { id, set: p.set } }], `set the length of ${id}`);
             }
           }}
         />{" "}
-        mm{cutText}
+        mm {ends}
+        {cutText}
         {mode.note && <div class="sub">{mode.note}</div>}
       </>
     );
   } else if (mode.kind === "driven") {
     body = (
       <>
-        <span data-testid="field-length-value">{mm(mode.len)}</span> mm{cutText}
+        <span data-testid="field-length-value">{mm(mode.len)}</span> mm {ends}
+        {cutText}
         <div class="sub" data-testid="length-driven">
           {mode.params.length > 0 ? (
             <>
@@ -105,14 +134,19 @@ function LengthRow({ m, id }: { m: Model; id: string }) {
   } else if (mode.kind === "ref") {
     body = (
       <>
-        {mm(mode.len)} mm{cutText}
+        {mm(mode.len)} mm {ends}
+        {cutText}
         <div class="sub">
           {mode.text}, which sets it {mode.refs.length > 0 && <EntityChips ids={mode.refs} />}
         </div>
       </>
     );
   } else {
-    body = <span class="sub">{mode.why}</span>;
+    body = (
+      <>
+        <span class="sub">{mode.why}</span> {ends}
+      </>
+    );
   }
   return (
     <>

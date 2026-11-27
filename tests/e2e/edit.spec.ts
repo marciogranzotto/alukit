@@ -218,3 +218,48 @@ test("Delete: an unreferenced bar goes at once; a referenced one lists what the 
   expect(back.connections).toEqual(doc.connections);
   expect(errors).toEqual([]);
 });
+
+// ---------------------------------------------------------------------------------------------
+// The editing round's bar edits (docs/ux/editing-audit.md §7.8, E4.2–E4.7; e4-decisions.md).
+
+/** Runs `alukit do` on the served project; fails the test on a refusal. */
+async function cliDo(dir: string, commands: unknown): Promise<void> {
+  const r = await cli(["do", dir, JSON.stringify(commands)]);
+  expect(r.code, r.err).toBe(0);
+}
+
+test("a length typed as =D binds the param (E-UX-16); from the middle keeps the centre", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  served = await serve("brace");
+  // D as a param, and a free bar beside the frame (b13).
+  await cliDo(served.dir, [
+    { cmd: "setParam", args: { name: "D", value: 600 } },
+    { cmd: "addBar", args: { a: [1400, 0, 0], b: [1400, 600, 0] } },
+  ]);
+  await openTab(page, served, 1);
+  const before = await cutList(served.dir);
+
+  // The left base rail b7 runs from y = 0 to 600: `=D` writes D in its end b, and nothing moves.
+  await pick(page, "b7");
+  await expect(page.getByTestId("field-length-end")).toHaveValue("b");
+  await page.getByTestId("field-length").fill("=D");
+  await page.getByTestId("field-length").press("Enter");
+  await waitDrawn(page, 2);
+  expect((await written(served.dir)).bars?.b7).toMatchObject({ a: [0, 0, 0], b: [0, "D", 0] });
+  expect(cutOf(await cutList(served.dir), "b7")).toBe(cutOf(before, "b7"));
+  await expect(page.getByTestId("length-driven")).toContainText("driven by D");
+
+  // From the middle: b13, 600 long about y = 300, made 400 long about the same centre.
+  await pick(page, "b13");
+  await page.getByTestId("field-length-end").selectOption("middle");
+  await page.getByTestId("field-length").fill("400");
+  await page.getByTestId("field-length").press("Enter");
+  await waitDrawn(page, 3);
+  expect((await written(served.dir)).bars?.b13).toMatchObject({
+    a: [1400, 100, 0],
+    b: [1400, 500, 0],
+  });
+  expect(cutOf(await cutList(served.dir), "b13")).toBe("400.00");
+});
