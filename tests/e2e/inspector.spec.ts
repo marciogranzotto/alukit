@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { cli, openTab, type Served, serve } from "./helpers.ts";
+import { cli, numberText, openTab, type Served, serve } from "./helpers.ts";
 
 /**
  * The inspector (design §8): selection from the tree and by a box reaches the properties panel,
@@ -25,7 +25,10 @@ test("selection: the tree and a box pick entities; properties show derived value
   await expect(props.locator("h2")).toContainText("b1");
   const d = await cli(["derive", served.dir, "--json"]);
   const b1 = (JSON.parse(d.out) as { bars: Record<string, { cut_mm: number }> }).bars.b1;
-  await expect(props.getByTestId("derived")).toContainText(`${b1?.cut_mm} mm`);
+  // Written as the cut list writes a length: two decimals (format.ts, S4.2).
+  await expect(props.getByTestId("derived")).toContainText(
+    numberText(`${b1?.cut_mm.toFixed(2)} mm`),
+  );
   await props.getByTestId("derived").getByRole("button", { name: /kg$/ }).click();
   await expect(props.getByTestId("provenance")).toContainText("estimated");
   await expect(props.getByTestId("provenance")).toContainText("1.493 kg/m");
