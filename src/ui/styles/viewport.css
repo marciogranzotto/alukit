@@ -58,6 +58,10 @@
 
 .viewport-top .tb {
   pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
   background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
@@ -235,8 +239,6 @@
 
 .callout-problem {
   margin: 4px 0 0;
-  padding: 0;
-  list-style: none;
 }
 
 .callout-refs,

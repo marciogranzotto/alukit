@@ -1,7 +1,8 @@
 import { useEffect } from "preact/hooks";
 import type { SectionPlane, Viewer } from "../../viewer/scene.ts";
-import { STANDARD_VIEWS } from "../../viewer/views.ts";
+import type { StandardView } from "../../viewer/views.ts";
 import { selection } from "../focus.ts";
+import { Icon, type IconName } from "../icons/Icons.tsx";
 import { chord, onKey } from "../keys.ts";
 import { model } from "../store.ts";
 import { colourBy, projection, sectionPlane, showJoints, showProblems, viewer } from "./viewer.ts";
@@ -60,6 +61,7 @@ function SectionTools() {
         class={s ? "tb on" : "tb"}
         data-testid="section"
         aria-pressed={s !== undefined}
+        aria-label="Section"
         title="Section plane: cut the view square to an axis (the document is unchanged)"
         disabled={!v}
         onClick={() => {
@@ -68,7 +70,7 @@ function SectionTools() {
           else setSection(lastSection ?? middleSection(v, "x"));
         }}
       >
-        Section
+        <Labelled icon="section" word="Section" />
       </button>
       {s && v && (
         <span class="section-tools" data-testid="section-tools">
@@ -125,29 +127,42 @@ function SectionSlider({ v, s }: { v: Viewer; s: SectionPlane }) {
   );
 }
 
-const VIEW_TEXT: Readonly<Record<string, string>> = {
-  iso: "Iso",
-  top: "Top",
-  front: "Front",
-  right: "Side",
-  left: "Left",
-  back: "Back",
-  bottom: "Bottom",
-};
+/** The views the bar offers, their words and S4's icons (a cube, the face looked at filled). */
+const VIEWS: readonly { name: StandardView; word: string; icon: IconName }[] = [
+  { name: "iso", word: "Iso", icon: "iso" },
+  { name: "top", word: "Top", icon: "top" },
+  { name: "front", word: "Front", icon: "front" },
+  { name: "right", word: "Side", icon: "side" },
+];
+
+/**
+ * S4's icon, and its word beside it from 1440 px (`.icon-word`); below that the button's label
+ * and its title say the word.
+ */
+function Labelled({ icon, word }: { icon: IconName; word: string }) {
+  return (
+    <>
+      <Icon name={icon} />
+      <span class="icon-word">{word}</span>
+    </>
+  );
+}
 
 /** A display toggle: pressed while what it shows is drawn. */
 function Toggle({
   on,
   testid,
+  icon,
+  word,
   title,
   onClick,
-  children,
 }: {
   on: boolean;
   testid: string;
+  icon: IconName;
+  word: string;
   title: string;
   onClick: () => void;
-  children: string;
 }) {
   return (
     <button
@@ -155,10 +170,11 @@ function Toggle({
       class={on ? "tb on" : "tb"}
       data-testid={testid}
       aria-pressed={on}
+      aria-label={word}
       title={title}
       onClick={onClick}
     >
-      {children}
+      <Labelled icon={icon} word={word} />
     </button>
   );
 }
@@ -167,7 +183,7 @@ function Toggle({
  * Three groups (S3.11): the views (standard views, orthographic, fit), the section plane, and
  * what the view shows (joint markers, problem badges, colour by item). Toggles say what they
  * turn on and show their state with `aria-pressed`, so the projection button names the action
- * (U58). S4.10's icons take the words' place below 1440 px when they land.
+ * (U58). Each shows S4.10's icon, and its word beside it from 1440 px; the word is its label.
  */
 export function ViewControls() {
   const v = viewer.value;
@@ -175,34 +191,36 @@ export function ViewControls() {
   return (
     <>
       <fieldset class="tb-group" aria-label="View">
-        {STANDARD_VIEWS.filter((n) => ["iso", "top", "front", "right"].includes(n)).map((n) => (
+        {VIEWS.map((x) => (
           <button
             type="button"
             class="tb"
-            key={n}
-            data-testid={`view-${n}`}
-            title={`${VIEW_TEXT[n]} view`}
-            onClick={() => v?.setView(n, undefined, true)}
+            key={x.name}
+            data-testid={`view-${x.name}`}
+            aria-label={`${x.word} view`}
+            title={`${x.word} view`}
+            onClick={() => v?.setView(x.name, undefined, true)}
           >
-            {VIEW_TEXT[n]}
+            <Labelled icon={x.icon} word={x.word} />
           </button>
         ))}
         <Toggle
           on={projection.value === "orthographic"}
           testid="projection"
+          icon="ortho"
+          word="Orthographic"
           title="Orthographic projection: no perspective (O)"
           onClick={() => toggleProjection(v)}
-        >
-          Orthographic
-        </Toggle>
+        />
         <button
           type="button"
           class="tb"
           data-testid="fit"
+          aria-label="Fit"
           title="Fit to the selection, or to everything (F)"
           onClick={() => v?.fitSelection(selection.value)}
         >
-          Fit
+          <Labelled icon="fit" word="Fit" />
         </button>
       </fieldset>
       <fieldset class="tb-group" aria-label="Section">
@@ -212,33 +230,33 @@ export function ViewControls() {
         <Toggle
           on={showJoints.value}
           testid="toggle-joints"
+          icon="joints"
+          word="Joints"
           title="Joint markers at every corner: filled joined, ring open, cross failed"
           onClick={() => {
             showJoints.value = !showJoints.value;
           }}
-        >
-          Joints
-        </Toggle>
+        />
         <Toggle
           on={showProblems.value}
           testid="toggle-problems"
+          icon="problems"
+          word="Problems"
           title="Problems drawn on their parts: octagon blocks or errs, triangle warns"
           onClick={() => {
             showProblems.value = !showProblems.value;
           }}
-        >
-          Problems
-        </Toggle>
+        />
         <Toggle
           on={colourBy.value === "item"}
           testid="colour-by"
+          icon="colour-by"
+          word="Colour by item"
           title="Colour by item, with a legend; off: by finish"
           onClick={() => {
             colourBy.value = colourBy.value === "item" ? "finish" : "item";
           }}
-        >
-          Colour by item
-        </Toggle>
+        />
       </fieldset>
     </>
   );
