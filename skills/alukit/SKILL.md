@@ -42,11 +42,12 @@ then read the output.
   machining are billed, the recipe is not, and no offer sells it. A tap into a bar's end, a
   connector's, a splice's or a tapped end hole, must stand on a core of its bar's section (`at_mm`
   or `at_holes` place a connector's; with none it is at the centre): one on no core is a
-  `machining` error naming the nearest. It must also fit the core: the core no wider than the
-  thread's largest 6H minor diameter, and the tap drill at most one pitch over it (an M6 fits an
-  80x80's Ø5 corner hole, an M16 does not; an M16 fits a Ø13.7 core). A section that gives no
-  core positions (a `tslot` section's `bores` and a drawn section's `cores` do) is not checked,
-  an info.
+  `machining` error naming the nearest. It must also fit the core: a thread the vendor labels the
+  core with (its `threads`, e.g. M5 in Forseti's 20-series Ø4.6) fits; any other is judged as a
+  cut thread, the core no wider than its largest 6H minor diameter and the tap drill at most one
+  pitch over it (an M6 fits an 80x80's Ø5 corner hole, an M16 does not; an M16 fits a Ø13.7
+  core). A section that gives no core positions (a `tslot` section's `bores` and a drawn
+  section's `cores` do) is not checked, an info.
 - **The lock pins catalog data.** Derive reads the lock, never the live catalogs. A command
   that names a new item pins it; `alukit lock update <dir>` refreshes entries and prints what
   moved (prices, sections, cut lengths). `--frozen` on any output makes a missing entry an error.

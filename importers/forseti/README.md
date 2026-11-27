@@ -62,7 +62,9 @@ rings, scaled by the printed width, centred, and turned into the section frame. 
 measured on those outlines and checked against the printed opening. A section's cores, where an
 end tap is cut, are the bores its page prints: on an exact outline, the holes whose inscribed
 circle is a printed diameter, each count checked; on a parametric envelope, `bores` at the printed
-positions, with the base-40 corner holes measured on the exact outlines that have them
+positions, with the base-40 corner holes measured on the exact outlines that have them. Each core
+carries the threads the vendor labels it with, from `CORE_THREADS` in `tables.py`: the drawing's
+label where it prints one, else the shop description's, checked to be in it
 ([`docs/notes/section-cores.md`](../../docs/notes/section-cores.md)).
 
 ## Where the judgement lives
