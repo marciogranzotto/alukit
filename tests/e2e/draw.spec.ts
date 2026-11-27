@@ -55,12 +55,15 @@ async function settle(page: Page): Promise<void> {
   throw new Error("the camera never came to rest");
 }
 
-/** Moves the mouse onto a world point, and checks what the tool says is there. */
+/**
+ * Moves the mouse onto a world point, and checks what the tool says is there: its `snap`, the
+ * machine label of what the pointer is on, which the hint words for the person.
+ */
 async function hover(page: Page, p: V3, says?: string | RegExp): Promise<void> {
   const [x, y] = await screen(page, p);
   await page.mouse.move(x, y, { steps: 4 });
   if (says !== undefined) {
-    await expect.poll(async () => (await tool(page))?.hint ?? "", { timeout: 2000 }).toMatch(says);
+    await expect.poll(async () => (await tool(page))?.snap ?? "", { timeout: 2000 }).toMatch(says);
   }
 }
 

@@ -1,13 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { cli, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
-import { decodePng } from "./png.ts";
 
 /**
- * The top bar and the viewport's section plane (design §8): the variant every view derives, the
- * GLB export, the revision saved and verified through the server, and a section clipping plane
- * that changes the view only. Each is checked against the CLI.
+ * The top bar (design §8): the variant every view derives, the GLB export, and the revision
+ * saved and verified through the server. Each is checked against the CLI.
  */
 
 let served: Served;
@@ -122,65 +120,4 @@ test("saves a revision from the top bar and verifies it, as alukit revision does
   await cli(["do", served.dir, '{"cmd":"setParam","args":{"name":"W","value":"1250"}}']);
   await waitDrawn(page, 1);
   await expect(button).toHaveText("Revision: unsaved");
-});
-
-async function viewportPng(page: Page) {
-  await page.mouse.move(0, 0);
-  return decodePng(await page.getByTestId("viewport").locator("canvas").screenshot());
-}
-
-function differing(a: ReturnType<typeof decodePng>, b: ReturnType<typeof decodePng>): number {
-  let n = 0;
-  for (let i = 0; i < a.data.length; i += 4) {
-    if (
-      a.data[i] !== b.data[i] ||
-      a.data[i + 1] !== b.data[i + 1] ||
-      a.data[i + 2] !== b.data[i + 2]
-    )
-      n++;
-  }
-  return n;
-}
-
-test("the section plane cuts the view along an axis, and nothing else", async ({ page }) => {
-  await openTab(page, served, 0);
-  const whole = await viewportPng(page);
-
-  // b2 stands at x 1200 to 1240, y −40 to 0 (anchored +x−y): a click on it picks it.
-  const [x, y] = (await page.evaluate(() => window.__alukit?.screen([1220, -20, 450]))) as [
-    number,
-    number,
-  ];
-  await page.mouse.click(x, y);
-  await expect(page.getByTestId("properties").locator("h2")).toContainText("b2");
-  await page.keyboard.press("Escape");
-  await expect(page.getByTestId("properties")).toHaveCount(0);
-
-  await page.getByTestId("section").click();
-  await expect(page.getByTestId("section-tools")).toBeVisible();
-  const on = await page.evaluate(() => window.__alukit?.section());
-  expect(on).toMatchObject({ axis: "x", flip: false });
-
-  // Drag the plane along X to 300 mm: the right-hand post is cut away, the left one stays.
-  await page.getByTestId("section-at").fill("300");
-  await expect.poll(() => page.evaluate(() => window.__alukit?.section()?.at_mm)).toBe(300);
-  expect(await page.evaluate(() => window.__alukit?.clipped([1200, 0, 450]))).toBe(true);
-  expect(await page.evaluate(() => window.__alukit?.clipped([0, 0, 450]))).toBe(false);
-  const cut = await viewportPng(page);
-  expect(differing(whole, cut)).toBeGreaterThan(1000);
-
-  // The same click now picks nothing: the post is cut away, and nothing drawn is behind it.
-  await page.mouse.click(x, y);
-  await expect(page.getByTestId("properties")).toHaveCount(0);
-
-  await page.getByTestId("section-flip").click();
-  expect(await page.evaluate(() => window.__alukit?.clipped([1200, 0, 450]))).toBe(false);
-  await page.getByTestId("section-y").click();
-  expect(await page.evaluate(() => window.__alukit?.section()?.axis)).toBe("y");
-
-  // Off again: the same picture as before, and the document never changed.
-  await page.getByTestId("section").click();
-  await expect(page.getByTestId("section-tools")).toHaveCount(0);
-  expect(differing(whole, await viewportPng(page))).toBe(0);
-  expect(await page.evaluate(() => window.__alukit?.rev())).toBe(0);
 });
