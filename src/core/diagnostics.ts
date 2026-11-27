@@ -7,9 +7,73 @@ import { compareIds } from "./ids.ts";
  */
 export type Severity = "error" | "warn" | "info";
 
+/**
+ * Every code a project's diagnostic carries, one per kind of problem: derive's (§5.1), the cut
+ * list's, the BOM's and the order's, the check's (§5.5), and reading and writing the project's
+ * files. The problem list words each one (`CHECK_TITLE`, src/core/problems/words.ts, E1.3), so a
+ * code is added here, with its words, before anything may emit it.
+ */
+export const DIAGNOSTIC_CODES = [
+  "anchor",
+  "angled-end",
+  "bend",
+  "butt-miss",
+  "butt-no-connector",
+  "catalog",
+  "chain",
+  "check",
+  "check-pending",
+  "connection",
+  "cover-none",
+  "covers",
+  "currency",
+  "cycle",
+  "end-far",
+  "expr",
+  "face",
+  "fit",
+  "format",
+  "hole",
+  "item",
+  "joint",
+  "json",
+  "length",
+  "lock",
+  "lock-behind",
+  "machining",
+  "mass",
+  "miter",
+  "near-vertical",
+  "no-offer",
+  "option",
+  "order",
+  "outline",
+  "part",
+  "pattern",
+  "pivot",
+  "pivot-plane",
+  "pivot-range",
+  "plane",
+  "price-band",
+  "rail",
+  "ref",
+  "run",
+  "schema",
+  "splice",
+  "station",
+  "two-providers",
+  "unconnected",
+  "up-parallel",
+  "variant",
+  "write",
+  "zero-length",
+] as const;
+
+export type DiagnosticCode = (typeof DIAGNOSTIC_CODES)[number];
+
 export interface Diagnostic {
   severity: Severity;
-  code: string;
+  code: DiagnosticCode;
   /** The entity: `b7`, a bar end `b7.a`, a pattern copy `b30@2`, a param `H`. */
   entity?: string;
   /** A field path within the entity, keys joined by "/". */
@@ -51,7 +115,7 @@ export class Diagnostics {
   }
 
   error(
-    code: string,
+    code: DiagnosticCode,
     entity: string | undefined,
     message: string,
     extra: Partial<Diagnostic> = {},
@@ -59,11 +123,21 @@ export class Diagnostics {
     this.add({ severity: "error", code, ...(entity ? { entity } : {}), ...extra, message });
   }
 
-  warn(code: string, entity: string | undefined, message: string, extra: Partial<Diagnostic> = {}) {
+  warn(
+    code: DiagnosticCode,
+    entity: string | undefined,
+    message: string,
+    extra: Partial<Diagnostic> = {},
+  ) {
     this.add({ severity: "warn", code, ...(entity ? { entity } : {}), ...extra, message });
   }
 
-  info(code: string, entity: string | undefined, message: string, extra: Partial<Diagnostic> = {}) {
+  info(
+    code: DiagnosticCode,
+    entity: string | undefined,
+    message: string,
+    extra: Partial<Diagnostic> = {},
+  ) {
     this.add({ severity: "info", code, ...(entity ? { entity } : {}), ...extra, message });
   }
 

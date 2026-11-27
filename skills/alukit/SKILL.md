@@ -311,7 +311,9 @@ alukit add bar|point|connection|part|frame <dir> [options] [--json]
     add one entity, or a box frame in one step, as sugar over `do`; `alukit add <what> --help`
     lists the options
 alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary] [--json]
-    entities by id, kind, tag:<t>, item:<ref>, or `<kind> of <id>`; bounded output
+    entities by id, kind, tag:<t>, item:<ref>, `<kind> of <id>`, like:<id> (its kind, item and
+    options), or connected:<ids> (the bars joined to them; connected*: the whole assembly);
+    bounded output
 alukit fmt <dir>... [--check]
     rewrite alukit.json and alukit.lock.json into canonical form; --check: exit 1 if one would change
 alukit lock update <dir> [--item <id>]... [--dry-run] [--json]
@@ -442,7 +444,7 @@ string; `<…>` is a string of that form; `?` marks an optional field.
 - **`setConnection`** (connections): change a connection's fields; its type may change when the result is valid
   - `id`: `string` — the entity to change
   - `set`: `{ <key>: any }` — fields to change, as a JSON merge patch (RFC 7396): null removes a field
-- **`autoConnect`** (connections): add the default butt where bar ends meet: through the bar passing the point, else as prefer says (a vertical, else the lowest id, by default)
+- **`autoConnect`** (connections): add the default butt where bar ends meet: through the bar passing the point, else as prefer says (a vertical, else the lowest id, by default), else through the bar a joined corner's butt runs through; an end cut at an angle declares it
   - `at` (optional): `<a node: n<number>> | [expr, expr, expr]` — the point where the draw tool closed
   - `end` (optional): `string` — or a bar end, at its design point
   - `connector` (optional): `string` — defaults.butt.connector when absent

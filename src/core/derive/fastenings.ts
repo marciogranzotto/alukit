@@ -1,5 +1,6 @@
 import { num } from "#catalog/schema/common.ts";
 import type { FastenerItem, Item } from "#catalog/schema/items.ts";
+import type { DiagnosticCode } from "../diagnostics.ts";
 import { type ExprScope, evalNumber } from "../expr.ts";
 import { compareIds } from "../ids.ts";
 import { type AnyItem, type BarItemInfo, fullRef } from "../items.ts";
@@ -654,7 +655,11 @@ class FaceGen {
     this.unchecked = unchecked;
   }
 
-  private error(code: string, message: string, extra: { field?: string; refs?: string[] } = {}) {
+  private error(
+    code: DiagnosticCode,
+    message: string,
+    extra: { field?: string; refs?: string[] } = {},
+  ) {
     if (this.report) this.ctx.d.error(code, this.id, message, extra);
   }
 

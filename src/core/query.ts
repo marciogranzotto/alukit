@@ -9,20 +9,27 @@ import {
   type Kind,
   kindOf,
 } from "./commands/doc.ts";
-import { outgoing, referrers } from "./commands/refs.ts";
+import { outgoing, type Ref, references, referrers } from "./commands/refs.ts";
 import type { RawDoc } from "./commands/types.ts";
+import type { Derived } from "./derive/derive.ts";
 import { compareIds } from "./ids.ts";
 import { itemRefSource } from "./lock/refs.ts";
+import { optKey } from "./order/types.ts";
 import { stringsWithPattern } from "./schema-walk.ts";
 
 /**
  * Selecting entities (design §7.3 `alukit query`): an id (`b7`, `K1`, `project:plate`), a kind
- * (`bars`, `bar`), `tag:<t>`, `item:<ref>`, or `<kind> of <id>`: the entities of that kind the
- * entity refers to or that refer to it (`connections of b2`, `bars of c3`). Over the document as
- * written: pattern copies are derive's, not entities of their own.
+ * (`bars`, `bar`), `tag:<t>`, `item:<ref>`, `<kind> of <id>`: the entities of that kind the
+ * entity refers to or that refer to it (`connections of b2`, `bars of c3`), `like:<id>` (what is
+ * like it, `similarTo`), and `connected:<ids>` and `connected*:<ids>` (the bars joined to them,
+ * `connectedTo`). Over the document as written: pattern copies are derive's, not entities of
+ * their own.
  */
 
 export type Selection = { ok: true; ids: string[] } | { ok: false; message: string };
+
+/** What makes two entities alike for `similarTo` (E1.5): their item and options, or their tags. */
+export type Likeness = "item" | "tag";
 
 const KINDS = Object.keys(KIND_NOUN) as Kind[];
 
@@ -53,8 +60,160 @@ export function itemsOf(doc: RawDoc, id: string): string[] {
   return [...out].sort();
 }
 
-export function select(doc: RawDoc, selector: string): Selection {
+/**
+ * What is like an entity (E1.5, the app's "select similar"), itself included, in id order: the
+ * entities of its kind that share
+ *
+ * - by `item`: its item and options. A bar's are the ones it derives with (its own, else the
+ *   project's default bar's), a part's likewise; one that does not derive is taken as written. A
+ *   connection must also be of its type (a butt is not like a splice with the same connector).
+ *   Any other kind compares the items it names, so every entity of a kind that names none is
+ *   alike.
+ * - by `tag`: every tag it carries. An entity with no tags is like nothing but itself.
+ *
+ * Pattern copies are not entities of the document, so none is returned. Empty when `id` names
+ * no entity.
+ */
+export function similarTo(doc: RawDoc, derived: Derived, id: string, by: Likeness): string[] {
+  const kind = kindOf(id);
+  if (kind === undefined || !hasEntity(doc, id)) return [];
+  const ids = entityIds(doc, kind);
+  if (by === "tag") {
+    const tags = tagsOf(getEntity(doc, id));
+    if (tags.length === 0) return [id];
+    return ids.filter((x) => {
+      const own = tagsOf(getEntity(doc, x));
+      return tags.every((t) => own.includes(t));
+    });
+  }
+  const key = (x: string): string => {
+    const v = getEntity(doc, x);
+    if (kind === "bars") {
+      const b = derived.bars.get(x)?.placed;
+      if (b) return optKeyed(b.item.id, b.opt);
+    }
+    if (kind === "parts") {
+      const p = derived.parts.get(x);
+      if (p) return optKeyed(p.item, p.opt);
+    }
+    const own = isObject(v) && isObject(v.opt) ? (v.opt as Record<string, string>) : undefined;
+    const items = itemsOf(doc, x).join(" ");
+    if (kind === "bars" || kind === "parts") return optKeyed(items, own);
+    if (kind === "connections") return `${isObject(v) ? String(v.type) : ""}\u0000${items}`;
+    return items;
+  };
+  const mine = key(id);
+  return ids.filter((x) => key(x) === mine);
+}
+
+function optKeyed(item: string, opt: Readonly<Record<string, string>> | undefined): string {
+  return `${item}\u0000${optKey(opt ?? {})}`;
+}
+
+/**
+ * The bars joined to some entities by a connection (E1.5, the app's "select connected"), with the
+ * entities themselves, in id order. A connection joins every bar it names structurally: its
+ * through bar, its ends' bars, a pivot's base bar, a face connection's layers (a run's bars), a
+ * stack's bars; a bar an expression reads (`len(b3)`) is not joined by it. From a bar, the bars
+ * of every connection that names it; from a connection or a run, its bars; from anything else
+ * (a part, a node, a pattern), the bars it names and the bars that name it. `transitive` follows
+ * the joints from each bar found until no new bar is reached: the whole assembly the entities
+ * belong to. Ids that name no entity of the document (a pattern copy) are left out.
+ */
+export function connectedTo(
+  doc: RawDoc,
+  ids: readonly string[],
+  opts: { transitive?: boolean } = {},
+): string[] {
+  const seeds = ids.filter((id) => hasEntity(doc, id));
+  const refs = references(doc).filter((r) => r.how !== "expr");
+  const barsOf = (to: string): string[] => {
+    const kind = kindOf(to);
+    if (kind === "bars") return hasEntity(doc, to) ? [to] : [];
+    if (kind === "runs") return runBars(doc, to);
+    return [];
+  };
+  // Each connection's bars, and the connections that name each bar.
+  const connBars = new Map<string, Set<string>>();
+  const barConns = new Map<string, Set<string>>();
+  const byFrom = new Map<string, Ref[]>();
+  const byTo = new Map<string, Ref[]>();
+  for (const r of refs) {
+    byFrom.set(r.from, [...(byFrom.get(r.from) ?? []), r]);
+    byTo.set(r.to, [...(byTo.get(r.to) ?? []), r]);
+    if (kindOf(r.from) !== "connections") continue;
+    for (const bar of barsOf(r.to)) {
+      connBars.set(r.from, (connBars.get(r.from) ?? new Set()).add(bar));
+      barConns.set(bar, (barConns.get(bar) ?? new Set()).add(r.from));
+    }
+  }
+  const joined = (bar: string): string[] =>
+    [...(barConns.get(bar) ?? [])].flatMap((c) => [...(connBars.get(c) ?? [])]);
+
+  const out = new Set<string>(seeds);
+  const found: string[] = [];
+  for (const id of seeds) {
+    const kind = kindOf(id);
+    if (kind === "bars") found.push(...joined(id));
+    else if (kind === "connections") found.push(...(connBars.get(id) ?? []));
+    else if (kind === "runs") found.push(...runBars(doc, id));
+    else {
+      for (const r of byFrom.get(id) ?? []) found.push(...barsOf(r.to));
+      for (const r of byTo.get(id) ?? []) found.push(...barsOf(r.from));
+    }
+  }
+  // The seeds are in already; a transitive walk goes on from each bar it reaches.
+  for (let i = 0; i < found.length; i++) {
+    const bar = found[i] as string;
+    if (out.has(bar)) continue;
+    out.add(bar);
+    if (opts.transitive) found.push(...joined(bar));
+  }
+  return [...out].sort(compareIds);
+}
+
+/** A run's bars, as written. */
+function runBars(doc: RawDoc, id: string): string[] {
+  const v = getEntity(doc, id);
+  const list = Array.isArray(v) ? v : isObject(v) ? v.bars : undefined;
+  return Array.isArray(list)
+    ? list.filter((x): x is string => typeof x === "string" && hasEntity(doc, x))
+    : [];
+}
+
+/** The ids a `like:` or `connected:` selector names, comma-separated. */
+function idsIn(list: string): string[] {
+  return list
+    .split(",")
+    .map((x) => x.trim())
+    .filter((x) => x !== "");
+}
+
+export function select(doc: RawDoc, selector: string, derived?: () => Derived): Selection {
   const s = selector.trim();
+  const like = /^like:(.*)$/.exec(s);
+  if (like) {
+    const id = (like[1] as string).trim();
+    if (id === "") return { ok: false, message: "like: needs an id, e.g. like:b1" };
+    if (!hasEntity(doc, id)) return { ok: false, message: `there is no entity ${id}` };
+    if (!derived) return { ok: false, message: "like: reads the derived model" };
+    return { ok: true, ids: similarTo(doc, derived(), id, "item") };
+  }
+  const connected = /^connected(\*?):(.*)$/.exec(s);
+  if (connected) {
+    const ids = idsIn(connected[2] as string);
+    if (ids.length === 0) {
+      return { ok: false, message: "connected: needs ids, e.g. connected:b1 or connected*:b1,b5" };
+    }
+    const missing = ids.filter((id) => !hasEntity(doc, id));
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        message: `there is no entity ${missing.join(", ")}`,
+      };
+    }
+    return { ok: true, ids: connectedTo(doc, ids, { transitive: connected[1] === "*" }) };
+  }
   const of = /^(\S+)\s+of\s+(\S+)$/.exec(s);
   if (of) {
     const kind = kindNamed(of[1] as string);

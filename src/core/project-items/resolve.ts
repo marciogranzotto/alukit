@@ -1,6 +1,6 @@
 import type { Src } from "#catalog/schema/common.ts";
 import { isValuedObject, num } from "#catalog/schema/common.ts";
-import type { Diagnostic } from "../diagnostics.ts";
+import type { Diagnostic, DiagnosticCode } from "../diagnostics.ts";
 import type { ItemSource, MassInfo, PriceField, ProjectItemView } from "../items.ts";
 import type {
   BentAngleItem,
@@ -113,7 +113,7 @@ class Problems {
   constructor(entity: string) {
     this.entity = entity;
   }
-  error(code: string, field: string, message: string): void {
+  error(code: DiagnosticCode, field: string, message: string): void {
     this.list.push({ severity: "error", code, entity: this.entity, field, message });
   }
 }

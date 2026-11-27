@@ -376,3 +376,23 @@ contracts. Each adds, except the moves marked **moved**.
   `lane`, the message lane; the command bar is no longer a viewport slot but a row of the canvas
   column (`App.tsx`).
 - **`outline/rows.ts`**: a `Row` gains `figure` and `title`.
+
+## Editing round: E1 changes
+
+*Stream E1 of the [editing audit](editing-audit.md) ([e1-decisions.md](e1-decisions.md)). Owner of
+everything below: E1; other streams add to it only.*
+
+- **`src/core/query.ts`**: `similarTo(doc, derived, id, by: "item" | "tag"): string[]` and
+  `connectedTo(doc, ids, opts?: { transitive?: boolean }): string[]`, each in id order with the
+  given entities included, document entities only (no pattern copies). `connectedTo` takes no
+  derived model, unlike the audit's §7.3 sketch (e1 11). `select(doc, selector, derived?)` takes
+  `like:<id>` (it needs `derived`) and `connected:<ids>`, `connected*:<ids>`.
+- **`autoConnect`'s `info`** gains `angled: string[]`, the ends it declared `cut: "angle"`, only
+  when there are some; `through` and `ends` are unchanged, and its result's `changed` names the
+  bars whose cut it declared (e1 5).
+- **`src/core/commands/join.ts`**: `planJoin(derived, point, rule)`, the rule `autoConnect` applies
+  and the `unconnected` problem asks (e1 1).
+- **`Derived.claims`**: every provider that claims each bar end, whether or not its plane resolved
+  (e1 2). Not in `alukit.derived/1`.
+- **`DIAGNOSTIC_CODES`** and `DiagnosticCode` (`src/core/diagnostics.ts`): a diagnostic's code is
+  one of the list, and each has a problem title (e1 7).

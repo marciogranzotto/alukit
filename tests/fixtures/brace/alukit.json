@@ -1,0 +1,34 @@
+{
+  "schema": "alukit.project/1",
+  "name": "Box frame for a brace",
+  "catalogs": ["../catalogs/test"],
+  "currency": "BRL",
+  "ids": { "b": 12, "c": 8 },
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } }
+  },
+  "bars": {
+    "b1": { "a": [0, 0, 0], "b": [0, 0, 750], "anchor": "-x-y", "label": "post, front left", "tags": ["post"] },
+    "b2": { "a": [1000, 0, 0], "b": [1000, 0, 750], "anchor": "+x-y", "label": "post, front right", "tags": ["post"] },
+    "b3": { "a": [0, 600, 0], "b": [0, 600, 750], "anchor": "-x+y", "label": "post, back left", "tags": ["post"] },
+    "b4": { "a": [1000, 600, 0], "b": [1000, 600, 750], "anchor": "+x+y", "label": "post, back right", "tags": ["post"] },
+    "b5": { "a": [0, 0, 0], "b": [1000, 0, 0], "anchor": "-x-y", "label": "base rail, front", "tags": ["base"] },
+    "b6": { "a": [0, 600, 0], "b": [1000, 600, 0], "anchor": "+x-y", "label": "base rail, back", "tags": ["base"] },
+    "b7": { "a": [0, 0, 0], "b": [0, 600, 0], "anchor": "+x-y", "label": "base rail, left", "tags": ["base"] },
+    "b8": { "a": [1000, 0, 0], "b": [1000, 600, 0], "anchor": "-x-y", "label": "base rail, right", "tags": ["base"] },
+    "b9": { "a": [0, 0, 750], "b": [1000, 0, 750], "anchor": "-x+y", "label": "top rail, front", "tags": ["top"] },
+    "b10": { "a": [0, 600, 750], "b": [1000, 600, 750], "anchor": "+x+y", "label": "top rail, back", "tags": ["top"] },
+    "b11": { "a": [0, 0, 750], "b": [0, 600, 750], "anchor": "+x+y", "label": "top rail, left", "tags": ["top"] },
+    "b12": { "a": [1000, 0, 750], "b": [1000, 600, 750], "anchor": "-x+y", "label": "top rail, right", "tags": ["top"] }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b5.a", "b7.a"] },
+    "c2": { "type": "butt", "through": "b2", "ends": ["b5.b", "b8.a"] },
+    "c3": { "type": "butt", "through": "b3", "ends": ["b6.a", "b7.b"] },
+    "c4": { "type": "butt", "through": "b4", "ends": ["b6.b", "b8.b"] },
+    "c5": { "type": "butt", "through": "b1", "ends": ["b9.a", "b11.a"] },
+    "c6": { "type": "butt", "through": "b2", "ends": ["b9.b", "b12.a"] },
+    "c7": { "type": "butt", "through": "b3", "ends": ["b10.a", "b11.b"] },
+    "c8": { "type": "butt", "through": "b4", "ends": ["b10.b", "b12.b"] }
+  }
+}

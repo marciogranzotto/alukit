@@ -22,8 +22,8 @@ proved the better choice is now the rule; a feature v1 does not have is stated a
 with the version that takes it up. Calls left for the owner's review are marked *open* (§14, call 6
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
-up to 63–64 after the decided frame's ninth run). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "After the decided frame's ninth run". Notes are cited by
+up to 63–64 after the decided frame's ninth run and 65–68 in "3D editing, E1"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "3D editing, E1". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -469,6 +469,35 @@ a golden case worked by an independent hand script ([`notes/f11-f12.md`](notes/f
 - §12, §13: the run's gaps row and its result. No golden value or fixture diagnostic moved; the
   acceptance frame's check is unchanged, and with its walls marked its five wall-side errors become
   warnings (f11, what moved).
+
+### 3D editing, E1
+
+The [editing audit](ux/editing-audit.md) (2026-11-27) found the model far ahead of the app, and
+four defects on the way; stream E1 builds the core and CLI half of its plan
+([`ux/e1-decisions.md`](ux/e1-decisions.md), cited as "e1"). Drop 1 is E1.5, E1.2 and E1.3. Each
+is built test first; the audit's brace is a fixture, `tests/fixtures/brace`, worked by hand in its
+test.
+
+- §4.5 Default connection: **an end at a joined corner joins it** (E-UX-12, D4). A brace drawn into
+  a box frame's corner, whose other ends are all claimed, butts on the corner's through bar, with a
+  butt of its own that leaves the post's end to the corner's butt (`through_end: "none"`). The
+  audit's brace was refused, "only b13 meets at that point: nothing butts on it" (e1 1, 3, 4).
+  Calls 65, 66.
+- §4.5: **an angled end `autoConnect` makes declares its cut** (E-UX-11, D3), `cut: "angle"`, in the
+  same step, by derive's own angle; a square end declares nothing, so the box frame's documents and
+  draw.spec's cut list are unchanged (e1 5). Call 67.
+- §4.5, §5.5: **an end a provider claims is joined, even where its claim fails**: `autoConnect`
+  leaves it, and the unconnected ends do not list it, since the failure is its own error. G10 and
+  G11 each lose a false `unconnected` warning (e1 2, what moved). Call 66.
+- §5.5 The problem list: **words for every diagnostic code**, held by the type of a diagnostic's
+  code; "Cut it on the face" and "Cut it square" for an angled end not declared; an open corner's
+  join offered only where the default butt would join it, by `autoConnect`'s own rule (D3, D4; e1
+  1, 7–9). The titles of G07, G10, G11 and G20's problems change; no other diagnostic moved.
+- §7.3: **`alukit query` selects `like:b1`** (b1's kind, item and options) **and `connected:b1`**
+  (the bars connections join to it; `connected*:` the whole assembly), the core of the app's
+  "select similar" and "select connected" (E1.5; e1 10, 11). Call 68.
+- The audit's other defect, a claimed end whose words read "open: nothing joins it" (D2), is the
+  inspector's words, not the core's: left to its stream (e1 12).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1538,9 +1567,22 @@ or script changed meaning when it came (D-UX-9). A 1000 × 600 ground rectangle 
 drawn b1 to b4 around, is cut 1040 / 600 / 1000 / 560 by `vertical` or `first` (nothing is
 vertical, so the lowest id runs through both its corners), 1040 / 560 / 1040 / 560 by `x`, and
 960 / 640 / 960 / 640 by `y` ([s1](ux/s1-decisions.md) 19). Its end, if any, covers. Ends some
-connection already claims are left alone. All of it can be changed. In the draw tool it is a
-check box, on by default, and it does nothing where nothing butts (*2.3*). A rail drawn onto a
-post's top butts into the post by `vertical`; with `x` or `y` the rail runs over the post.
+provider already claims are left alone, even where the claim fails (two providers, an angled end
+not declared): joining one again would make another provider (*2.3*, E1.2). All of it can be
+changed. In the draw tool it is a check box, on by default, and it does nothing where nothing
+butts (*2.3*). A rail drawn onto a post's top butts into the post by `vertical`; with `x` or `y`
+the rail runs over the post.
+
+*2.3* (3D editing, E1.2; [e1](ux/e1-decisions.md) 1–6). **An end at a joined corner** (every other
+end there claimed, so nothing is left to butt on it, as a brace drawn into a box frame's corner)
+butts on **the corner's through bar**, the bar a butt claiming an end there runs through: a butt of
+its own, with `through_end: "none"`, since the through bar's end there belongs to the corner's butt.
+Put into the corner's butt instead, the brace's prism would set the post's covering end
+(**measured**: "b3.a is cut at 36.87° by c3"). **An end the through bar cuts at an angle** declares
+`cut: "angle"` in the same step, where it declares no cut of its own, so the joint `autoConnect`
+makes is never an `angled-end` error; a square end declares nothing, so no box frame's document
+changes. The `unconnected` problem offers "Join with the default butt" only where this same rule
+accepts the join (§5.5).
 
 ### 4.6 Golden cases (review B1)
 
@@ -2098,7 +2140,7 @@ along the box's centre line from each end face (*2.3*).
 | Schema and references | invalid documents, missing items, cycles; two equally specific price bands; a line covered twice (§4.11) | error |
 | Ends and connections | the validation column of §4.5, two providers, an undeclared angled cut, a chain of end providers, a station on a run's joint, a run not spliced in order; a `held_by` that does not hold, a connector position that falls off its end or face (*2.3*); an end hole whose screw leaves the block by a side, or whose wall breaks out of one; a screw into a butting end that meets a side face at an angle; a butting bar that goes into the body it bears on beyond the face (*2.3*, after acceptance run 4); a blind hole in the butting bar's side that does not reach its position; a connector in a fastener set whose mount's plane is not the joint's, or that has fastener sets of its own; a headed connector counted by `qty` above one (*2.3*, after the round-3 acceptance, X7, X8) | error |
 | Ends and connections (*2.3*) | a butting end face that reaches past the face it bears on by more than the connector's `overhang_mm`, else `defaults.butt.overhang_mm`, else 0 (§4.5) | warn |
-| Unconnected ends | a point shared by two or more bar ends with no connection | warn |
+| Unconnected ends | a point shared by two or more bar ends with no connection; an end a provider claims is connected even when the claim fails, which is its own error (*2.3*, E1.2) | warn |
 | Fit | a connector that holds a joined bar in no way it may (§3.4, by role; *2.3*); a T-nut that does not fit its groove; a carriage on another rail system; a `face` with no contact; a head, nut or washer that bears on none of its face's material (*2.3*); a blind fastener whose grip lies outside its maker's range (*2.3*, §4.5) | error |
 | Fit (*2.3*) | a head, nut or washer that bears on less than half of its annulus (§4.5, its seat) | warn |
 | Fit (*2.3*) | a head, nut or washer whose item gives no bearing diameter, so its seats are not checked | info |
@@ -2183,6 +2225,15 @@ targets, and its fixes, the likeliest first: a batch of commands applied as one 
 anodised" on every bar that asks; "Join with the default butt"; "Release K1") or a form the app
 opens (resolve an open item, set a price, update the lock, edit a param). The answer carries the
 order's summary: `READY`, `BLOCKED` or `EMPTY`, and how many problems block it.
+
+*2.3* (3D editing, E1.3; [e1](ux/e1-decisions.md) 7–9). **Every diagnostic code has its words**:
+the codes are one list in the core (`DIAGNOSTIC_CODES`), a diagnostic carries no other, and the
+titles are a map over that list, so a new code cannot be emitted without its title; no title reads
+"A <code> problem". **An angled end not declared** reads "b13.a is cut at an angle it does not
+declare", with the joint and its angle, and two fixes, "Cut it on the face" and "Cut it square",
+each one `setBar` on the end's `cut`. **An open corner's fix is offered only when the default butt
+would join it**, by the rule `autoConnect` applies (§4.5); otherwise the detail says why, so a fix
+the list offers is never refused.
 
 ## 6. Commands (the one edit path)
 
@@ -2359,7 +2410,7 @@ source in the log.
 | `alukit arrangements <dir> --at x,y,z [--at …] [--rule r]… [--json]` (*2.3*) | a corner's arrangements (§7.1, §8): per corner rule, the bar that runs through, the cut lengths that move and the batch that applies it, or why the rule is refused; writes nothing; exit 1 when the project cannot be read |
 | `alukit cutlist` / `bom` / `machining` / `order` / `costs <dir> [--variant v] [--format md\|csv\|json]` | the outputs; `machining` (*2.3*) has no CSV; `order` and `costs` take `--as-of YYYY-MM-DD` (*2.3*); `order` exits non-zero when blocked |
 | `alukit derive <dir> --json [--select <paths>]` | the derived model, for report builders (`alukit.derived/1`, with its own JSON Schema). `--select` (*2.3*) takes dotted paths, `*` for every member, commas to merge (`bars.*.cut_mm,params`), and keeps the model's shape; a path the model lacks is an error |
-| `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context |
+| `alukit query <dir> <selector> [--fields a,b] [--limit n] [--summary]` | e.g. `tag:leg`, `b7`, `connections of b2`; bounded output for an agent's context. *2.3* (E1.5): `like:b1`, the entities of b1's kind with its item and options (a bar's or part's as derived, a connection's of its type too); `connected:b1,c3`, the bars a connection joins to them (through bar, ends, base, layers, a run's bars), and `connected*:b1`, the whole assembly they belong to; the app's "select similar" and "select connected" read the same functions (`similarTo`, `connectedTo` in `src/core/query.ts`) |
 | `alukit do <dir> -f batch.json` (or `-f -` for stdin) | edits from a file or stdin, one process per batch; inline JSON also works. `--dry-run` (*2.3*) says what the batch would do and writes nothing (§6) |
 | `alukit add bar --item … --a n1 --b 0,0,900`, … | sugar over `do`; `alukit add frame <dir> --size W,D,H` (*2.3*) is `addFrame` (§6) |
 | `alukit log` / `alukit undo` / `alukit redo` | the server's log; undo the latest step; redo the last one undone (*2.3*: all three need a running server) |
@@ -3132,6 +3183,25 @@ recipe, so the faces took 8 recipes and 5 split butts (F12). Both are fixed at t
     every edit and go with them; its faces and positions stay as written, since they are read in the
     butting bar's section, as the connector's are, which no edit turns (§4.5's v1 limit). The app's
     inspector does not edit it in v1: `setConnection` does, from the CLI, the server or an agent.
+
+65. *New in 2.3, 3D editing E1, open.* An end at a joined corner butts on the corner's through bar
+    with a butt of its own, `through_end: "none"`, rather than joining the corner's butt, whose cover
+    rule would then cut the post's end to the brace's face (measured). The corner's through bar is
+    the bar the first butt by id that claims an end there runs through; a corner joined only by a
+    miter has none, and the end stays refused (e1 3, 4).
+66. *New in 2.3, 3D editing E1, open.* An end is joined when a provider claims it, whether or not the
+    claim resolves: `autoConnect`, its problem's fix and the unconnected ends read derive's claims,
+    not the plane's provider. The alternative, a failed claim counted as open, warned "has no
+    connection" beside the failure's own error and offered a join that would add another provider
+    (e1 2).
+67. *New in 2.3, 3D editing E1, open.* `autoConnect` declares `cut: "angle"` on an end it makes at
+    an angle, never `square`, and never over a cut the end declares; an angle cut sits flush on the
+    face the seat checks read. §4.5's rule that an undeclared angled end is an error stands, for the
+    joints a person or an agent writes by hand (e1 5; the audit's E-UX-11).
+68. *New in 2.3, 3D editing E1, open.* "Like" is the same kind with the same item and options as
+    derived (a connection: also its type), or every tag the entity carries; "connected" is the bars
+    the document's connections name together, structurally, and not what an expression reads or a
+    point placed on a bar's face. Pattern copies are neither (e1 10, 11).
 
 ## 15. Review 1 resolution
 

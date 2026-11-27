@@ -273,6 +273,19 @@ describe("unconnected ends", () => {
       { severity: "warn", code: "unconnected", entity: "b1.b", refs: ["b1.b", "b2.a"] },
     ]);
   });
+
+  it("leaves an end a connection names, though its plane failed: the failure is the error", () => {
+    // G10's miter joins two sections, G11's b2.a has two providers: each end falls back to its
+    // default plane, with its error, and is joined all the same.
+    for (const n of ["G10", "G11"]) {
+      const r = checkModel(load(join(FIXTURES, "golden-ends", n)));
+      expect(
+        r.diagnostics.filter((d) => d.code === "unconnected"),
+        n,
+      ).toEqual([]);
+      expect(r.diagnostics.filter((d) => d.severity === "error").length, n).toBe(1);
+    }
+  });
 });
 
 describe("query selection", () => {

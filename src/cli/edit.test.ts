@@ -535,6 +535,26 @@ describe("alukit query", () => {
     expect(summary.out).toBe("34 matches for bars\n  34 bars: b1–b34");
   });
 
+  it("selects what is like an entity and what is joined to it (E1.5)", async () => {
+    const dir = await cart();
+    const ids = async (selector: string) => {
+      const r = await capture(["query", dir, selector, "--json", "--limit", "100"]);
+      expect(r.code, r.err).toBe(0);
+      return JSON.parse(r.out).entities.map((e: { id: string }) => e.id);
+    };
+    // The 80 × 40 top rails, by the item they name; the posts take the default bar's.
+    expect(await ids("like:b5")).toEqual(["b5", "b6"]);
+    expect(await ids("like:b1")).toHaveLength(22);
+    expect(await ids("connected:b9")).toEqual(["b1", "b2", "b9", "b14", "b15", "b18", "b26"]);
+    expect(await ids("connected*:b9")).toHaveLength(33);
+    expect((await capture(["query", dir, "connected:c13,r1", "--summary"])).out).toBe(
+      "6 matches for connected:c13,r1\n  4 bars: b1, b11, b12, b14\n  1 connection: c13\n  1 run: r1",
+    );
+    const missing = await capture(["query", dir, "like:b99"]);
+    expect([missing.code, missing.err]).toEqual([1, "alukit query: there is no entity b99"]);
+    expect((await capture(["query", dir, "connected:"])).err).toContain("connected: needs ids");
+  });
+
   it("reads derived fields on request", async () => {
     const root = await scratchFixtures();
     const dir = join(root, "golden-ends", "G01");

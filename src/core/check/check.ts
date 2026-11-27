@@ -156,16 +156,19 @@ export function projectChecks(input: CheckInput, d: Diagnostics): CheckResult[] 
 
 /**
  * Unconnected ends (§5.5): a point where two or more bar ends meet and an end there has no
- * provider. The through member of a butt at that point counts as connected: a through bar
- * (its end is claimed, or left on purpose with `through_end: "none"`), or a bar end a butt
- * bears on (`through: "b31.b"`, an end plate).
+ * provider. An end a provider claims is connected even when its claim fails (two providers, an
+ * angled end with no cut declared): that failure is its error, and the end is not open (*2.3*,
+ * E1.2). The through member of a butt at that point counts as connected: a through bar (its end
+ * is claimed, or left on purpose with `through_end: "none"`), or a bar end a butt bears on
+ * (`through: "b31.b"`, an end plate).
  */
 export function unconnectedEnds(derived: Derived, d: Diagnostics): void {
   const ends: { ref: string; bar: string; p: V3; free: boolean }[] = [];
   for (const [id, b] of derived.bars) {
     for (const e of ["a", "b"] as const) {
       const p = e === "a" ? b.placed.A : b.placed.B;
-      if (p) ends.push({ ref: `${id}.${e}`, bar: id, p, free: b.ends[e].by === "default" });
+      const ref = `${id}.${e}`;
+      if (p) ends.push({ ref, bar: id, p, free: (derived.claims.get(ref) ?? []).length === 0 });
     }
   }
   // For each butting end, the through members it bears on: bar ids and bar ends.
