@@ -1,4 +1,5 @@
 import { num } from "#catalog/schema/common.ts";
+import type { GrooveDim } from "#catalog/schema/groove.ts";
 import type { ConnectorItem, FastenerItem } from "#catalog/schema/items.ts";
 import { compareIds } from "../ids.ts";
 import { type BarItemInfo, fullRef } from "../items.ts";
@@ -7,8 +8,17 @@ import { clearanceHole, threadDiameter } from "../threads.ts";
 import { TOL } from "../tolerances.ts";
 import { add, addScaled, angleDeg, dot, neg, norm, scale, sub, type V3 } from "../vec.ts";
 import type { Ctx } from "./context.ts";
+import { ACCESS_MM, type Cover, type Covers } from "./cover.ts";
 import type { DerivedBar, EndHoleOp, HoleOp } from "./derive.ts";
-import { barFaceBearing, fitsGroove, type GenOut, SEAT_MIN, stockOptions } from "./fastenings.ts";
+import {
+  barFaceBearing,
+  fitsGroove,
+  type GenOut,
+  holeCentre,
+  lipBearing,
+  SEAT_MIN,
+  stockOptions,
+} from "./fastenings.ts";
 import { boxCentre, faceLocal, facePlane, grooveOffsets, onBar, resolveStation } from "./place.ts";
 import type {
   ButtHead,
@@ -34,7 +44,8 @@ import type {
  *   face it meets, or, for a butt through the through bar's end, into that end along its axis.
  *   A requirement with positions (`at_mm`, or `at_holes`: a mount's holes) makes one op at each,
  *   read in the butting bar's section x and y from its box centre (acceptance gap A8); a hole in
- *   the butting bar's side at a position is drilled over it, from the face nearest it (X7);
+ *   the butting bar's side at a position is drilled over it, from the face nearest it (X7) that
+ *   no other member covers (X9), or from the face the requirement or the mount's hole names;
  * - a connector in a mount's fastener set (a recipe placing bought connectors) sits at each hole
  *   of that mount: its own `requires` are made there, and its own head seated there (X7, X8);
  * - a splice's parts, and its taps in both spliced ends: one per stud, at the cores its item
@@ -102,6 +113,8 @@ interface Placed {
   item: ConnectorItem;
   /** The hole it sits at, in the butting bar's section from its box centre; none: the own connector. */
   at?: readonly [number, number];
+  /** The face that hole names for a hole in the butting bar's side (X9). */
+  face?: Face;
   /** How its requirements are named in messages: `connector`, or `connector mounts[0] <id>`. */
   label: string;
 }
@@ -119,6 +132,7 @@ export function connectorHardware(
   bars: ReadonlyMap<string, DerivedBar>,
   out: GenOut,
   stacks: ReadonlyMap<string, ReadonlyMap<string, readonly StackLayer[]>> = new Map(),
+  covers?: Covers,
 ): void {
   const joints = new Map<string, Joint>();
   for (const id of [...ctx.conns.keys()].sort(compareIds)) {
@@ -144,21 +158,28 @@ export function connectorHardware(
   for (const [id, j] of joints) {
     if (j.roles.body) out.hardware.push(j.roles.body);
     if (!j.roles.connector) continue;
-    new ConnectorGen(ctx, id, j.spec, j.roles, !j.copy, out, unchecked, held.get(id)).run();
+    new ConnectorGen(ctx, id, j.spec, j.roles, !j.copy, out, unchecked, covers, held.get(id)).run();
   }
-  // A screw whose head gives no size the check reads: one info, naming its connections (F2b).
+  // A screw whose head gives no size the check reads, or a bar whose groove's own geometry is not
+  // read: one info, naming its connections (F2b, F9).
   for (const [item, u] of [...unchecked].sort(([a], [b]) => compareIds(a, b))) {
     ctx.d.info(
       "fit",
       u.conns[0] as string,
-      `${item} gives ${u.what}, so its head's seat in a butt is not checked: ${u.conns.join(", ")}`,
+      u.groove
+        ? `${u.groove}'s grooves do not give ${u.what} from its own drawing${u.why ? ` (${u.why})` : ""}, so a head under its lips is not seated or checked: ${u.conns.join(", ")}`
+        : `${item} gives ${u.what}, so its head's seat in a butt is not checked: ${u.conns.join(", ")}`,
       u.conns.length > 1 ? { refs: u.conns.slice(1) } : {},
     );
   }
 }
 
-/** Per screw a butt connector seats but cannot check: what it does not give, and where (F2b). */
-type Unchecked = Map<string, { what: string; conns: string[] }>;
+/**
+ * Per screw a butt connector seats but cannot check: what it does not give, and where (F2b); per
+ * bar item whose groove's own dimensions a head under its lips needs and its drawing does not give
+ * (`groove`, keyed `groove|<item>`; F9), which, and the section's word on why.
+ */
+type Unchecked = Map<string, { what: string; conns: string[]; groove?: string; why?: string }>;
 
 function rolesOf(
   ctx: Ctx,
@@ -467,6 +488,8 @@ class ConnectorGen {
   private readonly out: GenOut;
   private readonly held: Held | undefined;
   private readonly unchecked: Unchecked;
+  /** What lies on the butting bars' faces, for the faces side holes go in from (X9). */
+  private readonly covers: Covers | undefined;
   private sleeves = 0;
   /**
    * The holes made in the through bar's side, by butting end and position (`madeKey`), each with
@@ -483,6 +506,7 @@ class ConnectorGen {
     report: boolean,
     out: GenOut,
     unchecked: Unchecked,
+    covers: Covers | undefined,
     held?: Held,
   ) {
     this.ctx = ctx;
@@ -492,6 +516,7 @@ class ConnectorGen {
     this.report = report;
     this.out = out;
     this.unchecked = unchecked;
+    this.covers = covers;
     this.held = held;
   }
 
@@ -585,6 +610,7 @@ class ConnectorGen {
             id: c.id,
             item: c.item,
             at: [h.at_mm[0], h.at_mm[1]] as const,
+            ...("face" in h && h.face ? { face: h.face } : {}),
             label: `${label} ${c.id}`,
           });
         }
@@ -839,6 +865,13 @@ class ConnectorGen {
     }
     const lips = `under the lips of ${tid}'s face ${face}`;
     const { groove, off } = g;
+    // A groove whose own dimensions the section's drawing does not give (F9): no judgement under
+    // its lips borrows its groove type's value for them.
+    const unread = unreadUnderLips(groove, tnut !== undefined);
+    if (unread.length > 0) {
+      this.grooveNotRead(T.placed.item.id, unread, groove.why);
+      return undefined;
+    }
     if (head.shank !== undefined && groove.opening_mm !== undefined) {
       const reach = Math.abs(off) + head.shank.d / 2;
       if (reach > groove.opening_mm / 2 + TOL.len) {
@@ -893,13 +926,17 @@ class ConnectorGen {
       room = { depth: r.depth, ...(r.side !== undefined ? { side: r.side } : {}) };
     }
     if (tnut) return undefined; // the T-nut is the head's seat, and a groove part bears on the lips
+    // The head bears on the lips' underside, as the section's outline gives it (F8).
     const seat: HeadSeat & Pick<ButtHead, "room"> = {
       side: "head",
       item: head.id,
       d_in: head.dIn,
       d_out: out,
       on: `${tid} ${face} (under its lips)`,
-      bearing: barFaceBearing(T, face, Q, out, head.dIn),
+      bearing:
+        lip === undefined
+          ? barFaceBearing(T, face, Q, out, head.dIn)
+          : lipBearing(T, face, lip, Q, out, head.dIn),
       ...(room ? { room } : {}),
     };
     this.reportSeat(seat, head.what, `the lips of ${tid}'s face ${face}`, tid);
@@ -930,6 +967,21 @@ class ConnectorGen {
     const u = this.unchecked.get(item) ?? { what, conns: [] };
     if (!u.conns.includes(this.id)) u.conns.push(this.id);
     this.unchecked.set(item, u);
+  }
+
+  /** A bar whose groove's own dimensions, needed under its lips, its drawing does not give (F9). */
+  private grooveNotRead(item: string, dims: readonly GrooveDim[], why: string | undefined): void {
+    if (!this.report) return;
+    const key = `groove|${item}`;
+    const what = dims.length === 1 ? dims[0] : `${dims.slice(0, -1).join(", ")} and ${dims.at(-1)}`;
+    const u = this.unchecked.get(key) ?? {
+      what: what as string,
+      conns: [],
+      groove: item,
+      ...(why ? { why } : {}),
+    };
+    if (!u.conns.includes(this.id)) u.conns.push(this.id);
+    this.unchecked.set(key, u);
   }
 
   /** Each mount's fastener set (`chooseSets`); a mount with none for the joined systems is a `fit` error. */
@@ -1082,6 +1134,7 @@ class ConnectorGen {
       const d = req.d_mm === undefined ? undefined : num(req.d_mm);
       const depth = req.depth_mm === undefined ? undefined : num(req.depth_mm);
       const fromEnd = req.from_end_mm === undefined ? 0 : num(req.from_end_mm);
+      const access = req.access_mm === undefined ? ACCESS_MM : num(req.access_mm);
       if (req.op === "end-tap" && !req.thread) {
         this.error("connection", `${field}: an end tap needs a thread`, { field: "connector" });
         continue;
@@ -1093,6 +1146,7 @@ class ConnectorGen {
         continue;
       }
       const at = placedPositions(item, req, placed.at);
+      const named = namedFaces(item, req, placed, at.length);
       const positioned = at[0] !== undefined;
       const hole = {
         ...(d !== undefined ? { d } : {}),
@@ -1109,10 +1163,9 @@ class ConnectorGen {
             if (req.op === "end-tap") {
               this.endTaps(bar, end, at, req.thread as string, depth, field);
             } else if (!positioned) {
-              const s = end === "a" ? bar.lengths.sa + fromEnd : bar.lengths.sb - fromEnd;
-              bar.ops.push({ op: "hole", face: "+y", from: "a", at: s, ...hole, by: id });
+              this.centreHole(bar, end, named[0], fromEnd, hole, access, field);
             } else {
-              this.sideHoles(bar, end, at, fromEnd, hole, field);
+              this.sideHoles(bar, end, at, named, fromEnd, hole, access, field);
             }
           }
           continue;
@@ -1265,51 +1318,104 @@ class ConnectorGen {
   /**
    * Holes in a butting bar's side at positions (after the round-3 acceptance, X7): a quick
    * connector's cross hole over the core its pin is in, `from_end_mm` in from the end. Each is
-   * drilled square to the face of the bar's box nearest its position, ties going to the first of
-   * +y, -y, +x, -x (so a position at a square section's centre keeps the unplaced hole's +y), and
-   * stands over the position: its offset across that face is the position's coordinate along the
-   * face. A blind hole must reach the position, or the part it holds cannot meet the core: one that
-   * does not is a `connection` error, and so is a position off the end's section box; neither is
-   * made.
+   * drilled square to a face of the bar's box and stands over the position: its offset across that
+   * face is the position's coordinate along the face. A blind hole must reach the position, or the
+   * part it holds cannot meet the core: one that does not is a `connection` error, and so is a
+   * position off the end's section box; neither is made.
+   *
+   * The face (after the round-4 acceptance, X9): the one the mount's hole or the requirement names;
+   * else, of the faces from which the hole reaches the position, the nearest whose mouth no other
+   * member covers (`Covers`), ties within tol.len going to the first of +y, -y, +x, -x. A tool
+   * reaches the hole through its mouth once the frame is built (a quick connector's bush is turned
+   * through it), so a hole in a covered face is a `connection` error naming what covers it,
+   * whoever chose the face: a named face, or the nearest face that reaches when none is clear.
    */
   private sideHoles(
     bar: DerivedBar,
     end: "a" | "b",
     at: readonly Pos[],
+    named: readonly (Named | undefined)[],
     fromEnd: number,
     hole: Pick<HoleOp, "d" | "thread" | "depth">,
+    access: number,
     field: string,
   ): void {
     const s = end === "a" ? bar.lengths.sa + fromEnd : bar.lengths.sb - fromEnd;
     const box = bar.placed.box;
     const off: string[] = [];
     const what = hole.d !== undefined ? `Ø${mm(hole.d)} hole` : `tap ${hole.thread}`;
-    for (const p of at) {
-      if (!p) continue;
+    const ref = `${bar.placed.id}.${end}`;
+    const reaches = (f: { dist: number }) =>
+      hole.depth === undefined || hole.depth >= f.dist - TOL.len;
+    at.forEach((p, i) => {
+      if (!p) return;
       if (!onEnd(bar, p)) {
         off.push(posText(p));
-        continue;
+        return;
       }
-      const { face, dist } = nearestFace(box, p);
-      if (hole.depth !== undefined && hole.depth < dist - TOL.len) {
+      const sides = facesByDistance(box, p);
+      const op = (face: Face): HoleOp => {
+        const across = face === "+y" || face === "-y" ? p[0] : p[1];
+        return {
+          op: "hole",
+          face,
+          from: "a",
+          at: s,
+          ...(zero(across) ? {} : { across }),
+          ...hole,
+          by: this.id,
+        };
+      };
+      const covered = (face: Face) => this.mouthCovers(bar, op(face), hole, access);
+      const name = named[i];
+      const here = `the ${what} ${mm(fromEnd)} from ${ref} over its position ${posText(p)}`;
+      const short = (f: { face: Face; dist: number }, how: string) =>
         this.error(
           "connection",
-          `${field}: the ${what} ${mm(fromEnd)} from ${bar.placed.id}.${end} over its position ${posText(p)} is drilled from ${bar.placed.id}'s face ${face}, the nearest, ${mm(dist)} from it, and is ${mm(hole.depth)} deep: it does not reach the position, so it is not made`,
+          `${field}: ${here} is drilled from ${bar.placed.id}'s face ${f.face}, ${how}, ${mm(f.dist)} from it, and is ${mm(hole.depth as number)} deep: it does not reach the position, so it is not made`,
           { field: "connector", refs: [bar.placed.id] },
         );
-        continue;
+      if (name) {
+        const f = sides.find((x) => x.face === name.face) as { face: Face; dist: number };
+        if (!reaches(f)) {
+          short(f, `as ${name.by} names it`);
+          return;
+        }
+        const cover = covered(f.face);
+        if (cover.length > 0) {
+          const clear = sides.filter((x) => x.face !== f.face && reaches(x));
+          const free = clear.filter((x) => covered(x.face).length === 0).map((x) => x.face);
+          this.error(
+            "connection",
+            `${field}: ${here} goes in from ${bar.placed.id}'s face ${f.face}, as ${name.by} names it, where ${coverText(cover, access)}: its mouth cannot be reached; ${free.length > 0 ? `${bar.placed.id}'s ${free.length === 1 ? "face" : "faces"} ${free.join(", ")} ${free.length === 1 ? "reaches" : "reach"} the position clear` : `no face of ${bar.placed.id} that reaches the position is clear`}`,
+            { field: "connector", refs: [bar.placed.id, ...cover.map((c) => c.id)] },
+          );
+        }
+        bar.ops.push(op(f.face));
+        return;
       }
-      const across = face === "+y" || face === "-y" ? p[0] : p[1];
-      bar.ops.push({
-        op: "hole",
-        face,
-        from: "a",
-        at: s,
-        ...(zero(across) ? {} : { across }),
-        ...hole,
-        by: this.id,
-      });
-    }
+      const reaching = sides.filter(reaches);
+      const nearest = reaching[0];
+      if (!nearest) {
+        short(sides[0] as { face: Face; dist: number }, "the nearest");
+        return;
+      }
+      const choice = reaching
+        .map((f) => ({ ...f, cover: covered(f.face) }))
+        .find((f) => f.cover.length === 0);
+      if (!choice) {
+        const all = reaching.map((f) => `${f.face}, where ${coverText(covered(f.face), access)}`);
+        const by = [...new Set(reaching.flatMap((f) => covered(f.face).map((c) => c.id)))].sort(
+          compareIds,
+        );
+        this.error(
+          "connection",
+          `${field}: no face of ${bar.placed.id} from which ${here} reaches it is clear (${all.join("; ")}): it is drilled from ${nearest.face}, the nearest, and its mouth cannot be reached`,
+          { field: "connector", refs: [bar.placed.id, ...by] },
+        );
+      }
+      bar.ops.push(op((choice ?? nearest).face));
+    });
     if (off.length > 0) {
       this.error(
         "connection",
@@ -1317,6 +1423,96 @@ class ConnectorGen {
         { field: "connector", refs: [bar.placed.id] },
       );
     }
+  }
+
+  /**
+   * A hole in a butting bar's side with no position (§3.4): on a face's centre line, `from_end_mm`
+   * in from the end, heading for the section's centre. On the face the requirement names (X9);
+   * else on +y, as draft 2.3 put it, while its mouth is clear. Where another member covers +y's
+   * mouth, on the nearest face whose mouth is clear among those that take it at least as far toward
+   * the centre (as near it as +y, or near enough for its depth to reach it), ties going to the
+   * first of +y, -y, +x, -x. A hole in a covered face is a `connection` error naming what covers
+   * it: a named face, or +y when no face is clear.
+   */
+  private centreHole(
+    bar: DerivedBar,
+    end: "a" | "b",
+    name: Named | undefined,
+    fromEnd: number,
+    hole: Pick<HoleOp, "d" | "thread" | "depth">,
+    access: number,
+    field: string,
+  ): void {
+    const s = end === "a" ? bar.lengths.sa + fromEnd : bar.lengths.sb - fromEnd;
+    const op = (face: Face): HoleOp => ({
+      op: "hole",
+      face,
+      from: "a",
+      at: s,
+      ...hole,
+      by: this.id,
+    });
+    const covered = (face: Face) => this.mouthCovers(bar, op(face), hole, access);
+    const what = hole.d !== undefined ? `Ø${mm(hole.d)} hole` : `tap ${hole.thread}`;
+    const here = `the ${what} ${mm(fromEnd)} from ${bar.placed.id}.${end}`;
+    const refs = (cover: readonly Cover[]) => [bar.placed.id, ...cover.map((c) => c.id)];
+    if (name) {
+      const cover = covered(name.face);
+      if (cover.length > 0) {
+        this.error(
+          "connection",
+          `${field}: ${here} goes in from ${bar.placed.id}'s face ${name.face} on its centre line, as ${name.by} names it, where ${coverText(cover, access)}: its mouth cannot be reached`,
+          { field: "connector", refs: refs(cover) },
+        );
+      }
+      bar.ops.push(op(name.face));
+      return;
+    }
+    const first = covered("+y");
+    if (first.length === 0) {
+      bar.ops.push(op("+y"));
+      return;
+    }
+    const sides = facesByDistance(bar.placed.box, [0, 0]);
+    const y = (sides.find((f) => f.face === "+y") as { dist: number }).dist;
+    const toward = (f: { face: Face; dist: number }) =>
+      f.face !== "+y" &&
+      (f.dist <= y + TOL.len || (hole.depth !== undefined && hole.depth >= f.dist - TOL.len));
+    const choice = sides.filter(toward).find((f) => covered(f.face).length === 0);
+    if (choice) {
+      bar.ops.push(op(choice.face));
+      return;
+    }
+    const all = [
+      `+y, where ${coverText(first, access)}`,
+      ...sides.filter(toward).map((f) => `${f.face}, where ${coverText(covered(f.face), access)}`),
+    ];
+    const by = [
+      ...new Set(
+        [...first, ...sides.filter(toward).flatMap((f) => covered(f.face))].map((c) => c.id),
+      ),
+    ].sort(compareIds);
+    this.error(
+      "connection",
+      `${field}: no face of ${bar.placed.id} that ${here} could go in from on its centre line is clear (${all.join("; ")}): it is drilled from +y, where a hole with no position goes, and its mouth cannot be reached`,
+      { field: "connector", refs: [bar.placed.id, ...by] },
+    );
+    bar.ops.push(op("+y"));
+  }
+
+  /**
+   * The members in front of a side hole's mouth, within `access` of the face (X9): none when
+   * nothing is known of the other members.
+   */
+  private mouthCovers(
+    bar: DerivedBar,
+    op: HoleOp,
+    hole: Pick<HoleOp, "d" | "thread" | "depth">,
+    access: number,
+  ): Cover[] {
+    const d = hole.d ?? (hole.thread ? threadDiameter(hole.thread) : undefined);
+    if (!this.covers || d === undefined) return [];
+    return this.covers.mouth(bar, op.face, holeCentre(bar, op), d, access);
   }
 
   /**
@@ -1729,13 +1925,13 @@ function madeKey(end: string, p: readonly [number, number]): string {
 }
 
 /**
- * The face of a section's box nearest a position in it (from the box's centre), and how far it is:
- * ties within tol.len go to the first of +y, -y, +x, -x (X7).
+ * The faces of a section's box by their distance from a position in it (from the box's centre),
+ * nearest first: ties within tol.len keep the order +y, -y, +x, -x (X7, X9).
  */
-function nearestFace(
+function facesByDistance(
   box: PlacedBar["box"],
   p: readonly [number, number],
-): { face: Face; dist: number } {
+): { face: Face; dist: number }[] {
   const hx = (box.x1 - box.x0) / 2;
   const hy = (box.y1 - box.y0) / 2;
   const sides: { face: Face; dist: number }[] = [
@@ -1744,9 +1940,49 @@ function nearestFace(
     { face: "+x", dist: hx - p[0] },
     { face: "-x", dist: hx + p[0] },
   ];
-  let best = sides[0] as { face: Face; dist: number };
-  for (const s of sides.slice(1)) if (s.dist < best.dist - TOL.len) best = s;
-  return best;
+  const out: { face: Face; dist: number }[] = [];
+  const left = [...sides];
+  while (left.length > 0) {
+    let k = 0;
+    for (let i = 1; i < left.length; i++) {
+      if ((left[i] as { dist: number }).dist < (left[k] as { dist: number }).dist - TOL.len) k = i;
+    }
+    out.push(...left.splice(k, 1));
+  }
+  return out;
+}
+
+/** A face named for a hole in the butting bar's side, and who names it, for messages (X9). */
+interface Named {
+  face: Face;
+  by: string;
+}
+
+/**
+ * The face named for each position of a requirement's holes in the butting bar's side (X9): the
+ * mount's hole the position is (a requirement `at_holes`, or the hole a connector in a mount's set
+ * sits at), else the requirement's own `face`.
+ */
+function namedFaces(
+  item: ConnectorItem,
+  req: NonNullable<ConnectorItem["requires"]>[number],
+  placed: Placed,
+  count: number,
+): (Named | undefined)[] {
+  const own = req.face ? { face: req.face, by: "the requirement" } : undefined;
+  const holes = req.at_holes !== undefined ? (item.mounts?.[req.at_holes]?.holes ?? []) : [];
+  return Array.from({ length: count }, (_, i) => {
+    if (placed.face) return { face: placed.face, by: "the mount's hole it sits at" };
+    const h = holes[i];
+    if (h?.face) return { face: h.face, by: `mounts[${req.at_holes}] holes[${i}]` };
+    return own;
+  });
+}
+
+/** Who covers a mouth, for messages: "b3 stands in front of 100.0 % of its mouth" (X9). */
+function coverText(cover: readonly Cover[], access: number): string {
+  const one = (c: Cover) => `${c.id} stands in front of ${(100 * c.share).toFixed(1)} %`;
+  return `${cover.map(one).join(", ")} of its mouth, within ${mm(access)} of the face`;
 }
 
 /**
@@ -1998,6 +2234,21 @@ export function headRoom(
 }
 
 const OPPOSITE: Record<Face, Face> = { "+x": "-x", "-x": "+x", "+y": "-y", "-y": "+y" };
+
+/**
+ * The dimensions a head under a groove's lips is judged on that the section's own drawing does
+ * not give (F9): the opening its shank passes, the lip, depth and chamber its room is read
+ * against, and, for a head that bears on the lips itself (not on a T-nut seat), the hook and the
+ * face wall beside it that its bearing is read on (F8). In the groove type's order.
+ */
+function unreadUnderLips(g: BarItemInfo["grooves"][number], onTnut: boolean): GrooveDim[] {
+  const unread = g.unread ?? [];
+  if (unread.length === 0) return [];
+  const need: GrooveDim[] = ["opening_mm", "lip_mm", "depth_mm", "undercut_mm"];
+  if (g.taper_from_mm !== undefined) need.push("taper_from_mm", "bottom_mm");
+  if (!onTnut) need.push("hook_mm", "wall_mm");
+  return need.filter((d) => unread.includes(d));
+}
 
 /**
  * A groove's chamber width `z` below its face (§3.3): its undercut, narrowing straight from

@@ -1,0 +1,237 @@
+{
+  "case": "G49",
+  "rule": "a quick connector's cross hole in the butting bar's side takes a tool through its mouth once the frame stands: a hole with no position goes on +y while no other member stands in front of its mouth within the tool's room (30 by default, access_mm), else on the nearest face as near the core that is clear, ties to the first of +y, -y, +x, -x, and the machining names the face; a face the requirement or the mount's hole names is kept, and a covered one, or no clear face, is a connection error naming who covers it (after the round-4 acceptance, X9). A head under the lips bears on the lips' underside, from the opening out to the hooks, not on the face beside the opening (F8). A profile's own groove dimensions replace its groove type's; where its drawing does not give them, a head under its lips is not seated and check says so (F9)",
+  "design": "A 40x40 post on a 40x40 rail with hooked lips (opening 8.18, lip 3.79, depth 9.99, undercut 22.01 narrowing from 7.03 to 12.24, hooks 13.6 wide), a quick connector in its core: Ø18, a Ø7.8 shank, 4.48 high, a dome of radius 17.5. A 40x40 bar lies against the post's +y face over the cross hole (25 up): +y is covered (100 %), so the hole goes in from -y, the next in tie order; the cut list says so. The head bears on 37.22 % of its annulus, the lips' underside from 4.09 to 6.8 off the centre line (54.41 % on the face beside the opening): a fit warning; room 1.72 deep, 2.01 a side. Named +y by the requirement: kept, an error naming b3. The bar 2 mm off: still covered within 30, -y; with a tool that needs 1 mm, +y. Covered on all four faces: +y and an error naming the four. A mount's hole naming -x: -x. A rail whose own drawing gives opening 8.1, lip 4 and hooks 14.3: 41.69 %, 1.51 deep. A rail drawn closed, its hooks not given: no seat, an info",
+  "expect": {
+    "ops": {
+      "b2": [
+        { "op": "hole", "face": "-y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+      ]
+    },
+    "lines": {
+      "test-cover:H40": [
+        { "count": 1, "cut_mm": 600 },
+        {
+          "count": 1,
+          "cut_mm": 500,
+          "machining": ["Ø18.00 hole 25.00 mm from end a on face -y, 28.00 deep"]
+        }
+      ]
+    },
+    "heads": {
+      "c1": [
+        {
+          "end": "b2.a",
+          "side": "head",
+          "item": "test-cover:HC40",
+          "on": "b1 +y (under its lips)",
+          "d_in_mm": 7.8,
+          "d_out_mm": 18,
+          "bearing_pct": 37.22,
+          "depth_room_mm": 1.72,
+          "side_room_mm": 2.01
+        }
+      ]
+    },
+    "hardware": { "test-cover:HC40": 1 },
+    "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "the requirement names the covered face",
+      "patch": { "connections": { "c1": { "connector": "test-cover:HC40-FACE" } } },
+      "expect": {
+        "ops": {
+          "b2": [
+            { "op": "hole", "face": "+y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+          ]
+        },
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "side": "head",
+              "item": "test-cover:HC40-FACE",
+              "on": "b1 +y (under its lips)",
+              "d_in_mm": 7.8,
+              "d_out_mm": 18,
+              "bearing_pct": 37.22,
+              "depth_room_mm": 1.72,
+              "side_room_mm": 2.01
+            }
+          ]
+        },
+        "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b2", "b3"] }]
+      }
+    },
+    {
+      "name": "the bar 2 mm off the face",
+      "patch": { "bars": { "b3": { "a": [200, 42, 45], "b": [400, 42, 45] } } },
+      "expect": {
+        "ops": {
+          "b2": [
+            { "op": "hole", "face": "-y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+          ]
+        },
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "side": "head",
+              "item": "test-cover:HC40",
+              "on": "b1 +y (under its lips)",
+              "d_in_mm": 7.8,
+              "d_out_mm": 18,
+              "bearing_pct": 37.22,
+              "depth_room_mm": 1.72,
+              "side_room_mm": 2.01
+            }
+          ]
+        },
+        "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+        "errors": []
+      }
+    },
+    {
+      "name": "the bar 2 mm off, a tool that needs 1 mm",
+      "patch": {
+        "bars": { "b3": { "a": [200, 42, 45], "b": [400, 42, 45] } },
+        "connections": { "c1": { "connector": "test-cover:HC40-ACCESS" } }
+      },
+      "expect": {
+        "ops": {
+          "b2": [
+            { "op": "hole", "face": "+y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+          ]
+        },
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "side": "head",
+              "item": "test-cover:HC40-ACCESS",
+              "on": "b1 +y (under its lips)",
+              "d_in_mm": 7.8,
+              "d_out_mm": 18,
+              "bearing_pct": 37.22,
+              "depth_room_mm": 1.72,
+              "side_room_mm": 2.01
+            }
+          ]
+        },
+        "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+        "errors": []
+      }
+    },
+    {
+      "name": "every face covered",
+      "patch": {
+        "bars": {
+          "b4": { "item": "test-cover:H40-B", "a": [200, -40, 45], "b": [400, -40, 45] },
+          "b5": { "item": "test-cover:H40-B", "a": [340, -15, 45], "b": [340, 15, 45] },
+          "b6": { "item": "test-cover:H40-B", "a": [260, -15, 45], "b": [260, 15, 45] }
+        }
+      },
+      "expect": {
+        "ops": {
+          "b2": [
+            { "op": "hole", "face": "+y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+          ]
+        },
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "side": "head",
+              "item": "test-cover:HC40",
+              "on": "b1 +y (under its lips)",
+              "d_in_mm": 7.8,
+              "d_out_mm": 18,
+              "bearing_pct": 37.22,
+              "depth_room_mm": 1.72,
+              "side_room_mm": 2.01
+            }
+          ]
+        },
+        "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+        "errors": [{ "code": "connection", "entity": "c1", "refs": ["b2", "b3", "b4", "b5", "b6"] }]
+      }
+    },
+    {
+      "name": "a mount's hole names -x",
+      "patch": { "connections": { "c1": { "connector": "test-cover:HR-X" } } },
+      "expect": {
+        "ops": {
+          "b2": [
+            { "op": "hole", "face": "-x", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+          ]
+        },
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "at_mm": [0, 0],
+              "side": "head",
+              "item": "test-cover:HC40",
+              "on": "b1 +y (under its lips)",
+              "d_in_mm": 7.8,
+              "d_out_mm": 18,
+              "bearing_pct": 37.22,
+              "depth_room_mm": 1.72,
+              "side_room_mm": 2.01
+            }
+          ]
+        },
+        "hardware": { "test-cover:HC40": 1 },
+        "recipes": { "test-cover:HR-X": 1 },
+        "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+        "errors": []
+      }
+    },
+    {
+      "name": "a rail whose drawing gives its own groove",
+      "patch": { "bars": { "b1": { "item": "test-cover:H40-OWN" } } },
+      "expect": {
+        "ops": {
+          "b2": [
+            { "op": "hole", "face": "-y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+          ]
+        },
+        "heads": {
+          "c1": [
+            {
+              "end": "b2.a",
+              "side": "head",
+              "item": "test-cover:HC40",
+              "on": "b1 +y (under its lips)",
+              "d_in_mm": 7.8,
+              "d_out_mm": 18,
+              "bearing_pct": 41.69,
+              "depth_room_mm": 1.51,
+              "side_room_mm": 2.01
+            }
+          ]
+        },
+        "warnings": [{ "code": "fit", "entity": "c1", "refs": ["b1"] }],
+        "errors": []
+      }
+    },
+    {
+      "name": "a rail whose drawing does not give its lips' undersides",
+      "patch": { "bars": { "b1": { "item": "test-cover:H40-UNREAD" } } },
+      "expect": {
+        "ops": {
+          "b2": [
+            { "op": "hole", "face": "-y", "from": "a", "at": 25, "d": 18, "depth": 28, "by": "c1" }
+          ]
+        },
+        "heads": { "c1": [] },
+        "warnings": [],
+        "infos": [{ "code": "fit", "entity": "c1" }],
+        "errors": []
+      }
+    }
+  ]
+}

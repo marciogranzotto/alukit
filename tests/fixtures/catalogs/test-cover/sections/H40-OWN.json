@@ -1,0 +1,20 @@
+{
+  "schema": "alukit.section/1",
+  "id": "H40-OWN",
+  "fidelity": "parametric",
+  "props_ok": false,
+  "generator": "tslot",
+  "params": {
+    "w_mm": 40,
+    "h_mm": 40,
+    "groove": "c8h",
+    "bores": [{ "at_mm": [0, 0], "d_mm": 13.7 }],
+    "groove_dims": {
+      "opening_mm": { "v": 8.1, "src": "src" },
+      "lip_mm": { "v": 4, "src": "src" },
+      "hook_mm": { "v": 14.3, "src": "est", "low": 14, "high": 14.6 },
+      "wall_mm": { "v": 1.9, "src": "est", "low": 1.6, "high": 2.2 },
+      "note": "opening and lip as its drawing prints them, the hooks read off it; the rest is the groove type's"
+    }
+  }
+}

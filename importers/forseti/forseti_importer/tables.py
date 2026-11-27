@@ -137,6 +137,77 @@ GROOVE_SOURCE = {
     "c8-45": {"profile": "PF45-12", "face": "+x", "at_mm": 22.5, "printed_opening_mm": 8.3, "page": 19},
 }
 
+#: Each profile's own groove (after the round-4 acceptance, F9), where the build cannot measure it
+#: on a vector outline: a groove type is an interface measured on one profile, and profiles of one
+#: type differ (the 40x80's lip is 4, the 40x40 básico's 3.79), so a section states its own. The
+#: build measures an exact outline's own groove itself; a section a groove type is measured on
+#: needs none. Here:
+#:
+#: - `printed`: the dimensions the profile's drawing prints, on `page`.
+#: - `read`: (value, low, high) read off the profile's raster image (page `page`, image `xref`),
+#:   an estimate: `read-groove` (forseti_importer/raster.py) prints the raw readings of each
+#:   groove, and the image's line weight is taken out by calibrating against the printed values
+#:   on the same image. The range covers the grooves' spread and the calibration's residuals
+#:   (at most 0.3 mm on these images: a printed value the calibration does not fit is off by
+#:   that much at worst).
+#: - `unread`: the dimensions the drawing does not give: no judgement that rests on the profile's
+#:   own groove takes another profile's value for them (check says so, as an info).
+#: - `note`: how they were read, for the section's `groove_dims.note`.
+OWN_GROOVES: dict[str, dict] = {
+    # p. 17 prints "8,1" (the opening, over the top right groove), "4" (the lip, at the top left
+    # groove), "10" (the depth of the short face's groove) and "22" (its undercut). Its "4,5" is
+    # the corner holes' inset (CORNER_HOLES), not a lip. Raw readings of its six grooves (image
+    # 189, 3.6 px/mm): opening 7.67, lip 4.22, depth 9.95, undercut 21.57 to 21.61, taper from
+    # 6.62 to 6.93, bottom 12.63 to 13.73, hook 14.55 to 14.83, wall 2.00 and 2.28. Against the
+    # printed values an empty width reads 0.43 narrow and an edge where material ends going in
+    # reads 0.22 deep: bottom +0.43, hook -0.43, wall -0.22; the taper's start is a corner and is
+    # taken as read.
+    "PF40-02": {
+        "page": 17, "xref": 189,
+        "printed": {"opening_mm": 8.1, "lip_mm": 4, "depth_mm": 10, "undercut_mm": 22},
+        "read": {"taper_from_mm": (6.8, 6.5, 7.1), "bottom_mm": (13.6, 13.0, 14.2),
+                 "hook_mm": (14.3, 14.0, 14.6), "wall_mm": (1.9, 1.6, 2.2)},
+        "note": ("opening, lip, depth and undercut as p. 17 prints them; the taper, the bottom and "
+                 "the lips' hooks read off its raster image, the line weight taken out against the "
+                 "printed values"),
+    },
+    # p. 20's image prints "4" (the lip of the left face's grooves), "10" (the depth of the right
+    # face's grooves) and "22" (their undercut); no opening. Raw readings of its eight grooves
+    # (image 238, 3.138 px/mm, cropped to x 85..350, y 108..372 to leave the dimensions out):
+    # opening 7.55 to 7.66, lip 4.47 to 4.57, depth 9.79 to 10.11, undercut 21.31 to 21.48, taper
+    # from 6.88 to 7.03, bottom 11.58 to 13.80, hook 14.46 to 14.65, wall 2.97 to 3.21. An empty
+    # width reads 0.61 narrow and an edge where material ends going in 0.52 deep: opening and
+    # bottom +0.61, hook -0.61, wall -0.52.
+    "PF40-03B": {
+        "page": 20, "xref": 238, "crop": (85, 108, 350, 372),
+        "printed": {"lip_mm": 4, "depth_mm": 10, "undercut_mm": 22},
+        "read": {"opening_mm": (8.2, 7.9, 8.5), "taper_from_mm": (7.0, 6.7, 7.3),
+                 "bottom_mm": (13.3, 12.2, 14.4), "hook_mm": (13.9, 13.6, 14.2),
+                 "wall_mm": (2.6, 2.3, 2.9)},
+        "note": ("lip, depth and undercut as p. 20's drawing prints them; the opening, the taper, "
+                 "the bottom and the lips' hooks read off its raster image, the line weight taken "
+                 "out against the printed values"),
+    },
+    # Closed profiles: each face is drawn with its cover in the slot. p. 17 prints the groove
+    # behind the 40x40 fechado's cover ("8,2", "22", "10", "4"); the cover hides the chamber's
+    # taper and the lips' undersides. p. 14 prints the 30x30 fechado's depth ("7,10") and
+    # undercut ("18"), and no opening or lip; its vector outline is the closed face.
+    "PF40-04": {
+        "page": 17,
+        "printed": {"opening_mm": 8.2, "lip_mm": 4, "depth_mm": 10, "undercut_mm": 22},
+        "unread": ["taper_from_mm", "bottom_mm", "hook_mm", "wall_mm"],
+        "note": ("opening, lip, depth and undercut as p. 17 prints them; the drawing shows each "
+                 "face closed by its cover, which hides the chamber's taper and the lips' undersides"),
+    },
+    "PF30-04": {
+        "page": 14,
+        "printed": {"depth_mm": 7.1, "undercut_mm": 18},
+        "unread": ["opening_mm", "lip_mm", "taper_from_mm", "bottom_mm", "hook_mm", "wall_mm"],
+        "note": ("depth and undercut as p. 14 prints them; the drawing shows each face closed by "
+                 "its cover, so the opening, the lips and the chamber's taper are not drawn"),
+    },
+}
+
 #: Profile stems this import emits, with what the shop's name does not say.
 #:
 #: - `w`, `h`: the section's width (x) and height (y). A name "AxB" is A wide and B tall, so

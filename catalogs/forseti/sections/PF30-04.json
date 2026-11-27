@@ -954,5 +954,11 @@
       [-10.0071, -10.2344],
       [-9.9904, -10.2887]
     ]
-  ]
+  ],
+  "groove_dims": {
+    "depth_mm": { "v": 7.1, "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p14" },
+    "undercut_mm": { "v": 18, "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p14" },
+    "unread": ["opening_mm", "lip_mm", "taper_from_mm", "bottom_mm", "hook_mm", "wall_mm"],
+    "note": "depth and undercut as p. 14 prints them; the drawing shows each face closed by its cover, so the opening, the lips and the chamber's taper are not drawn"
+  }
 }

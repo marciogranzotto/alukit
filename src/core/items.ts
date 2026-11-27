@@ -6,6 +6,7 @@ import {
 } from "#catalog/link.ts";
 import { type LoadedSection, splitRef } from "#catalog/load.ts";
 import { type Face, isValuedObject, type Minor, num, type Src } from "#catalog/schema/common.ts";
+import { type GrooveDim, mergeGroove } from "#catalog/schema/groove.ts";
 import type { BarItem, Item } from "#catalog/schema/items.ts";
 import type { Offer } from "#catalog/schema/offers.ts";
 import { GENERATORS } from "#catalog/sections/generators/index.ts";
@@ -18,7 +19,10 @@ import type { V3 } from "./vec.ts";
  * (§4.13) implements the same interface, so derive never reads live catalogs once a lock exists.
  */
 
-/** A section's groove, with its groove type's lip where the type is known (§3.3, §4.5). */
+/**
+ * A section's groove, with its dimensions where they are known (§3.3, §4.5): its groove type's,
+ * with the section's own over them (after the round-4 acceptance, F9).
+ */
 export interface BarGroove {
   face: Face;
   at_mm: number;
@@ -37,6 +41,16 @@ export interface BarGroove {
   /** Where the chamber starts to narrow, and its width at `depth_mm`, when it does (§3.3). */
   taper_from_mm?: number;
   bottom_mm?: number;
+  /** A lip whose underside is a hook narrower than the chamber, and the face wall beyond it (F8). */
+  hook_mm?: number;
+  wall_mm?: number;
+  /**
+   * The dimensions the section's own drawing does not give reliably (F9): the values above keep
+   * the groove type's for them, which no judgement under the lips rests on. `why`: the section's
+   * word on it.
+   */
+  unread?: readonly GrooveDim[];
+  why?: string;
 }
 
 /** A mass with the provenance of the value it came from (§3.5's authority rule). */
@@ -344,8 +358,8 @@ export function fullRef(ref: string, from: string): string {
 }
 
 /**
- * Each groove with its type's lip: the groove's own type (resolved in the section's catalog),
- * else the bar system's groove type.
+ * Each groove with its dimensions: its groove type's (the groove's own type, resolved in the
+ * section's catalog, else the bar system's groove type), with the section's own over them (F9).
  */
 function barGrooves(
   set: CatalogSet,
@@ -356,24 +370,31 @@ function barGrooves(
   const sys = system ? set.get("system", system, "")?.value : undefined;
   const fallback =
     sys?.type === "tslot" ? fullRef(sys.groove, splitRef(system as string, "").catalog) : undefined;
+  const own = built.own;
   return built.grooves.map((g) => {
     const type = g.type ? fullRef(g.type, sectionCatalog) : fallback;
     const gt = type ? set.get("groove", type, "")?.value : undefined;
+    const dims: Omit<BarGroove, "face" | "at_mm" | "type" | "unread" | "why"> = gt
+      ? {
+          lip_mm: num(gt.lip_mm),
+          opening_mm: num(gt.opening_mm),
+          depth_mm: num(gt.depth_mm),
+          undercut_mm: num(gt.undercut_mm),
+          ...(gt.taper_from_mm !== undefined && gt.bottom_mm !== undefined
+            ? { taper_from_mm: num(gt.taper_from_mm), bottom_mm: num(gt.bottom_mm) }
+            : {}),
+          ...(gt.hook_mm !== undefined && gt.wall_mm !== undefined
+            ? { hook_mm: num(gt.hook_mm), wall_mm: num(gt.wall_mm) }
+            : {}),
+        }
+      : {};
     return {
       face: g.face,
       at_mm: g.at_mm,
       ...(type ? { type } : {}),
-      ...(gt
-        ? {
-            lip_mm: num(gt.lip_mm),
-            opening_mm: num(gt.opening_mm),
-            depth_mm: num(gt.depth_mm),
-            undercut_mm: num(gt.undercut_mm),
-            ...(gt.taper_from_mm !== undefined && gt.bottom_mm !== undefined
-              ? { taper_from_mm: num(gt.taper_from_mm), bottom_mm: num(gt.bottom_mm) }
-              : {}),
-          }
-        : {}),
+      ...mergeGroove(dims, own),
+      ...(own && own.unread.length > 0 ? { unread: own.unread } : {}),
+      ...(own?.note ? { why: own.note } : {}),
     };
   });
 }

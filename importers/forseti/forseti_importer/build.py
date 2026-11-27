@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import re
+import statistics
 from collections import defaultdict
 from decimal import Decimal
 
@@ -16,6 +17,9 @@ from . import emit, geometry, pdfcat, rest, store, tables
 
 API = "https://loja.forsetisolucoes.com.br/wp-json/wc/store/v1/products"
 WALK = ("-y", "+x", "+y", "-x")
+#: A groove's dimensions, in the order a groove type lists them (src/catalog/schema/groove.ts).
+GROOVE_DIMS = ("opening_mm", "lip_mm", "depth_mm", "undercut_mm", "taper_from_mm", "bottom_mm",
+               "hook_mm", "wall_mm")
 
 
 def num(d: Decimal) -> int | float:
@@ -134,6 +138,9 @@ class Build:
             if d.taper_from_mm is not None:
                 gt["taper_from_mm"] = d.taper_from_mm
                 gt["bottom_mm"] = d.bottom_mm
+            if d.hook_mm is not None:
+                gt["hook_mm"] = d.hook_mm
+                gt["wall_mm"] = d.wall_mm
             gt["class"] = "standard"
             gt["prov"] = {
                 "src": "calc",
@@ -323,6 +330,42 @@ class Build:
             "outline": [list(pt) for pt in o.outline],
             "holes": [[list(pt) for pt in hole] for hole in o.holes],
         }
+        own = self.own_groove(stem, spec, grooves, o)
+        if own:
+            self.sections[stem]["groove_dims"] = own
+
+    def own_groove(self, stem: str, spec: dict, grooves: list[dict], o: pdfcat.Outline | None) -> dict | None:
+        """The section's own groove dimensions (after the round-4 acceptance, F9): the reviewed
+        OWN_GROOVES entry, else, on an exact outline, the median over its grooves of what
+        `measure_groove` measures. None for a section a groove type is measured on (the type is
+        its own groove) and for a parametric one the tables do not read."""
+        t = tables.OWN_GROOVES.get(stem)
+        if t is not None:
+            out: dict = {}
+            for k, v in t.get("printed", {}).items():
+                out[k] = {"v": v, "src": "src", "ref": pdf_ref(t["page"])}
+            for k, (v, lo, hi) in t.get("read", {}).items():
+                out[k] = {"v": v, "src": "est", "ref": pdf_ref(t["page"]), "low": lo, "high": hi}
+            out = {k: out[k] for k in GROOVE_DIMS if k in out}
+            if t.get("unread"):
+                out["unread"] = [k for k in GROOVE_DIMS if k in t["unread"]]
+            out["note"] = t["note"]
+            return out
+        if o is None or any(src["profile"] == stem for src in tables.GROOVE_SOURCE.values()):
+            return None
+        dims = [pdfcat.measure_groove(o.outline, o.holes, spec["w"], spec["h"], gr["face"], gr["at_mm"])
+                for gr in grooves]
+        out = {}
+        for k in GROOVE_DIMS:
+            vs = [getattr(d, k) for d in dims if getattr(d, k) is not None]
+            if 2 * len(vs) > len(dims):
+                out[k] = round(statistics.median(vs), 2)
+        spread = max(max(getattr(d, k) for d in dims) - min(getattr(d, k) for d in dims)
+                     for k in ("opening_mm", "lip_mm", "depth_mm", "undercut_mm"))
+        out["note"] = (f"measured on this section's vector outline as its groove type is on its "
+                       f"source profile's: the median over its {len(dims)} grooves, whose openings, "
+                       f"lips, depths and undercuts differ by at most {spread:.2f} mm")
+        return out
 
     @staticmethod
     def drawn_cores(stem: str, spec: dict, o: pdfcat.Outline) -> list[dict]:
@@ -375,8 +418,14 @@ class Build:
         if bores:
             labels = tables.CORE_THREADS[stem][0]
             params["bores"] = [{"at_mm": [x, y], "d_mm": spec["bore"], "threads": labels} for x, y in bores]
-        note = ("a T-slot envelope from the printed overall size and core bore, with the groove type "
-                "measured on the series' vector outline")
+        own = self.own_groove(stem, spec, grooves, None)
+        if own:
+            params["groove_dims"] = own
+            note = ("a T-slot envelope from the printed overall size and core bore, with its own groove "
+                    "dimensions (groove_dims) over the groove type measured on the series' vector outline")
+        else:
+            note = ("a T-slot envelope from the printed overall size and core bore, with the groove type "
+                    "measured on the series' vector outline")
         note += ("; the page draws this profile as a raster image" if spec["page"]
                  else "; the catalogue does not draw this profile")
         if spec.get("corners"):

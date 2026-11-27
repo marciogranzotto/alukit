@@ -1,9 +1,16 @@
 import { z } from "zod";
 import type { Vec2 } from "#core/section-properties.ts";
 import { Face, Ref, Thread } from "../../schema/common.ts";
+import { GrooveGeometry, mergeGroove, ownGroove } from "../../schema/groove.ts";
 import { combine, disc, type Part, rect, triangle } from "../closed-form.ts";
 import { circle } from "../geometry.ts";
-import { box2, type GeneratedGroove, type Generator, type GrooveDims } from "./types.ts";
+import {
+  box2,
+  type GeneratedGroove,
+  type Generator,
+  type GeneratorContext,
+  type GrooveDims,
+} from "./types.ts";
 
 /**
  * A T-slot profile as a box less its slots (design §3.5): the overall box, one slot per groove (the
@@ -12,7 +19,9 @@ import { box2, type GeneratedGroove, type Generator, type GrooveDims } from "./t
  * model, so a `tslot` section is drawn and cut from, and its `props_ok` is false.
  *
  * The groove's dimensions come from its groove type in the catalog (§3.3), so a correction to a
- * groove is made once.
+ * groove is made once; `groove_dims` states the profile's own over them, each with its source
+ * (after the round-4 acceptance, F9). A lip whose underside is a hook (`hook_mm`, `wall_mm`) is
+ * drawn with the chamber rising beside it to the face wall (F8).
  */
 export const TslotParams = z.strictObject({
   w_mm: z.number().positive().describe("overall width, along section x"),
@@ -43,6 +52,9 @@ export const TslotParams = z.strictObject({
     )
     .optional()
     .describe("core bores: centre, diameter and the vendor's thread labels"),
+  groove_dims: GrooveGeometry.optional().describe(
+    "the profile's own groove dimensions over its groove type's, each with its source (F9)",
+  ),
 });
 export type TslotParams = z.infer<typeof TslotParams>;
 
@@ -81,6 +93,17 @@ function grooveList(p: TslotParams): GeneratedGroove[] {
   }));
 }
 
+/**
+ * A groove's dimensions: its type's, with the profile's own over them (F9). A dimension the
+ * profile's drawing does not give (`unread`) keeps its type's value here: the envelope is drawn
+ * with it, and derive does not judge a head under the lips on it.
+ */
+function dimsOf(p: TslotParams, g: GeneratedGroove, ctx: GeneratorContext): GrooveDims | undefined {
+  const d = ctx.groove(g.type as string);
+  if (!d) return undefined;
+  return mergeGroove(d, ownGroove(p.groove_dims));
+}
+
 /** The depth where the full-width chamber ends: where it starts to narrow, or the bottom. */
 function chamberEnd(d: GrooveDims): number {
   return d.taper_from_mm ?? d.depth_mm;
@@ -94,9 +117,16 @@ function profile(d: GrooveDims): [number, number][] {
   const pts: [number, number][] = [
     [0, o],
     [d.lip_mm, o],
-    [d.lip_mm, u],
-    [chamberEnd(d), u],
   ];
+  // A hook: the lip's underside runs out to half the width over the hooks, then the chamber rises
+  // to the face wall.
+  if (d.hook_mm !== undefined && d.wall_mm !== undefined) {
+    const k = d.hook_mm / 2;
+    pts.push([d.lip_mm, k], [d.wall_mm, k], [d.wall_mm, u]);
+  } else {
+    pts.push([d.lip_mm, u]);
+  }
+  pts.push([chamberEnd(d), u]);
   if (d.taper_from_mm !== undefined) pts.push([d.depth_mm, bottom]);
   return pts;
 }
@@ -124,6 +154,14 @@ function slotPieces(g: GeneratedGroove, d: GrooveDims, w: number, h: number): Ve
   const pieces = [quad(0, o, d.lip_mm, o), quad(d.lip_mm, u, chamberEnd(d), u)];
   if (d.taper_from_mm !== undefined) {
     pieces.push(quad(d.taper_from_mm, u, d.depth_mm, (d.bottom_mm as number) / 2));
+  }
+  if (d.hook_mm !== undefined && d.wall_mm !== undefined) {
+    // The chamber beside each hook, from the face wall down to the lip's underside.
+    const h = d.hook_mm / 2;
+    pieces.push(
+      [pt(-u, d.wall_mm), pt(-h, d.wall_mm), pt(-h, d.lip_mm), pt(-u, d.lip_mm)],
+      [pt(h, d.wall_mm), pt(u, d.wall_mm), pt(u, d.lip_mm), pt(h, d.lip_mm)],
+    );
   }
   return pieces;
 }
@@ -175,7 +213,7 @@ export const tslot: Generator<TslotParams> = {
     const grooves = grooveList(p);
     const pieces: { what: string; poly: Vec2[] }[] = [];
     grooves.forEach((g, i) => {
-      const d = ctx.groove(g.type as string);
+      const d = dimsOf(p, g, ctx);
       if (!d) {
         out.push(`groove ${i}: unknown groove type "${g.type}"`);
         return;
@@ -190,6 +228,14 @@ export const tslot: Generator<TslotParams> = {
           out.push(`groove type "${g.type}": taper_from_mm not between the lip and the depth`);
         if (!(d.bottom_mm > 0 && d.bottom_mm <= d.undercut_mm))
           out.push(`groove type "${g.type}": bottom_mm not within the undercut`);
+      }
+      if ((d.hook_mm === undefined) !== (d.wall_mm === undefined))
+        out.push(`groove type "${g.type}": hook_mm and wall_mm go together`);
+      if (d.hook_mm !== undefined && d.wall_mm !== undefined) {
+        if (!(d.hook_mm > d.opening_mm && d.hook_mm < d.undercut_mm))
+          out.push(`groove type "${g.type}": hook_mm not between the opening and the undercut`);
+        if (!(d.wall_mm > 0 && d.wall_mm < d.lip_mm))
+          out.push(`groove type "${g.type}": wall_mm not between the face and the lip`);
       }
       const f = faceFrame(g.face, p.w_mm, p.h_mm);
       if (Math.abs(g.at_mm) + d.undercut_mm / 2 >= f.half) {
@@ -245,7 +291,7 @@ export const tslot: Generator<TslotParams> = {
         .map((g) => ({ g, s: f.sign * g.at_mm }))
         .sort((a, b) => a.s - b.s);
       for (const { g, s } of on) {
-        const d = ctx.groove(g.type as string) as GrooveDims;
+        const d = dimsOf(p, g, ctx) as GrooveDims;
         const pt = (along: number, depth: number): Vec2 => [
           f.c[0] + f.t[0] * along + f.n[0] * depth,
           f.c[1] + f.t[1] * along + f.n[1] * depth,
@@ -278,7 +324,7 @@ export const tslot: Generator<TslotParams> = {
   closedForm(p, ctx) {
     const parts: [Part, 1 | -1][] = [[rect(0, 0, p.w_mm, p.h_mm), 1]];
     for (const g of grooveList(p)) {
-      const d = ctx.groove(g.type as string) as GrooveDims;
+      const d = dimsOf(p, g, ctx) as GrooveDims;
       for (const piece of slotPieces(g, d, p.w_mm, p.h_mm))
         for (const part of quadParts(piece)) parts.push([part, -1]);
     }

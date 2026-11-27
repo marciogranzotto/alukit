@@ -5,6 +5,7 @@ import type { Source } from "./merge.ts";
 import { factoryE } from "./rails.ts";
 import { type Face, isValuedObject, num } from "./schema/common.ts";
 import type { GrooveType, Material, Standard, System } from "./schema/files.ts";
+import { type GrooveGeometry, type OwnGroove, ownGroove } from "./schema/groove.ts";
 import type { FastenerItem, Item } from "./schema/items.ts";
 import type { Offer } from "./schema/offers.ts";
 import {
@@ -398,6 +399,11 @@ export interface BuiltSection {
   props: Region;
   bbox_mm: readonly [Vec2, Vec2];
   grooves: { face: Face; at_mm: number; type?: string }[];
+  /**
+   * Its grooves' own dimensions, stated over their groove type's, and those its drawing does not
+   * give (after the round-4 acceptance, F9); absent when it states none.
+   */
+  own?: OwnGroove;
   datums: Record<string, Vec2>;
   /**
    * Its cores, where an end tap is cut (§5.5), in section coordinates: a generator's, where its
@@ -435,6 +441,9 @@ export function generatorContext(set: CatalogSet, ls: LoadedSection): GeneratorC
           ...(g.taper_from_mm !== undefined && g.bottom_mm !== undefined
             ? { taper_from_mm: num(g.taper_from_mm), bottom_mm: num(g.bottom_mm) }
             : {}),
+          ...(g.hook_mm !== undefined && g.wall_mm !== undefined
+            ? { hook_mm: num(g.hook_mm), wall_mm: num(g.wall_mm) }
+            : {}),
         }
       );
     },
@@ -454,6 +463,7 @@ export function buildSection(
     if (problems.length > 0) return { problems };
     const g = gen.generate(s.params, ctx);
     const draw = { outline: g.outline, holes: g.holes };
+    const own = ownGroove((s.params as { groove_dims?: GrooveGeometry }).groove_dims);
     return {
       id: s.id,
       fidelity: s.fidelity,
@@ -462,12 +472,14 @@ export function buildSection(
       props: g.props ?? draw,
       bbox_mm: g.bbox_mm,
       grooves: g.grooves,
+      ...(own ? { own } : {}),
       datums: g.datums,
       ...(g.cores ? { cores: g.cores } : {}),
     };
   }
   if (s.fidelity === "box") {
     const draw = { outline: boxRing(s.bbox_mm), holes: [] };
+    const own = ownGroove(s.groove_dims);
     return {
       id: s.id,
       fidelity: s.fidelity,
@@ -476,6 +488,7 @@ export function buildSection(
       props: draw,
       bbox_mm: s.bbox_mm,
       grooves: s.grooves ?? [],
+      ...(own ? { own } : {}),
       datums: s.datums ?? {},
     };
   }
@@ -487,6 +500,7 @@ export function buildSection(
   }
   const problems = coreProblems(s.cores ?? [], draw.holes);
   if (problems.length > 0) return { problems };
+  const own = ownGroove(s.groove_dims);
   return {
     id: s.id,
     fidelity: s.fidelity,
@@ -495,6 +509,7 @@ export function buildSection(
     props: draw,
     bbox_mm: s.bbox_mm,
     grooves: s.grooves ?? [],
+    ...(own ? { own } : {}),
     datums: s.datums ?? {},
     ...(s.cores ? { cores: s.cores } : {}),
   };

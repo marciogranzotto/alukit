@@ -1,0 +1,24 @@
+{
+  "schema": "alukit.lock/1",
+  "catalogs": {
+    "test-cover": { "hash": "sha256:c3007dca7ac11d2921f621bf580e0e630f1b6453eba463f3a94b9dad00fdcbc7", "name": "Cross hole cover and lip hook test catalog (synthetic)", "vendor": "test-cover-vendor", "currency": "BRL" }
+  },
+  "items": {
+    "test-cover:H40": { "hash": "sha256:78ab3b2820b4bbc32e130ece70c05da4d493f46e2290d3b44cb35224389fda27", "item": { "kind": "bar", "name": "Profile 40x40, hooked lips, a centre core (synthetic)", "material": "al", "prov": { "src": "est", "note": "synthetic test data for a cross hole whose mouth another member covers (X9), a head bearing on the underside of hooked lips (F8) and a profile's own groove (F9); the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, its hooks included, not a vendor's item" }, "shape": "tslot", "section": "H40", "system": "s40h", "mass_kg_per_m": 1.5 } },
+    "test-cover:H40-B": { "hash": "sha256:d421cf6da27fdcffa0b9e3480e313c318d74ea127a5c7ebc3973af5afb5bdb77", "item": { "kind": "bar", "name": "The same profile, listed apart for the members that stand in front of a hole (synthetic)", "material": "al", "prov": { "src": "est", "note": "synthetic test data for a cross hole whose mouth another member covers (X9), a head bearing on the underside of hooked lips (F8) and a profile's own groove (F9); the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, its hooks included, not a vendor's item" }, "shape": "tslot", "section": "H40", "system": "s40h", "mass_kg_per_m": 1.5 } },
+    "test-cover:HC40": { "hash": "sha256:9688bb20f496c3035dc5d5462e4e0267760fde3c64236a04ca26389041b3652a", "item": { "kind": "connector", "name": "A quick connector: a pin in the butting bar's core, its domed head under the through bar's lips, a cross bush in a hole over the core (synthetic)", "prov": { "src": "est", "note": "synthetic test data for a cross hole whose mouth another member covers (X9), a head bearing on the underside of hooked lips (F8) and a profile's own groove (F9); the groove copies the numbers of a base-40, canal-8 groove measured on a vector outline, its hooks included, not a vendor's item" }, "subtype": "end-connector", "fits": ["s40h"], "mass_kg": 0.06, "requires": [{ "op": "access-hole", "on": "butting", "d_mm": 18, "depth_mm": 28, "from_end_mm": 25 }], "dims": { "d_mm": 7.8, "dk_mm": 18, "k_mm": 4.48, "rf_mm": 17.5 } } }
+  },
+  "offers": {},
+  "sections": {
+    "test-cover:H40": { "hash": "sha256:9a7296aa96402d4fda3f698130676e2174784978d9cbbafb36c94329a8e46808", "section": { "schema": "alukit.section/1", "id": "H40", "fidelity": "parametric", "props_ok": false, "generator": "tslot", "params": { "w_mm": 40, "h_mm": 40, "groove": "c8h", "bores": [{ "at_mm": [0, 0], "d_mm": 13.7 }] } } }
+  },
+  "materials": {
+    "test-cover:al": { "hash": "sha256:0f2c491bb49ace41658fc2f0b33c2ebe288af52522a3cc7500d3fdd515deaa6c", "material": { "name": "Aluminium (synthetic)", "density_kg_per_m3": 2700 } }
+  },
+  "grooves": {
+    "test-cover:c8h": { "hash": "sha256:213c9ab8a8ca4b283c22db96b9c95a0476a8fc1b86915af0ca68972dca70ae68", "groove": { "opening_mm": 8.18, "lip_mm": 3.79, "depth_mm": 9.99, "undercut_mm": 22.01, "taper_from_mm": 7.03, "bottom_mm": 12.24, "hook_mm": 13.6, "wall_mm": 1.8, "class": "standard" } }
+  },
+  "systems": {
+    "test-cover:s40h": { "hash": "sha256:bcd0c2281b654cc860c1eae61ce030bd863301c55017194c828e9bb813689ca5", "system": { "type": "tslot", "series_mm": 40, "groove": "c8h" } }
+  }
+}

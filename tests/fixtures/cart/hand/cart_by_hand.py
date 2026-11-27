@@ -1390,8 +1390,20 @@ plate_part = {
         sheet_hole("h4", (80, 50), "through", 8.5),
     ],
 }
+def machining_words(m):
+    """A bar's machining in the cut list's words, which the sheet repeats for each line: a hole in
+    a bar's side names the face it is drilled from (after the round-4 acceptance, X9)."""
+    depth = f", {m['depth_mm']:.2f} deep" if "depth_mm" in m else ""
+    if m["op"] == "end-tap":
+        return f"tap {m['thread']} in end {m['from']}{depth}"
+    what = f"tap {m['thread']}" if "thread" in m else f"Ø{m['d_mm']:.2f} hole"
+    across = f", {m['across_mm']:.2f} across" if "across_mm" in m else ""
+    return f"{what} {m['at_mm']:.2f} mm from end {m['from']} on face {m['face']}{across}{depth}"
+
+
 bar_refs = [
-    {"item": g["item"], "opt": g["opt"], "cut_mm": l["cut_mm"], "count": l["count"], "ops": len(l["machining"]), "sources": l["sources"]}
+    {"item": g["item"], "opt": g["opt"], "cut_mm": l["cut_mm"], "count": l["count"], "ops": len(l["machining"]),
+     "machining": [machining_words(m) for m in l["machining"]], "sources": l["sources"]}
     for g in groups
     for l in g["lines"]
     if l.get("machining")

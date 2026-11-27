@@ -1,0 +1,16 @@
+{
+  "schema": "alukit.project/1",
+  "name": "G49",
+  "catalogs": ["../../catalogs/test-cover"],
+  "defaults": {
+    "cutting": { "kerf_mm": 3, "trim_mm": 0 }
+  },
+  "bars": {
+    "b1": { "item": "test-cover:H40", "a": [0, 0, 0], "b": [600, 0, 0], "label": "a 40x40 rail with hooked lips, its top groove under the post" },
+    "b2": { "item": "test-cover:H40", "a": [300, 0, 20], "b": [300, 0, 520], "label": "a 40x40 post on it, a quick connector in its centre core" },
+    "b3": { "item": "test-cover:H40-B", "a": [200, 40, 45], "b": [400, 40, 45], "label": "a 40x40 bar lying against the post's +y face, over the cross hole's place" }
+  },
+  "connections": {
+    "c1": { "type": "butt", "through": "b1", "ends": ["b2.a"], "connector": "test-cover:HC40" }
+  }
+}

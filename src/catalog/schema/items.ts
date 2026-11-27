@@ -3,6 +3,7 @@ import { ratingsSchema } from "../ratings.ts";
 import {
   Bbox3,
   DatumName,
+  Face,
   ItemQty,
   type Kind,
   num,
@@ -138,6 +139,9 @@ const Hole = z.strictObject({
   d_mm: Valued,
   slot_mm: Valued.optional().describe("a slotted hole's length"),
   thread: Thread.optional(),
+  face: Face.optional().describe(
+    "the face of the butting bar that a hole in its side at this hole goes in from: a requirement at the mount's holes, or a connector the mount's fastener set places here (after the round-4 acceptance, X9); default: the nearest face that reaches the position and that no other member covers",
+  ),
 });
 
 /** What a joint recipe (a connector with no body) cannot have: the fields that describe a body. */
@@ -160,6 +164,12 @@ const Positions = z
 const Requirement = z.strictObject({
   op: z.enum(["end-tap", "access-hole", "through-hole", "counterbore"]),
   on: z.enum(["butting", "through", "each"]).describe("which joined bar is machined"),
+  face: Face.optional().describe(
+    "a hole in the butting bar's side: the face it goes in from (after the round-4 acceptance, X9); default: over a position, the nearest face that reaches it and that no other member covers, else +y",
+  ),
+  access_mm: Valued.optional().describe(
+    "a hole in the butting bar's side: the room a tool needs in front of its mouth, along its axis, clear of the other members (X9); default 30",
+  ),
   thread: Thread.optional(),
   d_mm: Valued.optional(),
   depth_mm: Valued.optional(),
@@ -285,6 +295,22 @@ function requirementIssues(
   ctx: z.RefinementCtx,
 ): void {
   const path = ["requires", i];
+  for (const f of ["face", "access_mm"] as const) {
+    if (r[f] !== undefined && (r.on !== "butting" || r.op === "end-tap")) {
+      ctx.addIssue({
+        code: "custom",
+        path: [...path, f],
+        message: `${f} is for a hole in the butting bar's side: give it with on butting, not on an end tap`,
+      });
+    }
+  }
+  if (r.access_mm !== undefined && num(r.access_mm) < 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "access_mm"],
+      message: "access_mm is not negative",
+    });
+  }
   if (r.at_mm && r.at_holes !== undefined) {
     ctx.addIssue({
       code: "custom",

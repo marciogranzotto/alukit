@@ -58,6 +58,8 @@
       "undercut_mm": 22.01,
       "taper_from_mm": 7.03,
       "bottom_mm": 12.24,
+      "hook_mm": 13.59,
+      "wall_mm": 1.8,
       "class": "standard",
       "prov": {
         "src": "calc",
