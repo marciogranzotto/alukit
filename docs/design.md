@@ -1,16 +1,138 @@
 # AluKit: design (v1)
 
-*Draft 2.2, 2026-11-26. Built from the decisions D1–D16 in [`BRAINSTORM.md`](../BRAINSTORM.md),
+*Draft 2.3, 2026-11-26. Built from the decisions D1–D16 in [`BRAINSTORM.md`](../BRAINSTORM.md),
 the Forseti survey [`research/forseti-inventory.md`](research/forseti-inventory.md), review 1
 [`reviews/design-review-1.md`](reviews/design-review-1.md), the lessons and wishlist from the
 reference project (an internal lab rack), and the M1.5 paper model of that project's frame
-([`reviews/m1.5-paper-model-findings.md`](reviews/m1.5-paper-model-findings.md)). Building has
-started: M0 is done and M1 is being built from §3. Everything here is open to veto: section 14
-lists the calls made without asking, section 15 maps every review finding to where it is
-resolved, and section 16 does the same for the paper model's gaps.*
+([`reviews/m1.5-paper-model-findings.md`](reviews/m1.5-paper-model-findings.md)). v1 is built
+(§12), and this draft describes it as built, from the decision notes in
+[`notes/`](notes/README.md). Everything here is open to veto: section 14 lists the calls made
+without asking, section 15 maps every review finding to where it is resolved, and section 16 does
+the same for the paper model's gaps.*
 
 *Provenance labels: **verified** (run or checked against a source, with how), **read** (from the
 named document), **inferred** (reasoning, not checked).*
+
+## Draft 2.3 — what changed (2026-11-26)
+
+v1 is built: M0–M6, then M4c and the gaps the acceptance found (§12). Draft 2.3 folds in the
+decision notes and the 21 entries of [`notes/design-vs-built.md`](notes/design-vs-built.md) (cited
+below as dvb), so that the design again describes the system as built. A recorded deviation that
+proved the better choice is now the rule; a feature v1 does not have is stated as a **v1 limit**,
+with the version that takes it up. Calls left for the owner's review are marked *open* (§14,
+call 6 and calls 31–34). Changed text is marked *2.3*. The build was not changed for this draft.
+Notes are cited by name and decision number ("m4a 13" is decision 13 of
+[`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
+
+**§2 Conventions**
+
+- Four unit suffixes for the stiffness, straightness and twist fields §3.4 names; canonical
+  numbers snap to their grid only within `tol.snap`; every file is strict JSON with a `schema`; a
+  direct edit is taken in as written (m1 3, 6, 7; m3b-doc 3; m4a 9; dvb 9).
+
+**§3 Catalogs**
+
+- §3.1: a stale override is an error and is not applied; a project's item reference always names
+  its catalog. `services.json` is a v1 limit (m1 16, 19; m3a 6; m3b-order 13; dvb 14).
+- §3.2: `clone_of` on any kind; one SKU in several stock lengths is one offer per length, keyed
+  `<SKU>.<length>`, naming its `sku` (m1 22; m2a 8).
+- §3.3: a groove chamber that narrows toward its floor, `taper_from_mm` and `bottom_mm` (m2a 10).
+- §3.4: **fit by role** (gap A1) and **joint recipes**, `recipe: true` (A2); where `requires`
+  machines, with the **end hole** into a through bar's end (A4); a fastener set counts per mount
+  hole; fasteners gain `subtype`, `fits` and `dims`; a panel's mass follows from its thickness
+  (acceptance-gaps A1, A2, A4; m1 26, 27; m2a 6a, 9; m3b-gen 28, 29; dvb 18, 19).
+- §3.5: the `tslot` generator as built; no `channel` or `beam` generator yet, a v1 limit; arcs
+  flattened at 0.5° (m1 34–36; a3-face-contact).
+
+**§4 Projects**
+
+- §4.3: a station with no face takes `off_mm` in local x and y (m3a 13).
+- §4.5: **the faces of a layer**, bounding and inner, with stations, the fastener's walk through
+  the material, the grip and the holes on them (gap A3; G29); a hole a sleeve passes **clears**
+  it, by ISO 273 medium for its outside diameter or by `clearance_mm` (A7; G32); a butt's
+  connector, counted per end and not placed, a v1 limit; a placeholder as a through body (gap
+  G-B; G28); a miter declares its own angled cut; "end far from its face" is measured along the
+  face's normal; the holes of `screw`, `tnut` and rail layers; the draw tool's auto-connect
+  (a3-face-contact; acceptance-gaps A1, A4, A7; m3a 19, 23; m3b-gen 21–27; m4a 35; m4b 5, 6; m6,
+  gap G-B; dvb 20).
+- §4.6: golden cases G28 (M6) and G29–G32 (the acceptance gaps), their values copied from each
+  fixture's `expected.json` (m6; a3-face-contact; acceptance-gaps).
+- §4.8: a bent angle's legs, inside radius and required K-factor (open, call 33), one 90° bend in
+  v1; project items hold numbers, default to supplier `local`, and take the hole and price rules
+  as built (m6 1–15; dvb 17).
+- §4.9: `cost(high)`, not `cost("high")`, since the language has no strings; accessors are for
+  checks only; `bbox()` holds bars only, a v1 limit; margins per operator (m3a 7, 8; m3b-doc 34,
+  37, 39; dvb 13).
+- §4.10: cost lines take `only_in` and `not_in` (A5); `only_in` leaves an entity out of the
+  document derived with no variant; what a swap replaces and what it leaves (acceptance-gaps A5;
+  m5 3–6; dvb 15, 21).
+- §4.11: a cost line's fields as built, its provenance `est` by default; `services_on` takes a
+  list (A6); machining in v1 is priced only by a covering cost line (acceptance-gaps A5, A6;
+  m3b-order 13–15, 17, 25, 32; dvb 14, 21).
+- §4.13: when the lock is created and what `lock update` keeps; a revision holds every variant and
+  its `as_of`, and is saved through the server when one runs; diff sides (m3b-doc 9–11; m4c 5, 6;
+  m5 9–17).
+
+**§5 The derived model**
+
+- §5.1: stage 4 adds inner-face contact, end holes and sleeve clearances; stage 5 the machining
+  sheet (acceptance-gaps; a3-face-contact; m6 18).
+- §5.2: CI runs on Linux; the macOS run is the merge gate's (the repository's CI configuration).
+- §5.3: kerf and trim defaults; end holes listed from their end; identity by where machining
+  physically is; a rail's holes as one record (m3a 33; m3b-gen 5, 6, 32; acceptance-gaps A4).
+- §5.4: a bar's mass from its centre-line length; joint recipes listed apart; the **machining
+  sheet**; a v1 limit: only the order and the costs state the lock's hash (m3b-gen 35, 36;
+  acceptance-gaps A2; m6 18–22; m3b-doc 40; m3b-order).
+- §5.5: fit by role; the order's date, `as_of`; a placeholder holds its own group; the cover does
+  not avoid an out-of-stock offer (m3b-doc 41; m3b-order 5, 10; m6 16; dvb 16).
+
+**§6 Commands**
+
+- Merge patches for `set*`; what a cascade removes and what it refuses; `autoConnect`'s `optional`;
+  the shape of a refusal (m3b-doc 12–14, 17; m4a 1; m4b 5).
+
+**§7 Agent interface**
+
+- §7.1: what "valid" means; `serve` refuses invalid files and holds the edit lock while it runs;
+  the order of a step; the source tags; `undo`, `redo` and `log` need a server; `?variant=` and
+  `?as_of=` on the API (m4a 5–17, 25, 41; m4c 1–6; dvb 8–10).
+- §7.2: `Host` and `Origin` on static files too; `Sec-Fetch-Site`, the security headers and the
+  one token-free path, `/api/health` (m4a 18–22; dvb 11).
+- §7.3: `machining`, `redo`, `revision list` and `show`, `catalog schema`; the syntax of
+  `derive --select`; `catalog search` and `import` (m4c 20–25; m6 18; dvb 12). `snapshot` in a
+  fresh page stays the rule (open, call 34; m4b 29).
+- §7.5: the skill's worked example runs as a test (m5 30–32).
+
+**§8 Viewer and UI**
+
+- The work plane defaults to the ground (open, call 32); snap targets add each bar's design line
+  and the parts' datums and face centres; picking raycasts the bodies, snapping stays analytic; a
+  Machining tab; the read-only banner is its own bar; the variant switch, the revision, export,
+  the section plane, the catalog browser and the tabs as built; Connect builds pivots and fastened
+  joints. v1 limits: editing an existing connection, dragging a node or an end, placeholder
+  hatching, `W` on a part's face (m4a 34–38, 42; m4b 7–19, 25–28, 38–40; m4c 7–19; m6 28, 32;
+  dvb 2–7).
+
+**§9 Exports, §10 Stack, §11 Forseti**
+
+- §9: the GLB's root node, its hole children and extras; the machining sheet; which outputs carry
+  the lock's hash (m5 22–27, 40; m6 18).
+- §10: `serve` does not rebuild `dist/`, a v1 limit; the API in Vite's dev server; the pins as M0
+  kept them, with vite's release-age exclusion still open (m4a 43, 44; the
+  [build session log](sessions/2026-11-26-alukit-v1-build-session-log.md)).
+- §11: 27 profile stems, not 25; connectors beyond the first families have no mounting model yet;
+  two HIWIN editions disagree on MP and MY, open until loads (m2b 7, 14; std-hiwin-verification;
+  the build session log).
+
+**§12–§14**
+
+- §12: every milestone is done; M4c and the gaps' work are rows of their own; M5's recorded manual
+  run is not in the repository, its worked example runs as a test instead; the fixture list
+  (every note).
+- §13: the acceptance run of 2026-11-26 (tests 1–4 passed; failed overall on A1 and A3, with A2
+  and A4–A7; all fixed); the re-run's verdict is pending (the build session log;
+  acceptance-gaps; a3-face-contact).
+- §14: calls 31–35, four of them open, and call 6 marked open.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1704,9 +1826,17 @@ needs:
   a threaded rod and a tube sold in stock lengths, a rail sold in stock lengths with
   `factory_E_mm` and its carriage with a `run` datum, a bracket with per-system fastener sets and
   a sleeve, a hinge with pivot geometry, a splice stud, fasteners sold in packs and in a kit,
-  regular and sale prices, and an offer priced as a quoted range).
-- `golden-ends/`: the end cases of §4.6 (G1–G21).
-- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26).
+  regular and sale prices, and an offer priced as a quoted range). *2.3*: beside it, one small
+  synthetic catalog per milestone that needed items `test/` does not hold, so no milestone moved
+  another's oracle: `ref-test/` (clone ratings), `test-geo/` (M3a), `test-gen/` (M3b),
+  `test-order/` and `test-order-eu/` (the order rules), `test-joint/` and `test-open/` (the
+  acceptance gaps).
+- `golden-ends/`: the end cases of §4.6 (G1–G21; G27 and G28 since 2.2 and 2.3).
+- `golden-gen/`: the generation and cost cases of §4.6 (G22–G26; G29–G32 since 2.3).
+- `order/` (*2.3*): two suppliers, both READY as written, for the order rules: each test patches
+  one condition in, so each rule has a case that blocks and one that does not.
+- `base-frame/` (*2.3*): the cart's base frame built by the CLI from an empty project, the oracle
+  M4b's mouse script draws against.
 - `cart/`: a small synthetic cart with the reference project's classes of construction, and none
   of its specifics: T-slot bars with eccentric anchors and a rolled 40x80, a steel beam, a strut
   bearing on another bar's end, a flat bar flush with a beam's cut ends, a rail run from stock
@@ -1716,21 +1846,27 @@ needs:
   packers, a plate with threaded and countersunk holes, a placeholder, unplaced lines, a price
   band, and cost lines. Its expected outputs are worked by hand.
 
+**State** (*2.3*): every milestone below is done, all on 2026-11-26. Each milestone's calls are in
+its note in [`notes/`](notes/README.md); where the build differs from what a row asked for, the row
+says so.
+
 | M | Delivers | Done when |
 |---|---|---|
-| M0 | Scaffold: Vite + TS + Preact + three, Biome, Vitest, Playwright; the CLI entry; the server skeleton; Node 26 and pnpm verified | from a clean clone on Node 26: `pnpm install --frozen-lockfile`, `pnpm test` and `pnpm build` pass; `node src/cli/main.ts --version` runs without a flag or a warning; Playwright sees a non-blank canvas. A failure on 26 is recorded and the pin moves to 24 LTS |
-| M1 | Catalog schema (envelope, items and offers, kinds, ratings vocabulary), merge layers, sections with fidelity, generators, section properties, `catalog check`. Draft 2.1's four catalog additions (offer ranges, `factory_E_mm`, part `datums`, sleeves in `mounts`; see the changelog) follow as a small follow-up | the 40x40 básico's exact outline gives 553.5 ± 0.1 mm² and Ix, Iy 9.13 ± 0.01 cm⁴; each generator matches its closed-form A and I within 0.1 %; a test override with a stale `expect` is reported; a family file that changes an importer field fails |
+| M0 | Scaffold: Vite + TS + Preact + three, Biome, Vitest, Playwright; the CLI entry; the server skeleton; Node 26 and pnpm verified | from a clean clone on Node 26: `pnpm install --frozen-lockfile`, `pnpm test` and `pnpm build` pass; `node src/cli/main.ts --version` runs without a flag or a warning; Playwright sees a non-blank canvas. A failure on 26 is recorded and the pin moves to 24 LTS. **Done**: every check passed from a fresh clone on Node 26.13.1 and pnpm 12.23.0; the pin stays on 26 |
+| M1 | Catalog schema (envelope, items and offers, kinds, ratings vocabulary), merge layers, sections with fidelity, generators, section properties, `catalog check`. Draft 2.1's four catalog additions (offer ranges, `factory_E_mm`, part `datums`, sleeves in `mounts`; see the changelog) follow as a small follow-up | the 40x40 básico's exact outline gives 553.5 ± 0.1 mm² and Ix, Iy 9.13 ± 0.01 cm⁴; each generator matches its closed-form A and I within 0.1 %; a test override with a stale `expect` is reported; a family file that changes an importer field fails. **Done**: 553.53 mm², Ix 9.1287 and Iy 9.1307 cm⁴; the worst generator 0.0025 % from its closed form; the four 2.1 additions followed in M2a ([m1](notes/m1-decisions.md), [m2a](notes/m2a-decisions.md)) |
 | **M1.5** | **Paper model**: the reference frame's document written against the draft schema, by a throwaway converter from its existing model. Both are kept in this repo's gitignored `internal/` folder, not in the reference project's repo (decision A1 of the build session log; they may move there later) | every body of the reference frame is in the converted document or on a written gap list, and each gap is closed by a schema change in this design or an explicit v1 exclusion. One or two days. **Done 2026-11-26**: every body is in the document; the 20 gaps are closed by draft 2.1 (§16; [findings](reviews/m1.5-paper-model-findings.md)) |
-| M2a | Forseti items the reference project uses, the `std` steel and fastener items it needs, `ref-hiwin/` | each item has a section with a declared fidelity and offers with regular and sale prices and read dates; the 8 exact outlines pass `catalog check` within 1 % or are accepted mismatches |
-| M3a | Points, frames, placement, end planes in two sweeps and connections, runs, cut list | the end cases G1–G21 (§4.6) and the frame table (§4.4) pass to 0.01 mm; the cart's cut list equals its hand-worked table |
-| M3b | Generation (machining, hardware by system, rail holes and their selections, fasteners and sleeves cut from stock, patterns), BOM, offers and the order list with its rules, costs, price bands and totals, checks, commands with undo, CLI, lock file, canonical form | G22–G26 (§4.6) pass; the cart's order list and totals equal golden files byte for byte, on Linux and macOS; 37 screws pick the cheapest pack cover; each order rule has a test that blocks and one that does not |
-| Slice | **Early acceptance**: the reference frame's T-slot cut list (run in its own repo) | every T-slot piece within 0.5 mm of the record's drawn length, compared as §13 test 1 says, or on a written exceptions list with its reason |
-| M4a | Viewer: rendering, selection, properties, the server owning the document, event stream, watcher, security | in Playwright: a CLI command appears in two open tabs within 1 s at the same revision; an invalid direct edit makes both read-only with the error; requests without the token, or with a foreign `Origin` or `Host`, get 403 |
-| M4b | Draw tool with snapping and work plane, connect, place part, pattern, catalog browser | a Playwright script draws the cart's base frame with the mouse, and its derived cut list and BOM equal those of the CLI-built fixture |
-| M2b | The rest of Forseti's catalog, beside M4 | every one of the 1,196 orderable SKUs maps to an offer (a test against the importer's raw dump); every profile stem has a section with a declared fidelity |
-| M5 | Variants with `only_in`, diff, revisions with stored outputs, the GLB writer, `snapshot`, the skill | a diff across two commits with a lock price change reports it; `revision verify` shows zero drift on an untouched revision; two GLB exports are byte-identical and load in three's `GLTFLoader` with the expected node names and `extras`; an agent with only the skill rebuilds the cart's frame from a text description and `alukit check` passes (a recorded manual run) |
-| M6 | Custom plates and bent angles with hole features; generic items and placeholders | the cart plate's threaded, countersunk and counterbored holes appear on its machining sheet; the placeholder blocks only its own line in the golden order file |
-| **Acceptance** | §13 | §13 |
+| M2a | Forseti items the reference project uses, the `std` steel and fastener items it needs, `ref-hiwin/` | each item has a section with a declared fidelity and offers with regular and sale prices and read dates; the 8 exact outlines pass `catalog check` within 1 % or are accepted mismatches. **Done**, with `catalog check` passing on all three catalogs; every `std` and `ref-hiwin` number then compared with a public source ([verification](notes/std-hiwin-verification.md)) |
+| M3a | Points, frames, placement, end planes in two sweeps and connections, runs, cut list | the end cases G1–G21 (§4.6) and the frame table (§4.4) pass to 0.01 mm; the cart's cut list equals its hand-worked table. **Done**: no golden value was wrong ([m3a](notes/m3a-decisions.md)) |
+| M3b | Generation (machining, hardware by system, rail holes and their selections, fasteners and sleeves cut from stock, patterns), BOM, offers and the order list with its rules, costs, price bands and totals, checks, commands with undo, CLI, lock file, canonical form | G22–G26 (§4.6) pass; the cart's order list and totals equal golden files byte for byte, on Linux and macOS; 37 screws pick the cheapest pack cover; each order rule has a test that blocks and one that does not. **Done**, in three parts ([generation](notes/m3b-gen-decisions.md), [the edit path](notes/m3b-doc-decisions.md), [the order](notes/m3b-order-decisions.md)); Linux in CI, macOS in the merge gate (§5.2) |
+| Slice | **Early acceptance**: the reference frame's T-slot cut list (run in its own repo) | every T-slot piece within 0.5 mm of the record's drawn length, compared as §13 test 1 says, or on a written exceptions list with its reason. **Passed**: the largest difference 0.04 mm. Two pieces needed stand-ins, for gaps G-A and G-B, since closed by G27 (draft 2.2) and G28 |
+| M4a | Viewer: rendering, selection, properties, the server owning the document, event stream, watcher, security | in Playwright: a CLI command appears in two open tabs within 1 s at the same revision; an invalid direct edit makes both read-only with the error; requests without the token, or with a foreign `Origin` or `Host`, get 403. **Done**: the edit showed 4 to 31 ms after the CLI exited ([m4a](notes/m4a-decisions.md)) |
+| M4b | Draw tool with snapping and work plane, connect, place part, pattern, catalog browser | a Playwright script draws the cart's base frame with the mouse, and its derived cut list and BOM equal those of the CLI-built fixture. **Done**: byte for byte; `snapshot` came with it ([m4b](notes/m4b-decisions.md)) |
+| M2b | The rest of Forseti's catalog, beside M4 | every one of the 1,196 orderable SKUs maps to an offer (a test against the importer's raw dump); every profile stem has a section with a declared fidelity. **Done**: 1,196 of 1,196, checked against a committed SKU list everywhere and against the raw dump when it is present; 27 stems ([m2b](notes/m2b-decisions.md)) |
+| M5 | Variants with `only_in`, diff, revisions with stored outputs, the GLB writer, `snapshot`, the skill | a diff across two commits with a lock price change reports it; `revision verify` shows zero drift on an untouched revision; two GLB exports are byte-identical and load in three's `GLTFLoader` with the expected node names and `extras`; an agent with only the skill rebuilds the cart's frame from a text description and `alukit check` passes (a recorded manual run). **Done**, with one difference: the skill's worked example, a work table from the `forseti` catalog, runs as a test, every command as written; a recorded manual run of an agent rebuilding the cart is not in the repository ([m5](notes/m5-decisions.md)) |
+| M6 | Custom plates and bent angles with hole features; generic items and placeholders | the cart plate's threaded, countersunk and counterbored holes appear on its machining sheet; the placeholder blocks only its own line in the golden order file. **Done**; the placeholder holds its own group (§5.5, *2.3*), and G28 closes gap G-B ([m6](notes/m6-decisions.md)) |
+| M4c (*2.3*) | The v1 gaps between this design and the build: the variant switch, export and revisions in the top bar, the section plane, the Open items, Params and Decisions tabs, pivots and fastened face joints in Connect, `catalog search` and `catalog import`, `derive --select` | each missing feature of the design-vs-built record ([`notes/design-vs-built.md`](notes/design-vs-built.md), entries 3, 4, 5, 12) is built and tested, and no golden value moves. **Done** ([m4c](notes/m4c-decisions.md)) |
+| Gaps (*2.3*) | The model gaps the acceptance found (§13): fit by role (A1), joint recipes (A2), face contact on a section's inner faces (A3), end holes (A4), cost lines in variants (A5), `services_on` lists (A6), a sleeve's hole clearance (A7) | each is closed at its root, with a failing test written first; G29–G32 (§4.6) pass against independent hand scripts; G1–G28 and the cart's outputs do not move. **Done** ([acceptance gaps](notes/acceptance-gaps.md), [A3](notes/a3-face-contact.md)) |
+| **Acceptance** | §13 | §13. Tests 1–4 passed; the re-run after the gaps is pending |
 
 ## 13. Acceptance (review B2, M9)
 
@@ -1765,6 +1901,15 @@ acceptance starts. The tests then are:
 
 Acceptance **fails** if any exception is caused by a gap in AluKit's model. An exception may only
 be an error in the record or a deliberate scope exclusion from the table above.
+
+**Run, 2026-11-26** (*2.3*; the details stay with the reference project). Tests 1–4 **passed**:
+every bar within 0.05 mm of the record's drawn length; the mass within 1 %; every vendor line to
+the cent on a lock frozen at the record's price date; pack and kit counts equal. Every exception
+was an error in the record. Acceptance still **failed** by the rule above, on gaps in AluKit's
+model: A1 (a connector whose mount holds a sleeve could fit no bar) and A3 (a block on an angle's
+inner leg could not be a layer), with smaller gaps A2 and A4–A7. All seven are fixed at their
+root (§3.4, §4.5, §4.10, §4.11), with golden cases G29–G32 (§4.6). **The re-run with the new
+constructs: verdict pending.**
 
 ## 14. Calls made without asking (veto any)
 
