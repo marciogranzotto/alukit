@@ -26,6 +26,13 @@ profile `w` by `h`, the groove on `face` at `at`, optionally cropped to leave di
 build does not run it: its readings, calibrated against the dimensions the page prints, are the
 reviewed values of `OWN_GROOVES` in `tables.py`, each with its range (`docs/notes/x9-f8-f9.md`).
 
+`check-traces <catalogo_forsetiA4.pdf>` measures a trace's local uncertainty against ground truth:
+on the four pages that draw a raster under a vector outline of the same profile, it traces each
+raster as the build does and prints the farthest the trace lies from the vector outline, either
+way, in pixels and millimetres. It exits 1 if any exceeds `TRACE_LOCAL_PX` in `tables.py` (1.5),
+the local uncertainty every traced section states in `from.uncertainty`
+(`docs/notes/forseti-traced-sections.md`).
+
 `fetch` refuses a folder that exists, so each snapshot is new and whole. `build` writes into
 `catalogs/forseti` (or a third argument), prints what it emitted and what it left out, and fails
 rather than guess when the data is not where the tables say. `.cache/` is not committed.

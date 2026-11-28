@@ -176,6 +176,10 @@ re-check N10). The problem list's rule is "a title that says what is wrong and w
   checked against the section's cores" (`cores.ts`). The clauses read are the outcomes (what is
   wrong), not how the hole is named, so the core's N3 change to how a hole is named keeps them.
   A message none matches keeps "Machining to check".
+- **Superseded** (2026-11-28, [re-check fixes, core](recheck-fixes-core-decisions.md) 15): the
+  titles are now keyed by the diagnostic's `reason`, which each machining check gives, and
+  `machiningTitle` is removed. The titles above are unchanged; a check's wording can now change
+  without changing them.
 - **What moved** (**measured**): titles only; the problem's id, detail, `raw`, targets and fixes,
   and every CLI output but `alukit problems`' titles, are as before.
 

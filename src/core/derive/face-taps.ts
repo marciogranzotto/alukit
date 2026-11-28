@@ -45,7 +45,7 @@ function check(ctx: Ctx, b: DerivedBar, o: HoleOp, d: number): void {
       "machining",
       b.placed.id,
       `${opText(b, o)}${o.by ? ` (${o.by})` : ""}: its Ø${mm(d)} tap drill lies ${(100 * f).toFixed(1)} % in the ${mm(g.opening_mm)} opening of ${groove}, ${mm(Math.abs(off))} off its centre line, so its thread has less than half its circle of wall`,
-      o.by ? { refs: [o.by] } : {},
+      { reason: "tap-in-groove", ...(o.by ? { refs: [o.by] } : {}) },
     );
   }
 }

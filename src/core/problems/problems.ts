@@ -245,7 +245,7 @@ function fromDiagnostic(d: Diagnostic, ctx: Ctx): Draft {
     id: "",
     code: d.code,
     group: SEVERITY[d.severity],
-    title: checkTitle(d.code, where, d.message),
+    title: checkTitle(d.code, where, d.reason),
     detail: sentence(d.message),
     raw: d.message,
     targets: refsOf(names, ctx),
@@ -373,12 +373,12 @@ function fromReason(r: Reason, ctx: Ctx): Draft {
     }
     case "missing-price": {
       const rate = /: no exchange rate for (\S+)$/.exec(r.message)?.[1];
-      const services = SERVICES.exec(r.message);
+      const services = r.services;
       if (rate) {
         p.title = `No exchange rate for ${rate}`;
         p.detail = `Prices in ${rate} cannot be converted into the project's currency: add the rate (fx) in the project's settings.`;
       } else if (services) {
-        Object.assign(p, machiningWords(services[1] as string, Number(services[2]), item, ctx));
+        Object.assign(p, machiningWords(services.of, services.count, item, ctx));
       } else if (r.message.endsWith(": no price")) {
         p.title = `No price for ${name}`;
         p.detailFor = (s) => `The order from ${s} waits for its price.`;
@@ -475,9 +475,6 @@ const projectItem = (item: string) => item.startsWith(PROJECT_ITEM);
  */
 const setPrice = (item: string): Fix[] =>
   projectItem(item) ? [{ label: "Set a price…", kind: "set-price", item }] : [];
-
-/** The order's reason for a supplier's machining no cost line prices (`order/rules.ts`). */
-const SERVICES = /^(.+): no price for (\d+) machining services?; cover them with a cost line$/;
 
 /**
  * A supplier's machining that nothing prices (review M1; design §4.11, "Machining in v1"): the

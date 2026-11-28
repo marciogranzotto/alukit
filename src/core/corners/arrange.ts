@@ -71,11 +71,15 @@ export interface ArrangedCorner extends CornerSpec {
   joints?: string[];
 }
 
-/** How one corner comes out under a rule: the bar that runs through, the ends that butt. */
+/**
+ * How one corner comes out under a rule, as its `autoConnect` answers: the bar that runs through,
+ * the ends that butt, and the through bar's own end there, which the butt covers.
+ */
 export interface CornerPlan {
   at: V3;
   through: string;
   ends: string[];
+  covers?: string;
 }
 
 /** One rule's answer: what its batch would build, or why it is refused. */
@@ -190,12 +194,13 @@ export interface ArrangeInput {
 
 /** The plan an `autoConnect` reports (`info`): which bar runs through and which ends butt. */
 function planOf(at: V3, r: CommandResult | undefined): CornerPlan | undefined {
-  const info = r?.info as { through?: unknown; ends?: unknown } | undefined;
+  const info = r?.info as { through?: unknown; ends?: unknown; covers?: unknown } | undefined;
   if (!info || typeof info.through !== "string" || !Array.isArray(info.ends)) return undefined;
   return {
     at,
     through: info.through,
     ends: info.ends.filter((e): e is string => typeof e === "string"),
+    ...(typeof info.covers === "string" ? { covers: info.covers } : {}),
   };
 }
 

@@ -98,14 +98,21 @@ export const mirror: CommandDef<z.infer<typeof Mirror>> = {
     const open = info?.open ?? [];
     const there = Object.entries(info?.there ?? {});
     const selves = there.filter(([id, to]) => id === to).map(([id]) => id);
-    const others = there.filter(([id, to]) => id !== to).map(([id, to]) => `${id}'s image is ${to}`);
+    const others = there
+      .filter(([id, to]) => id !== to)
+      .map(([id, to]) => `${id}'s image is ${to}`);
     const kept = [
       ...(selves.length > 0
         ? [`${idList(selves)} ${selves.length > 1 ? "are their own images" : "is its own image"}`]
         : []),
       ...others,
     ];
-    return `mirror ${idList(a.ids)}, making ${idList(d.created)}${onto.length > 0 ? ` on ${idList([...new Set(onto)])}` : ""}${kept.length > 0 ? `; ${kept.join("; ")}` : ""}${open.length > 0 ? `; ${idList(open)} left open` : ""}`;
+    // The ends left open are the step's to say (`joinPhrases`): a join later in the step may
+    // close them (the re-check's follow-up to N2).
+    return {
+      say: `mirror ${idList(a.ids)}, making ${idList(d.created)}${onto.length > 0 ? ` on ${idList([...new Set(onto)])}` : ""}${kept.length > 0 ? `; ${kept.join("; ")}` : ""}`,
+      ...(open.length > 0 ? { open } : {}),
+    };
   },
   apply: (ctx, a) => guard(() => advised(ctx, a)),
 };

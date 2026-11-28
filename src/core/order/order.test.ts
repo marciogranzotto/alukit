@@ -327,6 +327,9 @@ describe("missing-price: no offer, no exchange rate, or machining with no price"
         "test-order:FLAT-O-c: no price for 1 machining service; cover them with a cost line",
       ],
     ]);
+    // And as data, which the problem list words it from (re-check follow-up to N10).
+    const reason = o.suppliers.flatMap((s) => s.reasons).find((r) => r.rule === "missing-price");
+    expect(reason?.services).toEqual({ of: "test-order:FLAT-O-c", count: 1 });
     const covered = run({
       ...hole,
       costs: [

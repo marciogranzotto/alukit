@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { Order } from "#core/order/types.ts";
+import type { OrderRule } from "#core/project/schema.ts";
 import type { BuiltinCatalog, ItemCard } from "../../server/catalog.ts";
 import { get, getAtRev } from "../api.ts";
 import { cardOf } from "../catalog/state.ts";
@@ -162,8 +163,11 @@ export function settingsPatch(
 
 const CURRENCIES = ["BRL", "USD", "EUR", "GBP", "CNY", "JPY"];
 
-/** The order rules in words, their codes shown small beside them (review m10; design §5.5). */
-const RULE_LABELS: Readonly<Record<string, string>> = {
+/**
+ * The order rules in words, their codes shown small beside them (review m10; design §5.5). The
+ * type takes every rule, so a rule cannot be added without its words (re-check fixes, core: xc 13).
+ */
+const RULE_LABELS: Readonly<Record<OrderRule, string>> = {
   "check-error": "An error in the model",
   "open-item": "An open item",
   placeholder: "A placeholder",
@@ -174,6 +178,7 @@ const RULE_LABELS: Readonly<Record<string, string>> = {
   "stale-price": "A price is over 30 days old",
   "no-connector": "Butts with no connector",
   unconnected: "An end with no connection",
+  coincident: "Two bars in one place",
 };
 const CORNER_WORDS: Readonly<Record<string, string>> = {
   "": "the default: a vertical bar runs through",
@@ -518,7 +523,8 @@ function SettingsForm({ m }: { m: Model }) {
             {Object.keys(rules).map((rule) => (
               <label key={rule} class="rule">
                 <span>
-                  {RULE_LABELS[rule] ?? rule} <code class="sub">{rule}</code>
+                  {(RULE_LABELS as Readonly<Record<string, string>>)[rule] ?? rule}{" "}
+                  <code class="sub">{rule}</code>
                 </span>
                 <select
                   data-testid={`settings-rule-${rule}`}

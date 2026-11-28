@@ -35,7 +35,7 @@ export function duplicateOps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): v
         "machining",
         id,
         `${opText(b, first)} is made ${ops.length} times at one place (${who}): give each its own position, or make it once`,
-        by.length > 0 ? { refs: by } : {},
+        { reason: "repeated", ...(by.length > 0 ? { refs: by } : {}) },
       );
     }
   }

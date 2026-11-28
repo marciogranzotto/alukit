@@ -625,14 +625,18 @@ export const autoConnect: CommandDef<z.infer<typeof AutoConnect>> = {
   args: AutoConnect,
   describe(_a, d) {
     if (d.created.length === 0) return undefined;
-    const { through, ends, angled } = d.info as JoinInfo;
+    const { through, ends, covers, angled } = d.info as JoinInfo;
     const cut =
       angled === undefined
         ? ""
         : angled.length === ends.length
           ? ", cut at an angle"
           : `, ${idList(angled)} cut at an angle`;
-    return `join ${idList(ends)} to ${through}${cut}`;
+    // The ends it joins, a corner's through end among them, for the step's words (`Said`).
+    return {
+      say: `join ${idList(ends)} to ${through}${cut}`,
+      joins: [...ends, ...(covers !== undefined ? [covers] : [])],
+    };
   },
   apply: (ctx, a) => guard(() => connectAt(ctx, a)),
 };
@@ -641,6 +645,8 @@ export const autoConnect: CommandDef<z.infer<typeof AutoConnect>> = {
 interface JoinInfo {
   through: string;
   ends: string[];
+  /** The through bar's own end at the point, a corner's, which the butt covers (`JoinPlan`). */
+  covers?: string;
   angled?: string[];
 }
 
@@ -706,6 +712,11 @@ function connectAt(ctx: CommandContext, a: z.infer<typeof AutoConnect>): Outcome
   }
   changed.sort(compareIds);
   checkAll(ctx, doc, [c.id, ...changed]);
-  const info: JoinInfo = { through, ends, ...(angled.length > 0 ? { angled } : {}) };
+  const info: JoinInfo = {
+    through,
+    ends,
+    ...(join.plan.covers !== undefined ? { covers: join.plan.covers } : {}),
+    ...(angled.length > 0 ? { angled } : {}),
+  };
   return done(withDoc(ctx, doc), { created: [c.id], changed }, info);
 }

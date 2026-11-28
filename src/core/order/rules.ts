@@ -71,6 +71,7 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
     to: Iterable<Key> | "all",
     message: string,
     entities: readonly string[] = [],
+    about: Pick<Reason, "services"> = {},
   ) => {
     const action = rules[rule];
     if (action === "off") return;
@@ -82,6 +83,7 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
         action,
         message,
         ...(entities.length > 0 ? { entities: [...entities] } : {}),
+        ...about,
       });
     }
   };
@@ -197,6 +199,7 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
       [e.key],
       `${what}: no price for ${e.count} machining service${e.count === 1 ? "" : "s"}; cover them with a cost line`,
       [e.item],
+      { services: { of: what, count: e.count } },
     );
   }
 

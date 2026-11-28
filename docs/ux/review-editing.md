@@ -582,6 +582,11 @@ The watch list's five risks were each tried:
   - *Steps:* the start card's A1 frame; A4 (post heading, **Replace…**, `40x80`, **Replace 4
     bars**, Roll 90); A6's bracket (`/`, `CT38-06`, **Use for placing**, `300`, b1's inner face);
     Esc, the bracket's outline row, Shift+F10, **Mirror…**, `=W / 2`.
+  - **Fixed** (2026-11-28, [re-check fixes, core](recheck-fixes-core-decisions.md) 1–6): a section is symmetric within its stated uncertainty, twice a
+    traced edge's local uncertainty, which the importer now measures against the catalogue's own
+    vector outlines (1.5 px, not the half pixel stated before) and states as data. The 40 × 80
+    mirrors and reverses, and the bracket lands on b2. A refusal's advice is tried before it is
+    given: it names the whole chain, or says why including it is refused too.
 
 ![A6 after A4: the mirror is refused on the 40 × 80 legs, in the core's words, with "include b1"](img/review-recheck/06-a6-mirror-refused-40x80-1440-dark.png)
 
@@ -599,7 +604,9 @@ The watch list's five risks were each tried:
   - **Fixed** (2026-11-28, [re-check fixes, app](recheck-fixes-app-decisions.md) 3): the preview says an image's end stays open only when nothing in
     the step claims it (the dry run's `effects.claimed`), whichever command lands the joint; the
     step's own words ("left open, joined at 2 ends") are the core's `mirror` describe, left to the
-    core.
+    core. **Fixed there too** ([re-check fixes, core](recheck-fixes-core-decisions.md) 16): the step gives each end one outcome, never "left open" for
+    an end the step joins ("mirror b13, making b14, joined at 2 ends"). After N1 the 40 × 80
+    brace's joints land on the posts' images, so nothing is open.
 - **N3. The groove check names a cut-counted hole from the design point.** The hole written "20
   mm from end a's cut" (form, row, and the cut list's "20.00 mm from end a") reads in Problems and
   in `alukit order` as "the tap M6 60.00 from design point a on face -x … less than half its
@@ -609,6 +616,8 @@ The watch list's five risks were each tried:
     references.
   - *Steps:* the plain frame, right-click b5's front face, **Add a hole…**, `20`, size `M6`,
     **Add the hole**, then Problems.
+  - **Fixed** (2026-11-28, [re-check fixes, core](recheck-fixes-core-decisions.md) 7, 8): every message about a hole names it from its own reference,
+    as written: "the tap M6 20.00 from end a's cut on face -x, through: …".
 - **N4. A refused Mirror still posts on Enter.** The preview already showed the refusal. Enter
   sent the step (HTTP 422), and a toast repeated it in the API's form ("mirror p1: mirror:
   p1/on: …"), with **Select the 3 places**. m3's rule (keep the gesture, say it in the bar) covers
@@ -625,6 +634,10 @@ The watch list's five risks were each tried:
   - A preview that said "lands on b9", or a check for coincident bars, would catch it.
   - *Steps:* the session's frame after A4, as run here (b9 itself is a 40 × 40), b9's outline row,
     Shift+F10, **Mirror…**, `=W / 2`, Enter.
+  - **Fixed** (2026-11-28, [re-check fixes, core](recheck-fixes-core-decisions.md) 9–14): Mirror copies no bar whose image already stands. b9 alone is
+    refused ("b9 is its own image across x = 500: the mirror would make nothing, and a copy would
+    stand on it"), and with a part, the part lands on b9 and the words say "b9 is its own image".
+    Two bars in one place, however made, are a check warning and an order warning (`coincident`).
 - **N6. Switching a hole's reference keeps its number and moves the hole.** Hole 1 (no `from`,
   "300 mm from design point a", cut list 260) switched to **end a's cut** in its row is stored
   `"from": "a.cut"` at 300. The cut list now says 300: the hole moved 40 mm along the bar, and
@@ -653,7 +666,8 @@ The watch list's five risks were each tried:
   stands.
 - **N10.** Two machining errors on one bar share the title "Machining to check at b5"; only their
   details tell the groove-wall tap from the off-piece hole. **Fixed** ([re-check fixes, app](recheck-fixes-app-decisions.md) 7): "A tap with too
-  little wall at b5", "A hole off its piece at b5".
+  little wall at b5", "A hole off its piece at b5". The core now titles them by a structured
+  `reason` its checks give, matching no text ([re-check fixes, core](recheck-fixes-core-decisions.md) 15).
 
 ### 9.5 The scenarios, compared
 

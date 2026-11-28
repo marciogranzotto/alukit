@@ -134,6 +134,13 @@ export interface Reason {
   action: "block" | "warn";
   message: string;
   entities?: string[];
+  /**
+   * On the `missing-price` reason for a supplier's machining that no cost line prices (§4.11):
+   * the offer, or the project item, whose lines carry it, and how many services. The problem list
+   * words it from these, never from the message (re-check follow-up to N10;
+   * docs/ux/recheck-fixes-core-decisions.md 15).
+   */
+  services?: { of: string; count: number };
 }
 
 export interface SupplierOrder {

@@ -430,7 +430,7 @@ describe("computed against published (design §3.6)", () => {
       ["traced-uncertainty", "test:sections/PF40-T", "from/uncertainty"],
     ]);
     await patchJson(traced, (d) => {
-      d.from.uncertainty = TRACED_UNCERTAINTY;
+      (d.from as { uncertainty?: unknown }).uncertainty = TRACED_UNCERTAINTY;
     });
     expect(codes(await checkTest(root))).toEqual([]);
   });
@@ -456,7 +456,7 @@ describe("computed against published (design §3.6)", () => {
     await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), traced);
     await patchJson(traced, (d) => {
       d.id = "PF40-T";
-      d.from.uncertainty = TRACED_UNCERTAINTY;
+      (d.from as { uncertainty?: unknown }).uncertainty = TRACED_UNCERTAINTY;
       d.fidelity = "traced";
       for (const g of d.grooves as { type: string }[]) g.type = "c8";
     });
@@ -474,7 +474,7 @@ describe("computed against published (design §3.6)", () => {
     await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), traced);
     await patchJson(traced, (d) => {
       d.id = "PF40-T";
-      d.from.uncertainty = TRACED_UNCERTAINTY;
+      (d.from as { uncertainty?: unknown }).uncertainty = TRACED_UNCERTAINTY;
       d.fidelity = "traced";
       for (const g of d.grooves as { type: string }[]) g.type = "c8";
     });
@@ -519,7 +519,7 @@ describe("a computed value's provenance follows its section's fidelity (§3.5)",
     await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), traced);
     await patchJson(traced, (d) => {
       d.id = "PF40-T";
-      d.from.uncertainty = TRACED_UNCERTAINTY;
+      (d.from as { uncertainty?: unknown }).uncertainty = TRACED_UNCERTAINTY;
       d.fidelity = "traced";
       for (const g of d.grooves as { type: string }[]) g.type = "c8";
     });

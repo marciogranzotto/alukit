@@ -1,19 +1,22 @@
+import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { type BuiltSection, buildSection, type CatalogSet } from "#catalog/link.ts";
 import { BUILTIN_DIR, openCatalog } from "#catalog/open.ts";
 import { capture } from "../cli/testing.ts";
 import { checkModel } from "./check/check.ts";
 import { applyBatch } from "./commands/apply.ts";
+import { effectsOf } from "./commands/dry.ts";
 import { stepWords } from "./commands/history.ts";
 import { hasSymmetry, symmetries } from "./commands/sections.ts";
 import type { RawDoc, State } from "./commands/types.ts";
 import { type Derived, derive } from "./derive/derive.ts";
+import { MACHINING_REASONS } from "./diagnostics.ts";
 import { emptyLock, LockFile } from "./lock/schema.ts";
 import { lockItems } from "./lock/source.ts";
-import { openLiveCatalogs } from "./project/open.ts";
-import { editJson, FIXTURES, readJson, scratchFixtures } from "./testing.ts";
+import { openLiveCatalogs, openProject } from "./project/open.ts";
+import { editJson, FIXTURES, mergePatch, readJson, scratchFixtures, subdirs } from "./testing.ts";
 
 /**
  * The designer re-check's core findings (docs/ux/review-editing.md §9.4; decisions in
@@ -45,10 +48,12 @@ const FRAME = [
 ];
 
 /** A4 as the app sends it: the four legs to the 40 × 80, rolled a quarter, each anchor turned. */
-const A4 = Object.entries({ b1: "-x+y", b2: "-x-y", b3: "+x+y", b4: "+x-y" }).map(([id, anchor]) => ({
-  cmd: "setBar",
-  args: { id, set: { item: "forseti:PF40-02", roll_deg: 90, anchor } },
-}));
+const A4 = Object.entries({ b1: "-x+y", b2: "-x-y", b3: "+x+y", b4: "+x-y" }).map(
+  ([id, anchor]) => ({
+    cmd: "setBar",
+    args: { id, set: { item: "forseti:PF40-02", roll_deg: 90, anchor } },
+  }),
+);
 
 /** The built-in Forseti catalog, and the test catalog the brace fixture names, open live. */
 let forseti: CatalogSet;
@@ -197,7 +202,9 @@ describe("N1: symmetry within a section's stated uncertainty", () => {
     const p2 = d.parts.get("p2");
     if (!p1?.placed || !p2?.placed) throw new Error("not placed");
     const r2 = (p: readonly number[]) => p.map((x) => Math.round(x * 100) / 100 + 0);
-    expect(r2(p2.origin)).toEqual(r2([1000 - (p1.origin[0] as number), p1.origin[1], p1.origin[2]]));
+    expect(r2(p2.origin)).toEqual(
+      r2([1000 - (p1.origin[0] as number), p1.origin[1], p1.origin[2]]),
+    );
   });
 
   it("mirrors and reverses a 40 × 80 bar itself, keeping its item", () => {
@@ -212,6 +219,29 @@ describe("N1: symmetry within a section's stated uncertainty", () => {
     // Reversed in place: the same body and cut, its design points swapped.
     expect(d1?.lengths.cut).toBeCloseTo(d0?.lengths.cut ?? Number.NaN, 9);
     expect(d1?.placed.A).toEqual(d0?.placed.B);
+  });
+});
+
+describe("every machining diagnostic says which problem it is (the re-check's N10, in the core)", () => {
+  // Every golden case, each of its patched cases, and the fixture projects: each machining
+  // diagnostic derive gives carries its reason, which the problem list titles it by.
+  const dirs = [
+    ...subdirs(join(FIXTURES, "golden-ends")),
+    ...subdirs(join(FIXTURES, "golden-gen")),
+    ...["base-frame", "brace", "cart", "order"].map((f) => join(FIXTURES, f)),
+  ];
+  it.each(dirs.map((d) => [basename(d), d]))("%s", async (_, dir) => {
+    const project = await openProject(dir);
+    const expected = join(dir, "expected.json");
+    const cases = existsSync(expected)
+      ? ((readJson(expected) as { cases?: { patch: unknown }[] }).cases ?? [])
+      : [];
+    for (const raw of [project.raw, ...cases.map((c) => mergePatch(project.raw, c.patch))]) {
+      for (const x of derive(raw, project.items).diagnostics) {
+        if (x.code !== "machining") continue;
+        expect(MACHINING_REASONS, x.message).toContain(x.reason);
+      }
+    }
   });
 });
 
@@ -409,7 +439,13 @@ describe("N5: mirror makes no twin of a bar", () => {
   });
 
   it("refuses to leave out a bar whose holes have no image on the bar already there", () => {
-    const hole = (at_mm: number, from: string) => ({ op: "hole", face: "+y", at_mm, from, d_mm: 7 });
+    const hole = (at_mm: number, from: string) => ({
+      op: "hole",
+      face: "+y",
+      at_mm,
+      from,
+      d_mm: 7,
+    });
     const one = run(
       brace(),
       { cmd: "setBar", args: { id: "b9", set: { ops: [hole(100, "a.cut")] } } },
@@ -489,5 +525,66 @@ describe("N5: the check warns of two bars in one place", () => {
     expect(
       order.suppliers.flatMap((s) => s.reasons).filter((x) => x.rule === "coincident"),
     ).toMatchObject([{ action: "warn" }]);
+  });
+});
+
+describe("a step says one outcome for each end (the re-check's follow-up to N2)", () => {
+  /** A post on the base rail's top face and under the top rail at x = 300, joined to both as drawing joins it. */
+  const post = () =>
+    run(
+      brace(),
+      { cmd: "addBar", args: { a: [300, 20, 40], b: [300, 20, 710] } },
+      { cmd: "autoConnect", args: { end: "b13.a", optional: true } },
+      { cmd: "autoConnect", args: { end: "b13.b", optional: true } },
+    ).state;
+  /** The app's mirror step (src/ui/edit/batches.ts, `mirrorBatch`): an autoConnect at each image end. */
+  const mirrorStep = (at: number, ends: readonly (readonly number[])[]) => [
+    mirror(["b13"], at),
+    ...ends.map((p) => ({ cmd: "autoConnect", args: { at: p, optional: true } })),
+  ];
+  /** A step's words, and the ends the dry run says the step claims. */
+  function step(s: State, commands: object[]) {
+    const r = run(s, ...commands);
+    const claimed = effectsOf(derived(s), derived(r.state), r.results).claimed;
+    return { r, words: stepWords({ commands, results: r.results }), claimed };
+  }
+
+  it("never says an end the step joins is left open", () => {
+    // Across x = 400 the image stands at x = 500, and b5's and b9's images (across x = 400, where
+    // no bar stands) give its joints nothing to land on: the mirror reports both ends open, and
+    // the step's autoConnects join them to b5 and b9 themselves.
+    const { r, words, claimed } = step(
+      post(),
+      mirrorStep(400, [
+        [500, 20, 40],
+        [500, 20, 710],
+      ]),
+    );
+    expect(r.results[0]?.info).toMatchObject({ open: ["b14.a", "b14.b"] });
+    expect(claimed).toEqual(expect.arrayContaining(["b14.a", "b14.b"]));
+    expect(words).toBe("mirror b13, making b14, joined at 2 ends");
+  });
+
+  it("says an end is left open only when nothing in the step joins it", () => {
+    // Only one autoConnect: b14.b stays open, and the words say so after what joined.
+    const one = step(post(), mirrorStep(400, [[500, 20, 40]]));
+    expect(one.claimed).not.toContain("b14.b");
+    expect(one.words).toBe("mirror b13, making b14, joined at 1 end; b14.b left open");
+    // The mirror alone, as `alukit do` sends it: nothing joins either end.
+    const alone = step(post(), [mirror(["b13"], 400)]);
+    expect(alone.words).toBe("mirror b13, making b14; b14.a and b14.b left open");
+  });
+
+  it("counts a corner's through end as joined, as the dry run claims it", () => {
+    // Two free ends meeting at a point clear of the frame: the vertical runs through (the corner
+    // rule's default), and the butt covers its end there as it joins the other's.
+    const s = run(
+      brace(),
+      { cmd: "addBar", args: { a: [2000, 0, 0], b: [2000, 0, 750] } },
+      { cmd: "addBar", args: { a: [2000, 0, 0], b: [2500, 0, 0] } },
+    ).state;
+    const { r, claimed } = step(s, [{ cmd: "autoConnect", args: { at: [2000, 0, 0] } }]);
+    expect(r.results[0]?.info).toMatchObject({ through: "b13", ends: ["b14.a"], covers: "b13.a" });
+    expect([...claimed].sort()).toEqual(["b13.a", "b14.a"]);
   });
 });

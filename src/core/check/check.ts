@@ -298,7 +298,9 @@ function sameBody(p: PlacedBar & { B: V3 }, q: PlacedBar & { B: V3 }): boolean {
       // The vertex placed at p's design point a (§4.4), then read in q's section frame.
       const lx = u - (p.anchor[0] as number) + (p.off[0] as number);
       const ly = v - (p.anchor[1] as number) + (p.off[1] as number);
-      const W = p.A.map((c, i) => c + lx * (p.frame.x[i] as number) + ly * (p.frame.y[i] as number));
+      const W = p.A.map(
+        (c, i) => c + lx * (p.frame.x[i] as number) + ly * (p.frame.y[i] as number),
+      );
       const r = W.map((c, i) => c - (q.A[i] as number)) as unknown as V3;
       const x = dot(r, q.frame.x) + (q.anchor[0] as number) - (q.off[0] as number);
       const y = dot(r, q.frame.y) + (q.anchor[1] as number) - (q.off[1] as number);

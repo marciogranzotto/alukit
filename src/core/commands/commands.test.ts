@@ -440,13 +440,14 @@ describe("connections", () => {
   it("autoConnect butts through the bar passing the point, else a vertical, else the lowest id", () => {
     const bare = ok(g("G01"), { cmd: "removeEntity", args: { id: "c1" } }).state;
     const a = ok(bare, { cmd: "autoConnect", args: { at: [1000, 0, 0] } });
-    expect(a.results[0]?.info).toEqual({ through: "b1", ends: ["b2.a"] });
+    expect(a.results[0]?.info).toEqual({ through: "b1", ends: ["b2.a"], covers: "b1.b" });
     expect(geometry(derived(a.state))).toEqual(geometry(derived(g("G01"))));
 
     const post = ok(bare, { cmd: "addBar", args: { a: [1000, 0, 0], b: [1000, 0, 500] } }).state;
     expect(ok(post, { cmd: "autoConnect", args: { end: "b3.a" } }).results[0]?.info).toEqual({
       through: "b3",
       ends: ["b1.b", "b2.a"],
+      covers: "b3.a",
     });
     const span = ok(bare, { cmd: "addBar", args: { a: [1000, -300, 0], b: [1000, 300, 0] } }).state;
     expect(ok(span, { cmd: "autoConnect", args: { at: [1000, 0, 0] } }).results[0]?.info).toEqual({
@@ -503,9 +504,21 @@ describe("connections", () => {
     const post = ok(drawn, { cmd: "addBar", args: { a: [1000, 0, 0], b: [1000, 0, 500] } }).state;
     const at = (s: State, prefer: string, where: number[]) =>
       ok(s, { cmd: "autoConnect", args: { at: where, prefer } }).results[0]?.info;
-    expect(at(post, "y", [1000, 0, 0])).toEqual({ through: "b2", ends: ["b1.b", "b5.a"] });
-    expect(at(post, "first", [1000, 0, 0])).toEqual({ through: "b1", ends: ["b2.a", "b5.a"] });
-    expect(at(post, "vertical", [1000, 0, 0])).toEqual({ through: "b5", ends: ["b1.b", "b2.a"] });
+    expect(at(post, "y", [1000, 0, 0])).toEqual({
+      through: "b2",
+      ends: ["b1.b", "b5.a"],
+      covers: "b2.a",
+    });
+    expect(at(post, "first", [1000, 0, 0])).toEqual({
+      through: "b1",
+      ends: ["b2.a", "b5.a"],
+      covers: "b1.b",
+    });
+    expect(at(post, "vertical", [1000, 0, 0])).toEqual({
+      through: "b5",
+      ends: ["b1.b", "b2.a"],
+      covers: "b5.a",
+    });
     const tee = ok(drawn, { cmd: "addBar", args: { a: [500, 0, 0], b: [500, 300, 0] } }).state;
     expect(at(tee, "y", [500, 0, 0])).toEqual({ through: "b1", ends: ["b5.a"] });
     const slope = ok(
@@ -516,7 +529,11 @@ describe("connections", () => {
         args: { a: [300, 300, 300], b: [300, 300, 900] },
       },
     ).state;
-    expect(at(slope, "x", [300, 300, 300])).toEqual({ through: "b2", ends: ["b1.b"] });
+    expect(at(slope, "x", [300, 300, 300])).toEqual({
+      through: "b2",
+      ends: ["b1.b"],
+      covers: "b2.a",
+    });
     expect(no(drawn, { cmd: "autoConnect", args: { at: [0, 0, 0], prefer: "z" } })[0]?.code).toBe(
       "args",
     );
@@ -567,8 +584,8 @@ describe("connections", () => {
     );
     expect(a.results.map((r) => r.info)).toEqual([
       undefined,
-      { through: "b1", ends: ["b2.a"] },
-      { through: "b2", ends: ["b3.a"] },
+      { through: "b1", ends: ["b2.a"], covers: "b1.b" },
+      { through: "b2", ends: ["b3.a"], covers: "b2.b" },
     ]);
   });
 

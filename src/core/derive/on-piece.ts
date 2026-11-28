@@ -36,7 +36,7 @@ export function holesOnPiece(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): v
         "machining",
         id,
         `the ${what} on face ${o.face}${o.by ? ` (${o.by})` : ""}, ${mm(at)} mm from ${from}, reaches ${mm(off.reach)} mm past end ${off.end}'s cut face: off the piece, a shop cannot make it there`,
-        o.by ? { refs: [o.by] } : {},
+        { reason: "off-piece", ...(o.by ? { refs: [o.by] } : {}) },
       );
     }
   }

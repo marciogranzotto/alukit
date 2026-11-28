@@ -81,8 +81,32 @@ export interface Diagnostic {
   field?: string;
   /** Other entities the problem names: both providers of an end, both ends of a chain. */
   refs?: string[];
+  /**
+   * What a check whose code covers several findings found (`machining`'s: a hole off its piece,
+   * a tap in a groove's opening, …): the problem list titles it by this, never by its words
+   * (re-check N10; docs/ux/recheck-fixes-core-decisions.md 15).
+   */
+  reason?: MachiningReason;
   message: string;
 }
+
+/**
+ * The findings of derive's machining checks (§5.5), each a `machining` diagnostic's `reason`:
+ * a hole reaching past a cut face (`on-piece.ts`), a tap more than half in a groove's opening
+ * (`face-taps.ts`), one machining made twice at one place (`duplicates.ts`), and an end tap on
+ * a section with no known cores, on no core, not fitting its core, or whose fit is not known
+ * (`cores.ts`).
+ */
+export const MACHINING_REASONS = [
+  "off-piece",
+  "tap-in-groove",
+  "repeated",
+  "no-cores",
+  "off-core",
+  "core-fit",
+  "fit-unchecked",
+] as const;
+export type MachiningReason = (typeof MACHINING_REASONS)[number];
 
 const RANK: Record<Severity, number> = { error: 0, warn: 1, info: 2 };
 
