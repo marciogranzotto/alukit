@@ -26,6 +26,7 @@ move, A1's ten clicks, A8's two steps, and the log without arguments
 6. [What works, and must be kept](#6-what-works-and-must-be-kept)
 7. [Notes on the record](#7-notes-on-the-record)
 8. [Sources](#8-sources)
+9. [Re-check after the fixes (2026-11-27)](#9-re-check-after-the-fixes-2026-11-27)
 
 ## 1. Verdict
 
@@ -56,6 +57,10 @@ and trust what it orders. Until then they must check every copy and every clicke
 which is the work AluKit exists to remove.
 
 **Counts:** 3 blockers, 7 majors, 14 minors, 5 nits. *(Corrected 2026-11-27: the minors' table lists 15, m1–m15; the count said 14.)*
+
+*Re-checked on `main` after the three fix rounds: all three blockers and all seven majors fixed,
+one new major (Mirror refuses bars and parts on traced sections, such as the 40 × 80). See
+[section 9](#9-re-check-after-the-fixes-2026-11-27).*
 
 ## 2. Method
 
@@ -296,13 +301,13 @@ nothing warns.** (A8)
 |---|---|---|---|
 | m1 | **Edit** on a param opens its field without focusing it: typing goes nowhere (A2 (i), whose guide line says "Edit beside W, type 1100") | *Measured* twice: the focus stays on "Edit W" | Focus and select the field on Edit, as the inspector's own fields do — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 5) |
 | m2 | Duplicate copies the label and tags: the rail 300 below the top reads "top rail, front" and is tagged `top`, so **Select tagged top** and `H` take it | *Measured*: b18's label and tags | Keep the tags but number the copy's label ("top rail, front 2"), as CAD tools number copied instances (**inferred**) — **Left for the core**: the copy is the core's `array` command, and the CLI's copy must number it the same way ([review fixes, app](review-fixes-app-decisions.md)) |
-| m3 | A refused Move speaks the API: "give joined: \"detach\" to free it"; and Enter sends a step the preview already knew was refused (HTTP 422) | *Measured* | Say "hold Alt to detach it"; keep the gesture open and say it in the bar instead of posting — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 6) |
+| m3 | A refused Move speaks the API: "give joined: \"detach\" to free it"; and Enter sends a step the preview already knew was refused (HTTP 422) | *Measured* | Say "hold Alt to detach it"; keep the gesture open and say it in the bar instead of posting — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 6). *Re-check: for Move and Duplicate; a refused Mirror still posts ([§9](#9-re-check-after-the-fixes-2026-11-27), N4)* |
 | m4 | Every gesture's field is named "Draw bar: value" for a screen reader (Move, Duplicate, Mirror, Align, an end drag) | *Measured* (accessibility tree); *read* `tools/CommandBar.tsx:455` passes `tool="draw"` | Name it by the gesture: "Move: offset", "Mirror: plane at" — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 7) |
 | m5 | Key caps say Ctrl on macOS (menu "Ctrl+D", inspector "Ctrl+C", help "Ctrl Z"), Alt for Option | *Measured* on a Mac user agent; *read* `actions/registry.ts:122` `mod: "Ctrl"` | ⌘ and ⌥ on macOS (Apple HIG, keyboards) — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 8) |
 | m6 | The selection's length label and the tool's readout collide: on top of each other at 1000 × 700, touching at 1440 | *Measured* (label rectangles, screenshots) | Put the selection label in the labels' `avoid` list (`viewer/labels.ts`), or show one combined label while a gesture runs — **Fixed**, by the avoid list ([review fixes, app](review-fixes-app-decisions.md) 9) |
 | m7 | At 1000 × 700 the orientation gizmo lies under the tool rail; its axis buttons are covered | *Measured*: gizmo at (284, 252) 72 × 72, rail down to y = 321 | Anchor the gizmo below the rail's measured height, or bottom-right — **Fixed**, beside the rail when it reaches the gizmo ([review fixes, app](review-fixes-app-decisions.md) 10) |
 | m8 | Pattern previews nothing before **Create**, and its prompt stays "Click the bar to repeat along" after along, pitch and count are set | *Measured* twice | Ghost copies and a dry-run reading, as Duplicate's `4x` has; a prompt that moves on — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 11) |
-| m9 | Faces are named in section axes only: on a rolled 40 × 80 leg the face that looks +X is "-y" in the snap tip, the menu, and the hole and part face selects; the Offset rows already say "(world +Y)" | *Measured*: b3 rolled 90° has section y along world −X | Add the world direction everywhere a face is named: "face −y (+X)" — **Fixed**, written "face −y (world +X)" ([review fixes, app](review-fixes-app-decisions.md) 12) |
+| m9 | Faces are named in section axes only: on a rolled 40 × 80 leg the face that looks +X is "-y" in the snap tip, the menu, and the hole and part face selects; the Offset rows already say "(world +Y)" | *Measured*: b3 rolled 90° has section y along world −X | Add the world direction everywhere a face is named: "face −y (+X)" — **Fixed**, written "face −y (world +X)" ([review fixes, app](review-fixes-app-decisions.md) 12). *Re-check: partly; Draw's second point still says only "b4 -x face" ([§9](#9-re-check-after-the-fixes-2026-11-27), N7)* |
 | m10 | The menu's **Show**, beside Hide, zooms to the bar and opens a callout that says only "b5 / b5"; it reads as un-hide, and **Fit to the selection** is right above it | *Measured* | Drop it from a visible entity's menu, or name it for what it does — **Fixed**: Show draws a hidden selection again, offered only then ([review fixes, app](review-fixes-app-decisions.md) 13) |
 | m11 | The menu's letter jump takes `D` to **Delete**, not Duplicate (whose key is Ctrl+D); the dialog then focuses "Delete all n", so a typed space deletes | *Measured*: Shift+F10, D, Enter, then typing an offset deleted b18 and its two joints | Give each entry its own access key (Duplicate D, Delete L), as menu access keys do — **Fixed**, and Delete's dialog focuses Cancel ([review fixes, app](review-fixes-app-decisions.md) 14) |
 | m12 | **Join** on an end that cannot be joined is offered and then refused (the plate, a face-drawn rail) | *Measured* | Offer Join only where `autoConnect` would make it, as the `unconnected` problem already decides (e1 9) — **Fixed** with M7 ([review fixes, app](review-fixes-app-decisions.md) 4) |
@@ -446,3 +451,260 @@ say nothing about a real GPU and are not reported as findings.
 | The menu, 1000 light | Rotate, 1000 dark |
 | ![Pattern set up: no ghosts, the prompt unchanged](img/review-editing/17-pattern-no-preview-1440-dark.png) | ![Draw bar in the light theme](img/review-editing/18-draw-1440-light.png) |
 | Pattern before Create, 1440 dark | Draw bar, 1440 light |
+
+## 9. Re-check after the fixes (2026-11-27)
+
+*The same designer's pass, repeated on `main` at `4a5ccfe`, after the three fix rounds merged
+([joins](review-fixes-joins-decisions.md), [machining and speed](review-fixes-machining-decisions.md),
+[app](review-fixes-app-decisions.md)). Each blocker and major was reproduced the way section 3 and
+section 4 found it, through the app, with the guide's steps, the mouse and the keys, on the same
+projects. Nothing in the product was changed. Labels as above: **measured** means seen in the
+running app or printed by the CLI, **read** means read in the code at `4a5ccfe`, **inferred** means
+a judgement.*
+
+### 9.1 How it ran
+
+- **Build:** `pnpm install --frozen-lockfile --offline`, `pnpm build`, then `alukit serve <dir>
+  --no-open --port <n>` on scratch copies, each on its own port:
+  - an empty project, `alukit new --catalog forseti --currency BRL`, on which A1 to A11 and A13
+    ran as one session, each scenario following the one before, as in section 3;
+  - the review's plain box frame (the A1 frame made by the CLI without params), for the clicked
+    rail, the holes, the Esc drag, the light theme at 1000 × 700, the menu's minors and A14;
+  - `tests/fixtures/cart` with the T-nut plate added by the CLI, for M7 and A12;
+  - the 1,008-bar lattice, built by `latticeBatch` (84 box frames of 500 mm, 672 butts), the
+    review's own lattice in a fixture.
+- **Driving:** Playwright in headless Chromium with SwiftShader, as `tests/e2e` runs it, at
+  1440 × 900 dark, and 1000 × 700 light for M5, m6 and m7. The steps were clicks and keys on what
+  the screen showed; the hook (`window.__alukit`) was read only for screen positions, the
+  selection, the tool's words and to wait for a drawn revision, never to act. The CLI (`derive`,
+  `check`, `cutlist`, `bom`, `order`, `log`, `diff`, `do --dry-run`) was the oracle. The scripts
+  were throwaway and are not committed.
+- **Load:** load average 6 to 11 throughout, against the review's 38 to 45. Times are the
+  script's, with 15 ms between typed characters; they are floors, not a person's.
+
+### 9.2 Blockers and majors
+
+| # | Verdict | Evidence (measured, against the review's) |
+|---|---|---|
+| B1 | **Fixed** | The review's path: a slat typed between the shelf rails (preview "will butt on b9 · will butt on b10 · cut 520"), `X`, b9 clicked, pitch 150, count 4, **Create**. The four slats are 520, each butted, by `c17`/`c18` and `c17@1`–`c17@3`/`c18@1`–`c18@3`; count 5 adds `b19@4`, 520 and joined; `alukit check` silent. The review had one 520 and three 600 running through both rails |
+| B2 | **Fixed**, with confusing words on 40 × 80 posts | A5's brace (958.67, both ends 28.81°) mirrored at `=W / 2` from the menu: the image is 958.67, both ends butted (`c19`, `c20`) and angled, where the review's was 1141.27 and unjoined. On 40 × 40 posts the preview is clean ("makes b19 · joins b4 (c16) · joins b3 (c17) · cut 1049.97"). On the session's 40 × 80 posts it reads "makes b20 · joins b4 (c19) · joins b3 (c20) · b20.a and b20.b stay open · cut 958.67", and the step "… left open, joined at 2 ends" (N2) |
+| B3 | **Fixed** | On the plain frame, a rail clicked from b3's inner face to b4's at z = 560: "will butt on b3 · will butt on b4 · cut 920" before the second click; the step "add bar b17, joined at 2 ends"; cut 920; two brackets more in the BOM; **Ready to order**. The same clicks with **Join ends** off: the check warns "b17.a lies on b3's +x face with no connection" for each end, the top bar reads **Ready, 2 warnings**, each problem has a **Join with the default butt** that works, and so does the end row's **Join**. The A5 brace by pointer on the session (40 × 80 posts) also butts at both ends, cut 1004.04 |
+| M1 | **Fixed** | One angled brace: "2 machining services on Perfil Estrutural em Alumínio 40×40 Básico – Canal 8 (forseti:PF40-01) have no price", on b17 ("2 × angled cut"), the `addCost` line in its detail, no fix button; with holes, "3 machining services … (2 × hole Ø7.00, 1 × tapped hole M6)". No "No supplier sells", no disabled **Set a price…** |
+| M2 | **Fixed** | The menu's **Add a hole on b5's face -x (world -Y), 560 mm from end a's cut…** opens the form with the distance focused and its 560 selected; typing `20`, a click in size and `M6` stores `at_mm` 20 and `thread` M6. The review got 2 and "0M6" |
+| M3 | **Fixed**, one message still in design terms | The menu offers the cut list's number (560 for a pointer at x = 600 on a rail cut back to x = 40); the hole is stored `"from": "a.cut"`, the row reads "M6 on face -x, 20 mm from end a's cut" and the cut list "tap M6 20.00 mm from end a". A hole 2 mm from the cut is a `machining` error: "reaches 1.50 mm past end a's cut face: off the piece", and `alukit check` exits 1. An existing hole without `from` keeps its place and reads "Ø7 on face +y, 300 mm from design point a" (cut list 260). The groove check still names the cut-counted M6 "60.00 from design point a" (N3) |
+| M4 | **Fixed** | An open end's handle dragged 150 mm, `500` typed, Esc: the gesture ends at once and the release sends nothing (no request, revision unchanged). Backspace in a drag still only clears the digits |
+| M5 | **Fixed** | Light theme, 1000 × 700: the Duplicate and Move readouts draw `rgb(232, 236, 240)` on `rgba(15, 18, 22, 0.88)`, 11.4:1 composited over white or black. The review measured 1.2:1 |
+| M6 | **Fixed** | The lattice, one 12-bar frame (Select the whole assembly from b21) moved by `0, -800, 0`, three runs: the preview's reading 155–217 ms after the last key (the server 113–147 ms), the step drawn 355–415 ms after Enter (the server 125–130 ms), logged as one `transform`; Undo drawn in about 300 ms. The review: 3.2 s and 2.2 s, the server 1.9 s each. The load was lower here (8–9 against 38–45), but the server times match the machining note's 128 and 142 ms under load 60–86, so the gain is the fix. A Duplicate of the same frame, which asks a join at all 24 ends, previewed in 260 ms (server 187) and stepped in 743 ms (server 191) |
+| M7 | **Fixed** | A click on the T-nut plate in the view: both ends read "held by c36 (face joint), square", no **Join**; a **Joints** row "face joint c36 (T-nut plate): with b35, 2 stations" with **Edit**; the plate's menu has **Edit c36…**, which opens the face form. The review found "open: nothing joins it" and a refused Join |
+
+![B1 fixed: the slats' corners all joined in the outline, and no 600 in the cut list](img/review-recheck/01-b1-slats-520-1440-dark.png)
+
+*A8 by the review's path, after count 5: every slat corner joined, and the 40 × 40 pieces are
+958.67, 840 and 520 only (11 × 520: six side rails and five slats).*
+
+![B2 on the session's 40 × 80 posts: the image is right, but the preview says both "joins b4 · joins b3" and "b20.a and b20.b stay open"](img/review-recheck/02-b2-mirror-words-1440-dark.png)
+
+![B3 fixed: "will butt on b3 · will butt on b4 · cut 1004.04" before the second click](img/review-recheck/03-b3-face-rail-preview-1440-dark.png)
+
+![1000 × 700, light: the Duplicate readout legible and clear of the length label, the gizmo beside the tool rail](img/review-recheck/04-readout-gizmo-1000-light.png)
+
+![M7 fixed: the plate's end reads "held by c36 (face joint)", with no Join](img/review-recheck/05-m7-plate-held-1440-dark.png)
+
+### 9.3 Minors and nits checked
+
+All fifteen minors and the five nits were checked; the minimum asked was about half.
+
+| # | Verdict | Evidence (measured unless said) |
+|---|---|---|
+| m1 | Fixed | **Edit** beside W: the field has the focus with "1000" selected; `1100`, Enter: one step, and the focus back on Edit |
+| m2 | Not fixed (left for the core, as decided) | The duplicated rail b18 is "top rail, front", tagged `top`; **Select tagged top** and `H` take it |
+| m3 | Fixed for Move and Duplicate | A move of b9 by `0, -100, 0`: "this move would break a joint: … · hold Option to detach it", and Enter sends nothing. A refused Mirror still posts (N4) |
+| m4 | Fixed | The gesture field is named "Move b9: distance" |
+| m5 | Fixed | On a Mac user agent the menu reads ⌘A, ⌘D, ⇧H, and the refusal "hold Option" |
+| m6 | Fixed | 1000 × 700 light, A7's duplicate: the readout and the selection's length label overlap by 0 px² (the review: on top of each other) |
+| m7 | Fixed | 1000 × 700: the gizmo at x 350, right of the rail's edge at 342; overlap 0 px² |
+| m8 | Fixed | Before **Create**: three ghost slats and "makes 3 copies: 3 bars more"; the prompt moves on to "Repeats along b9: set the pitch and the count, then Create makes the copies drawn" |
+| m9 | Partly fixed | The menu, the hole and part selects and Draw's first point say "face -y (world +X)"; Draw's second point still says "b4 -x face at 560 · 920 mm" (N7) |
+| m10 | Fixed | The menu of a drawn bar has no **Show**; after `H`, its row's menu has **Show**, which draws it again |
+| m11 | Fixed | Shift+F10, `D` goes to **Duplicate** and runs nothing; `L` goes to **Delete**; Delete's dialog focuses **Cancel** |
+| m12 | Fixed | With M7: no **Join** on the plate's ends; on a truly open end the Join offered works |
+| m13 | Fixed as decided | **Joined with**: "Corner joints that fit" (16) first, "Other connectors that fit" (14) after, 30 in all against the review's 33, nothing chosen; the bracket beside it is one click. The 180° extender is classed a splice in the catalog (**read**), and butts list no splices |
+| m14 | Fixed | In the outline, b5 then Shift+↓ twice selects b5, b6, b7 |
+| m15 | Fixed | The bracket's arrow dragged toward 447 lands on 450, one step "move p1 by [0, 0, 150]"; no field needed |
+| n1 | Fixed | "Delete b14?" and **Delete** |
+| n2 | Not fixed (left for the core) | "change b1's roll and anchor, change b2's roll and anchor and 2 more" |
+| n3 | Fixed in part | "writes b17.a z: H - 300 - 100"; the sum is not folded (the core's) |
+| n4 | Fixed | The inspector's Duplicate under Draw: "works in Select or Move: press Esc first" |
+| n5 | Fixed | No hover tip while an end is dragged |
+
+### 9.4 New findings
+
+The watch list's five risks were each tried:
+
+- **The `unconnected` warning and order rule** fired only where it should. Over all 59 fixture
+  projects it warns three times, the open corners of G14 and G24, as the joins note says. It
+  stays silent on a fresh frame, on frames standing on a context floor bar, on a strip lying
+  along a rail, on a rail 0.5 mm short of a post, and on the plate held by a face joint. On a
+  real open end it says so in the check, the order ("Ready, 2 warnings") and Problems, with a
+  Join that works. Its words in the order are a nit (N8).
+- **Holes from `"a.cut"`** read sensibly in an existing project: a hole written without `from`
+  stays where it was and its row says "from design point a". Two rough edges remain: the groove
+  check's words (N3), and switching a hole's reference (N6).
+- **Pattern copies follow their template's joints when those are edited later.** A new
+  connector on `c17` reaches all five copies (5 × CN40-01 in the BOM). **Free from c17** on the
+  template frees every copy, and the check names each copy's open end. **Join with the default
+  butt** on a copy's problem joins the template's end ("join b19.a to b9"), and all five copies
+  follow, 520 again.
+- **Mirror of a bar with no counterpart** says so honestly: across x = 2000 the preview reads
+  "makes b20 · b20.a and b20.b stay open · cut 1141.27", and the image floats free and uncut.
+  Mirror has other problems, though (N1, N2, N4, N5).
+- **Move on 1,008 bars**: see M6.
+
+**Major**
+
+- **N1. Mirror refuses bars, and parts on bars, whose section is traced. In §12's order, A6's
+  mirror fails after A4.** On the session, after A4's legs became 40 × 80 (PF40-02), the
+  bracket on b1 mirrored at `=W / 2` is refused: "p1/on: b1 is not mirrored, and b2 stands on
+  its image's line but is not its mirror image (another section or placement); include b1".
+  Following the advice fails too: mirroring a PF40-02 bar itself is refused with "forseti:PF40-02
+  is not symmetric and has no other hand, so its mirror image is another item" (measured on a
+  scratch project). The same bracket mirrors on 40 × 40 legs, rolled or not, and fails on
+  40 × 80 legs, rolled or not (measured with `alukit do --dry-run`).
+  - *Read:* `hasSymmetry` (`core/commands/sections.ts`) needs every outline vertex's reflection
+    to lie on the boundary. PF40-02's section is `"fidelity": "traced"` from a raster image, so
+    its outline is not exactly symmetric. In the Forseti catalog, 8 of the 27 sections are traced.
+  - Not introduced by the fix rounds: the review never ran this mirror, which was gap 2 then.
+    It blocks a §12 scenario run in order, on a common profile. The workaround is to place the
+    second bracket by hand.
+  - *Fix direction (inferred):* judge a traced section's symmetry within its stated uncertainty,
+    or by its grooves and bounding box. The refusal should not advise an inclusion that is refused
+    in turn.
+  - *Steps:* the start card's A1 frame; A4 (post heading, **Replace…**, `40x80`, **Replace 4
+    bars**, Roll 90); A6's bracket (`/`, `CT38-06`, **Use for placing**, `300`, b1's inner face);
+    Esc, the bracket's outline row, Shift+F10, **Mirror…**, `=W / 2`.
+
+![A6 after A4: the mirror is refused on the 40 × 80 legs, in the core's words, with "include b1"](img/review-recheck/06-a6-mirror-refused-40x80-1440-dark.png)
+
+**Minor**
+
+- **N2. Mirror's words contradict themselves where the posts' section is traced.** The brace's
+  image is right (B2), but the preview says "joins b4 (c19) · joins b3 (c20) · b20.a and b20.b
+  stay open", and the step and Undo say "mirror b17, making b20; b20.a and b20.b left open, joined
+  at 2 ends".
+  - *Inferred from N1 and rj 4–5:* the core's `mirror` cannot land the brace's own joints on the
+    posts' images, so it reports both ends open; the app's joins after it then butt them.
+  - The words come from B2's fix: the preview should merge the two, saying "joins" alone when a
+    join closes an end that `mirror` left open.
+  - *Steps:* after A4, A5 typed, then the brace's outline row, Shift+F10, **Mirror…**, `=W / 2`.
+- **N3. The groove check names a cut-counted hole from the design point.** The hole written "20
+  mm from end a's cut" (form, row, and the cut list's "20.00 mm from end a") reads in Problems and
+  in `alukit order` as "the tap M6 60.00 from design point a on face -x … less than half its
+  circle of wall".
+  - M3's two meanings are back, in one message. The new off-piece error words its hole from the
+    cut ("2.00 mm from end a's cut"), so the two machining errors on one bar use different
+    references.
+  - *Steps:* the plain frame, right-click b5's front face, **Add a hole…**, `20`, size `M6`,
+    **Add the hole**, then Problems.
+- **N4. A refused Mirror still posts on Enter.** The preview already showed the refusal. Enter
+  sent the step (HTTP 422), and a toast repeated it in the API's form ("mirror p1: mirror:
+  p1/on: …"), with **Select the 3 places**. m3's rule (keep the gesture, say it in the bar) covers
+  Move and Duplicate only. *Steps:* N1's, then Enter.
+- **N5. Mirror can make an exact twin of a bar, joined, and nothing says so.** A right-click
+  meant for open ground landed on the shelf rail b9, so the menu was b9's. **Mirror…** at `=W / 2`
+  previewed "makes b18 · joins b2 (c15) · joins b1 (c16) · cut 840". The step made b18 exactly on
+  b9, reversed: one bar and two brackets more in the BOM, and `alukit check` silent.
+  - Not introduced by the fixes, but their joins now hide it: `alukit do mirror` alone leaves the
+    twin's ends open, and the check warns of them.
+  - A preview that said "lands on b9", or a check for coincident bars, would catch it.
+  - *Steps:* the session's frame after A4, as run here (b9 itself is a 40 × 40), b9's outline row,
+    Shift+F10, **Mirror…**, `=W / 2`, Enter.
+- **N6. Switching a hole's reference keeps its number and moves the hole.** Hole 1 (no `from`,
+  "300 mm from design point a", cut list 260) switched to **end a's cut** in its row is stored
+  `"from": "a.cut"` at 300. The cut list now says 300: the hole moved 40 mm along the bar, and
+  nothing said so.
+  - Reverse and split keep a hole where it is (rm 7), and the likeliest reason to switch an old
+    hole is to read it as the cut list does.
+  - *Fix direction (inferred):* keep the hole in place and convert the number, or say how far it
+    moves.
+  - *Steps:* write `{"op":"hole","face":"+y","at_mm":300,"d_mm":7}` on b5 by `alukit do setBar`;
+    in b5's inspector, Hole 1's "from", **end a's cut**.
+
+**Nits**
+
+- **N7.** Draw's second point names its face without the world direction ("b4 -x face at 560 ·
+  920 mm"), where the first says "b3 +x face (world +X) at 560". *Read:* `tools/wire/draw.ts`
+  shows the end point's `label`, not its `tip`.
+- **N8.** The order quotes the check's line whole, so the end and the rule appear twice:
+  "**warn** unconnected: unconnected b17.b: b17.b lies on b4's -x face with no connection".
+- **N9.** After Enter on a refused Move, the command bar holds the refusal twice, once as the
+  preview and once as the result.
+- **N10.** Two machining errors on one bar share the title "Machining to check at b5"; only their
+  details tell the groove-wall tap from the off-piece hole.
+
+### 9.5 The scenarios, compared
+
+The session ran in §12's order on one project, as the review did. The paths are the review's
+(section 3), so A8 is the "select it, then **Create**" path, two steps, not the guide's one-step
+"Draw the bar to repeat". Clicks count a filled field as one, keys count characters; steps are the
+server's.
+
+- **A2 (i):** after it, W went back to 1000 by Undo, because the review's later numbers (the
+  brace's 958.67) are those of a 1000-wide frame.
+- **A2 (ii) and A15** were not run, as in the review.
+- **The integration's times** (the last column) are from `editing.spec` on its own paths and
+  machine, for scale only.
+
+| # | Review (section 3) | Re-check: path and what it said | Clicks | Keys | Steps | Time | Integration's time |
+|---|---|---|---|---|---|---|---|
+| A1 | Pass, 1 step; hesitated over 33 connectors (m13) | Start card, every field up front, the suggested CT38-06 one click; cut list byte-identical to `alukit add frame --params` | 8 | 13 | 1 | 2.0 s | 3.8 s |
+| A2 (i) | Pass, 1 step, after a click in the field (m1) | **Edit** beside W, `1100`, Enter; the toast "b5 920.00 → 1020.00 mm · …" | 1 | 5 | 1 | 0.6 s | 0.8 s |
+| A3 | Pass, 1 step | **by tag**, **shelf**, `D`, `0, 0, 150`, Enter; check unchanged | 2 | 11 | 1 | 1.1 s | 1.6 s |
+| A4 | Pass, 6 steps (known) | **post**, **Replace…** (Find empty, its placeholder the size), `40x80`, **Replace 4 bars**, Roll `90`; legs in 2 clicks; rails 840 and 520 | 8 | 8 | 2 | 2.2 s | 2.0 s |
+| A5 by pointer | Unjoined (B3) | `B`, b3's inner face at 100, b4's at 650; "will butt on b3 · will butt on b4 · cut 1004.04" | 2 | 1 | 1 | 2.1 s | — |
+| A5 typed | Pass, 1 step; then a false Blocked title (M1) | The guide's typed path; 958.67, 28.81° both ends; the order's reason in M1's new words | 2 | 32 | 1 | 1.6 s | 1.6 s |
+| A6 | Placement 1 step; mirror known gap 2 | Placed: tip "b1 -y face (world +X) at 120 · 300 mm from end a of b1". Mirror at `=W / 2`: **refused** on the 40 × 80 legs (N1) | 3 | 11 | 1 | 1.4 s | 1.5 s |
+| A7 | Pass, 1 step; copied label and tag (m2) | b13, **Duplicate**, `0, 0, -300`; "makes b18 · joins b1 (c15) · joins b2 (c16) · cut 840" | 2 | 11 | 1 | 1.2 s | 1.8 s |
+| A8, four | Copies 600 and unjoined (B1); no preview (m8) | Slat typed (anchor `+y`), `X`, b9 clicked, pitch, count, **Create**; ghosts and "makes 3 copies"; all 520, joined | 7 | 38 | 2 | 4.4 s | 1.3 s (1 step path) |
+| A8, five | Pass | pt1's row, Count `5`, Enter; five slats of 520 | 2 | 2 | 1 | 0.6 s | 0.2 s |
+| A9 | Drag gave 427 (m15); the field worked | The arrow dragged toward 447 lands on 450 | 2 | 0 | 1 | 2.8 s | 0.5 s (typed) |
+| A10 | Pass, 1 step; the dialog's words (n1) | b14, `Delete`, "Delete b14?" with Cancel focused, **Delete**; Undo brings b14 and its butts back | 2 | 1 | 1 | 2.4 s | 0.8 s |
+| A11 | Pass, no step; `H` took the copied rail (m2) | Right-click b13, **Select tagged top** (5 bars, b18 among them), `H`; a corner, `Shift+H` (22 hidden); `Alt+H` | 3 | 3 | 0 | 3.3 s | 0.9 s |
+| A12 | Pass, but the plate led nowhere (M7) | A click on the plate, its menu's **Edit c36…**, stations `100, 200, 300`, **Apply**; 13 screws, 13 T-nuts | 5 | 13 | 1 | 2.2 s | 0.8 s (outline filter) |
+| A13 | 16 presses, each named; `diff` empty | 15 presses, each named in `alukit log`'s words; the document then differs from a new project only in its name | 0 | 15 | 15 undone | 6.8 s | 0.4 s (3 steps) |
+| A14 (A3) | 3 clicks | **by tag** (a fresh browser), **shelf**, **Move** on the rail, `0, 0, 150`, a click in the view | 4 | 9 | 1 | 0.6 s | 0.9 s |
+
+Every §12 target the review checked holds:
+
+- A1 is within 8 clicks and 20 keys.
+- A4 is 2 steps, with the legs in 2 clicks.
+- Every other edit is one step. A8's four slats took two here because this is the review's path;
+  the guide's "Draw the bar to repeat" makes them one, as `editing.spec` asserts.
+- A11 makes no step, and A13 takes one key per step.
+
+The only scenario that does not pass as run is A6's mirror (N1). Where a time here is longer than
+the integration's, the path is the review's longer one: the menu rather than a typed id, a drag
+rather than a typed distance, and twelve more undo steps.
+
+### 9.6 Verdict
+
+**Yes, for frames on symmetric profiles; check every mirror on a 40 × 80 or another traced
+profile.** The three blockers are gone at their root:
+
+- pattern copies are cut and joined as their template;
+- a mirrored bar is cut and joined as the original;
+- a rail clicked between two faces butts on both, and an end left unjoined is now said in the
+  check, the order and Problems, with a Join that works.
+
+The seven majors hold as well: the order's machining reason in its own words, holes counted from
+the cut as the shop counts, Esc that ends a drag, legible labels in the light theme, a plate that
+leads to its joint, and a Move on 1,008 bars back to a fraction of a second.
+
+The `unconnected` warning fired nowhere it should not, and pattern copies follow their template's
+joints when those are edited later. No gesture made as the guide says left a cut list, a BOM or an
+order wrong in silence. The two edits that say too little are minors: N5's twin needs a mis-aimed
+right-click, and N6's moved hole needs a changed reference.
+
+What remains is Mirror on traced sections (N1), a refusal with a workaround, plus words to tidy:
+N2's contradiction, N3's design-point hole, N4's posted refusal, and N6's silent move of a hole.
+A designer can do real frame work in the editing round now. Fixing N1 before calling Mirror done
+would let §12 pass in its own order.
