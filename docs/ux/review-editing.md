@@ -736,3 +736,73 @@ What remains is Mirror on traced sections (N1), a refusal with a workaround, plu
 N2's contradiction, N3's design-point hole, N4's posted refusal, and N6's silent move of a hole.
 A designer can do real frame work in the editing round now. Fixing N1 before calling Mirror done
 would let §12 pass in its own order.
+
+### 9.7 Verification of N1–N10 (2026-11-28)
+
+*N1 to N10 each repeated by §9.4's own steps, through the app, on `main` at `f9938bc` (after the
+two fix rounds: [core](recheck-fixes-core-decisions.md), [app](recheck-fixes-app-decisions.md)).
+Playwright in headless Chromium with SwiftShader at 1440 × 900 dark, on scratch copies served by
+`alukit serve --no-open`; mouse and keys drove the app, the CLI (`derive`, `check`, `log`,
+`problems`, `order`, `machining`) was the oracle, and the window hook was read for screen
+positions only. Load average 9 to 11. The driving scripts were throwaway and are not committed.
+Labels as above: **measured** is what the app or the CLI printed.*
+
+N1, N2 and N5 ran in one session in §12's order: A1's frame, A4 (legs to 40 × 80, Roll 90, 2
+steps), A5 typed, A6's bracket, then the mirrors. The other items ran on the projects §9.4
+names.
+
+| # | Verdict | Evidence (measured), against §9.4's record |
+|---|---|---|
+| N1 | **Fixed** | After A4 and A5, the bracket p1 on b1 at 300, selected, menu **Mirror…**, `=W / 2`: the preview says "makes p2" and Enter sends it. The step reads "mirror p1, making p2 on b2"; p2 is on b2 at 300; no refusal, no toast, `alukit check` exit 0 with no diagnostics. §9.4 had "p1/on: b1 is not mirrored, and b2 stands on its image's line but is not its mirror image … include b1". The brace b17 (A5) mirrored the same way lands as b18, both 958.67, each end held by a connection (`c13`/`c14`, `c15`/`c16`), check clean. The legs are 40 × 80 and rolled, as in the review |
+| N2 | **Fixed** | The brace's preview: "makes b18 · joins b4 (c15) · joins b3 (c16) · cut 958.67". No "stay open". The step: "mirror b17, making b18, c15 and c16 on b4 and b3": one outcome per end, no "left open" |
+| N3 | **Fixed** | The plain frame, b5's front face, **Add a hole…**, `20`, `M6`: Problems and `alukit order` say "the tap M6 20.00 from end a's cut on face -x, through: …". The menu offered "520 mm from end a's cut" for a click at 560 on that bar. §9.4 had "60.00 from design point a" |
+| N4 | **Fixed** | On `tests/fixtures/ux/move`, the bracket's Mirror across y = 500: the preview shows "p1/on: b1 is not mirrored, and no bar stands at its image across y = 500; include b1". Enter: 0 commands sent (counted at the network), the drawn revision stays 0, no toast; the bar holds the refusal once. §9.4 had HTTP 422, a toast and "Select the 3 places" |
+| N5 | **Fixed** | b9 (a 40 × 40 shelf rail) mirrored at `=W / 2`: the preview says "b9 is its own image across x = 500: the mirror would make nothing, and a copy would stand on it", Enter sends nothing (18 bars before and after, the last step still the brace's mirror), and the check stays silent because nothing was made. §9.4's twin joined b2 and b1 |
+| N6 | **Fixed** | b5 with `{"op":"hole","face":"+y","at_mm":300,"d_mm":7}`: the row reads "300 mm from design point a" and the machining sheet "260.00 mm from end a". Hole 1's "from" set to **end a's cut**: stored `at_mm 260, from a.cut`, the row "260 mm from end a's cut", the sheet still 260.00. Set to end b's cut instead (the other option), it stores 660, the same place. §9.4's hole moved 40 mm |
+| N7 | **Fixed** | Draw's first point: "b3 +y face (world +Y) at 550"; the second: "b4 -y face (world -Y) at 590 · 961.67 mm". Both name the world direction |
+| N8 | **Fixed** | A rail clicked between b3 and b4 with **Join ends** off: the order lists "**warn** unconnected: b17.a runs 20.03 mm into b3, past its +x face, with no connection", the check line once, each Problems row with **Join with the default butt**. The end and the rule appear once, as the check words them |
+| N9 | **Fixed** | On the plain frame, b9 moved by `0, -100, 0` with `D`: Enter sends nothing, the gesture stays on, and "this move would break a joint: …" appears once in the command bar (counted: 1). §9.4 had it twice |
+| N10 | **Fixed** | With the M6 tap and a Ø7 hole 2 mm from end a's cut on b5, the two machining errors read "A tap with too little wall at b5" and "A hole off its piece at b5", in Problems and in `alukit problems --json`, each with its own detail and the hole worded from its own reference ("2.00 mm from end a's cut, reaches 1.50 mm past end a's cut face") |
+
+![N1: the bracket's mirror lands on b2 at 300 on the 40 × 80 legs; Undo names "mirror p1, making p2 on b2"](img/review-recheck/07-n1-mirror-lands-40x80-1440-dark.png)
+
+![N2: the brace's mirror preview joins both posts and says nothing about open ends](img/review-recheck/08-n2-brace-mirror-preview-1440-dark.png)
+
+![N3 and N10: the two machining errors, titled by their reason, with the holes counted from the cut](img/review-recheck/09-n3-n10-hole-problems-1440-dark.png)
+
+**The scenarios, once more.** A1 to A14 ran with `editing.spec`'s own paths, each from the state
+the scenarios before it leave (built by the CLI); the 20 tests passed. N1's session chained A1,
+A4, A5, A6 and the mirrors by hand, each one step except A4's two. The clicks, keys and steps
+below are the script's counts from that run; the review's counts (§9.5) are from its own
+paths, so a different count is a different path, not a regression, unless said.
+
+| # | §9.5 (clicks / keys / steps) | Now | Against §9.5 |
+|---|---|---|---|
+| A1 | 8 / 13 / 1, 2.0 s | 8 / 13 / 1, 2.4 s | same |
+| A2 (i) | 1 / 5 / 1, 0.6 s | 2 / 5 / 1, 0.3 s | same; the spec counts the field click |
+| A3 | 2 / 11 / 1, 1.1 s | 2 / 6 / 1, 0.4 s | same steps; typed value shorter |
+| A4 | 8 / 8 / 2, legs in 2 clicks | 8 / 8 / 2, legs in 2 clicks | same |
+| A5 by pointer | 2 / 1 / 1 | 2 / 1 / 1 | same |
+| A5 typed | 2 / 32 / 1 | 2 / 32 / 1 | same; the chained run's preview "will butt on b3 · will butt on b4 · cut 958.67" |
+| A6 | placed 3 / 11 / 1; mirror **refused** on 40 × 80 | place 5 / 10 / 1; mirror 2 / 8 / 1, 1.0 s; chained after A4 it lands | **improved**: the one scenario that did not pass now does |
+| A7 | 2 / 11 / 1 | 1 / 7 / 1, 0.9 s | same |
+| A8 | four: 7 / 38 / 2; five: 2 / 2 / 1 | four: 6 / 37 / 1 (the guide's "Draw the bar to repeat"); five: 1 / 2 / 1 | same or better |
+| A9 | 2 / 0 / 1 | 1 / 5 / 1 (typed distance) | same steps |
+| A10 | 2 / 1 / 1 | 2 / 1 / 1 | same |
+| A11 | 3 / 3 / 0 | 3 / 3 / 0 | same |
+| A12 | 5 / 13 / 1 | 4 / 16 / 1 | same steps |
+| A13 | 15 presses, 15 undone | 3 presses, 3 undone (the spec's chain) | the 15-step chain was **not** rerun |
+
+Times are the script's floors under load 9 to 11, all under 5 s. No scenario step, click or time
+regressed.
+
+**New findings.** None that blocks. Two notes, both small:
+
+- A13's full 15-step chain and A2 (ii)'s hand path were not driven this time; `editing.spec`
+  covers 3 undos and A2 (ii) passes. The §9.5 numbers for A13 stand as the last full run.
+- The N8 rail drawn with **Join ends** off between two post faces runs 20.03 mm into each post (its
+  centre line stops at the face); the new words say so ("runs 20.03 mm into b3, past its +x
+  face"), where §9.4 said "lies on". It is the same geometry as before, now said exactly.
+
+**Verdict.** N1 to N10 are all fixed, as seen through the app. §12 passes in its own order, A6's
+mirror included, on the 40 × 80 legs.
