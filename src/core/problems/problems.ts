@@ -98,6 +98,11 @@ interface Draft extends Problem {
   warns?: boolean;
   /** Its detail, once the suppliers it holds are known. */
   detailFor?: (suppliers: string) => string;
+  /**
+   * What its id is about, when its targets are not: the item whose machining has no price,
+   * whose targets are the bars that carry it, so the id stays while bars gain or lose holes.
+   */
+  about?: string;
 }
 
 interface Ctx {
@@ -461,7 +466,7 @@ function machiningWords(
   count: number,
   item: string,
   ctx: Ctx,
-): Pick<Draft, "title" | "detailFor" | "targets"> {
+): Pick<Draft, "title" | "detailFor" | "targets" | "about"> {
   const suppliers: string[] = [];
   const services = new Map<string, number>();
   const bars = new Set<string>();
@@ -491,6 +496,7 @@ function machiningWords(
     detailFor: (s) =>
       `The order from ${s} includes its machining on ${on.length > 0 ? idList(on) : "the pieces it cuts"} (${done}), and a supplier's machining has no price until a cost line covers it. Ask ${s} for the price and add the cost line with \`alukit do\`'s addCost: ${cover}. It holds the order from ${s} until one does.`,
     targets: on.length > 0 ? on : [item],
+    about: item,
   };
 }
 const lockUpdate = (item: string): Fix => ({
@@ -630,7 +636,7 @@ function finish(p: Draft): void {
 function uniqueIds(problems: Draft[]): void {
   const seen = new Map<string, number>();
   for (const p of problems) {
-    const what = p.from.includes("check") ? (p.targets[0] ?? "") : p.targets.join(",");
+    const what = p.about ?? (p.from.includes("check") ? (p.targets[0] ?? "") : p.targets.join(","));
     const who = p.suppliers ? `/${p.suppliers.map((s) => s ?? "-").join(",")}` : "";
     const id = `${p.code}/${what}${who}`;
     const n = (seen.get(id) ?? 0) + 1;

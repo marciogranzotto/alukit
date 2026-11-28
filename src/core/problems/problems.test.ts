@@ -232,6 +232,8 @@ describe("problems of a few edits", () => {
     expect(unpriced).toHaveLength(1);
     const machining = unpriced[0] as Problem;
     expect(machining).toMatchObject({
+      // Its id is the item's, so it stays while bars gain or lose holes.
+      id: "missing-price/test-order:FLAT-O/shop-a",
       group: "blocks-order",
       raw: "test-order:FLAT-O-c: no price for 1 machining service; cover them with a cost line",
       suppliers: ["shop-a"],
