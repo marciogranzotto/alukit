@@ -8,7 +8,8 @@
     "method": "raster",
     "scale": "the printed size, 30 x 30 mm, and the dimensions the page prints",
     "read": "2026-11-26",
-    "note": "traced from the page's raster image (grey levels 135x134 px of image 135 (fill grey 94)): its edge at 50 % coverage by marching squares, simplified by Douglas-Peucker at 0.1 px; the scale (3.925 x 3.935 px/mm) and the outline stroke's margin (0.134 ± 0.007 mm) fitted by least squares to the printed size and the printed groove dimensions (opening 8.1), residuals at most 0.03 mm; the margin taken off by an exact inner offset, the box snapped to 30 x 30 (it was +0.009, -0.008 mm off), the cores' bores snapped to their printed diameters (at most 0.11 mm off). Edges ±0.013 mm overall (the margin's standard error with 0.011 mm, the method's largest error on the rasters drawn under vector outlines) and ±0.13 mm locally (half a pixel). Against the published values the area -1.11 %, Ix -0.59 %, Iy -0.87 %. Grooves on -y, +x, -x only: the other faces are closed. The cores are labelled M14 by the shop's description."
+    "uncertainty": { "overall_mm": 0.013, "local_mm": 0.38 },
+    "note": "traced from the page's raster image (grey levels 135x134 px of image 135 (fill grey 94)): its edge at 50 % coverage by marching squares, simplified by Douglas-Peucker at 0.1 px; the scale (3.925 x 3.935 px/mm) and the outline stroke's margin (0.134 ± 0.007 mm) fitted by least squares to the printed size and the printed groove dimensions (opening 8.1), residuals at most 0.03 mm; the margin taken off by an exact inner offset, the box snapped to 30 x 30 (it was +0.009, -0.008 mm off), the cores' bores snapped to their printed diameters (at most 0.11 mm off). Edges ±0.013 mm overall (the margin's standard error with 0.011 mm, the method's largest error on the rasters drawn under vector outlines) and ±0.38 mm locally (1.5 pixels, the farthest a trace lay from the vector outline over its raster on those pages). Against the published values the area -1.11 %, Ix -0.59 %, Iy -0.87 %. Grooves on -y, +x, -x only: the other faces are closed. The cores are labelled M14 by the shop's description."
   },
   "bbox_mm": [[-15, -15], [15, 15]],
   "grooves": [
@@ -663,36 +664,36 @@
       "v": 2.07,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p13",
-      "low": 1.93,
-      "high": 2.21
+      "low": 1.68,
+      "high": 2.46
     },
     "depth_mm": {
       "v": 6.69,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p13",
-      "low": 6.5,
-      "high": 6.88
+      "low": 6.25,
+      "high": 7.13
     },
     "undercut_mm": {
       "v": 15.07,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p13",
-      "low": 14.92,
-      "high": 15.22
+      "low": 14.67,
+      "high": 15.47
     },
     "taper_from_mm": {
       "v": 3.41,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p13",
-      "low": 3.25,
-      "high": 3.57
+      "low": 3,
+      "high": 3.82
     },
     "bottom_mm": {
       "v": 7.53,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p13",
-      "low": 7.22,
-      "high": 7.84
+      "low": 6.97,
+      "high": 8.09
     },
     "note": "the dimensions p. 13 prints; the rest measured on the traced outline as on an exact one, the median over its 3 grooves, each range the trace's uncertainty and the grooves' spread"
   }

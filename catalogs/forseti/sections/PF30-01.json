@@ -8,7 +8,8 @@
     "method": "raster",
     "scale": "the printed size, 30 x 30 mm, and the dimensions the page prints",
     "read": "2026-11-26",
-    "note": "traced from the page's raster image (soft mask 198x197 px of image 137): its edge at 50 % coverage by marching squares, simplified by Douglas-Peucker at 0.1 px; the scale (5.769 x 5.782 px/mm) and the outline stroke's margin (0.115 ± 0.005 mm) fitted by least squares to the printed size and the printed groove dimensions (opening 8.1, lip 2, undercut 18), residuals at most 0.06 mm; the margin taken off by an exact inner offset, the box snapped to 30 x 30 (it was +0.016, -0.025 mm off), the cores' bores snapped to their printed diameters (at most 0.12 mm off). Edges ±0.012 mm overall (the margin's standard error with 0.011 mm, the method's largest error on the rasters drawn under vector outlines) and ±0.09 mm locally (half a pixel). Against the published values the area -1.20 %, Ix -1.27 %, Iy -0.79 %. The cores are labelled M14 by the drawing on p. 13."
+    "uncertainty": { "overall_mm": 0.012, "local_mm": 0.26 },
+    "note": "traced from the page's raster image (soft mask 198x197 px of image 137): its edge at 50 % coverage by marching squares, simplified by Douglas-Peucker at 0.1 px; the scale (5.769 x 5.782 px/mm) and the outline stroke's margin (0.115 ± 0.005 mm) fitted by least squares to the printed size and the printed groove dimensions (opening 8.1, lip 2, undercut 18), residuals at most 0.06 mm; the margin taken off by an exact inner offset, the box snapped to 30 x 30 (it was +0.016, -0.025 mm off), the cores' bores snapped to their printed diameters (at most 0.12 mm off). Edges ±0.012 mm overall (the margin's standard error with 0.011 mm, the method's largest error on the rasters drawn under vector outlines) and ±0.26 mm locally (1.5 pixels, the farthest a trace lay from the vector outline over its raster on those pages). Against the published values the area -1.20 %, Ix -1.27 %, Iy -0.79 %. The cores are labelled M14 by the drawing on p. 13."
   },
   "bbox_mm": [[-15, -15], [15, 15]],
   "grooves": [
@@ -675,23 +676,23 @@
       "v": 7.12,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p13",
-      "low": 6.96,
-      "high": 7.28
+      "low": 6.79,
+      "high": 7.45
     },
     "undercut_mm": { "v": 18, "src": "src", "ref": "pdf:catalogo_forsetiA4.pdf#p13" },
     "taper_from_mm": {
       "v": 4.72,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p13",
-      "low": 4.59,
-      "high": 4.85
+      "low": 4.42,
+      "high": 5.02
     },
     "bottom_mm": {
       "v": 12.41,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p13",
-      "low": 9.19,
-      "high": 15.63
+      "low": 9.01,
+      "high": 15.81
     },
     "note": "the dimensions p. 13 prints; the rest measured on the traced outline as on an exact one, the median over its 4 grooves, each range the trace's uncertainty and the grooves' spread"
   }

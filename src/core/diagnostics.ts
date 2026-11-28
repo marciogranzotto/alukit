@@ -23,6 +23,7 @@ export const DIAGNOSTIC_CODES = [
   "chain",
   "check",
   "check-pending",
+  "coincident",
   "connection",
   "cover-none",
   "covers",

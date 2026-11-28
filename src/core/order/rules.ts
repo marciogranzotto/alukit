@@ -23,6 +23,7 @@ import { cmp, type Key, optText, type Reason, readOf, type Work } from "./types.
  * | `stale-price` | warn | the supplier whose price was read more than 30 days before the order |
  * | `no-connector` | warn | butts naming no connector, with no project default: their bars' suppliers |
  * | `unconnected` | warn | an open end, the check's warning (*2.3*, review fixes, joins): its bars' suppliers |
+ * | `coincident` | warn | two bars in one place, the check's warning (*2.3*, re-check N5): their suppliers |
  */
 
 export const RULE_DEFAULTS: Readonly<Record<OrderRule, RuleAction>> = {
@@ -36,6 +37,7 @@ export const RULE_DEFAULTS: Readonly<Record<OrderRule, RuleAction>> = {
   "stale-price": "warn",
   "no-connector": "warn",
   unconnected: "warn",
+  coincident: "warn",
 };
 
 /** A price is stale when read more than this many days before the order's date. */
@@ -178,15 +180,12 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
   // Open ends (*2.3*, review fixes, joins; call 124): an end that meets a bar with nothing to
   // join it buys nothing to hold it either, so the order warns, quoting the check's warning as
   // `check-error` quotes an error, and the problem list keeps one problem with its Join fix.
+  // Two bars in one place (*2.3*, re-check N5) buy one bar too many, so the order warns the same
+  // way, quoting the check's warning.
   for (const x of ctx.diagnostics) {
-    if (x.code !== "unconnected") continue;
+    if (x.code !== "unconnected" && x.code !== "coincident") continue;
     const names = [...new Set([...(x.entity ? [x.entity] : []), ...(x.refs ?? [])])];
-    add(
-      "unconnected",
-      reach(names),
-      `${x.code}${x.entity ? ` ${x.entity}` : ""}: ${x.message}`,
-      names,
-    );
+    add(x.code, reach(names), `${x.code}${x.entity ? ` ${x.entity}` : ""}: ${x.message}`, names);
   }
 
   for (const [k, e] of services) {

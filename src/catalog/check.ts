@@ -144,6 +144,18 @@ export function checkCatalog(
     }
     built.set(ls.id, b);
     const s = ls.section;
+    // A traced outline states its uncertainty as data (§3.5, *2.3*, re-check N1): mirror and
+    // reverse judge its symmetry within it, and a trace that does not say is held as exact.
+    if (s.fidelity === "traced" && !s.from?.uncertainty) {
+      add(
+        "error",
+        "traced-uncertainty",
+        "a traced outline states its uncertainty in from.uncertainty (overall_mm, local_mm)",
+        [ls.file],
+        entity,
+        "from/uncertainty",
+      );
+    }
     if (s.fidelity === "exact" || s.fidelity === "traced") {
       const actual = sectionProperties([b.draw]).bbox_mm;
       const off = Math.max(

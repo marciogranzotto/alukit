@@ -8,7 +8,8 @@
     "method": "raster",
     "scale": "the printed size, 40 x 80 mm, and the dimensions the page prints",
     "read": "2026-11-26",
-    "note": "traced from the page's raster image (grey levels 173x317 px of image 189 (fill grey 95)): its edge at 50 % coverage by marching squares, simplified by Douglas-Peucker at 0.1 px; the scale (3.581 x 3.588 px/mm) and the outline stroke's margin (0.120 ± 0.005 mm) fitted by least squares to the printed size and the printed groove dimensions (opening 8.1, lip 4, depth 10, undercut 22), residuals at most 0.06 mm; the margin taken off by an exact inner offset, the box snapped to 40 x 80 (it was -0.032, +0.037 mm off), the cores' bores snapped to their printed diameters (at most 0.41 mm off). Edges ±0.012 mm overall (the margin's standard error with 0.011 mm, the method's largest error on the rasters drawn under vector outlines) and ±0.14 mm locally (half a pixel). Against the published values the area -0.11 %, Ix -1.09 %, Iy -0.58 %. The module cores are labelled M16 by the shop's description, the corner holes M6 by the drawing on p. 20."
+    "uncertainty": { "overall_mm": 0.012, "local_mm": 0.42 },
+    "note": "traced from the page's raster image (grey levels 173x317 px of image 189 (fill grey 95)): its edge at 50 % coverage by marching squares, simplified by Douglas-Peucker at 0.1 px; the scale (3.581 x 3.588 px/mm) and the outline stroke's margin (0.120 ± 0.005 mm) fitted by least squares to the printed size and the printed groove dimensions (opening 8.1, lip 4, depth 10, undercut 22), residuals at most 0.06 mm; the margin taken off by an exact inner offset, the box snapped to 40 x 80 (it was -0.032, +0.037 mm off), the cores' bores snapped to their printed diameters (at most 0.41 mm off). Edges ±0.012 mm overall (the margin's standard error with 0.011 mm, the method's largest error on the rasters drawn under vector outlines) and ±0.42 mm locally (1.5 pixels, the farthest a trace lay from the vector outline over its raster on those pages). Against the published values the area -0.11 %, Ix -1.09 %, Iy -0.58 %. The module cores are labelled M16 by the shop's description, the corner holes M6 by the drawing on p. 20."
   },
   "bbox_mm": [[-20, -40], [20, 40]],
   "grooves": [
@@ -2091,29 +2092,29 @@
       "v": 7.15,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p17",
-      "low": 6.93,
-      "high": 7.37
+      "low": 6.65,
+      "high": 7.65
     },
     "bottom_mm": {
       "v": 13.34,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p17",
-      "low": 12.63,
-      "high": 14.05
+      "low": 12.35,
+      "high": 14.33
     },
     "hook_mm": {
       "v": 14.33,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p17",
-      "low": 14,
-      "high": 14.66
+      "low": 13.72,
+      "high": 14.94
     },
     "wall_mm": {
       "v": 1.85,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p17",
-      "low": 1.55,
-      "high": 2.15
+      "low": 1.27,
+      "high": 2.43
     },
     "note": "the dimensions p. 17 prints; the rest measured on the traced outline as on an exact one, the median over its 6 grooves, each range the trace's uncertainty and the grooves' spread"
   }

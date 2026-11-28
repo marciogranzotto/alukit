@@ -53,6 +53,18 @@ const common = {
         .optional()
         .describe('how the drawing was scaled, e.g. "width 40 mm"'),
       read: IsoDate.optional(),
+      uncertainty: z
+        .strictObject({
+          overall_mm: z
+            .number()
+            .nonnegative()
+            .describe("how far every edge may be off together: a scale or a stroke's margin"),
+          local_mm: z.number().positive().describe("how far any one edge may be off on its own"),
+        })
+        .optional()
+        .describe(
+          "how far the outline's edges may lie from the section's (design §3.5); a traced section states it",
+        ),
       note: z.string().optional(),
     })
     .optional()

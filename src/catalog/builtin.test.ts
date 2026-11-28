@@ -90,6 +90,15 @@ describe("Forseti (design §12, M2a done-when)", () => {
       expect(s.from?.method, ls.id).toBe("raster");
       // Each states its uncertainty and its errors against the published values.
       expect(s.from?.note, ls.id).toMatch(/Edges ±\d\.\d{3} mm overall .* ±\d\.\d{2} mm locally/);
+      // And as data, which mirror and reverse read (re-check N1): the note's numbers, the local
+      // one 1.5 of the image's pixels (the importer's TRACE_LOCAL_PX).
+      const [, overall, local] = /±(\d\.\d{3}) mm overall .* ±(\d\.\d{2}) mm locally/.exec(
+        s.from?.note ?? "",
+      ) ?? [undefined, "", ""];
+      expect(s.from?.uncertainty, ls.id).toEqual({
+        overall_mm: Number(overall),
+        local_mm: Number(local),
+      });
       // The cores its page prints, snapped to the printed bores, and its own groove.
       expect(s.cores?.length, ls.id).toBeGreaterThan(0);
       expect(s.groove_dims, ls.id).toBeDefined();

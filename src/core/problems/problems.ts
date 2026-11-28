@@ -123,15 +123,16 @@ export function problemsOf(input: ProblemsInput): ProblemsAnswer {
   const drafts: Draft[] = [];
 
   // 1. The check's diagnostics, in its order. A `check-error` reason quotes an error this way,
-  // and an `unconnected` reason an open end; a `no-connector` reason names the butts the check
-  // notes one by one.
+  // an `unconnected` reason an open end and a `coincident` reason two bars in one place; a
+  // `no-connector` reason names the butts the check notes one by one.
   const quoted = new Map<string, Draft>();
   const noted = new Map<string, Draft>();
   for (const d of input.diagnostics) {
     const p = fromDiagnostic(d, ctx);
     drafts.push(p);
     const as = `${d.code}${d.entity ? ` ${d.entity}` : ""}: ${d.message}`;
-    if ((d.severity === "error" || d.code === "unconnected") && !quoted.has(as)) quoted.set(as, p);
+    const quotes = d.severity === "error" || d.code === "unconnected" || d.code === "coincident";
+    if (quotes && !quoted.has(as)) quoted.set(as, p);
     if (d.code === "butt-no-connector" && d.entity) noted.set(d.entity, p);
   }
 
@@ -143,7 +144,7 @@ export function problemsOf(input: ProblemsInput): ProblemsAnswer {
       let p =
         r.rule === "check-error"
           ? quoted.get(r.message)
-          : r.rule === "unconnected"
+          : r.rule === "unconnected" || r.rule === "coincident"
             ? (quoted.get(r.message) ?? reasons.get(key))
             : reasons.get(key);
       if (!p) {

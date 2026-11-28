@@ -278,6 +278,13 @@ def _seg_dist(x: float, y: float, p: g.Pt, q: g.Pt) -> float:
     return math.hypot(p[0] + t * dx - x, p[1] + t * dy - y)
 
 
+def farthest(a: list[g.Ring], b: list[g.Ring]) -> float:
+    """The farthest any vertex of rings `a` lies from the boundary of rings `b` (a directed
+    Hausdorff distance between the two outlines, at their vertices)."""
+    edges = [(r[i], r[(i + 1) % len(r)]) for r in b for i in range(len(r))]
+    return max(min(_seg_dist(x, y, p, q) for p, q in edges) for r in a for x, y in r)
+
+
 def offset(r: Rings, delta: float, step: float, min_area: float) -> Rings:
     """The region less a disc of radius `delta` (its inner parallel; a negative `delta` grows it):
     the iso-line at `delta` of the signed distance to its rings (positive in material), sampled
@@ -626,3 +633,27 @@ def trace_profile(doc: pymupdf.Document, spec: dict, size: tuple[float, float],
 
     return Traced(snap(er.outline), [snap(r) for r in er.holes], cal, ly.source,
                   ((max(xs) - min(xs)) - w, (max(ys) - min(ys)) - h), len(sel.dropped), sil)
+
+
+# --- Ground truth ---------------------------------------------------------------------------------
+
+def check_against_vector(doc: pymupdf.Document, spec: dict, xref: int, series: float) -> dict:
+    """A raster drawn under the vector outline the build reads, traced as `trace_profile` traces a
+    profile and compared with that outline: how far each lies from the other (the larger of the
+    two directed distances), in mm and in the image's pixels. It calibrates on the vector outline's
+    own groove dimensions, as a trace calibrates on the printed ones. `spec` is the profile's
+    `tables.PROFILES` entry; `series` its grooves' pitch."""
+    w, h = spec["w"], spec["h"]
+    vec = pdfcat.extract_outline(doc, spec["page"], spec["outline"], spec["drawn"], (w, h))
+    grooves = []
+    for face in ("-y", "+x", "+y", "-x"):
+        n = round((w if face in ("-y", "+y") else h) / series)
+        grooves.extend({"face": face, "at_mm": (i - (n - 1) / 2) * series} for i in range(n))
+    gr = grooves[0]
+    d = pdfcat.measure_groove(vec.outline, vec.holes, w, h, gr["face"], gr["at_mm"])
+    printed = {k: getattr(d, k) for k in ("opening_mm", "lip_mm", "depth_mm", "undercut_mm")}
+    tr = trace_profile(doc, {"page": spec["page"], "xref": xref, "drawn": spec["drawn"],
+                             "printed": printed}, (w, h), grooves)
+    a, b = [tr.outline, *tr.holes], [vec.outline, *vec.holes]
+    mm = max(farthest(a, b), farthest(b, a))
+    return {"px_per_mm": tr.cal.s, "mm": mm, "px": mm * tr.cal.s}

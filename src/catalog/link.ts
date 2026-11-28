@@ -421,6 +421,11 @@ export interface BuiltSection {
    * and a box has none drawn.
    */
   cores?: readonly SectionCore[];
+  /**
+   * How far its drawn outline's edges may lie from the section's (§3.5), where its file states it
+   * (`from.uncertainty`, which a traced section must); absent for a generator's or a box.
+   */
+  uncertainty?: { overall_mm: number; local_mm: number };
 }
 
 function boxRing([a, b]: readonly [Vec2, Vec2]): Vec2[] {
@@ -521,5 +526,6 @@ export function buildSection(
     ...(own ? { own } : {}),
     datums: s.datums ?? {},
     ...(s.cores ? { cores: s.cores } : {}),
+    ...(s.from?.uncertainty ? { uncertainty: s.from.uncertainty } : {}),
   };
 }

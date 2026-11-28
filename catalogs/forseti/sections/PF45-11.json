@@ -8,7 +8,8 @@
     "method": "raster",
     "scale": "the printed size, 45 x 45 mm, and the dimensions the page prints",
     "read": "2026-11-26",
-    "note": "traced from the page's raster image (grey levels 193x193 px of image 225 (fill grey 94)): its edge at 50 % coverage by marching squares, simplified by Douglas-Peucker at 0.1 px; the scale (3.929 x 3.933 px/mm) and the outline stroke's margin (0.141 ± 0.003 mm) fitted by least squares to the printed size and the printed groove dimensions (opening 8.3, lip 4.5, depth 16.5, undercut 13.5), residuals at most 0.06 mm; the margin taken off by an exact inner offset, the box snapped to 45 x 45 (it was -0.024, -0.026 mm off), the cores' bores snapped to their printed diameters (at most 0.14 mm off). Edges ±0.011 mm overall (the margin's standard error with 0.011 mm, the method's largest error on the rasters drawn under vector outlines) and ±0.13 mm locally (half a pixel). Against the published values the area -0.77 %, Ix -0.71 %, Iy -0.88 %. The cores are labelled M8 by the shop's description."
+    "uncertainty": { "overall_mm": 0.011, "local_mm": 0.38 },
+    "note": "traced from the page's raster image (grey levels 193x193 px of image 225 (fill grey 94)): its edge at 50 % coverage by marching squares, simplified by Douglas-Peucker at 0.1 px; the scale (3.929 x 3.933 px/mm) and the outline stroke's margin (0.141 ± 0.003 mm) fitted by least squares to the printed size and the printed groove dimensions (opening 8.3, lip 4.5, depth 16.5, undercut 13.5), residuals at most 0.06 mm; the margin taken off by an exact inner offset, the box snapped to 45 x 45 (it was -0.024, -0.026 mm off), the cores' bores snapped to their printed diameters (at most 0.14 mm off). Edges ±0.011 mm overall (the margin's standard error with 0.011 mm, the method's largest error on the rasters drawn under vector outlines) and ±0.38 mm locally (1.5 pixels, the farthest a trace lay from the vector outline over its raster on those pages). Against the published values the area -0.77 %, Ix -0.71 %, Iy -0.88 %. The cores are labelled M8 by the shop's description."
   },
   "bbox_mm": [[-22.5, -22.5], [22.5, 22.5]],
   "grooves": [
@@ -989,15 +990,15 @@
       "v": 14.41,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p19",
-      "low": 14.24,
-      "high": 14.58
+      "low": 13.99,
+      "high": 14.83
     },
     "bottom_mm": {
       "v": 8.51,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p19",
-      "low": 8.35,
-      "high": 8.67
+      "low": 8.09,
+      "high": 8.93
     },
     "note": "the dimensions p. 19 prints; the rest measured on the traced outline as on an exact one, the median over its 4 grooves, each range the trace's uncertainty and the grooves' spread"
   }

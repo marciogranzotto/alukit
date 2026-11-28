@@ -409,7 +409,32 @@ describe("a fastener made to a standard (F2a)", () => {
   });
 });
 
+/** What a traced section states of its edges (§3.5): PF40-02's, as the Forseti importer writes it. */
+const TRACED_UNCERTAINTY = { overall_mm: 0.012, local_mm: 0.42 };
+
 describe("computed against published (design §3.6)", () => {
+  it("requires a traced outline to state its uncertainty (2.3, re-check N1)", async () => {
+    const root = await fixtureCopy();
+    const traced = join(root, "test/sections/PF40-T.json");
+    await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), traced);
+    await patchJson(traced, (d) => {
+      d.id = "PF40-T";
+      d.fidelity = "traced";
+      for (const g of d.grooves as { type: string }[]) g.type = "c8";
+    });
+    await patchJson(join(root, "test/catalog.json"), (d) => {
+      at(d, "items", "TS40E").section = "PF40-T";
+    });
+    const { report } = await checkTest(root);
+    expect(report.diagnostics.map((d) => [d.code, d.entity, d.field])).toEqual([
+      ["traced-uncertainty", "test:sections/PF40-T", "from/uncertainty"],
+    ]);
+    await patchJson(traced, (d) => {
+      d.from.uncertainty = TRACED_UNCERTAINTY;
+    });
+    expect(codes(await checkTest(root))).toEqual([]);
+  });
+
   it("fails on a mismatch beyond 1 % that no override accepts", async () => {
     const root = await fixtureCopy();
     await patchJson(join(root, "test/overrides.json"), (d) => {
@@ -431,6 +456,7 @@ describe("computed against published (design §3.6)", () => {
     await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), traced);
     await patchJson(traced, (d) => {
       d.id = "PF40-T";
+      d.from.uncertainty = TRACED_UNCERTAINTY;
       d.fidelity = "traced";
       for (const g of d.grooves as { type: string }[]) g.type = "c8";
     });
@@ -448,6 +474,7 @@ describe("computed against published (design §3.6)", () => {
     await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), traced);
     await patchJson(traced, (d) => {
       d.id = "PF40-T";
+      d.from.uncertainty = TRACED_UNCERTAINTY;
       d.fidelity = "traced";
       for (const g of d.grooves as { type: string }[]) g.type = "c8";
     });
@@ -492,6 +519,7 @@ describe("a computed value's provenance follows its section's fidelity (§3.5)",
     await copyFile(join(BUILTIN_DIR, "forseti/sections/PF40-01.json"), traced);
     await patchJson(traced, (d) => {
       d.id = "PF40-T";
+      d.from.uncertainty = TRACED_UNCERTAINTY;
       d.fidelity = "traced";
       for (const g of d.grooves as { type: string }[]) g.type = "c8";
     });

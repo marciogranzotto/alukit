@@ -1,11 +1,14 @@
 import { z } from "zod";
+import type { HoleOp } from "../derive/derive.ts";
+import { holeCentre } from "../derive/fastenings.ts";
+import { faceNormal } from "../derive/on-piece.ts";
 import { claimedEnds, ownJoints } from "../derive/own-joints.ts";
 import { poseAxes } from "../derive/place.ts";
 import { compareIds } from "../ids.ts";
 import type { Expr, Face } from "../project/schema.ts";
 import { TOL } from "../tolerances.ts";
 import { atan2Deg } from "../trig.ts";
-import { dist, dot, type V3 } from "../vec.ts";
+import { cross, dist, dot, norm, sub, type V3 } from "../vec.ts";
 import {
   getEntity,
   isObject,
@@ -23,7 +26,13 @@ import { ang, minus, negate, reflect } from "./numbers.ts";
 import { joinedTo } from "./patterns.ts";
 import { Refusal, type Rewriter, refusal, rewriteEntity } from "./rewrite.ts";
 import { flipsU, hasSymmetry, type Map2, mapFace, type Sym, symmetries } from "./sections.ts";
-import { type CommandContext, type CommandDef, done, type Outcome } from "./types.ts";
+import {
+  type CommandContext,
+  type CommandDef,
+  type CommandError,
+  done,
+  type Outcome,
+} from "./types.ts";
 import { idList } from "./words.ts";
 
 /**
@@ -87,10 +96,77 @@ export const mirror: CommandDef<z.infer<typeof Mirror>> = {
     const info = d.info as MirrorInfo | undefined;
     const onto = Object.values(info?.onto ?? {});
     const open = info?.open ?? [];
-    return `mirror ${idList(a.ids)}, making ${idList(d.created)}${onto.length > 0 ? ` on ${idList([...new Set(onto)])}` : ""}${open.length > 0 ? `; ${idList(open)} left open` : ""}`;
+    const there = Object.entries(info?.there ?? {});
+    const selves = there.filter(([id, to]) => id === to).map(([id]) => id);
+    const others = there.filter(([id, to]) => id !== to).map(([id, to]) => `${id}'s image is ${to}`);
+    const kept = [
+      ...(selves.length > 0
+        ? [`${idList(selves)} ${selves.length > 1 ? "are their own images" : "is its own image"}`]
+        : []),
+      ...others,
+    ];
+    return `mirror ${idList(a.ids)}, making ${idList(d.created)}${onto.length > 0 ? ` on ${idList([...new Set(onto)])}` : ""}${kept.length > 0 ? `; ${kept.join("; ")}` : ""}${open.length > 0 ? `; ${idList(open)} left open` : ""}`;
   },
-  apply: (ctx, a) => guard(() => mirrorSet(ctx, a)),
+  apply: (ctx, a) => guard(() => advised(ctx, a)),
 };
+
+/**
+ * A refusal that advises including entities in the set (design §6, *2.3*, re-check N1). Its
+ * advice is tried before it is given (`advised`), so it is never a step that is refused in turn.
+ */
+class Include extends Refusal {
+  readonly why: string;
+  readonly include: readonly string[];
+  readonly extra: Partial<CommandError>;
+  constructor(why: string, include: readonly string[], extra: Partial<CommandError> = {}) {
+    const all = idList(include, include.length);
+    super([{ code: "geometry", message: `${why}; include ${all}`, ...extra }]);
+    this.why = why;
+    this.include = include;
+    this.extra = extra;
+  }
+}
+
+/**
+ * The mirror, or a refusal whose advice has been tried (re-check N1; recheck-fixes-core-decisions
+ * 4–6): an advice to include entities is given only when the mirror with them goes through. Each
+ * further inclusion that one asks for is tried too, and the advice names them all; when an
+ * inclusion is refused for another reason, the refusal says that reason instead of advising it.
+ */
+function advised(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
+  try {
+    return mirrorSet(ctx, a);
+  } catch (e) {
+    if (!(e instanceof Include)) throw e;
+    const ids = [...a.ids];
+    const added: string[] = [];
+    let asked: Include = e;
+    for (;;) {
+      const more = asked.include.filter((x) => !ids.includes(x));
+      if (more.length === 0) throw refusal("geometry", e.why, e.extra);
+      ids.push(...more);
+      added.push(...more);
+      try {
+        mirrorSet(ctx, { ...a, ids });
+      } catch (f) {
+        if (f instanceof Include) {
+          asked = f;
+          continue;
+        }
+        if (f instanceof Refusal) {
+          const why = f.errors.map((x) => x.message).join("; ");
+          throw refusal(
+            "geometry",
+            `${e.why}; mirroring ${idList(added)} with it is refused too: ${why}`,
+            e.extra,
+          );
+        }
+        throw f;
+      }
+      throw added.length === e.include.length ? e : new Include(e.why, added, e.extra);
+    }
+  }
+}
 
 function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
   const doc0 = ctx.state.doc;
@@ -103,51 +179,8 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
   }
   const R = (v: V3): V3 => v.map((c, i) => (i === k ? 2 * at - c : c)) as unknown as V3;
   const Rdir = (v: V3): V3 => v.map((c, i) => (i === k ? -c : c)) as unknown as V3;
+  const plane = `${AXES[k]} = ${at}`;
 
-  // Copy ids, in id order per kind.
-  let doc = doc0;
-  const copyOf = new Map<string, string>();
-  for (const id of set) {
-    const n = nextId(doc, KIND_PREFIX[kindOf(id) as MapKind]);
-    doc = n.doc;
-    copyOf.set(id, n.id);
-  }
-
-  // How each mirrored bar's section turns over, and the roll that places the image.
-  const maps = new Map<string, BarMap>();
-  const rollC = new Map<string, number>();
-  const hand = new Map<string, O>();
-  for (const id of set.filter((x) => x.startsWith("b"))) {
-    const spec = getEntity(doc0, id) as O;
-    const section = sectionOf(ctx, id, spec);
-    const db = derivedBar(ctx, id);
-    let m: Sym | undefined = symmetries(section)[0];
-    if (m === undefined) {
-      hand.set(id, otherHand(ctx, id, spec, "bar"));
-      m = "x";
-    }
-    const t = db.placed.frame.t;
-    const vertical = Math.hypot(t[0], t[1]) < TOL.vert;
-    const caseB = spec.up === undefined && (vertical ? k === 1 : k === 2);
-    maps.set(id, { to: copyOf.get(id) as string, reversed: false, m, section });
-    rollC.set(id, (caseB ? ROLL_B : ROLL_A)[m]);
-  }
-  for (const id of set.filter((x) => x.startsWith("r"))) {
-    const bars = runBars(getEntity(doc0, id));
-    const first = maps.get(bars[0] as string);
-    if (!first || !bars.every((b) => maps.has(b))) {
-      throw refusal("args", `${id}: mirror its bars with it`, {
-        entity: id,
-        refs: bars.filter((b) => !maps.has(b)),
-      });
-    }
-    maps.set(id, { ...first, to: copyOf.get(id) as string });
-  }
-
-  // A bar outside the set is referred to as the bar at its image (the editing polish, gap 2):
-  // itself when the plane maps it onto itself (it lies in the plane, or crosses it
-  // symmetrically), else an existing bar that stands exactly where its image would, so a bracket
-  // on one leg mirrored alone lands on the opposite leg. Where no bar stands there, it is refused.
   const docBars = Object.keys(isObject(doc0.bars) ? doc0.bars : {}).sort(compareIds);
   /** How bar `src`'s image lies on bar `dst`, or undefined when it is not `dst`'s body. */
   const onto = (src: string, dst: string): BarMap | undefined => {
@@ -189,18 +222,127 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
     if (m === undefined || !boxOn || (m !== "i" && !hasSymmetry(section, m))) return undefined;
     return { to: dst, reversed, m, section };
   };
-  type Home = { map: BarMap } | { why: string; refs: string[] };
+  /**
+   * The bars already standing at a bar's image (the editing polish, gap 2; re-check N5): itself
+   * when the plane maps it onto itself (it lies in the plane, or crosses it symmetrically), else
+   * each existing bar that stands exactly where its image would.
+   */
+  const standing = (bar: string): BarMap[] => {
+    const own = onto(bar, bar);
+    if (own) return [own];
+    return docBars.flatMap((x) => {
+      const bm = x === bar ? undefined : onto(bar, x);
+      return bm ? [bm] : [];
+    });
+  };
+
+  // A bar of the set whose image already stands in the model is not copied, since its copy would
+  // stand on that bar, the BOM counting it twice (re-check N5; recheck-fixes-core-decisions 9–11).
+  // It is referred to as that bar, as a bar outside the set is; a mirror adds no holes to a bar,
+  // so the holes written on it must have their images there already.
+  const there = new Map<string, string>();
+  const imageWords = (id: string, to: string) =>
+    to === id ? `${id} is its own image across ${plane}` : `${id}'s image across ${plane} is ${to}`;
+  for (const id of set.filter((x) => x.startsWith("b"))) {
+    const found = standing(id);
+    if (found.length === 0) continue;
+    if (found.length > 1) {
+      const ids = found.map((x) => x.to);
+      throw refusal(
+        "geometry",
+        `${id}'s image across ${plane} is where ${idList(ids, ids.length)} ${ids.length === 2 ? "both" : "all"} stand, one on another: remove all but one`,
+        { entity: id, refs: [id, ...ids] },
+      );
+    }
+    const to = (found[0] as BarMap).to;
+    if (!holesThere(ctx, id, to, R, Rdir)) {
+      throw refusal(
+        "geometry",
+        `${imageWords(id, to)}, but its holes' images are not on ${to === id ? "it" : to}, and a mirror adds none to a bar: leave ${id} out, or add them to ${to === id ? "it" : to}`,
+        { entity: id, refs: to === id ? [id] : [id, to] },
+      );
+    }
+    there.set(id, to);
+  }
+  const copied = set.filter((x) => !there.has(x));
+  if (copied.length === 0) {
+    const phrases = [...there].map(([id, to]) =>
+      to === id ? imageWords(id, to) : `${imageWords(id, to)}, already there`,
+    );
+    throw refusal(
+      "geometry",
+      `${phrases.join("; ")}: the mirror would make nothing, and ${there.size > 1 ? "copies would stand on them" : "a copy would stand on it"}`,
+      { refs: [...new Set([...there].flat())] },
+    );
+  }
+
+  // Copy ids, in id order per kind.
+  let doc = doc0;
+  const copyOf = new Map<string, string>();
+  for (const id of copied) {
+    const n = nextId(doc, KIND_PREFIX[kindOf(id) as MapKind]);
+    doc = n.doc;
+    copyOf.set(id, n.id);
+  }
+
+  // How each mirrored bar's section turns over, and the roll that places the image.
+  const maps = new Map<string, BarMap>();
+  const rollC = new Map<string, number>();
+  const hand = new Map<string, O>();
+  for (const id of copied.filter((x) => x.startsWith("b"))) {
+    const spec = getEntity(doc0, id) as O;
+    const section = sectionOf(ctx, id, spec);
+    const db = derivedBar(ctx, id);
+    let m: Sym | undefined = symmetries(section)[0];
+    if (m === undefined) {
+      hand.set(id, otherHand(ctx, id, spec, "bar"));
+      m = "x";
+    }
+    const t = db.placed.frame.t;
+    const vertical = Math.hypot(t[0], t[1]) < TOL.vert;
+    const caseB = spec.up === undefined && (vertical ? k === 1 : k === 2);
+    maps.set(id, { to: copyOf.get(id) as string, reversed: false, m, section });
+    rollC.set(id, (caseB ? ROLL_B : ROLL_A)[m]);
+  }
+  for (const id of copied.filter((x) => x.startsWith("r"))) {
+    const bars = runBars(getEntity(doc0, id));
+    const kept = bars.filter((b) => there.has(b));
+    if (kept.length > 0) {
+      throw refusal(
+        "geometry",
+        `${id}: ${kept.map((b) => imageWords(b, there.get(b) as string)).join("; ")}, so the run has no copy to make; leave ${id} out`,
+        { entity: id, refs: kept },
+      );
+    }
+    const first = maps.get(bars[0] as string);
+    if (!first || !bars.every((b) => maps.has(b))) {
+      const missing = bars.filter((b) => !maps.has(b));
+      throw new Include(`${id}: a run is mirrored with all its bars`, missing, {
+        code: "args",
+        entity: id,
+        refs: missing,
+      });
+    }
+    maps.set(id, { ...first, to: copyOf.get(id) as string });
+  }
+
+  // A bar outside the set, or one of the set already standing at its image, is referred to as
+  // the bar at its image (the editing polish, gap 2), so a bracket on one leg mirrored alone lands
+  // on the opposite leg. Where none stands there, it is refused, saying why and, where that
+  // helps, what to include.
+  /** The bar a bar outside the set lands on; or why none, and what to include where that helps. */
+  type Home = { map: BarMap } | { why: string; refs: string[]; include?: string[] };
   const homes = new Map<string, Home>();
-  /** The bar a bar outside the set lands on, or why none. */
   const homeOf = (bar: string): Home => {
     const hit = homes.get(bar);
     if (hit) return hit;
     let home: Home;
-    if (bar.startsWith("r"))
-      home = { why: `run ${bar} is not mirrored; include it and its bars`, refs: [bar] };
-    else {
-      const own = onto(bar, bar);
-      if (own) home = { map: own };
+    if (bar.startsWith("r")) {
+      const bars = runBars(getEntity(doc0, bar));
+      home = { why: `run ${bar} is not mirrored`, refs: [bar], include: [bar, ...bars] };
+    } else {
+      const found = standing(bar);
+      if (found.length === 1) home = { map: found[0] as BarMap };
       else {
         const s = derivedBar(ctx, bar).placed;
         const RA = R(s.A);
@@ -213,27 +355,32 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
             (dist(RA, d.B) <= TOL.len && dist(RB, d.A) <= TOL.len)
           );
         });
-        const found = lined.flatMap((x) => {
-          const bm = onto(bar, x);
-          return bm ? [bm] : [];
-        });
-        const plane = `${AXES[k]} = ${at}`;
-        if (found.length === 1) home = { map: found[0] as BarMap };
-        else if (found.length > 1) {
+        if (found.length > 1) {
+          // Including the bar would stand a third body there (re-check N5): say what is wrong.
           const ids = found.map((x) => x.to);
           home = {
-            why: `${bar} is not mirrored, and ${idList(ids)} all stand at its image across ${plane}; include ${bar}`,
+            why: `${bar} is not mirrored, and ${idList(ids, ids.length)} ${ids.length === 2 ? "both" : "all"} stand at its image across ${plane}, one on another: remove all but one`,
             refs: [bar, ...ids],
           };
         } else if (lined.length > 0) {
+          // Including the bar would stand its image on top of these: say how they differ.
+          const one = lined.length === 1 ? (lined[0] as string) : undefined;
+          const own = sectionOf(ctx, bar, getEntity(doc0, bar) as O).id;
+          const theirs = one && sectionOf(ctx, one, getEntity(doc0, one) as O).id;
+          const how = !one
+            ? "another section or placement"
+            : theirs !== own
+              ? `its section is ${theirs}, and ${bar}'s ${own}`
+              : "the same section, placed otherwise: its roll, anchor or offset";
           home = {
-            why: `${bar} is not mirrored, and ${idList(lined)} ${lined.length > 1 ? "stand" : "stands"} on its image's line but ${lined.length > 1 ? "are" : "is"} not its mirror image (another section or placement); include ${bar}`,
+            why: `${bar} is not mirrored, and ${idList(lined, lined.length)} ${one ? "stands" : "stand"} on its image's line but ${one ? "is" : "are"} not its mirror image (${how}): make ${one ? "it" : "one of them"} ${bar}'s mirror image, or place the image by hand`,
             refs: [bar, ...lined],
           };
         } else {
           home = {
-            why: `${bar} is not mirrored, and no bar stands at its image across ${plane}; include ${bar}`,
+            why: `${bar} is not mirrored, and no bar stands at its image across ${plane}`,
             refs: [bar],
+            include: [bar],
           };
         }
       }
@@ -244,10 +391,9 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
   const outsideMap = (bar: string, where: string): BarMap => {
     const h = homeOf(bar);
     if ("map" in h) return h.map;
-    throw refusal("geometry", `${where}: ${h.why}`, {
-      entity: where.split("/")[0],
-      refs: h.refs,
-    });
+    const extra = { entity: where.split("/")[0], refs: h.refs };
+    if (h.include) throw new Include(`${where}: ${h.why}`, h.include, extra);
+    throw refusal("geometry", `${where}: ${h.why}`, extra);
   };
   const mapOf = (bar: string, where: string) => maps.get(bar) ?? outsideMap(bar, where);
   /** The map that produced a bar id as rewritten: a copy's, or an outside bar's home. */
@@ -265,14 +411,12 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
         // A node outside the set is kept only when it lies on the plane.
         const p = ctx.derived().nodes.get(x);
         if (!p || Math.abs((p[k] as number) - at) > TOL.len) {
-          throw refusal("geometry", `node ${x} is not mirrored and is off the plane; include it`, {
-            refs: [x],
-          });
+          throw new Include(`node ${x} is not mirrored and is off the plane`, [x], { refs: [x] });
         }
       }
       if (x.startsWith("b") || x.startsWith("r")) return outsideMap(x, x).to;
       if (x.startsWith("c") || x.startsWith("p")) {
-        throw refusal("geometry", `${x} is named by what is mirrored; include it`, { refs: [x] });
+        throw new Include(`${x} is named by what is mirrored`, [x], { refs: [x] });
       }
       return x;
     },
@@ -294,11 +438,10 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
       if (along <= 1e-9 || Math.abs(along - 1) <= 1e-9) return bar;
       const h = homeOf(bar);
       if ("map" in h) return h.map.to;
-      throw refusal(
-        "geometry",
-        `${where}: the plane is square to ${bar}, which is not mirrored and whose axis the mirror turns; include it`,
-        { entity: where.split("/")[0], refs: [bar] },
-      );
+      const why = `${where}: the plane is square to ${bar}, which is not mirrored and whose axis the mirror turns`;
+      const extra = { entity: where.split("/")[0], refs: h.refs };
+      if (h.include) throw new Include(why, h.include, extra);
+      throw refusal("geometry", `${why}; ${h.why}`, extra);
     },
     coords: (v) => v.map((c, i) => (i === k ? reflect(c, at) : c)) as unknown as typeof v,
     direction: (v) => {
@@ -316,9 +459,11 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
         const was = derivedBar(ctx, st.bar as string).ends[e].move;
         const now = derivedBar(ctx, bm.to).ends[te].move;
         if (Math.abs(was - now) > TOL.len) {
+          // Including the bar would stand its image on the bar it lands on (re-check N1, N5), so
+          // the advice is what makes the two agree.
           throw refusal(
             "geometry",
-            `${where}: it is measured from ${st.bar as string}.${e}'s cut, and ${bm.to}.${te} is not cut as its image; include ${st.bar as string}`,
+            `${where}: it is measured from ${st.bar as string}.${e}'s cut, and ${bm.to}.${te} is not cut as its image; count it from a design point, or cut ${bm.to}.${te} as ${st.bar as string}.${e} is`,
             { entity: where.split("/")[0], refs: [st.bar as string, bm.to] },
           );
         }
@@ -345,10 +490,11 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
   // that claims only ends of the mirrored bars, its members outside the set landed on the bars at
   // their images, as references are. A joint whose member has no image is left out, as a copy
   // that finds no new main part for a connected object leaves it, and the image's ends it would
-  // have claimed are reported open. One the set names is mirrored as any member, or refused.
+  // have claimed are reported open. One the set names is mirrored as any member, or refused. A
+  // bar already at its image is not copied, so its joints are not either: that bar has its own.
   const own = ownJoints(
     isObject(doc0.connections) ? doc0.connections : {},
-    new Set(set.filter((x) => x.startsWith("b"))),
+    new Set(copied.filter((x) => x.startsWith("b"))),
   ).filter((c) => !copyOf.has(c));
   const implied: string[] = [];
   const open: string[] = [];
@@ -369,7 +515,7 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
 
   const created: string[] = [];
   const joined: Record<string, string> = {};
-  for (const id of [...set, ...implied]) {
+  for (const id of [...copied, ...implied]) {
     const kind = kindOf(id) as Kind;
     const copy = copyOf.get(id) as string;
     const value = rewriteEntity(kind, id, getEntity(doc0, id), rw);
@@ -381,7 +527,7 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
   checkAll(ctx, doc, created);
   // The bars outside the set that the images landed on other than themselves.
   const rehomed = [...homes.entries()].flatMap(([bar, h]) =>
-    "map" in h && h.map.to !== bar ? [[bar, h.map.to] as const] : [],
+    "map" in h && h.map.to !== bar && !there.has(bar) ? [[bar, h.map.to] as const] : [],
   );
   open.sort(compareIds);
   return done(
@@ -389,6 +535,7 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
     { created },
     {
       copies: Object.fromEntries(copyOf),
+      ...(there.size > 0 ? { there: Object.fromEntries(there) } : {}),
       ...(rehomed.length > 0 ? { onto: Object.fromEntries(rehomed) } : {}),
       ...(Object.keys(joined).length > 0 ? { joined } : {}),
       ...(open.length > 0 ? { open } : {}),
@@ -396,10 +543,47 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
   );
 }
 
+/**
+ * Whether every hole written on bar `src` has its image on bar `dst`, the bar at `src`'s image
+ * (re-check N5): the same hole, its centre at the image of `src`'s within tol.len and drilled
+ * along the image of its face's normal; a plain through hole along its axis either way, as the
+ * cut list counts it one hole from either face (§5.3).
+ */
+function holesThere(
+  ctx: CommandContext,
+  src: string,
+  dst: string,
+  R: (v: V3) => V3,
+  Rdir: (v: V3) => V3,
+): boolean {
+  const a = derivedBar(ctx, src);
+  const b = derivedBar(ctx, dst);
+  const theirs = b.ops.filter((o): o is HoleOp => o.op === "hole");
+  const kind = (o: HoleOp) => JSON.stringify([o.d, o.thread, o.depth, o.csk, o.cbore]);
+  return a.ops.every((o) => {
+    if (o.op !== "hole" || !o.written) return true;
+    const X = R(holeCentre(a, o));
+    const n = Rdir(faceNormal(a, o.face));
+    const plain = o.depth === undefined && !o.csk && !o.cbore;
+    return theirs.some((p) => {
+      if (kind(p) !== kind(o)) return false;
+      const along = dot(faceNormal(b, p.face), n);
+      const d = sub(holeCentre(b, p), X);
+      if (plain) return Math.abs(along) >= 1 - 1e-9 && norm(cross(d, n)) <= TOL.len;
+      return along >= 1 - 1e-9 && norm(d) <= TOL.len;
+    });
+  });
+}
+
 /** What a mirror did beyond its copies: the bars outside the set its images landed on. */
 export interface MirrorInfo {
   /** Each entity mirrored, and its copy; the set's own joints included. */
   copies: Record<string, string>;
+  /**
+   * A bar of the set whose image already stands in the model, and that bar (itself, when the
+   * plane maps it onto itself): it is not copied (re-check N5). Absent when none.
+   */
+  there?: Record<string, string>;
   /** A bar outside the set whose image another bar stands at, and that bar; absent when none. */
   onto?: Record<string, string>;
   /** Each connection made, and the bar it joins the images to (a butt's through bar). */

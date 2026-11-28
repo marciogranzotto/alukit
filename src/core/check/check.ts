@@ -1,13 +1,15 @@
 import { liesOn } from "../commands/join.ts";
+import { onOutline } from "../commands/sections.ts";
 import { cutList } from "../cutlist/cutlist.ts";
 import type { Derived } from "../derive/derive.ts";
+import type { PlacedBar } from "../derive/types.ts";
 import { type Diagnostic, Diagnostics, type Severity, sortDiagnostics } from "../diagnostics.ts";
 import { type Ast, evalNumber, evaluate, parseExpr } from "../expr.ts";
 import { compareIds } from "../ids.ts";
 import type { ItemSource } from "../items.ts";
 import { QUANTUM, quantize } from "../quantum.ts";
 import { TOL } from "../tolerances.ts";
-import { dist, type V3 } from "../vec.ts";
+import { dist, dot, type V3 } from "../vec.ts";
 import { unjoinedButts, unjoinedMessage } from "./joints.ts";
 import { type Accessor, modelScope, PendingAccessor } from "./model.ts";
 
@@ -247,12 +249,72 @@ export function noConnector(derived: Derived, d: Diagnostics): void {
   }
 }
 
+/**
+ * Two bars in one place (*2.3*, re-check N5; docs/ux/recheck-fixes-core-decisions.md 12–14): a
+ * bar standing where another of its section stands, on the same line (its design points the
+ * other's, either way, within tol.len) and placed as the same body (every vertex of its outline,
+ * placed, on the other's placed outline within the section's tolerance), however it was made: a
+ * paste, a duplicate, a mirror of old. The cut list and the BOM count both, so it is a warning on
+ * the later bar, naming the first it stands on, as Tekla's clash check reports two identical
+ * objects that completely overlap. A bar on the same line but beside it is not one.
+ */
+export function coincidentBars(derived: Derived, d: Diagnostics): void {
+  const placed = [...derived.bars.values()]
+    .map((b) => b.placed)
+    .filter((p): p is PlacedBar & { B: V3 } => p.B !== undefined)
+    .map((p) => ({ p, key: Math.min(p.A[0], p.B[0]) }))
+    .sort((x, y) => x.key - y.key || compareIds(x.p.id, y.p.id));
+  const first = new Map<string, string>();
+  for (let i = 0; i < placed.length; i++) {
+    const a = placed[i] as (typeof placed)[number];
+    for (let j = i + 1; j < placed.length; j++) {
+      const b = placed[j] as (typeof placed)[number];
+      if (b.key - a.key > TOL.len) break;
+      if (!sameBody(a.p, b.p)) continue;
+      const [one, two] = compareIds(a.p.id, b.p.id) < 0 ? [a.p.id, b.p.id] : [b.p.id, a.p.id];
+      const was = first.get(two);
+      if (was === undefined || compareIds(one, was) < 0) first.set(two, one);
+    }
+  }
+  for (const [two, one] of [...first].sort(([x], [y]) => compareIds(x, y))) {
+    const counted = !derived.context.has(one) && !derived.context.has(two);
+    d.warn(
+      "coincident",
+      two,
+      `${two} stands where ${one} does: the same section on the same line, one body in one place${counted ? ", so the BOM counts it twice" : ""}; remove one of them`,
+      { refs: [one, two] },
+    );
+  }
+}
+
+/** Whether two placed bars are one body: the same section, line and placed outline. */
+function sameBody(p: PlacedBar & { B: V3 }, q: PlacedBar & { B: V3 }): boolean {
+  if (p.item.sectionId !== q.item.sectionId) return false;
+  const same = dist(p.A, q.A) <= TOL.len && dist(p.B, q.B) <= TOL.len;
+  if (!same && !(dist(p.A, q.B) <= TOL.len && dist(p.B, q.A) <= TOL.len)) return false;
+  const s = p.item.section;
+  for (const ring of [s.draw.outline, ...s.draw.holes]) {
+    for (const [u, v] of ring) {
+      // The vertex placed at p's design point a (§4.4), then read in q's section frame.
+      const lx = u - (p.anchor[0] as number) + (p.off[0] as number);
+      const ly = v - (p.anchor[1] as number) + (p.off[1] as number);
+      const W = p.A.map((c, i) => c + lx * (p.frame.x[i] as number) + ly * (p.frame.y[i] as number));
+      const r = W.map((c, i) => c - (q.A[i] as number)) as unknown as V3;
+      const x = dot(r, q.frame.x) + (q.anchor[0] as number) - (q.off[0] as number);
+      const y = dot(r, q.frame.y) + (q.anchor[1] as number) - (q.off[1] as number);
+      if (!onOutline(s, [x, y])) return false;
+    }
+  }
+  return true;
+}
+
 /** Everything `alukit check` reports about a derived model. */
 export function checkModel(input: CheckInput): CheckOutput {
   const d = new Diagnostics();
   for (const x of input.derived.diagnostics) d.add(x);
   for (const x of cutList({ derived: input.derived, items: input.items }).diagnostics) d.add(x);
   unconnectedEnds(input.derived, d);
+  coincidentBars(input.derived, d);
   noConnector(input.derived, d);
   const checks = projectChecks(input, d);
   return { checks, diagnostics: sortDiagnostics(d.sorted()) };

@@ -506,6 +506,16 @@ TRACE_TOLERANCE = {"area": 0.02, "inertia": 0.04}
 #: The largest error of the fitted margin on the four rasters drawn under vector outlines (PF40-00,
 #: PF40-01, PF40-03, PF45-12: 0.011 mm); a trace's stated uncertainty includes it.
 TRACE_METHOD_MM = 0.011
+#: A traced edge's local uncertainty, in the image's pixels: the farthest a trace lies from the
+#: vector outline drawn over its raster, either way, on the same four pages (1.11, 0.67, 1.45 and
+#: 1.23 px for PF40-00, PF40-01, PF45-12 and PF40-03; `import_forseti.py check-traces`), rounded up
+#: to the half pixel. Half a pixel, stated before, was the 50 % contour's own error alone: the
+#: rasters place an edge, a sharp corner most, by a pixel or more, and a trace follows its image.
+TRACE_LOCAL_PX = 1.5
+#: The rasters drawn under the vector outlines the build reads, which `check-traces` traces as the
+#: build traces a profile and compares with their outlines: (stem, page, the image's xref).
+TRACE_GROUND_TRUTH = [("PF40-00", 16, 176), ("PF40-01", 16, 173), ("PF45-12", 19, 222),
+                      ("PF40-03", 21, 254)]
 #: A traced core's bore is snapped to the printed diameter when it reads within this of it (mm),
 #: and the trace is refused otherwise.
 TRACE_CORE_MM = 0.5

@@ -6,6 +6,7 @@ import { TOL } from "../tolerances.ts";
 import { addScaled, dot, norm, scale, sub, type V3 } from "../vec.ts";
 import type { Ctx } from "./context.ts";
 import type { DerivedBar, HoleOp } from "./derive.ts";
+import { holePlace } from "./duplicates.ts";
 import { holeCentre } from "./fastenings.ts";
 
 /**
@@ -28,13 +29,13 @@ export function holesOnPiece(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): v
       if (o.op !== "hole") continue;
       const off = farthest(b, o);
       if (!off || off.reach <= TOL.len) continue;
-      const s = o.from === "a" ? o.at : b.lengths.len - o.at;
-      const fromCut = off.end === "a" ? s - b.lengths.la : b.lengths.lb - s;
+      // Placed in its own reference (re-check N3), as every message about a hole is.
+      const [at, from] = holePlace(b, o);
       const what = o.thread ? `tap ${o.thread}` : `Ø${o.d === undefined ? "?" : mm(o.d)} hole`;
       ctx.d.error(
         "machining",
         id,
-        `the ${what} on face ${o.face}${o.by ? ` (${o.by})` : ""}, ${mm(fromCut)} mm from end ${off.end}'s cut, reaches ${mm(off.reach)} mm past end ${off.end}'s cut face: off the piece, a shop cannot make it there`,
+        `the ${what} on face ${o.face}${o.by ? ` (${o.by})` : ""}, ${mm(at)} mm from ${from}, reaches ${mm(off.reach)} mm past end ${off.end}'s cut face: off the piece, a shop cannot make it there`,
         o.by ? { refs: [o.by] } : {},
       );
     }
@@ -47,7 +48,7 @@ const mm = (x: number) => {
 };
 
 /** The face's outward normal in world terms. */
-function faceNormal(b: DerivedBar, face: Face): V3 {
+export function faceNormal(b: DerivedBar, face: Face): V3 {
   const axis = face[1] === "x" ? b.placed.frame.x : b.placed.frame.y;
   return face[0] === "+" ? axis : scale(axis, -1);
 }

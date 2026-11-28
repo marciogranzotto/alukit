@@ -8,7 +8,8 @@
     "method": "raster",
     "scale": "the printed size, 50 x 50 mm, and the dimensions the page prints",
     "read": "2026-11-26",
-    "note": "traced from the page's raster image (grey levels 301x347 px of image 240 (fill grey 96), cropped to x 100..276, y 94..271, opened by 3 px): its edge at 50 % coverage by marching squares, simplified by Douglas-Peucker at 0.1 px; the scale (3.438 x 3.443 px/mm) and the outline stroke's margin (0.015 ± 0.004 mm) fitted by least squares to the printed size and the printed groove dimensions (opening 8.3, lip 4, depth 14.5, undercut 22), residuals at most 0.05 mm; the margin taken off by an exact inner offset, the box snapped to 50 x 50 (it was -0.006, -0.045 mm off), the cores' bores snapped to their printed diameters (at most 0.14 mm off). Edges ±0.012 mm overall (the margin's standard error with 0.011 mm, the method's largest error on the rasters drawn under vector outlines) and ±0.15 mm locally (half a pixel). Against the published values the area +0.44 %. The cores are labelled M16 by the drawing on p. 20."
+    "uncertainty": { "overall_mm": 0.012, "local_mm": 0.44 },
+    "note": "traced from the page's raster image (grey levels 301x347 px of image 240 (fill grey 96), cropped to x 100..276, y 94..271, opened by 3 px): its edge at 50 % coverage by marching squares, simplified by Douglas-Peucker at 0.1 px; the scale (3.438 x 3.443 px/mm) and the outline stroke's margin (0.015 ± 0.004 mm) fitted by least squares to the printed size and the printed groove dimensions (opening 8.3, lip 4, depth 14.5, undercut 22), residuals at most 0.05 mm; the margin taken off by an exact inner offset, the box snapped to 50 x 50 (it was -0.006, -0.045 mm off), the cores' bores snapped to their printed diameters (at most 0.14 mm off). Edges ±0.012 mm overall (the margin's standard error with 0.011 mm, the method's largest error on the rasters drawn under vector outlines) and ±0.44 mm locally (1.5 pixels, the farthest a trace lay from the vector outline over its raster on those pages). Against the published values the area +0.44 %. The cores are labelled M16 by the drawing on p. 20."
   },
   "bbox_mm": [[-25, -25], [25, 25]],
   "grooves": [
@@ -839,15 +840,15 @@
       "v": 8.51,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p20",
-      "low": 8.33,
-      "high": 8.69
+      "low": 8.04,
+      "high": 8.98
     },
     "bottom_mm": {
       "v": 6.52,
       "src": "est",
       "ref": "pdf:catalogo_forsetiA4.pdf#p20",
-      "low": 4.42,
-      "high": 8.62
+      "low": 4.13,
+      "high": 8.91
     },
     "note": "the dimensions p. 20 prints; the rest measured on the traced outline as on an exact one, the median over its 4 grooves, each range the trace's uncertainty and the grooves' spread"
   }

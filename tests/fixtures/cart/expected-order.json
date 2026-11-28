@@ -15,7 +15,8 @@
     "option-not-sold": "block",
     "stale-price": "warn",
     "no-connector": "warn",
-    "unconnected": "warn"
+    "unconnected": "warn",
+    "coincident": "warn"
   },
   "suppliers": [
     {

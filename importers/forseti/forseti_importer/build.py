@@ -487,7 +487,7 @@ class Build:
         tr = trace.trace_profile(self.doc, t, (w, h), grooves)
         cal = tr.cal
         u_sys = (cal.se_delta_mm ** 2 + tables.TRACE_METHOD_MM ** 2) ** 0.5
-        u_px = 0.5 / cal.s
+        u_px = tables.TRACE_LOCAL_PX / cal.s
         # Cores: each a traced hole at its printed centre, its bore snapped to the printed diameter.
         holes = list(tr.holes)
         cores, worst, problems = [], 0.0, []
@@ -539,7 +539,9 @@ class Build:
                if cores else "")
             + f". Edges ±{u_sys:.3f} mm overall (the margin's standard error with "
             f"{tables.TRACE_METHOD_MM} mm, the method's largest error on the rasters drawn under vector "
-            f"outlines) and ±{u_px:.2f} mm locally (half a pixel). Against the published values {said}"
+            f"outlines) and ±{u_px:.2f} mm locally ({num(Decimal(str(tables.TRACE_LOCAL_PX)))} pixels, "
+            f"the farthest a trace lay from the vector outline over its raster on those pages). "
+            f"Against the published values {said}"
             + (". Grooves on " + ", ".join(faces) + " only: the other faces are closed" if len(faces) < 4 else "")
             + ". " + self.labels_note(stem, bool(spec.get("corners"))) + "."
         )
@@ -551,7 +553,9 @@ class Build:
             "props_ok": True,
             "from": {"ref": pdf_ref(t["page"]), "method": "raster",
                      "scale": f"the printed size, {w} x {h} mm, and the dimensions the page prints",
-                     "read": tables.PDF_READ, "note": note},
+                     "read": tables.PDF_READ,
+                     "uncertainty": {"overall_mm": round(u_sys, 3), "local_mm": round(u_px, 2)},
+                     "note": note},
             "bbox_mm": [[num(Decimal(str(-w2))), num(Decimal(str(-h2)))],
                         [num(Decimal(str(w2))), num(Decimal(str(h2)))]],
             "grooves": [{**gr, "type": gid} for gr in grooves],

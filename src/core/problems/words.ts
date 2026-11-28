@@ -22,6 +22,7 @@ const CHECK_TITLE: Readonly<Record<DiagnosticCode, string>> = {
   chain: "An end that reads another end's plane",
   check: "A project check",
   "check-pending": "A project check that cannot run yet",
+  coincident: "Two bars in one place",
   connection: "A joint problem",
   "cover-none": "A through end with nothing to cover",
   covers: "A cost line's cover",

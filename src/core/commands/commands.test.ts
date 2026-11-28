@@ -870,9 +870,11 @@ describe("mirror", () => {
     });
 
     it("puts a part mirrored with its bar on the bar's copy", () => {
+      // Across x = 400, where no bar stands at b1's image: across x = 500 b2 stands there, and
+      // b1 is not copied onto it (re-check N5).
       const r = run(bracketed(), {
         cmd: "mirror",
-        args: { ids: ["b1", "p1"], plane: { axis: "x", at_mm: 500 } },
+        args: { ids: ["b1", "p1"], plane: { axis: "x", at_mm: 400 } },
       });
       expect(r.results[0]?.created).toEqual(["b13", "p2"]);
       expect(parts(r.state).p2).toEqual({
@@ -910,7 +912,9 @@ describe("mirror", () => {
       expect(e?.message).toBe(
         "p1/on: b1 is not mirrored, and no bar stands at its image across x = 400; include b1",
       );
-      // A bar on the image's line that is not its mirror image (another anchor) is no home.
+      // A bar on the image's line that is not its mirror image (another anchor) is no home, and
+      // including b1 would stand its image on top of b2, so the refusal says how they differ
+      // instead (re-check N1: never advise a step that goes wrong in turn).
       const moved = run(s, { cmd: "setBar", args: { id: "b2", set: { anchor: "-x-y" } } }).state;
       const [f] = no(moved, {
         cmd: "mirror",
@@ -918,7 +922,7 @@ describe("mirror", () => {
       });
       expect(f).toMatchObject({ code: "geometry", refs: ["b1", "b2"] });
       expect(f?.message).toBe(
-        "p1/on: b1 is not mirrored, and b2 stands on its image's line but is not its mirror image (another section or placement); include b1",
+        "p1/on: b1 is not mirrored, and b2 stands on its image's line but is not its mirror image (the same section, placed otherwise: its roll, anchor or offset): make it b1's mirror image, or place the image by hand",
       );
     });
   });
@@ -1579,9 +1583,15 @@ describe("a plane's normal naming a bar (gap G-A, G27)", () => {
     expect(
       no(s, { cmd: "mirror", args: { ids: ["n1", "b2", "c1"], plane: { axis: "x", at_mm: 500 } } }),
     ).toMatchObject([{ code: "geometry", refs: ["b3"] }]);
-    // A plane square to y leaves that axis as it is: the image is square to the same strut.
-    const y = ok(s, { cmd: "mirror", args: { ids: ["b2", "c1"], plane: { axis: "y", at_mm: 0 } } });
-    expect(normalOf(y.state, "b4")).toBe("b3");
+    // A plane square to y leaves that axis as it is: the image is square to the same strut. Across
+    // y = 100, beside the frame: across y = 0, in its plane, every bar is its own image and none
+    // is copied (re-check N5).
+    const y = ok(s, {
+      cmd: "mirror",
+      args: { ids: ["n1", "b1", "b2", "c1"], plane: { axis: "y", at_mm: 100 } },
+    });
+    expect(y.results[0]?.created).toEqual(["b4", "b5", "c3", "n2"]);
+    expect(normalOf(y.state, "b5")).toBe("b3");
     expect(errorsOf(derived(y.state))).toEqual([]);
   });
 
@@ -1816,7 +1826,8 @@ describe("batches and history (§6)", () => {
       cart(),
       { cmd: "addNode", args: { at: [0.1 + 0.2, 0, 0], label: "z" } },
       { cmd: "addBar", args: { a: "n1", b: [1199.9999999999998, 0, 0], tags: ["t"] } },
-      { cmd: "mirror", args: { ids: ["b35"], plane: { axis: "y", at_mm: 0 } } },
+      // Beside it: across y = 0, the bar's own plane, it is its own image (re-check N5).
+      { cmd: "mirror", args: { ids: ["n1", "b35"], plane: { axis: "y", at_mm: 100 } } },
       { cmd: "addCheck", args: { check: { value: "1", op: "<=", limit: "2" } } },
     );
     const text = projectText(r.state.doc);
