@@ -1,3 +1,4 @@
+import { minus, plus } from "#core/commands/numbers.ts";
 import type { Model } from "../model.ts";
 import type { Cmd } from "../tools/preview.ts";
 import { parseTyped } from "../tools/typed.ts";
@@ -126,6 +127,49 @@ export function changeHole(m: Model, bar: string, i: number, patch: O): Cmd {
     return next;
   });
   return setOps(bar, ops);
+}
+
+/**
+ * Where a distance from `from` counts from on a bar, as derive resolves a hole (`resolveOps`,
+ * design §4.3): its origin along the axis from design point a, and the way it counts (+1 toward
+ * end b). A cut end's origin is its long point, the view model's `long_mm`, where the cut list
+ * measures; undefined when the bar does not derive.
+ */
+function originOf(m: Model, bar: string, from: From): { at: number; way: 1 | -1 } | undefined {
+  const len = m.derived.bars[bar]?.len_mm;
+  const long = m.display.bars[bar]?.long_mm;
+  if (len === undefined || !long) return undefined;
+  if (from === "a") return { at: 0, way: 1 };
+  if (from === "a.cut") return { at: long[0], way: 1 };
+  if (from === "b") return { at: len, way: -1 };
+  return { at: long[1], way: -1 };
+}
+
+/**
+ * The step that makes hole `i` count from `to` and keeps it where it is (re-check N6: the number
+ * stayed and the hole moved 40 mm, unsaid). As a CAD dimension re-attached to another reference
+ * keeps the geometry and reads the new distance, the distance is converted: a hole `x` from its
+ * old origin lies at `o₁ + w₁·x` from design point a, so from the new one it is
+ * `(o₁ − o₂)·w₂ + w₁·w₂·x`. The core's numbers do the arithmetic (`plus`, `minus`), so a distance
+ * written over params stays an expression that follows them, and a number is quantised as every
+ * command's is.
+ */
+export function switchFrom(m: Model, bar: string, i: number, to: From): Cmd | { why: string } {
+  const op = holesOf(m, bar)[i];
+  if (!op) return { why: `${bar} has no hole ${i + 1}` };
+  const from = fromOf(op);
+  if (from === to) return changeHole(m, bar, i, {});
+  const at = op.at_mm;
+  const x = originOf(m, bar, from);
+  const y = originOf(m, bar, to);
+  if (!x || !y || (typeof at !== "number" && typeof at !== "string")) {
+    return { why: `${bar} does not derive, so the hole cannot be kept where it is` };
+  }
+  const k = (x.at - y.at) * y.way;
+  return changeHole(m, bar, i, {
+    from: to,
+    at_mm: x.way === y.way ? plus(at, k) : minus(k, at),
+  });
 }
 
 /** The step that removes hole `i`; the list goes with its last hole. */

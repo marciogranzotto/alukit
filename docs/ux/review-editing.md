@@ -301,13 +301,13 @@ nothing warns.** (A8)
 |---|---|---|---|
 | m1 | **Edit** on a param opens its field without focusing it: typing goes nowhere (A2 (i), whose guide line says "Edit beside W, type 1100") | *Measured* twice: the focus stays on "Edit W" | Focus and select the field on Edit, as the inspector's own fields do — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 5) |
 | m2 | Duplicate copies the label and tags: the rail 300 below the top reads "top rail, front" and is tagged `top`, so **Select tagged top** and `H` take it | *Measured*: b18's label and tags | Keep the tags but number the copy's label ("top rail, front 2"), as CAD tools number copied instances (**inferred**) — **Left for the core**: the copy is the core's `array` command, and the CLI's copy must number it the same way ([review fixes, app](review-fixes-app-decisions.md)) |
-| m3 | A refused Move speaks the API: "give joined: \"detach\" to free it"; and Enter sends a step the preview already knew was refused (HTTP 422) | *Measured* | Say "hold Alt to detach it"; keep the gesture open and say it in the bar instead of posting — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 6). *Re-check: for Move and Duplicate; a refused Mirror still posts ([§9](#9-re-check-after-the-fixes-2026-11-27), N4)* |
+| m3 | A refused Move speaks the API: "give joined: \"detach\" to free it"; and Enter sends a step the preview already knew was refused (HTTP 422) | *Measured* | Say "hold Alt to detach it"; keep the gesture open and say it in the bar instead of posting — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 6). *Re-check: for Move and Duplicate; a refused Mirror still posts ([§9](#9-re-check-after-the-fixes-2026-11-27), N4); since fixed for every previewed commit ([re-check fixes, app](recheck-fixes-app-decisions.md) 1)* |
 | m4 | Every gesture's field is named "Draw bar: value" for a screen reader (Move, Duplicate, Mirror, Align, an end drag) | *Measured* (accessibility tree); *read* `tools/CommandBar.tsx:455` passes `tool="draw"` | Name it by the gesture: "Move: offset", "Mirror: plane at" — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 7) |
 | m5 | Key caps say Ctrl on macOS (menu "Ctrl+D", inspector "Ctrl+C", help "Ctrl Z"), Alt for Option | *Measured* on a Mac user agent; *read* `actions/registry.ts:122` `mod: "Ctrl"` | ⌘ and ⌥ on macOS (Apple HIG, keyboards) — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 8) |
 | m6 | The selection's length label and the tool's readout collide: on top of each other at 1000 × 700, touching at 1440 | *Measured* (label rectangles, screenshots) | Put the selection label in the labels' `avoid` list (`viewer/labels.ts`), or show one combined label while a gesture runs — **Fixed**, by the avoid list ([review fixes, app](review-fixes-app-decisions.md) 9) |
 | m7 | At 1000 × 700 the orientation gizmo lies under the tool rail; its axis buttons are covered | *Measured*: gizmo at (284, 252) 72 × 72, rail down to y = 321 | Anchor the gizmo below the rail's measured height, or bottom-right — **Fixed**, beside the rail when it reaches the gizmo ([review fixes, app](review-fixes-app-decisions.md) 10) |
 | m8 | Pattern previews nothing before **Create**, and its prompt stays "Click the bar to repeat along" after along, pitch and count are set | *Measured* twice | Ghost copies and a dry-run reading, as Duplicate's `4x` has; a prompt that moves on — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 11) |
-| m9 | Faces are named in section axes only: on a rolled 40 × 80 leg the face that looks +X is "-y" in the snap tip, the menu, and the hole and part face selects; the Offset rows already say "(world +Y)" | *Measured*: b3 rolled 90° has section y along world −X | Add the world direction everywhere a face is named: "face −y (+X)" — **Fixed**, written "face −y (world +X)" ([review fixes, app](review-fixes-app-decisions.md) 12). *Re-check: partly; Draw's second point still says only "b4 -x face" ([§9](#9-re-check-after-the-fixes-2026-11-27), N7)* |
+| m9 | Faces are named in section axes only: on a rolled 40 × 80 leg the face that looks +X is "-y" in the snap tip, the menu, and the hole and part face selects; the Offset rows already say "(world +Y)" | *Measured*: b3 rolled 90° has section y along world −X | Add the world direction everywhere a face is named: "face −y (+X)" — **Fixed**, written "face −y (world +X)" ([review fixes, app](review-fixes-app-decisions.md) 12). *Re-check: partly; Draw's second point still says only "b4 -x face" ([§9](#9-re-check-after-the-fixes-2026-11-27), N7); since fixed ([re-check fixes, app](recheck-fixes-app-decisions.md) 5)* |
 | m10 | The menu's **Show**, beside Hide, zooms to the bar and opens a callout that says only "b5 / b5"; it reads as un-hide, and **Fit to the selection** is right above it | *Measured* | Drop it from a visible entity's menu, or name it for what it does — **Fixed**: Show draws a hidden selection again, offered only then ([review fixes, app](review-fixes-app-decisions.md) 13) |
 | m11 | The menu's letter jump takes `D` to **Delete**, not Duplicate (whose key is Ctrl+D); the dialog then focuses "Delete all n", so a typed space deletes | *Measured*: Shift+F10, D, Enter, then typing an offset deleted b18 and its two joints | Give each entry its own access key (Duplicate D, Delete L), as menu access keys do — **Fixed**, and Delete's dialog focuses Cancel ([review fixes, app](review-fixes-app-decisions.md) 14) |
 | m12 | **Join** on an end that cannot be joined is offered and then refused (the plate, a face-drawn rail) | *Measured* | Offer Join only where `autoConnect` would make it, as the `unconnected` problem already decides (e1 9) — **Fixed** with M7 ([review fixes, app](review-fixes-app-decisions.md) 4) |
@@ -596,6 +596,10 @@ The watch list's five risks were each tried:
   - The words come from B2's fix: the preview should merge the two, saying "joins" alone when a
     join closes an end that `mirror` left open.
   - *Steps:* after A4, A5 typed, then the brace's outline row, Shift+F10, **Mirror…**, `=W / 2`.
+  - **Fixed** (2026-11-28, [re-check fixes, app](recheck-fixes-app-decisions.md) 3): the preview says an image's end stays open only when nothing in
+    the step claims it (the dry run's `effects.claimed`), whichever command lands the joint; the
+    step's own words ("left open, joined at 2 ends") are the core's `mirror` describe, left to the
+    core.
 - **N3. The groove check names a cut-counted hole from the design point.** The hole written "20
   mm from end a's cut" (form, row, and the cut list's "20.00 mm from end a") reads in Problems and
   in `alukit order` as "the tap M6 60.00 from design point a on face -x … less than half its
@@ -609,6 +613,9 @@ The watch list's five risks were each tried:
   sent the step (HTTP 422), and a toast repeated it in the API's form ("mirror p1: mirror:
   p1/on: …"), with **Select the 3 places**. m3's rule (keep the gesture, say it in the bar) covers
   Move and Duplicate only. *Steps:* N1's, then Enter.
+  - **Fixed** (2026-11-28, [re-check fixes, app](recheck-fixes-app-decisions.md) 1, 2): one gate for every previewed commit (every gesture, Draw,
+    the length label; Pattern's Create disabled): a refusal the preview shows for exactly those
+    commands, at the revision held, is not sent, and the bar says it once.
 - **N5. Mirror can make an exact twin of a bar, joined, and nothing says so.** A right-click
   meant for open ground landed on the shelf rail b9, so the menu was b9's. **Mirror…** at `=W / 2`
   previewed "makes b18 · joins b2 (c15) · joins b1 (c16) · cut 840". The step made b18 exactly on
@@ -628,18 +635,25 @@ The watch list's five risks were each tried:
     moves.
   - *Steps:* write `{"op":"hole","face":"+y","at_mm":300,"d_mm":7}` on b5 by `alukit do setBar`;
     in b5's inspector, Hole 1's "from", **end a's cut**.
+  - **Fixed** (2026-11-28, [re-check fixes, app](recheck-fixes-app-decisions.md) 4): the switch keeps the hole where it is and converts its number
+    (300 from design point a reads 260 from end a's cut), as a CAD dimension re-attached to another
+    reference keeps the geometry; an expression stays one.
 
 **Nits**
 
 - **N7.** Draw's second point names its face without the world direction ("b4 -x face at 560 ·
   920 mm"), where the first says "b3 +x face (world +X) at 560". *Read:* `tools/wire/draw.ts`
-  shows the end point's `label`, not its `tip`.
+  shows the end point's `label`, not its `tip`. **Fixed** ([re-check fixes, app](recheck-fixes-app-decisions.md) 5): the end point carries the
+  snap's `tip` too.
 - **N8.** The order quotes the check's line whole, so the end and the rule appear twice:
   "**warn** unconnected: unconnected b17.b: b17.b lies on b4's -x face with no connection".
+  **Fixed** ([re-check fixes, app](recheck-fixes-app-decisions.md) 6): the reason quotes the check's line alone.
 - **N9.** After Enter on a refused Move, the command bar holds the refusal twice, once as the
-  preview and once as the result.
+  preview and once as the result. **Fixed** ([re-check fixes, app](recheck-fixes-app-decisions.md) 2): once, as Enter's answer, while that preview
+  stands.
 - **N10.** Two machining errors on one bar share the title "Machining to check at b5"; only their
-  details tell the groove-wall tap from the off-piece hole.
+  details tell the groove-wall tap from the off-piece hole. **Fixed** ([re-check fixes, app](recheck-fixes-app-decisions.md) 7): "A tap with too
+  little wall at b5", "A hole off its piece at b5".
 
 ### 9.5 The scenarios, compared
 

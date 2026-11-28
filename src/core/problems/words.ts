@@ -70,11 +70,35 @@ const CHECK_TITLE: Readonly<Record<DiagnosticCode, string>> = {
 };
 
 /**
- * "A joint problem at c21". A code AluKit does not know (a newer project's, read by an older
- * build) reads as its kind of problem.
+ * What a `machining` diagnostic says is wrong, read from the outcome clause each of derive's
+ * machining checks writes (the re-check's N10: a tap in a groove's opening and a hole off its
+ * piece on one bar were both "Machining to check at b5"). The clauses are the outcomes, not how
+ * the hole is named, so a change to a hole's naming keeps them; a message none matches keeps the
+ * code's own words.
  */
-export function checkTitle(code: string, where: readonly string[]): string {
+const MACHINING_TITLE: readonly (readonly [RegExp, string])[] = [
+  [/: off the piece, /, "A hole off its piece"], // derive/on-piece.ts
+  [/ less than half its circle of wall$/, "A tap with too little wall"], // derive/face-taps.ts
+  [/ is made \d+ times at one place /, "The same machining made twice at one place"], // derive/duplicates.ts
+  [/ gives no core positions: /, "Taps not checked against the section's cores"], // derive/cores.ts
+  [/: its thread is cut in no core$| is on no core of /, "A tap on no core"],
+  [/ does not fit .+ it is on: /, "A tap that does not fit its core"],
+  [/; its fit is not checked: /, "A tap whose fit is not checked"],
+];
+
+/** A machining diagnostic's title before where it is, by what its message says is wrong. */
+export function machiningTitle(message: string): string | undefined {
+  return MACHINING_TITLE.find(([said]) => said.test(message))?.[1];
+}
+
+/**
+ * "A joint problem at c21". A code AluKit does not know (a newer project's, read by an older
+ * build) reads as its kind of problem. A `machining` diagnostic's `message`, when given, names
+ * which machining problem it is (`machiningTitle`).
+ */
+export function checkTitle(code: string, where: readonly string[], message?: string): string {
   const what =
+    (code === "machining" && message !== undefined ? machiningTitle(message) : undefined) ??
     (CHECK_TITLE as Readonly<Record<string, string>>)[code] ??
     `A ${code.replaceAll("-", " ")} problem`;
   return where.length > 0 ? `${what} at ${idList(where)}` : what;

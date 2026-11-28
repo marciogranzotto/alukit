@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core", 115–119 in "Editing polish, app", 120–124 in "Review fixes, joins", 125–129 in "Review fixes, machining and speed" and 130–134 in "Review fixes, app"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "Review fixes, app". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core", 115–119 in "Editing polish, app", 120–124 in "Review fixes, joins", 125–129 in "Review fixes, machining and speed", 130–134 in "Review fixes, app" and 138–140 in "Re-check fixes, app"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "Re-check fixes, app". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -938,6 +938,27 @@ first, but three nits.
   m8). The inspector: the hole form keeps the focus where it is typed; a param's Edit focuses its
   field (rfa 1, 5; M2, m1). Outline: Shift + arrow extends the selection (rfa 16; m14). Words:
   Move "writes"; the verbs of Select or Move say "press Esc first" (rfa 18; n3, n4).
+
+### Re-check fixes, app
+
+The editing review's re-check (§9.4 of [`ux/review-editing.md`](ux/review-editing.md)), its
+app-side findings N2, N4, N6 and the nits N7–N10
+([`ux/recheck-fixes-app-decisions.md`](ux/recheck-fixes-app-decisions.md), cited as "xa"): no
+command, schema, CLI path or golden value changes; two of the core's words change, the order's
+open-end reason and the machining problems' titles. Each fix has a test that failed first.
+
+- §8 Gestures: **one gate for every previewed commit**: a step whose preview shows the core
+  refusing exactly those commands, at the revision the app holds, is not sent, whichever tool
+  (Move, Duplicate, Paste, Rotate, Mirror, Align, an end drag, Draw, the length label); **the bar
+  says it once**, as Enter's answer; Pattern's **Create is disabled** while its preview shows a
+  refusal (xa 1, 2; N4, N9). Call 138.
+- §8 Mirror: **an image's end is said to stay open only when nothing in the step claims it**, by
+  the dry run's `effects.claimed`, never "joins" and "stays open" for one end (xa 3; N2). §8 Draw:
+  the second point's face says its world direction (xa 5; N7). §5.5: the order quotes an
+  open end's check line once; a machining problem's title says what is wrong (xa 6, 7; N8, N10).
+  Call 139.
+- §8 The inspector: **switching a hole's reference keeps the hole where it is** and converts its
+  distance, an expression staying one (xa 4; N6). Call 140.
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -2736,7 +2757,7 @@ error.
 | `option-not-sold` ("not sold with finish red"; with none chosen, "sold only with finish anodised or black; choose one", *2.3*) | block | that supplier |
 | `stale-price` (older than 30 days before the order's date) | warn | that supplier |
 | `no-connector` (butts that name no connector, while the project names no default butt connector: nothing is bought to join them; [polish](ux/polish-decisions.md) 1) | warn | the suppliers of the butted bars |
-| `unconnected` (*2.3*: an unconnected end of the check, a corner's or one on a bar, quoted: nothing holds it and nothing is bought to; [rj](ux/review-fixes-joins-decisions.md) 9; call 124) | warn | the suppliers of its bars |
+| `unconnected` (*2.3*: an unconnected end of the check, a corner's or one on a bar, quoted: nothing holds it and nothing is bought to; [rj](ux/review-fixes-joins-decisions.md) 9; call 124; its line alone, [xa](ux/recheck-fixes-app-decisions.md) 6) | warn | the suppliers of its bars |
 
 The order list reports **READY** or **BLOCKED** per supplier, with every reason. `alukit order`
 exits non-zero when any supplier is blocked, so an agent cannot hand over a blocked list by
@@ -2782,6 +2803,12 @@ the list offers is never refused. *2.3* (review fixes, joins): an end on a bar r
 b13.a lies on b3 with no connection" (or "runs into b5"), with the same fix; a pattern copy's open
 end is joined at its template's end, whose copies follow (§4.7). With the order rule
 `unconnected`, the problem is the check's and the order's at once ([rj](ux/review-fixes-joins-decisions.md) 8–10).
+*2.3* (the re-check fixes; [xa](ux/recheck-fixes-app-decisions.md) 6, 7; call 139): the order's
+reason quotes the check's line alone ("unconnected: b17.b lies on b4's -x face with no
+connection"), since the rule already says what it is; **a `machining` problem is titled by what
+is wrong**, read from the outcome its check writes: "A hole off its piece at b5", "A tap with too
+little wall at b5", "A tap on no core", "The same machining made twice at one place"; else
+"Machining to check".
 
 *2.3* (review M1; [rm](ux/review-fixes-machining-decisions.md) 1, 2; call 125). **A supplier's
 unpriced machining reads as itself**: the order's "no price for N machining services" is "N
@@ -3282,7 +3309,9 @@ step: the revision does not move.
   A bar's face is named with the world direction it looks along wherever a person reads it,
   "face -y (world +X)": the snap tips, the menu, the hole, part and end-stop selects; a snap's
   machine label stays the section's (rfa 12). On a Mac the caps are ⌘ ⌥ ⇧, in Apple's order
-  (rfa 8). Call 134.
+  (rfa 8). Call 134. *2.3* (the re-check fixes, app): Draw's end point says it too, as its
+  start does, met, snapped or level with a face ([xa](ux/recheck-fixes-app-decisions.md) 5;
+  call 139).
 
 ### Tools
 
@@ -3454,7 +3483,10 @@ the same height; where no bar stands there, the preview gives the core's refusal
 Call 92. *2.3* (review fixes, joins; [rj](ux/review-fixes-joins-decisions.md) 5, 6; call 122):
 the step is `mirror`, which carries the bars' own joints, then an `autoConnect` at each image's
 end, as Duplicate's; the preview says what joins the images and what stays open ("makes b14 ·
-joins b4 (c11) · joins b3 (c12) · cut 1049.97").
+joins b4 (c11) · joins b3 (c12) · cut 1049.97"). *2.3* (the re-check fixes, app; xa 3; call 139):
+an image's end stays open, in the preview's words, only when no connection of the whole step
+claims it (the dry run's `effects.claimed`), so whether `mirror` lands a joint or a join after it
+does, an end is never said both joined and open.
 
 **Align to a face…** (*2.3*, E-UX-23; e3 16), in the menu and the header: a click on a bar's face
 moves the selection along that face's outward normal until its own face that looks the same way
@@ -3474,7 +3506,14 @@ one at a time, and each user takes it away only while the view still shows the o
 release sends nothing; a click-move gesture keeps its levels (rfa 2). **A step the preview
 refused is not sent**: Enter keeps the gesture open and the bar says why, in the app's words
 (rfa 6). A gesture's value field is named for the gesture ("Drag end b3.b: cut length"), and the
-hover tip hides while one runs (rfa 7, 18). Call 131.
+hover tip hides while one runs (rfa 7, 18). Call 131. *2.3* (the re-check fixes, app): **every
+previewed commit passes one gate** (`refusalOf`): a refusal the preview shows for exactly the
+commands about to be sent, at the revision the app still holds, is not sent, for every gesture
+(the rule moved from Move's and Duplicate's own commits into the gestures' one commit path), Draw
+and the length label; the command bar then says the refusal once, as Enter's answer, in the
+preview's place, until the gesture moves on. Pattern's **Create** is disabled, its title the
+refusal, while its preview shows the core refusing it. A preview of other commands or of an older
+revision holds nothing: the server judges (xa 1, 2). Call 138.
 
 ### The inspector
 
@@ -3527,7 +3566,10 @@ overwritten.
   saying which ("194 mm from end a's cut"), and a new hole counts from end a's cut, the menu
   offering that distance as the cut list will print it; each change is one `setBar` of the
   whole `ops` list, keeping a countersink or counterbore the row does not show (E-UX-21, E-UX-22;
-  e4 9–12). Call 97.
+  e4 9–12). Call 97. *2.3* (the re-check fixes, app; xa 4; call 140): **switching what a hole
+  counts from keeps the hole where it is**, as a CAD dimension re-attached to another reference
+  keeps the geometry: its distance is converted through the bar's long points and design length,
+  with the core's `plus` and `minus`, so the row shows the new number and an expression stays one.
 - **Several selected** (E-UX-15): with several bars, their options (when they share one profile),
   anchor and roll; with any entities, their label and tags; each shows the value they share or
   "varies", and a change is one step, one patch per entity. *2.3*: the anchor's dots show when the
@@ -4596,6 +4638,23 @@ reasons. Marking the room is the run's own change, in its project.
      the tool rail when the rail reaches it; a bar's face is named "face -y (world +X)" wherever a
      person reads it, a snap keeping its section-axis label for machines; a Mac's caps are
      ⌥ ⇧ ⌘ by the user agent (rfa 3, 8, 9, 10, 12).
+138. *New in 2.3, re-check fixes (app), open.* Every previewed commit asks one gate: a refusal the
+     preview shows for exactly the commands about to be sent, at the revision the app held when it
+     asked, is not sent, in every gesture's one commit path, Draw and the length label; the bar
+     says it once, as Enter's answer, while that preview stands. Pattern's Create is disabled
+     instead, its title the refusal, since the line above it already says it. A preview of other
+     commands, still in flight, or of an older revision holds nothing (xa 1, 2).
+139. *New in 2.3, re-check fixes (app), open.* Words follow what the core will do: Mirror's preview
+     says an image's end stays open only when the dry run's `effects.claimed` does not hold it
+     (the step's own words, the core's `mirror` describe, are left to the core); Draw's second
+     point names its face with the world direction; the order's `unconnected` reason quotes the
+     check's line alone; a `machining` problem is titled by the outcome its check writes ("A hole
+     off its piece", "A tap with too little wall"), else "Machining to check" (xa 3, 5, 6, 7).
+140. *New in 2.3, re-check fixes (app), open.* Switching a hole's reference keeps the hole where it
+     is and converts its distance, `(o₁ − o₂)·w₂ + w₁·w₂·x` over the reference's origin and way
+     along the axis (design points, or the long points derive counts a cut from), with the core's
+     `plus` and `minus`, so an expression keeps its params; a bar that does not derive says so and
+     sends nothing (xa 4).
 
 ## 15. Review 1 resolution
 

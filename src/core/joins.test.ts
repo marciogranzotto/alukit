@@ -282,10 +282,17 @@ describe("the CLI: the same commands, the same joins, and an order that warns of
     expect(problems.order.warnings).toBeGreaterThanOrEqual(2);
     const order = JSON.parse(
       (await capture(["order", p, "--format", "json", "--as-of", "2026-11-27"])).out,
-    ) as { suppliers: { reasons: { rule: string; action: string }[] }[] };
-    expect(
-      order.suppliers.flatMap((s) => s.reasons).filter((r) => r.rule === "unconnected"),
-    ).toMatchObject([{ action: "warn" }, { action: "warn" }]);
+    ) as { suppliers: { reasons: { rule: string; action: string; message: string }[] }[] };
+    const reasons = order.suppliers
+      .flatMap((s) => s.reasons)
+      .filter((r) => r.rule === "unconnected");
+    expect(reasons).toMatchObject([{ action: "warn" }, { action: "warn" }]);
+    // The check's line, once: the rule already says it is an open end, and the line names the end
+    // (the re-check's N8: "unconnected: unconnected b17.b: b17.b lies on …").
+    for (const r of reasons)
+      expect(r.message).toMatch(/^b15\.[ab] lies on b[34]'s [+-][xy] face with no connection$/);
+    const md = (await capture(["order", p, "--as-of", "2026-11-27"])).out;
+    expect(md).not.toContain("unconnected: unconnected");
 
     // Each fix is one step that clears its warning.
     for (const x of open) {

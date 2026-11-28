@@ -178,14 +178,16 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
   const butts = unjoinedButts(derived);
   if (butts.length > 0) add("no-connector", reach(butts), unjoinedMessage(butts), butts);
   // Open ends (*2.3*, review fixes, joins; call 124): an end that meets a bar with nothing to
-  // join it buys nothing to hold it either, so the order warns, quoting the check's warning as
-  // `check-error` quotes an error, and the problem list keeps one problem with its Join fix.
+  // join it buys nothing to hold it either, so the order warns, quoting the check's warning, and
+  // the problem list keeps one problem with its Join fix. The rule already says what it is and
+  // the check's line names the end, so the line is quoted alone (the re-check's N8: `check-error`'s
+  // "code entity:" before it said the end and the rule twice).
   // Two bars in one place (*2.3*, re-check N5) buy one bar too many, so the order warns the same
-  // way, quoting the check's warning.
+  // way, quoting the check's line alone.
   for (const x of ctx.diagnostics) {
     if (x.code !== "unconnected" && x.code !== "coincident") continue;
     const names = [...new Set([...(x.entity ? [x.entity] : []), ...(x.refs ?? [])])];
-    add(x.code, reach(names), `${x.code}${x.entity ? ` ${x.entity}` : ""}: ${x.message}`, names);
+    add(x.code, reach(names), x.message, names);
   }
 
   for (const [k, e] of services) {

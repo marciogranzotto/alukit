@@ -353,6 +353,9 @@ function Result() {
   // "Which way?" is answered once the pointer shows the way, or an axis is locked (review N2).
   const { start, end } = drawState.value;
   if (r.wayNeeded && (!start || wayKnown(start, end, drawOptions.value.lock))) return null;
+  // Enter's answer to a refusal the preview showed: said here while that preview stands, in its
+  // place, and gone with it when the gesture moves on (re-check N9).
+  if (r.held !== undefined && jointPreview.value?.key !== r.held) return null;
   if (r.error)
     return (
       <output class="cb-chip error" data-testid="tool-result" data-error="true" title={r.error}>
@@ -414,7 +417,9 @@ function ValueField({
     };
   }, []);
   const words = reading !== undefined ? { text: reading, error: false } : valueWords(tool);
-  const j = tool === "draw" || reading !== undefined ? jointPreview.value : undefined;
+  const preview = tool === "draw" || reading !== undefined ? jointPreview.value : undefined;
+  // A preview whose refusal Enter met is said once, as the result (`Result`; re-check N9).
+  const j = preview && lastResult.value?.held === preview.key ? undefined : preview;
   return (
     <>
       <label class="cb-value">

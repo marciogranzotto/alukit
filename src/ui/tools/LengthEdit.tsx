@@ -7,7 +7,7 @@ import { pointParam } from "../records/Params.tsx";
 import { sendCommands } from "../store.ts";
 import { viewer } from "../viewport/viewer.ts";
 import { endAxis, endStops, labelEnd, typedCut, typedLanding } from "./ends.ts";
-import { createPreviewer, type JointPreviewer } from "./preview.ts";
+import { createPreviewer, type JointPreviewer, shownRefusal } from "./preview.ts";
 import { drawOptions, gesture, jointPreview, labelEdit } from "./state.ts";
 import { endGhost, endNote, endWords } from "./wire/ends.ts";
 
@@ -158,9 +158,15 @@ function LengthField({
       return;
     }
     const l = typedLanding(axis, stops, c.cut, c.written);
-    const o = await sendCommands(endBatch(ref_, l, false, rule()), `set ${id}'s cut length`, {
-      inline: true,
-    });
+    const cmds = endBatch(ref_, l, false, rule());
+    // A length the preview shows refused is not sent (re-check N4): its refusal stands in the
+    // preview's place, once.
+    const held = shownRefusal(cmds);
+    if (held !== undefined) {
+      setError(held);
+      return;
+    }
+    const o = await sendCommands(cmds, `set ${id}'s cut length`, { inline: true });
     if (!alive.current) return;
     if (o.ok) onClose();
     else setError(o.why);
