@@ -13,6 +13,7 @@ import {
 } from "../project/schema.ts";
 import { unit, type V3 } from "../vec.ts";
 import type { Ctx } from "./context.ts";
+import { ownJoints } from "./own-joints.ts";
 import type { Copy } from "./types.ts";
 
 /**
@@ -20,6 +21,12 @@ import type { Copy } from "./types.ts";
  * k = 1 … count − 1 get ids `<id>@<k>` and are translated by k × pitch_mm along the `along`
  * bar's or run's axis, or a `{ dir }`, or by `offsets_mm`. References inside the template are
  * remapped in each copy; references outside it are kept.
+ *
+ * *2.3* (review fixes, joins; docs/ux/review-fixes-joins-decisions.md 1–3): **the template
+ * carries its bars' own joints**, listed or not: every connection that claims only ends of the
+ * template's bars (`ownJoints`), as the joints that cut a bar's ends are its end conditions. Each
+ * copy gets its copy of them, its through bar kept outside the template, so a slat butted between
+ * two rails repeats as slats butted between them. A joint another pattern lists is that one's.
  *
  * Expansion here is structural: copies are new entities with remapped references and a `Copy`
  * record. Their translation is applied when points resolve (place.ts), since the axis comes from
@@ -33,11 +40,15 @@ export function expandPatterns(ctx: Ctx): void {
   for (const [id, spec] of Object.entries(doc.connections)) ctx.conns.set(id, { spec });
   for (const [id, spec] of Object.entries(doc.parts)) ctx.parts.set(id, { spec });
 
+  const listed = new Set(Object.values(doc.patterns).flatMap((pt) => pt.template));
   const used = new Map<string, string>();
   for (const [pid, pt] of Object.entries(doc.patterns)) {
     const plan = planPattern(ctx, pid, pt, used);
     if (!plan) continue;
-    const { template, steps } = plan;
+    const { steps } = plan;
+    const bars = new Set([...plan.template].filter((id) => Object.hasOwn(doc.bars, id)));
+    const joints = ownJoints(doc.connections, bars).filter((c) => !listed.has(c));
+    const template = new Set([...plan.template, ...joints]);
     for (const [k, step] of steps) {
       const copy: Copy = {
         pattern: pid,

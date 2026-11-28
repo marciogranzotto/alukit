@@ -1,3 +1,4 @@
+import { liesOn } from "../commands/join.ts";
 import { cutList } from "../cutlist/cutlist.ts";
 import type { Derived } from "../derive/derive.ts";
 import { type Diagnostic, Diagnostics, type Severity, sortDiagnostics } from "../diagnostics.ts";
@@ -161,6 +162,12 @@ export function projectChecks(input: CheckInput, d: Diagnostics): CheckResult[] 
  * E1.2). The through member of a butt at that point counts as connected: a through bar (its end
  * is claimed, or left on purpose with `through_end: "none"`), or a bar end a butt bears on
  * (`through: "b31.b"`, an end plate).
+ *
+ * *2.3* (review fixes, joins; B3): **an end that lies on another bar**, on its face or inside it,
+ * with no provider, where a butt through that bar would bear on it (`liesOn`, the rule
+ * `autoConnect` joins it by), is open too: a rail clicked between two posts' faces, or a copy
+ * run into the rails it should butt on. Nothing holds it and nothing is bought to, and a bar run
+ * into another is cut too long. Not between two context bars, whose joints are made already.
  */
 export function unconnectedEnds(derived: Derived, d: Diagnostics): void {
   const ends: { ref: string; bar: string; p: V3; free: boolean }[] = [];
@@ -178,6 +185,7 @@ export function unconnectedEnds(derived: Derived, d: Diagnostics): void {
     for (const e of c.ends) throughAt.set(e, (throughAt.get(e) ?? new Set()).add(c.through));
   }
   const seen = new Set<number>();
+  const alone: (typeof ends)[number][] = [];
   ends.forEach((e, i) => {
     if (seen.has(i)) return;
     const group = [i];
@@ -185,7 +193,10 @@ export function unconnectedEnds(derived: Derived, d: Diagnostics): void {
       if (!seen.has(j) && dist(e.p, (ends[j] as (typeof ends)[number]).p) <= TOL.len) group.push(j);
     }
     for (const j of group) seen.add(j);
-    if (group.length < 2) return;
+    if (group.length < 2) {
+      if (e.free) alone.push(e);
+      return;
+    }
     const here = group.map((j) => ends[j] as (typeof ends)[number]);
     const through = new Set(here.flatMap((x) => [...(throughAt.get(x.ref) ?? [])]));
     const loose = here.filter((x) => x.free && !through.has(x.bar) && !through.has(x.ref));
@@ -200,6 +211,27 @@ export function unconnectedEnds(derived: Derived, d: Diagnostics): void {
       { refs },
     );
   });
+
+  // A free end that meets no other end, but lies on a bar (B3). A bar end a butt bears on (an
+  // end plate's, a block's) is the joint's through member, as at a corner.
+  const borne = new Set([...throughAt.values()].flatMap((s) => [...s]));
+  const bars = [...derived.bars].sort(([x], [y]) => compareIds(x, y));
+  for (const e of alone) {
+    const K = derived.bars.get(e.bar)?.placed;
+    if (!K || borne.has(e.ref)) continue;
+    const end = e.ref.slice(e.ref.lastIndexOf(".") + 1) as "a" | "b";
+    for (const [id, T] of bars) {
+      if (derived.context.has(e.bar) && derived.context.has(id)) continue;
+      const on = liesOn(K, end, T);
+      if (!on) continue;
+      const how =
+        on.depth > TOL.len
+          ? `runs ${shown(on.depth)} mm into ${id}, past its ${on.face} face,`
+          : `lies on ${id}'s ${on.face} face`;
+      d.warn("unconnected", e.ref, `${e.ref} ${how} with no connection`, { refs: [e.ref, id] });
+      break;
+    }
+  }
 }
 
 /**
