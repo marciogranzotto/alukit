@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownJoints } from "../derive/own-joints.ts";
 import { evalNumber } from "../expr.ts";
 import { compareIds } from "../ids.ts";
 import { type Expr, Pattern, PatternId } from "../project/schema.ts";
@@ -25,8 +26,9 @@ import { idList } from "./words.ts";
 /**
  * Patterns made ordinary (design §4.7, §6): `explodePattern` turns a pattern's copies into
  * entities of their own, and `array` makes copies that way at once. A copy is what derive makes
- * of it: the template's entities translated by k × pitch along the pattern's bar, run or
- * direction, references inside the template remapped and those outside kept; a station on the
+ * of it: the template's entities, with its bars' own joints (`ownJoints`), translated by k ×
+ * pitch along the pattern's bar, run or direction, references inside the template remapped and
+ * those outside kept; a station on the
  * pattern's bar slides along it, and inline points move. The copies no longer follow the
  * pattern's pitch, so each step is a number; coordinates written as expressions stay
  * expressions, so a copy still follows the params it was written with.
@@ -95,28 +97,41 @@ function axisOf(ctx: CommandContext, bar: string): V3 | undefined {
 }
 
 /**
- * Makes the copies of a template into entities; returns the document, the ids made, and which
- * copy each one is (`b26@2` → `b37`: the template's id and the copy's number, as derive names a
- * pattern's copies).
+ * Makes the copies of a template into entities; returns the document, the ids made, which copy
+ * each one is (`b26@2` → `b37`: the template's id and the copy's number, as derive names a
+ * pattern's copies), and the bar each new connection joins its copies to (`joined`).
+ *
+ * The template carries its bars' own joints, listed or not (`ownJoints`; design §4.7, *2.3*,
+ * review fixes, joins), as derive's copies do, so exploding a pattern keeps its copies' cuts and
+ * `array` copies a bar with what cuts its ends.
  */
 function makeCopies(
   ctx: CommandContext,
   doc0: RawDoc,
   spec: Spec,
   where: string,
-): { doc: RawDoc; created: string[]; copies: Record<string, string> } {
+): {
+  doc: RawDoc;
+  created: string[];
+  copies: Record<string, string>;
+  joined: Record<string, string>;
+} {
   if (spec.rail_holes !== undefined) {
     throw refusal(
       "geometry",
       `${where}: its stations come from a rail's holes; exploding it would freeze a layout the rail decides`,
     );
   }
-  const template = [...spec.template].sort(compareIds);
+  const docBars = isObject(doc0.bars) ? doc0.bars : {};
+  const bars = new Set(spec.template.filter((id) => Object.hasOwn(docBars, id)));
+  const own = ownJoints(isObject(doc0.connections) ? doc0.connections : {}, bars);
+  const template = [...new Set([...spec.template, ...own])].sort(compareIds);
   const inTemplate = new Set(template);
   const { t, along, steps } = plan(ctx, spec, where);
   let doc = doc0;
   const created: string[] = [];
   const copies: Record<string, string> = {};
+  const joined: Record<string, string> = {};
   for (const [k, step] of steps) {
     const ids = new Map<string, string>();
     for (const id of template) {
@@ -191,9 +206,36 @@ function makeCopies(
       doc = withEntity(doc, ids.get(id) as string, value);
       created.push(ids.get(id) as string);
       copies[`${id}@${k}`] = ids.get(id) as string;
+      const to = kindOf(id) === "connections" ? joinedTo(value, ids) : undefined;
+      if (to !== undefined) joined[ids.get(id) as string] = to;
     }
   }
-  return { doc, created, copies };
+  return { doc, created, copies, joined };
+}
+
+/**
+ * The bar a copied connection joins its copied bars to, as a preview names it ("joins b9"): a
+ * butt's through bar (the bar of an end it bears on), a pivot's base, a miter's or a splice's
+ * other bar; none for a face connection or a butt through a body.
+ */
+export function joinedTo(conn: unknown, made: ReadonlyMap<string, string>): string | undefined {
+  if (!isObject(conn)) return undefined;
+  const mine = new Set(made.values());
+  const barOf = (e: string) => e.slice(0, e.includes(".") ? e.lastIndexOf(".") : e.length);
+  switch (conn.type) {
+    case "butt":
+      return typeof conn.through === "string" ? barOf(conn.through) : undefined;
+    case "pivot":
+      return isObject(conn.base) && typeof conn.base.bar === "string" ? conn.base.bar : undefined;
+    case "miter":
+    case "splice": {
+      const ends = (Array.isArray(conn.ends) ? conn.ends : []) as string[];
+      const other = ends.map(barOf).find((b) => !mine.has(b));
+      return other ?? (ends[1] !== undefined ? barOf(ends[1]) : undefined);
+    }
+    default:
+      return undefined;
+  }
 }
 
 const ExplodePattern = z.strictObject({ id: PatternId });
@@ -280,6 +322,11 @@ export const array: CommandDef<z.infer<typeof ArrayArgs>> = {
       };
       const r = makeCopies(ctx, doc, spec, "array");
       checkAll(ctx, r.doc, r.created);
-      return done(withDoc(ctx, r.doc), { created: r.created });
+      // The joints copied with the bars, and what each joins them to, for a preview's words.
+      return done(
+        withDoc(ctx, r.doc),
+        { created: r.created },
+        Object.keys(r.joined).length > 0 ? { joined: r.joined } : undefined,
+      );
     }),
 };

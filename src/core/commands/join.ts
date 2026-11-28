@@ -1,9 +1,10 @@
-import type { Derived } from "../derive/derive.ts";
-import { buttEndAngle } from "../derive/ends.ts";
+import type { Derived, DerivedBar } from "../derive/derive.ts";
+import { buttBearing, buttEndAngle } from "../derive/ends.ts";
+import type { PlacedBar } from "../derive/types.ts";
 import { compareIds } from "../ids.ts";
 import type { CornerRule } from "../project/schema.ts";
 import { TOL } from "../tolerances.ts";
-import { dist, type V3 } from "../vec.ts";
+import { dist, dot, sub, type V3 } from "../vec.ts";
 
 /**
  * Where bar ends at a point can join with the default butt (design §4.5 "Default connection";
@@ -14,8 +15,10 @@ import { dist, type V3 } from "../vec.ts";
  *   butt takes them as its through end, they have no plane of their own. An end whose claim fails
  *   (two providers, an angled end with no cut declared) is still claimed: joining it again would
  *   make another provider.
- * - The bar that runs through is the one passing the point, else the one the corner rule prefers
- *   among those with a free end there, else a vertical, else the lowest id.
+ * - The bar that runs through is the one passing the point, else one the free ends lie on, on
+ *   its face or inside it, where a butt through it would bear (`liesOn`: a rail clicked between
+ *   two posts' faces; *2.3*, review fixes, joins), else the one the corner rule prefers among
+ *   those with a free end there, else a vertical, else the lowest id.
  * - When that leaves nothing to butt on it (a brace drawn into a corner whose ends are joined
  *   already), the free ends butt on the corner's own through bar: the bar a butt at the point runs
  *   through. That bar's end there belongs to the corner's butt, so the new butt leaves it alone
@@ -80,7 +83,11 @@ export function planJoin(d: Derived, P: V3, prefer: CornerRule): JoinAnswer {
     x: atEnds.find(along(0)),
     y: atEnds.find(along(1)),
   };
-  const through = passing[0] ?? preferred[prefer] ?? atEnds.find(along(2)) ?? (atEnds[0] as string);
+  // An end drawn on a bar's face, or into it, bears on that bar (B3): the face is where a butt
+  // through it would seat the end, so it runs through as a bar passing the point does.
+  const bearing = passing.length > 0 ? [] : bearingBars(d, free, atEnds);
+  const through =
+    passing[0] ?? bearing[0] ?? preferred[prefer] ?? atEnds.find(along(2)) ?? (atEnds[0] as string);
   const butting = free.filter((e) => barOf(e) !== through);
   if (butting.length > 0) return { ok: true, plan: plan(d, through, butting) };
 
@@ -99,6 +106,55 @@ export function planJoin(d: Derived, P: V3, prefer: CornerRule): JoinAnswer {
 
 function barOf(ref: string): string {
   return ref.split(".")[0] as string;
+}
+
+/**
+ * The bars, in id order, that every free end at the point lies on (`liesOn`), none of them a bar
+ * with an end there: a pattern's copy is no bar a butt can name.
+ */
+function bearingBars(d: Derived, free: readonly string[], atEnds: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const [id, b] of [...d.bars].sort(([x], [y]) => compareIds(x, y))) {
+    if (id.includes("@") || atEnds.includes(id)) continue;
+    const all = free.every((ref) => {
+      const [bar, e] = ref.split(".") as [string, "a" | "b"];
+      const K = d.bars.get(bar)?.placed;
+      return K !== undefined && liesOn(K, e, b) !== undefined;
+    });
+    if (all) out.push(id);
+  }
+  return out;
+}
+
+/**
+ * Where end `end` of bar `K` lies on bar `T` (*2.3*, review fixes, joins; B3): its design point
+ * on `T`'s bounding box or inside it, within tol.len, and strictly between `T`'s end faces, as
+ * derived (an end at `T`'s end is a corner, which the corner rule decides, and one past `T`'s
+ * cut meets nothing); and a butt through `T` would bear on it (`buttBearing`: `K`'s centre line
+ * crosses a face of `T`, clear of its edges, so a bar lying along a face does not). The face it
+ * bears on and how far it runs past it, or undefined. `autoConnect` butts such an end on `T`;
+ * the check calls it open while nothing joins it.
+ */
+export function liesOn(
+  K: PlacedBar,
+  end: "a" | "b",
+  T: DerivedBar,
+): { face: string; depth: number } | undefined {
+  const P = end === "a" ? K.A : K.B;
+  const t = T.placed;
+  if (K.id === t.id || !P) return undefined;
+  // Inside both of T's end faces: each one's outward normal points away from T's body.
+  for (const e of [T.ends.a, T.ends.b]) {
+    if (dot(sub(P, e.point), e.normal) > -TOL.len) return undefined;
+  }
+  const v = sub(P, t.A);
+  const lx = dot(v, t.frame.x);
+  const ly = dot(v, t.frame.y);
+  const { x0, x1, y0, y1 } = t.box;
+  if (lx < x0 - TOL.len || lx > x1 + TOL.len || ly < y0 - TOL.len || ly > y1 + TOL.len) {
+    return undefined;
+  }
+  return buttBearing(K, end, t);
 }
 
 function plan(d: Derived, through: string, ends: string[]): JoinPlan {

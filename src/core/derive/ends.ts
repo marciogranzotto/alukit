@@ -180,6 +180,28 @@ export function buttEndAngle(K: PlacedBar, end: "a" | "b", T: PlacedBar): number
   return angleDeg(outward(c.face.n, K, end), endDir(K, end));
 }
 
+/**
+ * Where end `end` of bar `K` would bear on bar `T` by a butt (§4.5): the face of `T`'s prism that
+ * `K`'s centre line crosses there, clear of the face's edges, and how far the end runs past that
+ * face along `K`'s axis (`depth`: 0 on the face, positive inside `T`, negative short of it).
+ * Undefined where a butt through `T` would not bear on it (a miss, or an edge). `autoConnect`'s
+ * end on a face and the check's open end read it (*2.3*, review fixes, joins; B3), so the joint
+ * the one makes is the one the other asks for.
+ */
+export function buttBearing(
+  K: PlacedBar,
+  end: "a" | "b",
+  T: PlacedBar,
+): { face: string; depth: number } | undefined {
+  if (!K.B) return undefined;
+  const prism = barPrism(T);
+  const c = buttCrossing(K, end, prism);
+  if (typeof c === "string") return undefined;
+  // The centre line is parametrised from end a's design point along t (`centreLine`).
+  const depth = end === "a" ? c.cr.s : dist(K.A, K.B) - c.cr.s;
+  return { face: faceName(prism, c.cr), depth };
+}
+
 // ---------------------------------------------------------------------------------------------
 
 export interface Stage3 {

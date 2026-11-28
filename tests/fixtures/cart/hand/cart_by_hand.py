@@ -1245,8 +1245,11 @@ UNJOINED_NOTES = [
     }
     for c in unjoined
 ]
-RULES = ["check-error", "open-item", "placeholder", "missing-price", "est-price", "out-of-stock", "option-not-sold", "stale-price", "no-connector"]
-WARN_RULES = {"stale-price", "no-connector"}
+# The order rule unconnected (design §5.5, *2.3*, review fixes, joins) warns of an end that meets
+# a bar with no connection. The cart has none: every end that meets another, or lies on a bar, is
+# joined, so it is in the rules table and in no supplier's reasons.
+RULES = ["check-error", "open-item", "placeholder", "missing-price", "est-price", "out-of-stock", "option-not-sold", "stale-price", "no-connector", "unconnected"]
+WARN_RULES = {"stale-price", "no-connector", "unconnected"}
 
 # Lines in a group: bars, connectors, fasteners, carriages, …, generic, then the project's own
 # plates, bent angles and placeholders; by item, offer, longest.

@@ -103,4 +103,29 @@ describe("where a stroke can join (touchesBars)", () => {
     expect(touchesBars(m, [500, 0, 900])).toBe(false);
     expect(touchesBars(m, [500, 0, 450])).toBe(false);
   });
+
+  it("is a bar's face, or inside its box, between its end faces (review B3)", () => {
+    // A 40 × 40 post at the origin, its box x 0 to 40, y −40 to 0, cut square at 0 and 750: a
+    // rail clicked on its +x face at 560 butts on it (src/core/commands/join.ts, liesOn).
+    const post = {
+      a: [0, 600, 0],
+      b: [0, 600, 750],
+      frame: { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] },
+      box_mm: [
+        [0, -40],
+        [40, 0],
+      ],
+      ends: {
+        a: { point: [0, 600, 0], normal: [0, 0, -1] },
+        b: { point: [0, 600, 750], normal: [0, 0, 1] },
+      },
+    };
+    const framed = { derived: { bars: { b3: post } } } as unknown as Model;
+    expect(touchesBars(framed, [40, 580, 560])).toBe(true);
+    expect(touchesBars(framed, [20, 580, 560])).toBe(true);
+    expect(touchesBars(framed, [41, 580, 560])).toBe(false);
+    // Past its cut, or beside it: nothing to bear on.
+    expect(touchesBars(framed, [40, 580, 760])).toBe(false);
+    expect(touchesBars(framed, [40, 540, 560])).toBe(false);
+  });
 });

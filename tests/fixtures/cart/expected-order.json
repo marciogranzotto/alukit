@@ -14,7 +14,8 @@
     "out-of-stock": "block",
     "option-not-sold": "block",
     "stale-price": "warn",
-    "no-connector": "warn"
+    "no-connector": "warn",
+    "unconnected": "warn"
   },
   "suppliers": [
     {

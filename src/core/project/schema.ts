@@ -908,6 +908,7 @@ export const ORDER_RULES = [
   "option-not-sold",
   "stale-price",
   "no-connector",
+  "unconnected",
 ] as const;
 export type OrderRule = (typeof ORDER_RULES)[number];
 export const RuleAction = z.enum(["block", "warn", "off"]);

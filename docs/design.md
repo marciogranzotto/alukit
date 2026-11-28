@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core" and 115–119 in "Editing polish, app"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "Editing polish, app". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core", 115–119 in "Editing polish, app" and 120–124 in "Review fixes, joins"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "Review fixes, joins". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -846,6 +846,37 @@ CLI sends the same way. `editing.spec`'s A1, A4 and A8 now assert §12's targets
 - §8 Pattern: **Draw the bar to repeat**: with along, pitch and count filled, the next bar drawn
   commits with its pattern as one step, named by the id the document gives next and sent strict,
   then Select with the pattern selected. A8: 2 steps to 1, five in 1 click (pu 4). Call 119.
+
+### Review fixes, joins
+
+The [editing review](ux/review-editing.md)'s three blockers, each a cut list or a BOM that went
+wrong while Problems stayed green, fixed at their cause in the core, with the decisions, sources
+and measurements in [`ux/review-fixes-joins-decisions.md`](ux/review-fixes-joins-decisions.md)
+("rj"). Compared on all 58 fixture projects: no check diagnostic, cut list, BOM or golden value
+moved; every order's rules table lists the new rule, and G14's and G24's open corners now warn at
+the order (rj, "What moved").
+
+- §4.7, §6: **a pattern's copies carry the joints that cut its template** (B1): its template
+  bars' own joints, every connection that claims only their ends, listed or not, each copy's
+  through bar kept, so four slats butted between the shelf rails are four slats of 520, each
+  joined, where three were 600 and ran through both rails. `explodePattern` and `array` copy the
+  same joints; `array` answers `joined` (rj 1–3). Call 120.
+- §6: **`mirror` carries the set's own joints** (B2), landed on the bars at their images, so the
+  A5 brace mirrored across the frame's middle is cut as the brace (1049.97 on the test frame, not
+  1141.27) and butted on the opposite posts; a joint whose member has no image is left out and the
+  end reported open (`open`); `joined` names what each new joint joins (rj 4). Call 121.
+- §8: **the app's Mirror step joins each image's end**, `autoConnect` after `mirror` as Duplicate
+  sends after `array`, and its preview says what joins and what stays open (rj 5, 6). Call 122.
+- §4.5, §5.5, §6: **an end that lies on a bar's face, or inside it, butts on that bar** (B3), by
+  `autoConnect`'s rule where the butt would bear on it, after a bar passing the point and before
+  the corner rule, and the draw tool's preview names the butt before the click; the check calls
+  such an end open while nothing joins it ("b13.a lies on b3's +x face with no connection"), with
+  a Join that works (rj 7, 8, 10). Call 123.
+- §5.5: **the order rule `unconnected`** warns of every open end, quoting the check's warning, so
+  the order is never a plain Ready while a rail floats (rj 9). Call 124.
+- §13's scenarios as `editing.spec` checks them: A8 asserts every slat's cut is the template's and
+  no slat end is unjoined; A5 and A6 that nothing is left open; "A5 by pointer" and "A6 on a bar"
+  drive B3's and B2's paths (rj 11).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -1973,6 +2004,15 @@ makes is never an `angled-end` error; a square end declares nothing, so no box f
 changes. The `unconnected` problem offers "Join with the default butt" only where this same rule
 accepts the join (§5.5).
 
+*2.3* (review fixes, joins; [rj](ux/review-fixes-joins-decisions.md) 7; call 123). **An end that
+lies on a bar**, its design point on the bar's bounding box or inside it (within `tol.len`) and
+strictly between the bar's end faces, butts on that bar where a butt through it would bear on the
+end: the end's centre line crosses one of the bar's faces clear of its edges, the crossing the
+butt's own plane is built from. That bar runs through, after a bar passing the point and before
+the corner rule; an end at a bar's end is a corner, decided as above. So a rail clicked from one
+post's face to another's butts on both, and a bar lying along a face does not. The check calls
+such an end open while nothing joins it (§5.5).
+
 ### 4.6 Golden cases (review B1)
 
 Each row is a small document in `tests/fixtures/golden-ends/` with its expected outputs. M3a is
@@ -2140,6 +2180,15 @@ G22–G24 (§4.6) are the worked cases.
   `offsets_mm`. Copies get ids `b30@1`, `b30@2`, …. A part copy on a run lands on the piece that
   holds it (§4.3), so carriages at fixed stops may cross a rail joint.
 - References inside the template are remapped in each copy; references outside it are kept.
+- *2.3* (review fixes, joins; [rj](ux/review-fixes-joins-decisions.md) 1–3; call 120). **The
+  template carries its bars' own joints**, listed or not: every connection that claims bar ends,
+  each an end of a template bar (a butt's butting ends and a through end it names, a miter's or a
+  splice's ends, a pivot's carried ends; never a face connection, nor a joint that also claims an
+  end outside the template). They are the template's end conditions, which CAD patterns solve
+  per instance (Fusion's Adjust, Onshape's Reapply features), so a slat butted between two rails
+  repeats as slats butted between them, each copy's butt (`c17@2`) bearing on the rail where its
+  line crosses it. A joint another pattern lists is that pattern's. `explodePattern` and `array`
+  copy the same joints.
 - `skip` drops stations. `explodePattern` turns copies into ordinary entities when one needs an
   edit of its own.
 - `rail_holes` (part templates, and a `face` connection's `stations`, §4.5) puts stations at the
@@ -2559,7 +2608,7 @@ sleeve). What the build machines on a context bar is on the machining sheet, mad
 | Schema and references | invalid documents, missing items, cycles; two equally specific price bands; a line covered twice (§4.11) | error |
 | Ends and connections | the validation column of §4.5, two providers, an undeclared angled cut, a chain of end providers, a station on a run's joint, a run not spliced in order; a `held_by` that does not hold, a connector position that falls off its end or face (*2.3*); an end hole whose screw leaves the block by a side, or whose wall breaks out of one; a screw into a butting end that meets a side face at an angle; a butting bar that goes into the body it bears on beyond the face (*2.3*, after acceptance run 4); a blind hole in the butting bar's side that does not reach its position; a connector in a fastener set whose mount's plane is not the joint's, or that has fastener sets of its own; a headed connector counted by `qty` above one (*2.3*, after the round-3 acceptance, X7, X8) | error |
 | Ends and connections (*2.3*) | a butting end face that reaches past the face it bears on by more than the connector's `overhang_mm`, else `defaults.butt.overhang_mm`, else 0 (§4.5) | warn |
-| Unconnected ends | a point shared by two or more bar ends with no connection; an end a provider claims is connected even when the claim fails, which is its own error (*2.3*, E1.2) | warn |
+| Unconnected ends | a point shared by two or more bar ends with no connection; an end a provider claims is connected even when the claim fails, which is its own error (*2.3*, E1.2); *2.3* a free end that lies on another bar, on its face or inside it, where a butt through that bar would bear on it (§4.5, the default connection's rule; not an end a butt bears on, nor between two context bars): "b13.a lies on b3's +x face with no connection", or "runs 40 mm into b5, past its +x face" (review fixes, joins; call 123) | warn |
 | Fit | a connector that holds a joined bar in no way it may (§3.4, by role; *2.3*); a T-nut that does not fit its groove; a carriage on another rail system; a `face` with no contact; a head, nut or washer that bears on none of its face's material (*2.3*); a blind fastener whose grip lies outside its maker's range (*2.3*, §4.5) | error |
 | Fit (*2.3*) | a head, nut or washer that bears on less than half of its annulus (§4.5, its seat) | warn |
 | Fit (*2.3*) | a head, nut or washer whose item gives no bearing diameter, so its seats are not checked | info |
@@ -2617,6 +2666,7 @@ error.
 | `option-not-sold` ("not sold with finish red"; with none chosen, "sold only with finish anodised or black; choose one", *2.3*) | block | that supplier |
 | `stale-price` (older than 30 days before the order's date) | warn | that supplier |
 | `no-connector` (butts that name no connector, while the project names no default butt connector: nothing is bought to join them; [polish](ux/polish-decisions.md) 1) | warn | the suppliers of the butted bars |
+| `unconnected` (*2.3*: an unconnected end of the check, a corner's or one on a bar, quoted: nothing holds it and nothing is bought to; [rj](ux/review-fixes-joins-decisions.md) 9; call 124) | warn | the suppliers of its bars |
 
 The order list reports **READY** or **BLOCKED** per supplier, with every reason. `alukit order`
 exits non-zero when any supplier is blocked, so an agent cannot hand over a blocked list by
@@ -2658,7 +2708,10 @@ titles are a map over that list, so a new code cannot be emitted without its tit
 declare", with the joint and its angle, and two fixes, "Cut it on the face" and "Cut it square",
 each one `setBar` on the end's `cut`. **An open corner's fix is offered only when the default butt
 would join it**, by the rule `autoConnect` applies (§4.5); otherwise the detail says why, so a fix
-the list offers is never refused.
+the list offers is never refused. *2.3* (review fixes, joins): an end on a bar reads "Open end:
+b13.a lies on b3 with no connection" (or "runs into b5"), with the same fix; a pattern copy's open
+end is joined at its template's end, whose copies follow (§4.7). With the order rule
+`unconnected`, the problem is the check's and the order's at once ([rj](ux/review-fixes-joins-decisions.md) 8–10).
 
 ## 6. Commands (the one edit path)
 
@@ -2703,6 +2756,8 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   ends in its answer (`angled`); an end at a corner whose ends are all joined butts on the
   corner's through bar with a butt of its own (§4.5). Its rule is one function (`planJoin`), which
   the `unconnected` problem also asks before it offers its join ([e1](ux/e1-decisions.md) 1–6).
+  *2.3* (review fixes, joins): an end that lies on a bar's face, or inside it, butts on that bar
+  (§4.5; [rj](ux/review-fixes-joins-decisions.md) 7; call 123).
 - **`setProject`** (*2.3*) takes a merge patch over `name`, `catalogs`, `currency`,
   `price_basis`, `fx`, `defaults` and `order_rules`, and answers the fields it changed. A catalog
   it adds must be a built-in id or a folder that resolves, symbolic links followed, inside the
@@ -2786,6 +2841,14 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   image across x = 400; include b1"), as it is where a bar on the image's line is not its image,
   or two bars stand there. The answer names the bars landed on (`onto`), and the words end
   "on b2" ([pe](ux/polish-editing-decisions.md) 8–11; call 112).
+  *2.3* (review fixes, joins; [rj](ux/review-fixes-joins-decisions.md) 4; call 121): **the set's
+  own joints come with it** (§4.7's own joints: those that claim only the mirrored bars' ends),
+  their members outside the set landed on the bars at their images, so a brace butted on two
+  posts mirrors as a brace butted on the opposite two, cut as the brace. A joint whose member has
+  no image is left out, and the image's ends it claimed are named in the answer (`open`) and the
+  words ("b14.a and b14.b left open"); `joined` gives each connection made and the bar it joins
+  to. `array` and `explodePattern` copy the own joints of the bars they copy, as derive's
+  patterns do, and `array` answers `joined` too (rj 3).
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
   moves (`cuts`, before and after), the bars it adds with their cuts, the parts it adds (`parts`,
@@ -3274,7 +3337,10 @@ command bar, removes what was mirrored in the same step, with Delete's cascade. 
 polish): a part on a bar's station lands on the bar at that bar's image (§6, `mirror`), so a
 bracket on one leg mirrored across the frame's middle lands on the opposite leg's inner face at
 the same height; where no bar stands there, the preview gives the core's refusal, which says so.
-Call 92.
+Call 92. *2.3* (review fixes, joins; [rj](ux/review-fixes-joins-decisions.md) 5, 6; call 122):
+the step is `mirror`, which carries the bars' own joints, then an `autoConnect` at each image's
+end, as Duplicate's; the preview says what joins the images and what stays open ("makes b14 ·
+joins b4 (c11) · joins b3 (c12) · cut 1049.97").
 
 **Align to a face…** (*2.3*, E-UX-23; e3 16), in the menu and the header: a click on a bar's face
 moves the selection along that face's outward normal until its own face that looks the same way
@@ -3390,7 +3456,7 @@ added two commands, `moveEnd` and `transform`. An agent makes the same edit with
 | Rotate | `transform { rotate }`, then the same joins |
 | An end handle, the length label | `moveEnd`, then `autoConnect { end }` |
 | Duplicate, Paste | `array` along the offset, then `autoConnect` at each new bar's end (the first 48) |
-| Mirror… | `mirror`; with Remove the originals, `removeEntity { cascade }` of each, referrers first |
+| Mirror… | `mirror`; with Remove the originals, `removeEntity { cascade }` of each, referrers first; *2.3* then `autoConnect` at each image's end (the first 48; review fixes, joins) |
 | Delete | `removeEntity` (with `cascade`, strict, when the dialog listed more) |
 | Split here, Split at… | `splitBar` |
 | Reverse | `reverseBar` |
@@ -4328,6 +4394,32 @@ reasons. Marking the room is the run's own change, in its project.
      its pattern one step: the batch names the bar by the id the document gives next and is sent
      strict, as a pivot's is; after it the app is in Select with the pattern selected. Amending
      the draw step after it commits (SketchUp's `x4`) stays out (D-UX-16) (pu 4).
+120. *New in 2.3, review fixes (joins), open.* A pattern's template carries its bars' own joints in
+     derive, listed or not: each connection that claims bar ends, all of them its bars' (a butt's
+     butting ends and a named through end, a miter's or splice's ends, a pivot's carried ends;
+     never a face connection, nor a joint sharing an end outside the template), read from the
+     document. Live, so a joint made later reaches the copies, and the one-step pattern batch
+     needs no ids; `addPattern` writing them into `template` was rejected, since it would miss
+     those made later. `explodePattern` and `array` copy the same (rj 1–3).
+121. *New in 2.3, review fixes (joins), open.* `mirror` carries the set's own joints, landed on the
+     bars at their images; a joint whose member has no image is left out, not refused, and the
+     image's ends it claimed are reported open in the answer and the words, as Tekla leaves a
+     connected object it finds no new main part for (rj 4).
+122. *New in 2.3, review fixes (joins), open.* The app's Mirror joins each image's end with
+     `autoConnect` after `mirror`, in the app's batch rather than inside the core's `mirror`: the
+     core's commands do one thing and the joins are logged commands `alukit do` replays, as
+     Duplicate's are after `array`; `alukit do mirror` alone joins every end the bars' own joints
+     held, and only an end whose joint was shared (a rail's corner) needs the joins after it
+     (rj 5).
+123. *New in 2.3, review fixes (joins), open.* `autoConnect` butts an end that lies on a bar, on its
+     face or inside it, strictly between its end faces, where the end's centre line crosses one
+     of its faces clear of the edges; that bar runs through after a bar passing the point, before
+     the corner rule. The check calls such an end open (§5.5's unconnected ends, a warning), not an
+     end a butt bears on nor one between two context bars (rj 7, 8).
+124. *New in 2.3, review fixes (joins), open.* The order rule `unconnected`, warn by default, makes
+     every open end of the check (a corner's or one on a bar) an order reason for its bars'
+     suppliers, so the top bar reads "Ready, n warnings" rather than Ready while an end floats.
+     Open corners did not reach the order before; G14's and G24's now warn there (rj 9).
 
 ## 15. Review 1 resolution
 
