@@ -343,27 +343,31 @@ function fromReason(r: Reason, ctx: Ctx): Draft {
     }
     case "missing-price": {
       const rate = /: no exchange rate for (\S+)$/.exec(r.message)?.[1];
+      const services = SERVICES.exec(r.message);
       if (rate) {
         p.title = `No exchange rate for ${rate}`;
         p.detail = `Prices in ${rate} cannot be converted into the project's currency: add the rate (fx) in the project's settings.`;
+      } else if (services) {
+        Object.assign(p, machiningWords(services[1] as string, Number(services[2]), item, ctx));
       } else if (r.message.endsWith(": no price")) {
         p.title = `No price for ${name}`;
         p.detailFor = (s) => `The order from ${s} waits for its price.`;
-        p.fixes.push(setPrice(item));
+        p.fixes.push(...setPrice(item));
       } else if (r.message.endsWith(": no offer sells it by length")) {
         p.title = `Nothing sells ${name} by length`;
         p.detail = "It is sold, but neither cut to length nor in stock lengths.";
       } else {
         p.title = `No supplier sells ${name}`;
         p.detail = "No catalog offers it, so it has no price and no supplier to order from.";
-        p.fixes.push(setPrice(item));
+        p.fixes.push(...setPrice(item));
       }
       return p;
     }
     case "est-price":
       p.title = `The price of ${name} is an estimate`;
-      p.detailFor = (s) => `The order from ${s} waits for a price read from a source.`;
-      p.fixes.push({ ...setPrice(item), label: "Set a sourced price…" });
+      p.detailFor = (s) =>
+        `The order from ${s} waits for a price read from a source${projectItem(item) ? "" : ": its catalog's offer gives an estimate, so source it there and update the lock"}.`;
+      p.fixes.push(...setPrice(item).map((f) => ({ ...f, label: "Set a sourced price…" })));
       return p;
     case "placeholder":
       p.title = `${capital(name)} is a placeholder, not a part to order`;
@@ -432,7 +436,63 @@ function connectorWords(
   };
 }
 
-const setPrice = (item: string): Fix => ({ label: "Set a price…", kind: "set-price", item });
+/** A project item (§4.8): its price is the document's, which the app's price form sets. */
+const projectItem = (item: string) => item.startsWith(PROJECT_ITEM);
+
+/**
+ * The price form, offered only for a project item: a catalog item's price comes from its
+ * catalog (§3.2), so a form for it could only ever be shown disabled (review M1).
+ */
+const setPrice = (item: string): Fix[] =>
+  projectItem(item) ? [{ label: "Set a price…", kind: "set-price", item }] : [];
+
+/** The order's reason for a supplier's machining no cost line prices (`order/rules.ts`). */
+const SERVICES = /^(.+): no price for (\d+) machining services?; cover them with a cost line$/;
+
+/**
+ * A supplier's machining that nothing prices (review M1; design §4.11, "Machining in v1"): the
+ * holes, taps and angled cuts a supplier makes on the pieces it cuts have no price until a cost
+ * line covers them. Its own words, on the bars that carry it, and no fix: a cost line needs the
+ * supplier's amounts, which only a person has, and costs have no app path yet (§8), so the words
+ * give the cost line to add.
+ */
+function machiningWords(
+  what: string,
+  count: number,
+  item: string,
+  ctx: Ctx,
+): Pick<Draft, "title" | "detailFor" | "targets"> {
+  const suppliers: string[] = [];
+  const services = new Map<string, number>();
+  const bars = new Set<string>();
+  const machined = (id: string) => {
+    const b = ctx.derived.bars.get(id);
+    return (
+      b !== undefined &&
+      (b.ops.length > 0 || b.ends.a.mitre !== undefined || b.ends.b.mitre !== undefined)
+    );
+  };
+  for (const s of ctx.order.suppliers) {
+    for (const l of s.lines) {
+      if ((l.offer ?? l.item) !== what) continue;
+      const own = (l.services ?? []).filter((x) => x.by === "supplier" && !x.covered_by);
+      if (own.length === 0) continue;
+      if (s.supplier !== null && !suppliers.includes(s.supplier)) suppliers.push(s.supplier);
+      for (const x of own) services.set(x.what, (services.get(x.what) ?? 0) + x.count);
+      for (const pc of l.pieces ?? []) for (const id of pc.sources) if (machined(id)) bars.add(id);
+    }
+  }
+  const on = [...bars].sort(compareIds);
+  const done = [...services].map(([w, n]) => `${n} × ${w}`).join(", ");
+  const who = suppliers[0] ?? "the supplier";
+  const cover = `{ "label": "machining by ${who}", "kind": "machining", "supplier": "${who}", "low_minor": …, "likely_minor": …, "high_minor": …, "covers": { "supplier": "${who}", "services": true } }`;
+  return {
+    title: `${count} machining service${count === 1 ? "" : "s"} on ${nameOf(item, ctx)} ${count === 1 ? "has" : "have"} no price`,
+    detailFor: (s) =>
+      `The order from ${s} includes its machining on ${on.length > 0 ? idList(on) : "the pieces it cuts"} (${done}), and a supplier's machining has no price until a cost line covers it. Ask ${s} for the price and add the cost line with \`alukit do\`'s addCost: ${cover}. It holds the order from ${s} until one does.`,
+    targets: on.length > 0 ? on : [item],
+  };
+}
 const lockUpdate = (item: string): Fix => ({
   label: "Update the price…",
   kind: "lock-update",

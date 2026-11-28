@@ -53,6 +53,8 @@ const RESOLVE = /^(\S+?): /;
 /** The fixes an order reason has by its rule (the problem model's, when the server has not said). */
 function fixesFor(m: Model, r: Reason): Fix[] {
   const item = r.entities?.[0];
+  // A price form only for a project item: a catalog item's price is its catalog's (review M1).
+  const own = item?.startsWith("project:") === true;
   switch (r.rule) {
     case "open-item": {
       const id = RESOLVE.exec(r.message)?.[1];
@@ -61,11 +63,13 @@ function fixesFor(m: Model, r: Reason): Fix[] {
         : [];
     }
     case "missing-price":
-      return item !== undefined && /: (no price|no offer)$/.test(r.message)
+      return item !== undefined && own && /: (no price|no offer)$/.test(r.message)
         ? [{ label: "Set a price…", kind: "set-price", item }]
         : [];
     case "est-price":
-      return item !== undefined ? [{ label: "Set a sourced price…", kind: "set-price", item }] : [];
+      return item !== undefined && own
+        ? [{ label: "Set a sourced price…", kind: "set-price", item }]
+        : [];
     case "stale-price":
       return item !== undefined ? [{ label: "Update the price…", kind: "lock-update", item }] : [];
     default:
