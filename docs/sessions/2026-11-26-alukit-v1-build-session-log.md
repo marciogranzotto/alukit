@@ -1039,3 +1039,7 @@ anything, and each has a default in place.
   - **Mirror and duplicates:** a bar that is its own image is not copied, and coincident bars warn.
   - **Machining problems:** they carry a structured reason, so the app no longer matches message text.
 - **01:45**: N1–N10 verified fixed by repeating each one's reproduction through the app (§9.7). With the steps chained A1 → A4 → A5 → A6, the 40×80 mirror lands joined. No scenario regressed. **The editing round's review is closed.**
+- **02:51**: The review's last items merged (calls 141–143), so the designer review of the editing round has no open item.
+  - **Copy labels:** copies from Duplicate, Paste, Mirror and Explode get a numbered label ("top rail, front (2)"). They keep their tags, because a position tag can't be told from a role tag, and every step says which tags the copy carries.
+  - **Undo names** group like changes: "change the roll and anchor of b1, b2, b3 and b4".
+  - **Constant folding:** Move folds constants with exact decimals, so it writes `H - 400`. A property test checks that every folded value is equal at the output quantum.
