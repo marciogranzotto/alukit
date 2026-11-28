@@ -89,7 +89,7 @@ describe("m2: a copy of its own numbers its label and says the tags it carries",
     const bare = run(run(plain, { cmd: "tag", args: { ids: ["b13"], remove: ["top"] } }).state, A7);
     expect(bars(bare.state).b17?.label).toBeUndefined();
     expect(bars(bare.state).b17?.tags).toBeUndefined();
-    expect(bare.results[0]?.info).not.toHaveProperty("tagged");
+    expect((bare.results[0]?.info as { tagged?: unknown } | undefined)?.tagged).toBeUndefined();
     expect(bare.words).toBe("copy b13, making b17");
   });
 
