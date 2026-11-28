@@ -180,7 +180,9 @@ through it and see each other's changes at once; `alukit undo`, `redo` and `log`
 history, whoever made a step.
 
 Check after each batch: `alukit check <dir>` exits 1 on an error, prints warnings (an unconnected
-end, an item with no offer) and reports your checks.
+end, an item with no offer) and reports your checks. An unconnected end is one that meets another
+bar's end, or lies on a bar's face or runs into it, with no joint: "b13.a lies on b3's +x face
+with no connection". `autoConnect { "end": "b13.a" }` joins it, and the order warns until it is.
 
 ## Drawing in the viewer
 
@@ -285,8 +287,10 @@ draws that length toward the pointer. While drawing:
 - `Space` draws the next bar from the last one's end.
 - With **Join ends** on (the command bar's check box, on by default), when the end closes on
   another bar the preview says what the joint will do ("will butt on b1 · cut 580 · b1 800 →
-  820"), and `Tab` flips which bar runs through. **Corners** sets the corner rule for every bar
-  drawn until you change it. Switch Join ends off to join the ends yourself with Connect.
+  820"), and `Tab` flips which bar runs through. An end on a bar's face joins it too: click one
+  post's inner face, then the other's, and the rail butts on both. **Corners** sets the corner
+  rule for every bar drawn until you change it. Switch Join ends off to join the ends yourself
+  with Connect.
 
 **A box frame.** `G`, click the corner, type `1000, 600` and `Enter` (or click the far corner),
 type the height and `Enter`: four posts, a base and a top ring, every corner butted, as one step.
@@ -420,8 +424,9 @@ is hidden.
 - **Duplicate (`Ctrl/Cmd+D`)**: the copy follows the pointer from the original's place; click a
   base point and then where it goes, or type the offset. To copy the top front rail 300 down,
   joined to the legs: select b13, `Ctrl/Cmd+D`, `↑`, `-300`, `Enter`. Type `4x` after the offset
-  for four copies at that spacing, or `/4` for four dividing it (`0, 0, -600 /3`). Each new bar's
-  ends join what they land on.
+  for four copies at that spacing, or `/4` for four dividing it (`0, 0, -600 /3`). A copy keeps
+  the joints that are its bar's own (a slat's butts on the rails), and each new bar's other ends
+  join what they land on.
 - **Copy (`Ctrl/Cmd+C`) and Paste (`Ctrl/Cmd+V`)**: paste hangs the copy from the pointer by its
   lowest corner; click where it goes.
 - **Mirror…** (the menu): the plane is square to X (press `Y` or `Z`, or `→ ← ↑`, to turn it) and
@@ -430,7 +435,11 @@ is hidden.
   away in the same step. A part on a bar lands on the bar standing where that bar's image is: a
   bracket on the front-left leg's inner face at 300, mirrored at `=W / 2`, lands on the
   front-right leg's inner face at 300 ("mirror p1, making p2 on b2"). Where no bar stands at the
-  image, the preview says so and nothing is made.
+  image, the preview says so and nothing is made. A mirrored bar keeps its joints, landed on the
+  bars at their images, and its other ends join what they land on: the brace butted on the back
+  posts, mirrored at `=W / 2`, is cut as the brace and butted on the opposite posts, and the
+  preview says so before the click ("makes b18 · joins b4 (c15) · joins b3 (c16) · cut 1049.97").
+  An end whose joint has no bar at its image stays open, and the preview says that too.
 
 ### Lengths and ends
 
@@ -502,7 +511,7 @@ is hidden.
   to repeat**; draw the slat (`[200, 0, 250]`, `Enter`, **Anchor** in the command bar and the
   section's dot `+y` so its top is flush with the rails', `[200, 600, 250]`, `Enter`). The slat and
   its pattern are made together, and the pattern is selected: type `5` in its **Count** to make it
-  five. To repeat what exists, select it first and press **Create** instead. A pattern's pitch
+  five. Each copy carries the slat's joints, so every slat is cut 520 and butted on both rails. To repeat what exists, select it first and press **Create** instead. A pattern's pitch
   (`W / 8` keeps following W), offsets, skips (`3, 5`) and along edit the same way, and
   **Explode** turns the copies into plain bars, selected.
 - **A part**: **Replace…** picks another item of its kind, for this part or all like it; its bar,
@@ -570,6 +579,7 @@ drilling it, say) replaces the item's price. The rules, and what each blocks:
 | `option-not-sold` | yes | the option (a finish) is not sold |
 | `stale-price` | warns | the price was read more than 30 days before `--as-of` (today by default) |
 | `no-connector` | warns | butts name no connector and the project names no default butt connector, so nothing is bought to join them |
+| `unconnected` | warns | an end meets another bar's end, or lies on a bar, with no joint: nothing holds it, so nothing is bought to |
 
 Set a rule to `block`, `warn` or `off` in the document's `order_rules`. `alukit order` exits 1
 while any supplier is blocked, which is what you want in a script. The cart is blocked, on

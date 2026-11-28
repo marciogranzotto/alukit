@@ -990,3 +990,23 @@ anything, and each has a default in place.
     - walls arriving after assembly (F11) turn 5 wall-side errors into warnings;
     - context members (X11) take the walls out of the BOM and order, and the height check out of reach of the room.
   - AluKit's own geometry puts A's block 9.7759 mm behind the back plane, the record's figure exactly.
+- **20:43**: Editing polish, core, merged (gate PASS, 1,436 tests).
+  - **Stretch:** `transform` takes bar ends, so a crossing box stretches what it crosses, as AutoCAD's STRETCH does, while a window still moves whole bars.
+  - **Mirror:** re-homes a part onto the bar at its image. An older refusal of a part mirrored with its bar is fixed.
+  - **The log:** keeps each step's canonical commands, so a session replays from `alukit log`.
+  - **Keys:** Move's arrow keys start a move.
+  - The three `fixme` scenarios pass.
+- **20:59**: Editing polish, app, merged (gate PASS, 1,475 tests).
+  - **A4:** a quarter roll turns the anchor with the bar, so the four legs take 2 steps instead of 6.
+  - **Anchor dots:** 24 px targets, none overlapping.
+  - **A1:** the frame form's shelf and params are up front, 8 clicks instead of 10.
+  - **A8:** "Draw the bar to repeat" makes a slat and its pattern in one step.
+  - Its decision citations are renamed "pu", so they don't collide with the core polish's "pe".
+- **21:00**: The designer review of the editing round merged (`docs/ux/review-editing.md`). **Verdict: not ready for real frame work yet, but close.**
+  - **Blockers:**
+    - pattern copies leave the template's joints behind, so three slats run through the rails with no warning;
+    - a mirrored copy isn't joined;
+    - a rail drawn face to face joins nothing while the order says Ready.
+  - **7 majors:** an unpriced-machining problem titled as unsold, a hole form that loses keystrokes, hole distances from the design end while the cut list counts from the cut end, Esc not cancelling an end drag, light-theme label contrast, 2 s Move previews on 1,008 bars, and a plate's face joint unreachable from the plate.
+  - **Plus 14 minors and 5 nits.**
+  - Three fix agents started: joins, machining and speed, and the app.

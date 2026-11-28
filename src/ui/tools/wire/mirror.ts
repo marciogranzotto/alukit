@@ -21,8 +21,9 @@ import type { Model } from "../../model.ts";
 import { model, summary } from "../../store.ts";
 import type { GestureSpec, Gestures } from "../drag.ts";
 import type { JointWords } from "../joint.ts";
+import { copiedJoins } from "../moves.ts";
 import { createPreviewer } from "../preview.ts";
-import { activeTool, gesture, hint, mirrorOptions, typed } from "../state.ts";
+import { activeTool, drawOptions, gesture, hint, mirrorOptions, typed } from "../state.ts";
 import { parseTyped } from "../typed.ts";
 
 /**
@@ -57,18 +58,33 @@ export interface MirrorDeps {
   snap(e: ToolPointer): Snap | undefined;
 }
 
-/** What a mirror's dry run says it makes, or why the core refuses it. */
+/**
+ * What a mirror's dry run says it makes, or why the core refuses it: the images, what joins
+ * them (the joints mirrored with them, then the joins at their ends; review B2), what stays open
+ * because its joint's bar has no image, their cuts, and what is removed.
+ */
 export function mirrorWords(r: DryRun): JointWords {
   if (!r.ok) {
     return { text: r.errors[0]?.message ?? r.why, shape: "refused", joins: false };
   }
-  const made = r.results[0]?.created ?? [];
+  const info = r.results[0]?.info as
+    | { joined?: Record<string, string>; open?: string[] }
+    | undefined;
+  const made = (r.results[0]?.created ?? []).filter((id) => info?.joined?.[id] === undefined);
+  const joins = copiedJoins(r);
+  const open = info?.open ?? [];
+  const cuts = [...new Set(made.map((id) => r.effects.added[id]).filter((c) => c !== undefined))];
   const removed = r.effects.removed;
   const parts = [
     made.length > 0 ? `makes ${idList(made)}` : "makes nothing",
+    ...(joins.length > 3 ? [`${joins.length} joints`] : joins),
+    ...(open.length > 0 ? [`${idList(open)} stay${open.length === 1 ? "s" : ""} open`] : []),
+    ...(cuts.length > 0
+      ? [`cut ${cuts.slice(0, 3).join(", ")}${cuts.length > 3 ? " …" : ""}`]
+      : []),
     ...(removed.length > 0 ? [`removes ${idList(removed)}`] : []),
   ];
-  return { text: parts.join(" · "), shape: "mirror", joins: false };
+  return { text: parts.join(" · "), shape: "mirror", joins: joins.length > 0 };
 }
 
 /** Whether a tool that takes the pointer for a gesture is on: Select or Move. */
@@ -90,7 +106,12 @@ export function createMirror(viewer: Viewer, gestures: Gestures, deps: MirrorDep
     let why: string | undefined;
     const title = `Mirror ${idList(ids)}`;
     const batch = () =>
-      mirrorBatch(m, ids, { axis, at_mm: at }, { removeOriginals: mirrorOptions.peek().remove });
+      mirrorBatch(
+        m,
+        ids,
+        { axis, at_mm: at },
+        { removeOriginals: mirrorOptions.peek().remove, prefer: drawOptions.peek().prefer },
+      );
 
     function draw(typedWhy?: string): void {
       why = typedWhy;

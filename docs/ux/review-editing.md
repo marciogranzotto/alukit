@@ -47,6 +47,9 @@ while Problems stays green.
 3. **A rail drawn by clicking one post's face, then the other's, is not joined** (B3). No joint,
    no bracket in the BOM, and the order reads **Ready to order**.
 
+*All three since fixed, 2026-11-27 ([review-fixes-joins-decisions.md](review-fixes-joins-decisions.md));
+each blocker below says how.*
+
 Each has a fix inside what the core already does (section 4). With those three fixed, and the
 seven majors after them, a designer could build and change a small-to-medium frame in the app
 and trust what it orders. Until then they must check every copy and every clicked rail by hand,
@@ -119,6 +122,11 @@ nothing warns.** (A8)
   *Measured* on a scratch copy: `setPattern pt1 { template: [b19, c17, c18] }` gives four slats of
   520, each joined by `c17@k` and `c18@k`, 0 warnings, six brackets more in the BOM. A check for a
   free bar end lying inside another bar would have caught it too (see B3).
+- **Fixed** (2026-11-27; [review-fixes-joins-decisions.md](review-fixes-joins-decisions.md) 1–3,
+  11): in the core, not the tool. A pattern's template carries its bars' own joints in derive,
+  listed or not, so the same one-step batch gives four slats of 520, each joined by `c17@k` and
+  `c18@k`; `explodePattern` and `array` copy them too. `editing.spec`'s A8 now asserts every
+  slat's cut and that no slat end is unjoined.
 
 **B2. Mirror copies a bar without joining it.** (Mirror, any joined bar)
 
@@ -131,6 +139,11 @@ nothing warns.** (A8)
 - *Fix:* make Mirror's step `mirror` followed by `autoConnect { optional }` at each new bar's end,
   as Duplicate does, and have its preview say what joins ("makes b20 · joins b4 (c…) · joins b3
   (c…)"), or what stays open. One rule for every copying verb.
+- **Fixed** (2026-11-27; [review-fixes-joins-decisions.md](review-fixes-joins-decisions.md) 4–6):
+  the core's `mirror` carries the bar's own joints, landed on the posts at their images, so
+  `alukit do mirror` alone gives the brace's image cut as the brace and butted on both posts; the
+  app's step then joins each image's end, as Duplicate's does, and its preview says what joins or
+  stays open. `editing.spec` "A6 on a bar" drives it.
 
 ![Mirror's preview reads "makes b20" and nothing about joins; the copy will be uncut](img/review-editing/02-mirror-preview-1440-dark.png)
 
@@ -153,6 +166,12 @@ nothing warns.** (A8)
   Move and Duplicate inherit it. Then extend `unconnected` to a free end touching or inside another
   bar, with the same "Join with the default butt". Vention connects a part as it is inserted, and
   MISUMI FRAMES places brackets where two bars join (audit §4.5).
+- **Fixed** (2026-11-27; [review-fixes-joins-decisions.md](review-fixes-joins-decisions.md)
+  7–10): `autoConnect` butts an end lying on a bar's face, or inside it, on that bar where the
+  butt would bear, and the draw tool's preview says "will butt on b3" before the click. The check
+  calls such an end open ("b17.a lies on b3's +x face with no connection") with a Join that
+  works, and the new order rule `unconnected` makes the order warn of every open end, so it no
+  longer reads a plain Ready. `editing.spec` "A5 by pointer" drives the clicks.
 
 ![A rail clicked between two faces: "open: nothing joins it" on its ends, Problems green, Ready to order](img/review-editing/03-face-rail-unjoined-1440-dark.png)
 
@@ -375,7 +394,8 @@ say nothing about a real GPU and are not reported as findings.
 - [integration-editing.md](integration-editing.md) gives A8 a pass: "spacing equal within
   0.01 mm, the count follows, the CLI's project". The CLI project was built with the same
   commands, so it has the same unjoined copies, and the check cannot see B1. A8's check should
-  add: every slat's cut equals the template's, and no corner is open.
+  add: every slat's cut equals the template's, and no corner is open. *Added*, with the same
+  checks in A5 and A6 ([review-fixes-joins-decisions.md](review-fixes-joins-decisions.md) 11).
 - The same document gives A5 a pass by the typed path, which joins. The pointer path a first-time
   user tries first does not (B3); neither the scenario nor the guide says so.
 - The guide's A8 line said **Apply**; the Pattern form's button says **Create**. Corrected in

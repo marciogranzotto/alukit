@@ -189,6 +189,7 @@ interface DerivedBar {
   a: V3;
   b: V3;
   cut_mm: number;
+  ends: { a: { by: string }; b: { by: string } };
 }
 interface Derived {
   bars: Record<string, DerivedBar>;
@@ -211,6 +212,26 @@ async function logEntries(dir: string): Promise<{ what: string; text: string }[]
 
 const diagnosticsOf = async (dir: string) =>
   (await derived(dir)).diagnostics.map((d) => `${d.severity} ${d.code} ${d.entity ?? ""}`).sort();
+
+/**
+ * The ends of `ids` that no connection holds (docs/ux/review-editing.md B1–B3): derive names the
+ * provider of each end's plane, a connection (`c17`, a copy's `c17@2`) or none (`default`).
+ */
+function unjoined(d: Derived, ids: readonly string[]): string[] {
+  return ids.flatMap((id) =>
+    (["a", "b"] as const).flatMap((e) => {
+      const by = d.bars[id]?.ends[e].by ?? "missing";
+      return /^c\d+(@\d+)?$/.test(by) ? [] : [`${id}.${e} (${by})`];
+    }),
+  );
+}
+
+/** The project's open ends, as `alukit check` warns of them (§5.5's unconnected ends). */
+async function openEnds(dir: string): Promise<string[]> {
+  const r = await cli(["check", dir, "--json"]);
+  const out = JSON.parse(r.out) as { diagnostics: { code: string; entity?: string }[] };
+  return out.diagnostics.filter((x) => x.code === "unconnected").map((x) => x.entity ?? "");
+}
 
 async function screen(page: Page, p: V3): Promise<[number, number]> {
   const s = await page.evaluate((q) => window.__alukit?.screen(q), p);
@@ -529,11 +550,13 @@ test("A5: a diagonal brace in the back plane, 100 above the bottom-left corner t
   await waitDrawn(page, 1);
   u.done();
   u.report("A5", 1);
-  // No error; both ends declared `angle`.
+  // No error; both ends declared `angle`, each held by a joint, and no end left open.
   const d = await derived(served.dir);
   expect(d.diagnostics.filter((x) => x.severity === "error")).toEqual([]);
   const brace = ((await docOf(served.dir)).bars as Record<string, { ends?: unknown }>).b17;
   expect(brace?.ends).toEqual({ a: { cut: "angle" }, b: { cut: "angle" } });
+  expect(unjoined(d, ["b17"])).toEqual([]);
+  expect(await openEnds(served.dir)).toEqual([]);
   // The brace's cut is a dry run's of the same batch on the frame.
   expect(sent).toHaveLength(1);
   const copy = await scratchNew((dir) => doAll(dir, FRAME));
@@ -546,6 +569,47 @@ test("A5: a diagonal brace in the back plane, 100 above the bottom-left corner t
   } finally {
     await copy.remove();
   }
+});
+
+test("A5 by pointer (review B3): the brace clicked from one back post's inner face to the other's is joined at both ends", async ({
+  page,
+}) => {
+  // The path a first-time user tries first (docs/ux/review-editing.md B3): Draw, a click on the
+  // back-left post's inner face at 100 up, a click on the back-right post's at 650. Each end is a
+  // station on a face, which the joins must find.
+  test.setTimeout(120_000);
+  served = await serveFrame();
+  const sent = sentSteps(page);
+  await openTab(page, served, 0);
+  await atRest(page);
+  const u = new User(page);
+  /** The pointer onto a world point, until the tool's snap is the face named (as draw.spec). */
+  const onto = async (p: V3, says: RegExp) => {
+    await page.mouse.move(...(await screen(page, p)), { steps: 4 });
+    await expect
+      .poll(async () => (await page.evaluate(() => window.__alukit?.tool()))?.snap ?? "")
+      .toMatch(says);
+  };
+  await u.press("b");
+  await onto([40, 580, 100], /b3/);
+  await u.clickAt(await screen(page, [40, 580, 100]));
+  await onto([960, 580, 650], /b4/);
+  // The preview names the joint before the click.
+  await expect(page.getByTestId("joint-preview")).toContainText("butt");
+  await u.clickAt(await screen(page, [960, 580, 650]));
+  await waitDrawn(page, 1);
+  u.done();
+  u.report("A5 by pointer", 1);
+  expect(sent).toHaveLength(1);
+  const bar = (sent[0] as { cmd: string; args: { a: unknown; b: unknown } }[])[0];
+  expect(bar?.args.a).toEqual({ on: { bar: "b3", at_mm: 100, face: "+x" } });
+  expect(bar?.args.b).toEqual({ on: { bar: "b4", at_mm: 650, face: "-x" } });
+  const d = await derived(served.dir);
+  expect(d.diagnostics.filter((x) => x.severity === "error")).toEqual([]);
+  expect(unjoined(d, ["b17"])).toEqual([]);
+  expect(await openEnds(served.dir)).toEqual([]);
+  // Its cut is the posts' inner faces' distance along it, as the CLI makes it of the same step.
+  await sameAsCli(served.dir, (dir) => doAll(dir, FRAME, sent[0] as unknown[]));
 });
 
 /** A6's mirror as the CLI sends it: the bracket across x = 500 (W / 2). */
@@ -603,6 +667,59 @@ test("A6: an angle bracket on the front-left leg's inner face at 300, mirrored t
   v.report("A6, mirror", 1);
   expect(await lastStepWords(served.dir)).toBe("mirror p1, making p2 on b2");
   await expectMirrored(sent);
+  // Nothing mirrored is left open (docs/ux/review-editing.md B2's check, here on a part).
+  expect(await openEnds(served.dir)).toEqual([]);
+});
+
+/** A5's brace as the CLI makes it: typed from 100 up the back-left post to 650 up the right. */
+const BRACE = [
+  {
+    cmd: "addBar",
+    args: { item: "forseti:PF40-01", a: [0, 600, 100], b: [1000, 600, 650], anchor: "+x" },
+  },
+  { cmd: "autoConnect", args: { at: [0, 600, 100], optional: true } },
+  { cmd: "autoConnect", args: { at: [1000, 600, 650], optional: true } },
+];
+
+test("A6 on a bar (review B2): A5's brace mirrored across W / 2 is cut as the brace and joined at both ends", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  served = await serveFrame([BRACE]);
+  const sent = sentSteps(page);
+  await openTab(page, served, 0);
+  const u = new User(page);
+  await selectByIds(page, ["b17"]);
+  await u.clickAt(await screen(page, [500, 300, 0]), { button: "right" });
+  await u.click(page.getByTestId("context-menu").getByRole("menuitem", { name: /^Mirror/ }));
+  await u.type("=W / 2");
+  // The preview says what joins the image before the click (B2: it said only "makes b18").
+  await expect(page.getByTestId("joint-preview")).toContainText("joins b4");
+  await expect(page.getByTestId("joint-preview")).toContainText("joins b3");
+  await u.press("Enter");
+  await waitDrawn(page, 1);
+  u.done();
+  u.report("A6 on a bar, mirror", 1);
+  const d = await derived(served.dir);
+  expect(d.bars.b18?.cut_mm).toBe(d.bars.b17?.cut_mm);
+  expect(unjoined(d, ["b17", "b18"])).toEqual([]);
+  expect(await openEnds(served.dir)).toEqual([]);
+  expect(d.diagnostics.filter((x) => x.severity === "error")).toEqual([]);
+  // The step replays with alukit do; and `alukit do mirror` alone joins the image the same way.
+  expect(sent).toHaveLength(1);
+  await sameAsCli(served.dir, (dir) => doAll(dir, FRAME, BRACE, sent[0] as unknown[]));
+  const copy = await scratchNew((dir) =>
+    doAll(dir, FRAME, BRACE, [
+      { cmd: "mirror", args: { ids: ["b17"], plane: { axis: "x", at_mm: 500 } } },
+    ]),
+  );
+  try {
+    const alone = await derived(copy.dir);
+    expect(alone.bars.b18?.cut_mm).toBe(d.bars.b17?.cut_mm);
+    expect(unjoined(alone, ["b18"])).toEqual([]);
+  } finally {
+    await copy.remove();
+  }
 });
 
 test("A7: duplicate the top front rail 300 down, joined to the legs", async ({ page }) => {
@@ -672,13 +789,20 @@ test("A8: four slats across the shelf, evenly spaced; then five, by editing the 
   // §12: one step.
   expect(sent).toHaveLength(1);
   const spacing = async (n: number) => {
-    const bars = (await derived(served?.dir as string)).bars;
-    const xs = ["b17", ...Array.from({ length: n - 1 }, (_, i) => `b17@${i + 1}`)].map(
-      (id) => bars[id]?.a[0] as number,
-    );
+    const d = await derived(served?.dir as string);
+    const bars = d.bars;
+    const slats = ["b17", ...Array.from({ length: n - 1 }, (_, i) => `b17@${i + 1}`)];
+    const xs = slats.map((id) => bars[id]?.a[0] as number);
     expect(Object.keys(bars).filter((k) => k.startsWith("b17@"))).toHaveLength(n - 1);
     const gaps = xs.slice(1).map((x, i) => x - (xs[i] as number));
     for (const g of gaps) expect(Math.abs(g - (gaps[0] as number))).toBeLessThan(0.01);
+    // Every slat is cut as the one drawn, between the shelf rails' inner faces (600 − 2 × 40,
+    // by hand), and none has an end left unjoined (docs/ux/review-editing.md B1: the copies were
+    // cut 600, running through both rails, and the CLI's same batch could not tell).
+    expect(bars.b17?.cut_mm).toBe(520);
+    for (const id of slats) expect(bars[id]?.cut_mm, id).toBe(520);
+    expect(unjoined(d, slats)).toEqual([]);
+    expect(await openEnds(served?.dir as string)).toEqual([]);
   };
   await spacing(4);
   // Five: the pattern, selected by the step that made it, its count in its inspector; one step.

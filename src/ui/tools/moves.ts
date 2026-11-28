@@ -199,22 +199,36 @@ function list(ids: readonly string[]): string {
 }
 
 /**
+ * The joints a copying step makes, in words ("joins b9 (c20)"): those its first command copied
+ * with the bars (`array`'s and `mirror`'s `info.joined`, the bars' own joints; design §6), then
+ * each later command's that made one (an `autoConnect` at a new end).
+ */
+export function copiedJoins(r: Extract<DryRun, { ok: true }>): string[] {
+  const carried = (r.results[0]?.info as { joined?: Record<string, string> } | undefined)?.joined;
+  const own = Object.entries(carried ?? {}).map(([c, bar]) => `joins ${bar} (${c})`);
+  const made = r.results
+    .slice(1)
+    .filter((x) => x.created.length > 0 && x.cmd !== "removeEntity")
+    .map((x) => {
+      const plan = x.info as { through?: string } | undefined;
+      return `joins ${plan?.through ?? x.created.join(", ")} (${x.created.join(", ")})`;
+    });
+  return [...own, ...made];
+}
+
+/**
  * What a copy's dry run says it makes, by the pointer (Duplicate and Paste, E-UX-6): the new
- * entities, the joints their ends make and their cuts, or why the core refuses it.
+ * entities, the joints their ends make and their cuts, or why the core refuses it. A joint the
+ * copy carried is a join, not an entity it makes.
  */
 export function copyWords(r: DryRun): JointWords {
   if (!r.ok) {
     const said = r.errors[0]?.message ?? r.why;
     return { text: said, shape: "refused", joins: false };
   }
-  const made = r.results[0]?.created ?? [];
-  const joins = r.results
-    .slice(1)
-    .filter((x) => x.created.length > 0)
-    .map((x) => {
-      const plan = x.info as { through?: string } | undefined;
-      return `joins ${plan?.through ?? x.created.join(", ")} (${x.created.join(", ")})`;
-    });
+  const carried = (r.results[0]?.info as { joined?: Record<string, string> } | undefined)?.joined;
+  const made = (r.results[0]?.created ?? []).filter((id) => carried?.[id] === undefined);
+  const joins = copiedJoins(r);
   const cuts = [...new Set(made.map((id) => r.effects.added[id]).filter((c) => c !== undefined))];
   const parts = [
     made.length > 0 ? `makes ${list(made)}` : "makes nothing",
