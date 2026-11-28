@@ -123,3 +123,27 @@ export function shown(ds: readonly Diagnostic[], severity: Diagnostic["severity"
     .filter((d) => d.severity === severity)
     .map((d) => ({ code: d.code, entity: d.entity, refs: d.refs, message: d.message }));
 }
+
+/**
+ * The batch that builds the 1,008-bar lattice in tests/fixtures/ux/lattice (review M6), the
+ * large project the editing review timed a Move on: one box frame of 500 mm (`addFrame`, 12
+ * bars, 8 butts), copied to 12 along X at 700 (`array`), and that row to 7 along Y: 1,008 bars
+ * and 672 butts, made by the commands a person would send, not written by hand.
+ */
+export function latticeBatch(): object[] {
+  const ids = (bars: number, butts: number) => [
+    ...Array.from({ length: bars }, (_, i) => `b${i + 1}`),
+    ...Array.from({ length: butts }, (_, i) => `c${i + 1}`),
+  ];
+  return [
+    { cmd: "addFrame", args: { at: [0, 0, 0], size: [500, 500, 500] } },
+    {
+      cmd: "array",
+      args: { ids: ids(12, 8), along: { dir: [1, 0, 0] }, pitch_mm: 700, count: 12 },
+    },
+    {
+      cmd: "array",
+      args: { ids: ids(144, 96), along: { dir: [0, 1, 0] }, pitch_mm: 700, count: 7 },
+    },
+  ];
+}

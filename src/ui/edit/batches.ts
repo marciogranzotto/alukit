@@ -36,21 +36,28 @@ const q6 = (x: number) => {
 
 /**
  * Move (E-UX-3; docs/ux/drag-ends-decisions.md, "The Move tool"): one `transform`, then an
- * `autoConnect` at each end it moves (the first 24: both ends of each bar moved whole, then the
- * ends a crossing box stretches), as drawing a bar sends one per end, so an end that lands on a
- * bar joins it by the corner rule. `detach` frees what joins the selection to the rest (Alt).
+ * `autoConnect` at each end it moves that a join can take (of the first 24: both ends of each
+ * bar moved whole, then the ends a crossing box stretches), as drawing a bar sends one per end,
+ * so an end that lands on a bar joins it by the corner rule. `detach` frees what joins the
+ * selection to the rest (Alt). Given the model and the offset in numbers (`at`), the ends no join
+ * can take are left out (review M6, `joinable`); without them, every moved end is asked.
  */
 export function transformBatch(
   set: MoveSet,
   written: Vec,
   detach: boolean,
   prefer: string | undefined,
+  at?: { m: Model; by: V3 },
 ): Cmd[] {
   const moved = [...set.bars.flatMap((b) => [`${b}.a`, `${b}.b`]), ...(set.ends ?? [])];
-  const join = moved.slice(0, 24).map((end) => ({
-    cmd: "autoConnect",
-    args: { end, optional: true, ...(prefer ? { prefer } : {}) },
-  }));
+  const takes = at ? joinable(at.m, moved, at.by, detach) : () => true;
+  const join = moved
+    .slice(0, 24)
+    .filter(takes)
+    .map((end) => ({
+      cmd: "autoConnect",
+      args: { end, optional: true, ...(prefer ? { prefer } : {}) },
+    }));
   return [
     {
       cmd: "transform",
@@ -58,6 +65,56 @@ export function transformBatch(
     },
     ...join,
   ];
+}
+
+/** Within this of each other, two points may be one to `autoConnect` (its own is 0.01 mm). */
+const MEET_MM = 0.05;
+
+/**
+ * Which moved ends a join can take after the move (review M6). `autoConnect` joins the free
+ * ends at a point (design §4.5, `planJoin`): with none there, it finds nothing, and asking it
+ * costs a derive of the model. So a moved end is asked when, after the move, a free end may be
+ * at its point: it is free itself (no connection claims it, `m.claims`), the move frees it (Alt),
+ * another free end lands where it lands (a moved one, or one of a bar that stays), or a free end
+ * of a bar that stays was where it was (one written on a moved bar or node follows it there).
+ * Any other end keeps its joint where it lands, alone: the joins it would have made are none, and
+ * the batch, the order of the joins it makes, and the step are the same as with every end asked.
+ * Wider than the core's tolerance, so a point it may meet is never missed.
+ */
+function joinable(
+  m: Model,
+  moved: readonly string[],
+  by: V3,
+  detach: boolean,
+): (end: string) => boolean {
+  const moving = new Set(moved);
+  const free = (end: string) => (m.claims[end] ?? []).length === 0;
+  const point = (end: string): V3 | undefined => {
+    const [bar, e] = end.split(".") as [string, "a" | "b"];
+    return m.derived.bars[bar]?.[e];
+  };
+  const after = (end: string, p: V3): V3 =>
+    moving.has(end) ? [p[0] + by[0], p[1] + by[1], p[2] + by[2]] : p;
+  const near = (p: V3, q: V3) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) <= MEET_MM;
+  // Every free end, where it is and where it will be; a pattern copy's are not `autoConnect`'s.
+  const loose: { end: string; was: V3; will: V3 }[] = [];
+  for (const [id, b] of Object.entries(m.derived.bars)) {
+    if (id.includes("@")) continue;
+    for (const e of ["a", "b"] as const) {
+      const end = `${id}.${e}`;
+      const p = b[e];
+      if (p && free(end)) loose.push({ end, was: p, will: after(end, p) });
+    }
+  }
+  return (end) => {
+    if (detach || free(end)) return true;
+    const p = point(end);
+    if (!p) return true;
+    const will = after(end, p);
+    return loose.some(
+      (f) => f.end !== end && (near(f.will, will) || (!moving.has(f.end) && near(f.was, p))),
+    );
+  };
 }
 
 /**

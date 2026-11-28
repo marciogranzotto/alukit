@@ -1,7 +1,16 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { cli, lastStepWords, openTab, type Served, serve, waitDrawn } from "./helpers.ts";
+import { latticeBatch } from "../../src/core/testing.ts";
+import {
+  cli,
+  lastStepWords,
+  openTab,
+  type Served,
+  selectByIds,
+  serve,
+  waitDrawn,
+} from "./helpers.ts";
 
 /**
  * The Move tool, D (docs/ux/drag-ends-decisions.md, "The Move tool"), on tests/fixtures/ux/move:
@@ -194,4 +203,53 @@ test("a typed offset over a param, from the keyboard: the param is kept; Esc can
     b: [500, "300 + D", 0],
   });
   expect(await lastStepWords(served.dir)).toBe("move b3 by [0, D, 0], keeping b3.a y: 600 + D");
+});
+
+test("on the 1,008-bar lattice a Move's preview and its step each answer within 500 ms at the server (review M6)", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  served = await serve("ux/lattice", async (dir) => {
+    const r = await cli(["do", dir, JSON.stringify(latticeBatch())]);
+    expect(r.code, r.err).toBe(0);
+  });
+  await page.goto(served.appUrl);
+  await waitDrawn(page, 0, 120_000);
+  // The second frame, as a person picks it: its front top rail in the outline, then, from the
+  // menu (Shift+F10), the whole assembly that rail is joined in.
+  await selectByIds(page, ["b21"]);
+  await page.getByTestId("skip-link").focus();
+  await page.keyboard.press("Shift+F10");
+  const menu = page.getByTestId("context-menu");
+  await expect(menu).toHaveAttribute("aria-label", "Actions on b21");
+  await menu.locator('[data-action="select-assembly"]').click();
+  await expect.poll(() => page.evaluate(() => window.__alukit?.selection().length)).toBe(12);
+  // Each step request the app sends, timed by the browser from request to response: the
+  // server's work, which the review measured at about 2 s each for the preview and the step.
+  const answers: { dry: boolean; ms: number }[] = [];
+  page.on("requestfinished", (req) => {
+    if (req.method() !== "POST" || !req.url().endsWith("/api/commands")) return;
+    const body = JSON.parse(req.postData() ?? "{}") as { dryRun?: boolean };
+    answers.push({ dry: body.dryRun === true, ms: req.timing().responseEnd });
+  });
+  await moveTool(page);
+  await page.keyboard.type("0, 0, 300");
+  await expect
+    .poll(() => answers.filter((a) => a.dry).length, { timeout: 30_000 })
+    .toBeGreaterThan(0);
+  await expect(page.getByTestId("joint-preview")).not.toBeEmpty();
+  await page.keyboard.press("Enter");
+  await waitDrawn(page, 1, 60_000);
+  await expect.poll(() => answers.filter((a) => !a.dry).length).toBe(1);
+  const said = answers.map((a) => `${a.dry ? "dry run" : "step"} ${a.ms.toFixed(0)} ms`);
+  test.info().annotations.push({ type: "server times", description: said.join(", ") });
+  // The frame's ends all stay joined, and no free end waits where one lands: the step is the
+  // transform alone, with no join to ask for.
+  const log = await cli(["log", served.dir, "--json"]);
+  const entries = (JSON.parse(log.out) as { entries: { what: string }[] }).entries;
+  expect(entries.at(-1)?.what).toBe("transform");
+  for (const a of answers) {
+    const what = a.dry ? "the preview's dry run" : "the step";
+    expect(a.ms, `${what}: ${a.ms.toFixed(0)} ms`).toBeLessThan(500);
+  }
 });

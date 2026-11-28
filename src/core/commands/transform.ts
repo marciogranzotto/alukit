@@ -1,10 +1,8 @@
 import { z } from "zod";
-import { derive } from "../derive/derive.ts";
 import { barFrame } from "../derive/frame.ts";
 import { poseAxes } from "../derive/place.ts";
 import { evalNumber } from "../expr.ts";
 import { compareIds } from "../ids.ts";
-import { lockItems } from "../lock/source.ts";
 import { type Expr, Vec3Expr } from "../project/schema.ts";
 import { TOL } from "../tolerances.ts";
 import { atan2Deg, cosDeg, sinDeg } from "../trig.ts";
@@ -802,13 +800,15 @@ function apply(ctx: CommandContext, a: Args): Outcome {
 
   const ids = [...changed].sort(compareIds);
   checkAll(ctx, doc, ids);
+  const next = withDoc(ctx, doc as RawDoc);
 
-  // Follow keeps every joint: a move that breaks one anyway is refused, naming it.
+  // Follow keeps every joint: a move that breaks one anyway is refused, naming it. The state it
+  // would leave is derived through the batch's shared derives, so the joins after it reuse it.
   if (mode === "follow") {
     const key = (d: { code: string; entity?: string; message: string }) =>
       `${d.code}|${d.entity ?? ""}|${d.message}`;
     const before = new Set(D.diagnostics.filter((d) => d.severity === "error").map(key));
-    const after = derive(doc, lockItems(ctx.state.lock));
+    const after = ctx.deriveOf(next);
     const broke = after.diagnostics.filter((d) => d.severity === "error" && !before.has(key(d)));
     if (broke.length > 0) {
       throw refusal(
@@ -834,7 +834,7 @@ function apply(ctx: CommandContext, a: Args): Outcome {
     kept,
     ...(M.ends.size > 0 ? { stretched: [...M.ends].sort(compareEnds) } : {}),
   };
-  return done(withDoc(ctx, doc as RawDoc), { changed: ids, removed: [...removed] }, info);
+  return done(next, { changed: ids, removed: [...removed] }, info);
 }
 
 /**

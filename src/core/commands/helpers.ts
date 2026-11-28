@@ -43,17 +43,62 @@ export function makeContext(state: State, env: CommandEnv): CommandContext {
       derived ??= env.derived?.(state) ?? derive(state.doc, base());
       return derived;
     },
+    deriveOf(s) {
+      if (s === state) return this.derived();
+      return env.derived?.(s) ?? derive(s.doc, lockItems(s.lock));
+    },
   };
 }
+
+const SHARED = new WeakSet<CommandEnv>();
+
+/** An env whose derives a batch shares: it always derives. */
+export type SharedEnv = Omit<CommandEnv, "derived"> & { derived(s: State): Derived };
+
+/**
+ * One derive per state for a batch (review M6). States are immutable and derive is pure, so a
+ * state is derived once, whichever commands read it: a command that leaves the state as it found
+ * it (an `autoConnect` with nothing to join) and the next command share one derive, and a command
+ * that derives the state it returns (`transform`'s guard, through `deriveOf`) hands it on. A
+ * derive the caller already holds for a state (`env.derived`) is asked first; the caller may ask
+ * this env for the batch's last state afterwards. Commands never change a derived model.
+ */
+export function sharedDerives(env: CommandEnv): SharedEnv {
+  if (SHARED.has(env)) return env as SharedEnv;
+  const seen = new WeakMap<State, Derived>();
+  const shared = {
+    ...env,
+    derived(s: State): Derived {
+      let d = seen.get(s);
+      if (!d) {
+        d = env.derived?.(s) ?? derive(s.doc, lockItems(s.lock));
+        seen.set(s, d);
+      }
+      return d;
+    },
+  };
+  SHARED.add(shared);
+  return shared;
+}
+
+/**
+ * The states whose lock pins everything their document names. A state is immutable, so this is
+ * looked at once: a command that leaves the state as it found it (an `autoConnect` with nothing
+ * to join) costs no second walk of every item the document names (review M6).
+ */
+const COVERED = new WeakSet<State>();
 
 /**
  * Pins what the document newly names, when the live catalogs are open (§4.13): after each
  * command, so the next one, and derive, see it.
  */
 export function pinNew(state: State, env: CommandEnv): State {
-  if (!env.live) return state;
+  if (!env.live || COVERED.has(state)) return state;
   const refs = documentRefs(state.doc);
-  if (lockCovers(state.lock, refs)) return state;
+  if (lockCovers(state.lock, refs)) {
+    COVERED.add(state);
+    return state;
+  }
   return { doc: state.doc, lock: pinLock(env.live, refs, state.lock, { kind: "add" }).lock };
 }
 

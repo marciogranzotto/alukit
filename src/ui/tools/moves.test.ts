@@ -1,6 +1,12 @@
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
+import { applyBatch } from "#core/commands/apply.ts";
+import type { State } from "#core/commands/types.ts";
+import { LockFile } from "#core/lock/schema.ts";
+import { projectText } from "#core/project/canonical.ts";
 import { scratchFixtures } from "#core/testing.ts";
+import type { V3 } from "../../mesh/model.ts";
 import type { DryRun } from "../client/dryrun.ts";
 import { transformBatch } from "../edit/batches.ts";
 import type { Model } from "../model.ts";
@@ -161,5 +167,93 @@ describe("the Move tool", () => {
     } finally {
       await h.close();
     }
+  });
+});
+
+describe("the joins a move sends (review M6)", () => {
+  type Set = Extract<ReturnType<typeof moveSet>, { ids: string[] }>;
+  const setOf = (model: Model, ids: string[]): Set => {
+    const s = moveSet(model, ids);
+    if ("why" in s) throw new Error(s.why);
+    return s;
+  };
+  /** The batch as it was before: a join at every moved end, the first 24. */
+  const everyEnd = (set: Set, by: V3, detach: boolean) => [
+    { cmd: "transform", args: { ids: set.ids, by, ...(detach ? { joined: "detach" } : {}) } },
+    ...[...set.bars.flatMap((b) => [`${b}.a`, `${b}.b`]), ...(set.ends ?? [])]
+      .slice(0, 24)
+      .map((end) => ({ cmd: "autoConnect", args: { end, optional: true } })),
+  ];
+  const ends = (batch: { args?: unknown }[]) =>
+    batch.slice(1).map((c) => (c.args as { end: string }).end);
+  const stateOf = (d: string): State => ({
+    doc: JSON.parse(readFileSync(join(d, "alukit.json"), "utf8")),
+    lock: LockFile.parse(JSON.parse(readFileSync(join(d, "alukit.lock.json"), "utf8"))),
+  });
+
+  /** ux/move's moves, and the brace's box frame moved whole: name, model, folder, ids, by, Alt. */
+  const cases = async (): Promise<[string, Model, string, string[], V3, boolean][]> => {
+    const braceDir = join(dir, "..", "..", "brace");
+    const brace = await viewOf(braceDir);
+    const twelve = Array.from({ length: 12 }, (_, i) => `b${i + 1}`);
+    return [
+      ["a free brace", m, dir, ["b3"], [0, -280, 0], false],
+      ["a joined pair into open space", m, dir, ["b1", "b2"], [0, 0, 300], false],
+      [
+        "a joined pair whose corner lands on b4's free end",
+        m,
+        dir,
+        ["b1", "b2"],
+        [-800, 300, 0],
+        false,
+      ],
+      ["a butting rail freed with Alt", m, dir, ["b2"], [0, 0, 100], true],
+      ["a box frame moved whole", brace, braceDir, twelve, [0, 0, 300], false],
+    ];
+  };
+
+  it("joins only where a moved end can join: free, freed, or brought onto a free end", async () => {
+    const want: Record<string, string[]> = {
+      "a free brace": ["b3.a", "b3.b"],
+      "a joined pair into open space": ["b1.a", "b2.b"],
+      "a joined pair whose corner lands on b4's free end": ["b1.a", "b1.b", "b2.a", "b2.b"],
+      "a butting rail freed with Alt": ["b2.a", "b2.b"],
+      // Every end stays joined and no free end waits where one lands: the transform alone.
+      "a box frame moved whole": [],
+    };
+    for (const [name, model, , ids, by, detach] of await cases()) {
+      const batch = transformBatch(setOf(model, ids), [...by], detach, undefined, { m: model, by });
+      expect(ends(batch), name).toEqual(want[name]);
+    }
+  });
+
+  it("makes the same step as a join at every moved end", async () => {
+    for (const [name, model, d, ids, by, detach] of await cases()) {
+      const set = setOf(model, ids);
+      const s = stateOf(d);
+      const env = { today: "2026-11-27" };
+      const all = applyBatch(s, everyEnd(set, by, detach), env);
+      const some = applyBatch(
+        s,
+        transformBatch(set, [...by], detach, undefined, { m: model, by }),
+        env,
+      );
+      if (!all.ok || !some.ok) throw new Error(`${name}: refused`);
+      expect(projectText(some.state.doc), name).toBe(projectText(all.state.doc));
+      expect(
+        some.results.flatMap((r) => r.created),
+        name,
+      ).toEqual(all.results.flatMap((r) => r.created));
+    }
+    // The corner that lands on b4's free end joins it: the case is not vacuous.
+    const [, , , ids, by] = (await cases())[2] as [string, Model, string, string[], V3, boolean];
+    const r = applyBatch(
+      stateOf(dir),
+      transformBatch(setOf(m, ids), [...by], false, undefined, { m, by }),
+      {
+        today: "2026-11-27",
+      },
+    );
+    expect(r.ok && r.results.flatMap((x) => x.created)).toEqual(["c2"]);
   });
 });

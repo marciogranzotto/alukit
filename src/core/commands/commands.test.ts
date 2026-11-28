@@ -1602,6 +1602,39 @@ describe("a plane's normal naming a bar (gap G-A, G27)", () => {
 });
 
 describe("batches and history (§6)", () => {
+  it("derives each state of a batch once, whichever commands read it (review M6)", () => {
+    // A move of the cart's base frame with follow, then a join at each of its ends that finds
+    // nothing: the transform reads the state it starts from and checks the one it leaves, and
+    // every autoConnect after it reads that same state. Each is derived once.
+    const asked: State[] = [];
+    const env: CommandEnv = {
+      ...ENV,
+      derived(s) {
+        asked.push(s);
+        return derive(s.doc, lockItems(s.lock));
+      },
+    };
+    const base = ["b9", "b10"];
+    const r = applyBatch(
+      cart(),
+      [
+        { cmd: "transform", args: { ids: base, by: [0, 0, 10] } },
+        ...base.flatMap((b) =>
+          ["a", "b"].map((e) => ({
+            cmd: "autoConnect",
+            args: { end: `${b}.${e}`, optional: true },
+          })),
+        ),
+      ],
+      env,
+    );
+    if (!r.ok) throw new Error(JSON.stringify(r.failed));
+    expect(r.results.slice(1).every((x) => x.created.length === 0)).toBe(true);
+    expect(asked).toHaveLength(2);
+    expect(new Set(asked).size).toBe(2);
+    expect(asked[1]).toBe(r.state);
+  });
+
   it("a batch with one refused command changes nothing", () => {
     const h = new History(cart());
     const before = h.current;

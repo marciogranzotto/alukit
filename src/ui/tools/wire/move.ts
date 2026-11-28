@@ -212,7 +212,8 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
         return;
       }
       preview.ask({
-        commands: (prefer) => transformBatch(set, now.written, detach, prefer ?? rule()),
+        commands: (prefer) =>
+          transformBatch(set, now.written, detach, prefer ?? rule(), { m, by: now.d }),
         at: dest,
         soon,
         words: (r) => moveWords(r, detach),
@@ -285,7 +286,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
           return { commands: b, what: `copy ${idList(set.ids)}` };
         }
         return {
-          commands: transformBatch(set, now.written, detach, rule()),
+          commands: transformBatch(set, now.written, detach, rule(), { m, by: now.d }),
           what: `move ${idList(set.ids)}`,
         };
       },
