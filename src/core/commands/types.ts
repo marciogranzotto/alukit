@@ -93,6 +93,12 @@ export interface CommandContext {
   items(): ItemSource;
   /** The current document derived from its lock (§5), computed once per command. */
   derived(): Derived;
+  /**
+   * Another state derived, one the command makes (`transform` checks the joints of what it would
+   * leave): through the batch's shared derives, so the next command reading that state does not
+   * derive it again when the command returns it (review M6).
+   */
+  deriveOf(state: State): Derived;
 }
 
 export type Outcome =

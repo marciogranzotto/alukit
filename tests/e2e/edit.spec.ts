@@ -450,7 +450,7 @@ async function machining(dir: string): Promise<string> {
   return r.out;
 }
 
-test("holes (E-UX-22): a Ø7 hole 20 from end a on b1's +x face, as the CLI's setBar ops; edited, removed", async ({
+test("holes (E-UX-22): a Ø7 hole 20 from end a's cut on b1's +x face, as the CLI's setBar ops; edited, removed", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -458,16 +458,19 @@ test("holes (E-UX-22): a Ø7 hole 20 from end a on b1's +x face, as the CLI's se
   const oracle = await scratchProject("base-frame/cli");
   await cliDo(oracle.dir, {
     cmd: "setBar",
-    args: { id: "b1", set: { ops: [{ op: "hole", face: "+x", at_mm: 20, d_mm: 7 }] } },
+    args: {
+      id: "b1",
+      set: { ops: [{ op: "hole", face: "+x", at_mm: 20, from: "a.cut", d_mm: 7 }] },
+    },
   });
   await openTab(page, served, 0);
 
   // The menu on b1's side offers a hole there; its form opens prefilled with the face and the
-  // station, which typed values then set exactly.
+  // station, counted from end a's cut (review M3), which typed values then set exactly.
   await pick(page, "b1");
   const menu = await contextMenu(page, await sideOf(page, served.dir, "b1", 300));
   await menu
-    .getByRole("menuitem", { name: /^Add a hole on b1's face [+-][xy], \d+ mm from end a…/ })
+    .getByRole("menuitem", { name: /^Add a hole on b1's face [+-][xy], \d+ mm from end a's cut…/ })
     .click();
   const form = page.getByTestId("hole-form");
   await form.getByTestId("hole-face").selectOption("+x");
@@ -476,18 +479,18 @@ test("holes (E-UX-22): a Ø7 hole 20 from end a on b1's +x face, as the CLI's se
   await form.getByTestId("hole-add").click();
   await waitDrawn(page, 1);
   expect((await written(served.dir)).bars?.b1).toMatchObject({
-    ops: [{ op: "hole", face: "+x", at_mm: 20, d_mm: 7 }],
+    ops: [{ op: "hole", face: "+x", at_mm: 20, from: "a.cut", d_mm: 7 }],
   });
   expect(await machining(served.dir)).toEqual(await machining(oracle.dir));
   await oracle.remove();
-  await expect(page.getByTestId("hole-0")).toContainText("Ø7 on face +x, 20 mm from end a");
+  await expect(page.getByTestId("hole-0")).toContainText("Ø7 on face +x, 20 mm from end a's cut");
 
   // Edited in its row: a tapped M6 instead, one step; then removed, one step.
   await page.getByTestId("hole-0-size").fill("M6");
   await page.getByTestId("hole-0-size").press("Enter");
   await waitDrawn(page, 2);
   expect((await written(served.dir)).bars?.b1).toMatchObject({
-    ops: [{ op: "hole", face: "+x", at_mm: 20, thread: "M6" }],
+    ops: [{ op: "hole", face: "+x", at_mm: 20, from: "a.cut", thread: "M6" }],
   });
   await page.getByTestId("hole-0-remove").click();
   await waitDrawn(page, 3);

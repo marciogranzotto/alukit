@@ -7,6 +7,7 @@ import { type CheckOutput, checkModel } from "#core/check/check.ts";
 import { type ModelOutputs, modelOutputs, outputAccessors } from "#core/check/outputs.ts";
 import { applyBatchLive, type CommandResult } from "#core/commands/apply.ts";
 import { type DryEffects, effectsOf } from "#core/commands/dry.ts";
+import { sharedDerives } from "#core/commands/helpers.ts";
 import { History, type LogEntry, type Step, stepText, stepWords } from "#core/commands/history.ts";
 import type { CatalogPlaces, CommandEnv, State } from "#core/commands/types.ts";
 import { type Arrangements, arrange, type JointKind } from "#core/corners/arrange.ts";
@@ -414,10 +415,10 @@ export class ProjectHost {
       if (this.statusValue.readOnly) {
         return { ok: false, kind: "read-only", status: this.statusValue, rev };
       }
-      const { r, now } = await this.tryBatch(req.commands);
+      const { r, now, derived } = await this.tryBatch(req.commands);
       this.adoptCatalogs(now);
       if (!r.ok) return { ok: false, kind: "refused", failed: r.failed, rev };
-      const after = this.compute(undefined, r.state);
+      const after = this.compute(undefined, r.state, derived(r.state));
       return {
         ok: true,
         rev,
@@ -590,11 +591,18 @@ export class ProjectHost {
   private async tryBatch(commands: readonly unknown[]) {
     const now = await openLiveCatalogs(this.dir, this.state.doc, this.opts.builtinDir);
     let after = now;
-    const r = await applyBatchLive(this.state, commands, this.env(now.set), async (catalogs) => {
+    // One derive per state (review M6): the current state's is the snapshot's, and the batch's
+    // last state is derived once, by the batch or after it, for the answer and the snapshot.
+    const snap = this.snap;
+    const env = sharedDerives({
+      ...this.env(now.set),
+      derived: (s) => (s === snap.state ? snap.derived : undefined),
+    });
+    const r = await applyBatchLive(this.state, commands, env, async (catalogs) => {
       after = await openLiveCatalogs(this.dir, { catalogs }, this.opts.builtinDir);
       return after.set;
     });
-    return { r, now, after };
+    return { r, now, after, derived: env.derived };
   }
 
   private adoptCatalogs(live: { set: CatalogSet; diagnostics: Diagnostic[]; named: string[] }) {
@@ -617,7 +625,7 @@ export class ProjectHost {
     if (req.strict && req.baseRev !== undefined && req.baseRev !== rev0) {
       return { ok: false, kind: "stale", rev: rev0, between };
     }
-    const { r, now, after } = await this.tryBatch(req.commands);
+    const { r, now, after, derived } = await this.tryBatch(req.commands);
     this.adoptCatalogs(now);
     if (!r.ok) return { ok: false, kind: "refused", failed: r.failed, rev: rev0 };
     try {
@@ -634,7 +642,7 @@ export class ProjectHost {
       removed: r.results.flatMap((x) => x.removed),
       changed: r.results.flatMap((x) => x.changed),
     };
-    const delta = this.advance(before);
+    const delta = this.advance(before, { state: r.state, derived: derived(r.state) });
     this.emit({
       type: "rev",
       rev,
@@ -779,9 +787,11 @@ export class ProjectHost {
     }
   }
 
-  private compute(variant?: string, state: State = this.state): Snapshot {
+  /** A state's snapshot; `known`, a derive of that state in the default variant already made. */
+  private compute(variant?: string, state: State = this.state, known?: Derived): Snapshot {
     const items = lockItems(state.lock);
-    const derived = derive(state.doc, items, { variant });
+    const derived =
+      known !== undefined && variant === undefined ? known : derive(state.doc, items, { variant });
     const stamp = { lock: lockHash(state.lock) };
     const outputs = modelOutputs(derived, items, stamp);
     // The same checks as `alukit check` and a headless `alukit do`: mass() and cost() evaluate.
@@ -804,8 +814,9 @@ export class ProjectHost {
   }
 
   /** Moves the snapshot to the current revision; the diagnostics it added and resolved. */
-  private advance(before: Snapshot): DiagnosticsDelta {
-    this.snap = this.compute();
+  private advance(before: Snapshot, known?: { state: State; derived: Derived }): DiagnosticsDelta {
+    const state = this.state;
+    this.snap = this.compute(undefined, state, known?.state === state ? known.derived : undefined);
     this.variantSnaps.clear();
     return deltaOf(before, this.snap);
   }

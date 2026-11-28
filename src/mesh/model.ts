@@ -79,6 +79,11 @@ export interface ViewBar {
   section: string;
   /** Section point s lands at s + shift in the bar's local x, y (anchor and offset, §4.4). */
   shift: P2;
+  /**
+   * Along the axis from design point a, where each end's cut reaches farthest (its long point,
+   * §5.3): where the cut list, and a hole counted from a cut end, measure from (review M3).
+   */
+  long_mm?: P2;
   /** Mass by the BOM's rule (centre-line length × mass per metre, §5.4), and its source. */
   mass_kg?: number;
   mass_src?: string;

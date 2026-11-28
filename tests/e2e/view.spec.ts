@@ -700,8 +700,9 @@ test("context draws translucent, apart from the build; marking it or not links n
 
   // The bench's post and the floor unmarked, one step: they draw with the programs the opaque
   // bars and the translucent parts already have, and the problems they bring are badged: the two
-  // placeholders, and the post's hole, now a machining service with no price, on the three
-  // built posts (the item's bars the order buys).
+  // placeholders, and the post's hole, now a machining service with no price, on the post that
+  // carries it (review M1: the problem names the bars its machining is on, not every bar of the
+  // item).
   let drawn = await frames();
   await step([
     { cmd: "setBar", args: { id: "b3", set: { context: null } } },
@@ -709,7 +710,7 @@ test("context draws translucent, apart from the build; marking it or not links n
   ]);
   await waitDrawn(page, 2);
   await expect.poll(frames).toBeGreaterThan(drawn);
-  await expect.poll(badges).toBe(5);
+  await expect.poll(badges).toBe(3);
   expect(await stats()).toMatchObject({ bars: 5, parts: 3, context: 2 });
   expect(await links()).toBe(before);
 

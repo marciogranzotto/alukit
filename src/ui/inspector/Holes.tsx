@@ -9,6 +9,9 @@ import {
   changeHole,
   FACES,
   type Face,
+  FROMS,
+  type From,
+  fromOf,
   holeOp,
   holesOf,
   holeWords,
@@ -75,12 +78,15 @@ function HoleRow({ m, id, i, op }: { m: Model; id: string; i: number; op: O }) {
             class="insp-select"
             data-testid={`hole-${i}-from`}
             aria-label={`Hole ${i + 1}: from end`}
-            value={op.from === "b" ? "b" : "a"}
+            value={fromOf(op)}
             disabled={off}
             onChange={(e) => change({ from: (e.currentTarget as HTMLSelectElement).value })}
           >
-            <option value="a">end a</option>
-            <option value="b">end b</option>
+            {FROMS.map((x) => (
+              <option key={x.value} value={x.value}>
+                {x.label}
+              </option>
+            ))}
           </select>
           <span>
             size{" "}
@@ -123,11 +129,26 @@ function HoleRow({ m, id, i, op }: { m: Model; id: string; i: number; op: O }) {
   );
 }
 
-/** The form that adds a hole: a face, a distance from an end, a size, a depth (empty: through). */
-function HoleForm({ m, id, face, at }: { m: Model; id: string; face: Face; at: number }) {
+/**
+ * The form that adds a hole: a face, a distance from where it counts (end a's cut unless the menu
+ * said otherwise; review M3), a size, a depth (empty: through).
+ */
+function HoleForm({
+  m,
+  id,
+  face,
+  at,
+  from: from0,
+}: {
+  m: Model;
+  id: string;
+  face: Face;
+  at: number;
+  from: From;
+}) {
   const [f, setF] = useState<Face>(face);
   const [atText, setAt] = useState(String(at));
-  const [from, setFrom] = useState<"a" | "b">("a");
+  const [from, setFrom] = useState<From>(from0);
   const [size, setSize] = useState("");
   const [depth, setDepth] = useState("");
   const [bad, setBad] = useState<string>();
@@ -186,12 +207,15 @@ function HoleForm({ m, id, face, at }: { m: Model; id: string; face: Face; at: n
       <select
         class="insp-select"
         data-testid="hole-from"
-        aria-label="From end"
+        aria-label="Counted from"
         value={from}
-        onChange={(e) => setFrom((e.currentTarget as HTMLSelectElement).value as "a" | "b")}
+        onChange={(e) => setFrom((e.currentTarget as HTMLSelectElement).value as From)}
       >
-        <option value="a">end a</option>
-        <option value="b">end b</option>
+        {FROMS.map((x) => (
+          <option key={x.value} value={x.value}>
+            {x.label}
+          </option>
+        ))}
       </select>
       <label>
         size{" "}
@@ -253,6 +277,7 @@ export function HoleRows({ m, id }: { m: Model; id: string }) {
               id={id}
               face={asked.face}
               at={asked.at_mm}
+              from={asked.from}
             />
           ) : (
             <button
@@ -260,7 +285,7 @@ export function HoleRows({ m, id }: { m: Model; id: string }) {
               class="btn"
               data-testid="hole-new"
               disabled={readOnly()}
-              onClick={() => (holeAsked.value = { bar: id, face: "+x", at_mm: 0 })}
+              onClick={() => (holeAsked.value = { bar: id, face: "+x", at_mm: 0, from: "a.cut" })}
             >
               Add a hole…
             </button>

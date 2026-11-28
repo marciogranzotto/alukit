@@ -107,7 +107,10 @@ export function mapBarFields(id: string, b: O, m: Sym, section: BuiltSection, ro
   return out;
 }
 
-/** A bar's ops (§4.4) under a map: faces renamed, and measured from the other end if reversed. */
+/**
+ * A bar's ops (§4.4) under a map: faces renamed, and measured from the other end if reversed, a
+ * design point's or a cut's alike (review M3).
+ */
 export function mapOps(ops: unknown, m: Map2, reversed: boolean): unknown {
   if (!Array.isArray(ops)) return ops;
   return ops.map((op) => {
@@ -115,8 +118,9 @@ export function mapOps(ops: unknown, m: Map2, reversed: boolean): unknown {
     const o = { ...(op as O) };
     if (typeof o.face === "string") o.face = mapFace(m, o.face as Face);
     if (reversed) {
-      if ((o.from ?? "a") === "a") o.from = "b";
-      else delete o.from;
+      const from = FROM_SWAP[(o.from as string | undefined) ?? "a"] as string;
+      if (from === "a") delete o.from;
+      else o.from = from;
     }
     return o;
   });

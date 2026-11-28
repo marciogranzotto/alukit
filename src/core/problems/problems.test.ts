@@ -115,8 +115,9 @@ describe("the cart's problems", () => {
     });
     expect(byId("est-price/test:PSU-24V/test-vendor")).toMatchObject({
       title: expect.stringMatching(/^The price of .+ \(test:PSU-24V\) is an estimate$/),
-      detail: "The order from test-vendor waits for a price read from a source.",
-      fixes: [{ label: "Set a sourced price…", kind: "set-price", item: "test:PSU-24V" }],
+      detail:
+        "The order from test-vendor waits for a price read from a source: its catalog's offer gives an estimate, so source it there and update the lock.",
+      fixes: [],
     });
     expect(byId("stale-price/test-geo:NUT-M10/test-geo-vendor")).toMatchObject({
       group: "warning",
@@ -219,6 +220,71 @@ describe("problems of a few edits", () => {
       from: ["open"],
       fixes: [{ kind: "resolve-open", open: "O1" }],
     });
+  });
+
+  it("words a supplier's unpriced machining as itself, on the bars it is on, with no dead fix (review M1)", async () => {
+    // A hole on b1, which shop-a cuts: a machining service no cost line prices. It is not an
+    // item nobody sells, and a catalog item's price is not the app's to set.
+    const hole = { op: "hole", face: "+y", at_mm: 100, d_mm: 6.6 };
+    const { m, s } = await model(ORDER, { bars: { b1: { ops: [hole] } } });
+    const p = problemsAt(m, AS_OF);
+    const unpriced = p.problems.filter((x) => x.rule === "missing-price");
+    expect(unpriced).toHaveLength(1);
+    const machining = unpriced[0] as Problem;
+    expect(machining).toMatchObject({
+      // Its id is the item's, so it stays while bars gain or lose holes.
+      id: "missing-price/test-order:FLAT-O/shop-a",
+      group: "blocks-order",
+      raw: "test-order:FLAT-O-c: no price for 1 machining service; cover them with a cost line",
+      suppliers: ["shop-a"],
+      targets: ["b1"],
+      fixes: [],
+    });
+    expect(machining.title).toMatch(
+      /^1 machining service on .+ \(test-order:FLAT-O\) has no price$/,
+    );
+    expect(machining.title).not.toMatch(/sells/);
+    expect(machining.detail).toContain("b1 (1 × hole Ø6.60)");
+    expect(machining.detail).toContain("addCost");
+    expect(machining.detail).toContain('"covers": { "supplier": "shop-a", "services": true }');
+    expect(machining.detail).toMatch(/It holds the order from shop-a until one does\.$/);
+
+    // The cost line the words describe, with the amounts filled in, clears it.
+    const cost = {
+      label: "machining by shop-a",
+      kind: "machining",
+      supplier: "shop-a",
+      low_minor: 500,
+      likely_minor: 800,
+      high_minor: 1200,
+      covers: { supplier: "shop-a", services: true },
+    };
+    const r = applyBatch(s, [{ cmd: "addCost", args: { cost } }], { today: AS_OF });
+    if (!r.ok) throw new Error(JSON.stringify(r.failed));
+    const after = problemsAt(modelOf(r.state, [], 1), AS_OF);
+    expect(after.problems.filter((x) => x.rule === "missing-price")).toEqual([]);
+    expect(after.order.status).toBe("READY");
+  });
+
+  it("offers a price form only where the app sets one: a project item's (review M1)", async () => {
+    // Every set-price fix the problems offer names a project item: a catalog item's price comes
+    // from its catalog, so a form for it could only ever be shown disabled.
+    for (const dir of [CART, ORDER]) {
+      const p = problemsAt((await model(dir)).m, AS_OF);
+      const priced = p.problems.flatMap((x) => x.fixes).filter((f) => f.kind === "set-price");
+      for (const f of priced) expect((f as { item: string }).item).toMatch(/^project:/);
+    }
+    const nobody = problemsAt(
+      (
+        await model(ORDER, {
+          parts: { p3: { item: "test-order:PIN-O", qty: 4, unplaced: true, why: "pins" } },
+        })
+      ).m,
+      AS_OF,
+    );
+    const none = nobody.problems.find((x) => x.raw === "test-order:PIN-O: no offer") as Problem;
+    expect(none.title).toMatch(/^No supplier sells /);
+    expect(none.fixes).toEqual([]);
   });
 
   it("says EMPTY when there is nothing to order", async () => {
