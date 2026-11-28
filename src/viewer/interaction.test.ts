@@ -411,6 +411,30 @@ describe("the draw gesture (§8)", () => {
     });
   });
 
+  it("keeps a face's world direction for the person, at the station it meets (re-check N7)", () => {
+    const from = { p: [0, 0, 560] as V3, written: [0, 0, 560], label: "b3 +x face at 560" };
+    const face = {
+      p: [960, 0, 566] as V3,
+      ref: { kind: "station", bar: "b4", at_mm: 566, face: "-x" },
+      label: "b4 -x face at 566",
+      tip: "b4 -x face (world -X) at 566",
+      kind: "line",
+      line: { a: [960, 0, 0] as V3, t: [0, 0, 1] as V3, len: 750 },
+    } as const;
+    // Met by the axis through the start: the machine's label and the person's both at 560.
+    expect(endUnder(from, opts(960, 566, { snap: face }))).toMatchObject({
+      how: "meet",
+      label: "b4 -x face at 560",
+      tip: "b4 -x face (world -X) at 560",
+    });
+    const point = { ...face, kind: "point" } as const;
+    expect(endUnder(from, opts(960, 566, { snap: point }))).toMatchObject({
+      how: "snap",
+      label: "b4 -x face at 566",
+      tip: "b4 -x face (world -X) at 566",
+    });
+  });
+
   it("with Shift, is free in the work plane through the start", () => {
     const e = endUnder(start, {
       ...opts(0, 0),

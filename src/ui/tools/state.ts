@@ -162,6 +162,8 @@ export interface JointPreview {
   ms: number;
   /** Whether a joint is made, so Tab has something to flip; undefined reads as yes. */
   joins?: boolean;
+  /** The revision the app held when it asked: a refusal holds a commit only at it (N4). */
+  rev?: number | undefined;
 }
 export const jointPreview = signal<JointPreview | undefined>(undefined);
 
@@ -177,6 +179,11 @@ export const lastResult = signal<
       error?: string | undefined;
       /** The refusal is "which way?": it holds only until a way is known (review N2). */
       wayNeeded?: true;
+      /**
+       * Enter met a refusal the preview already showed (`heldByPreview`): the commands it held, as
+       * JSON. The bar says it once, as this result while that preview stands (re-check N9).
+       */
+      held?: string;
     }
   | undefined
 >(undefined);

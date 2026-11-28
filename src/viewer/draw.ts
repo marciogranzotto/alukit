@@ -44,6 +44,12 @@ export interface DrawPoint {
   written: PointJson;
   /** What it snapped to, for the indicator. */
   label: string;
+  /**
+   * The label as a person reads it, when it says more: a face with the world direction it faces
+   * ("b4 -x face (world -X) at 560"; the snap's `tip`, review m9, re-check N7). `label` stays the
+   * machine's.
+   */
+  tip?: string;
 }
 
 /** The end under the pointer while drawing. */
@@ -187,10 +193,12 @@ function lockedEnd(start: DrawPoint, axis: Axis, o: EndOptions, step: number): D
   const snap = Math.abs(level) > 1e-6 ? o.snap : undefined;
   const s = snap ? level : Math.round(rayLineParams(o.ray, S, e).s / step) * step;
   if (Math.abs(s) < 1e-6) return undefined;
+  const along = `${s > 0 ? "+" : "-"}${axis} ${Math.abs(s)}`;
   return {
     p: addScaled(S, e, s),
     written: endFrom(start, e, s),
-    label: `${s > 0 ? "+" : "-"}${axis} ${Math.abs(s)}${snap ? ` level with ${snap.label}` : ""}`,
+    label: `${along}${snap ? ` level with ${snap.label}` : ""}`,
+    ...(snap?.tip ? { tip: `${along} level with ${snap.tip}` } : {}),
     how: "axis",
     axis,
   };
@@ -220,17 +228,25 @@ export function endUnder(start: DrawPoint, o: EndOptions): DrawEnd | undefined {
       if (best && best.d <= step * 2) {
         const ref = { ...snap.ref, at_mm: q(best.s) };
         const met: Snap = { ...snap, p: best.p, ref };
+        const at = (words: string) => `${words.replace(/ at [-\d.]+$/, "")} at ${q(best.s)}`;
         return {
           p: best.p,
           written: writtenPoint(met, o.doc),
-          label: `${snap.label.replace(/ at [-\d.]+$/, "")} at ${q(best.s)}`,
+          label: at(snap.label),
+          ...(snap.tip ? { tip: at(snap.tip) } : {}),
           how: "meet",
           axis: best.axis,
         };
       }
     }
     if (len3(sub(snap.p, S)) < 1e-6) return undefined;
-    return { p: snap.p, written: writtenPoint(snap, o.doc), label: snap.label, how: "snap" };
+    return {
+      p: snap.p,
+      written: writtenPoint(snap, o.doc),
+      label: snap.label,
+      ...(snap.tip ? { tip: snap.tip } : {}),
+      how: "snap",
+    };
   }
   if (o.free) {
     const plane = through(o.plane, S);

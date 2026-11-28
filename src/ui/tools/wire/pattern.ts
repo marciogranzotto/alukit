@@ -8,6 +8,7 @@ import { extendHook } from "../../hook.ts";
 import type { Model } from "../../model.ts";
 import { model } from "../../store.ts";
 import { patternCommand } from "../commands.ts";
+import type { ShownAnswer } from "../preview.ts";
 import { activeTool, hint, patternState } from "../state.ts";
 import { typedNumber } from "../typed.ts";
 import type { Wire, WireContext } from "./common.ts";
@@ -31,10 +32,14 @@ declare module "../../hook.ts" {
 }
 extendHook({ patternGhosts: () => (activeTool.peek() === "pattern" ? ghostsDrawn : 0) });
 
-/** What Create would make, in words, and how many copies the view draws: by the form. */
-export const patternPreview = signal<{ text: string; error: boolean; ghosts: number } | undefined>(
-  undefined,
-);
+/**
+ * What Create would make, in words, and how many copies the view draws: by the form. `shown` is
+ * the answer as the commit gate reads it (`refusalOf`, re-check N4): the command it dry-ran, at
+ * which revision, and the core's refusal, so Create is not offered for a step the core refuses.
+ */
+export const patternPreview = signal<
+  { text: string; error: boolean; ghosts: number; shown?: ShownAnswer } | undefined
+>(undefined);
 
 /** The unit direction a pattern repeats along: its bar's, a to b, or a run's first bar's. */
 function alongDir(m: Model, along: string): V3 | undefined {
@@ -135,10 +140,16 @@ export function createPatternTool(ctx: WireContext): Wire {
     void dryRun([cmd]).then((r) => {
       if (asked !== key) return;
       if (!r.ok) {
+        // The dry run did not answer: not the core's refusal, so Create stays the server's to judge.
         patternPreview.value = { text: r.why, error: true, ghosts: ghosts.length };
         return;
       }
-      patternPreview.value = { ...patternWords(r.value, count), ghosts: ghosts.length };
+      const w = patternWords(r.value, count);
+      patternPreview.value = {
+        ...w,
+        ghosts: ghosts.length,
+        shown: { key: JSON.stringify([cmd]), rev: m.rev, refused: w.error ? w.text : undefined },
+      };
     });
   });
 

@@ -22,7 +22,7 @@ import { palette } from "../../palette.ts";
 import { model, sendCommands } from "../../store.ts";
 import { repeatBatch } from "../commands.ts";
 import { type JointWords, jointWords, touchesBars } from "../joint.ts";
-import { type Cmd, createPreviewer } from "../preview.ts";
+import { type Cmd, createPreviewer, heldByPreview } from "../preview.ts";
 import {
   activeTool,
   drawOptions,
@@ -196,9 +196,10 @@ export function createDrawTool(ctx: WireContext): Wire {
     });
     const what = under ? under.label : current?.label;
     // A face is said with the world direction it faces (review m9); `what` stays the machine's.
-    const said = under ? under.label : (current?.tip ?? current?.label);
+    // Both points alike: the second's face says its world direction too (re-check N7).
+    const said = under ? (under.tip ?? under.label) : (current?.tip ?? current?.label);
     const text = [
-      t.kind === "empty" ? said : end?.label,
+      t.kind === "empty" ? said : (end?.tip ?? end?.label),
       length !== undefined ? `${fmt(length)} mm` : undefined,
       t.kind === "error" ? t.why : undefined,
     ]
@@ -219,6 +220,9 @@ export function createDrawTool(ctx: WireContext): Wire {
     if (!drawn || !m) return;
     const repeat = drawRepeat.peek();
     const cmds = repeat ? repeatBatch(drawn, m.doc, repeat) : drawn;
+    // The one gate every previewed commit passes (re-check N4): a bar the preview shows refused
+    // is not sent, and the gesture stays to change it.
+    if (heldByPreview(cmds)) return;
     drawState.value = {};
     current = undefined;
     joint.reset();

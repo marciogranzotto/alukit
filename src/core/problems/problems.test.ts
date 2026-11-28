@@ -305,6 +305,45 @@ describe("plain words for every diagnostic code (E1.3)", () => {
   });
 });
 
+describe("machining problems say which (the re-check's N10)", () => {
+  // Each of derive's machining checks, its message as it writes it (derive/on-piece.ts,
+  // face-taps.ts, duplicates.ts, cores.ts), and the title it reads as.
+  it.each([
+    [
+      "the Ø7.00 hole on face +y, 2.00 mm from end a's cut, reaches 1.50 mm past end a's cut face: off the piece, a shop cannot make it there",
+      "A hole off its piece at b5",
+    ],
+    [
+      "the tap M6 on face +y: its Ø5.00 tap drill lies 100.0 % in the 8.20 opening of the groove on face +y at 0.00, 0.00 off its centre line, so its thread has less than half its circle of wall",
+      "A tap with too little wall at b5",
+    ],
+    [
+      "the Ø7.00 hole on face +y is made 2 times at one place (c1, 1 written in ops): give each its own position, or make it once",
+      "The same machining made twice at one place at b5",
+    ],
+    [
+      "test:X gives no core positions: the taps in end a (c1) are not checked against its cores",
+      "Taps not checked against the section's cores at b5",
+    ],
+    [
+      "the tap M8 in end a (c1) runs across test:X's cores, which lie along its axis: its thread is cut in no core",
+      "A tap on no core at b5",
+    ],
+    ["the tap M8 in end a (c1) is on no core of test:X", "A tap on no core at b5"],
+    [
+      "the tap M8 in end a (c1) does not fit core 1 it is on: its drill is wider than the core",
+      "A tap that does not fit its core at b5",
+    ],
+    [
+      "the tap M8 in end a (c1) is on core 1; its fit is not checked: AluKit has no tap drill and 6H tolerance for M8",
+      "A tap whose fit is not checked at b5",
+    ],
+    ["something no check writes", "Machining to check at b5"],
+  ])("%s", (message, title) => {
+    expect(checkTitle("machining", ["b5"], message)).toBe(title);
+  });
+});
+
 describe("the editing audit's brace (D3, D4; E1.3)", () => {
   // The box frame of tests/fixtures/brace and a brace drawn into its back plane
   // (src/core/brace.test.ts).
@@ -325,6 +364,29 @@ describe("the editing audit's brace (D3, D4; E1.3)", () => {
     if (!r.ok) throw new Error(`${fix.label}: ${JSON.stringify(r.failed)}`);
     return modelOf(r.state, [], 2).check.diagnostics;
   }
+
+  it("titles two machining errors on one bar by what is wrong with each (the re-check's N10)", async () => {
+    // On the front base rail b5: a Ø7 hole 2 from end a's cut, off the piece, and an M6 tap at
+    // 300 in the groove's opening on +y, with less than half its circle of wall.
+    const ops = [
+      { op: "hole", face: "+y", at_mm: 2, from: "a.cut", d_mm: 7 },
+      { op: "hole", face: "+y", at_mm: 300, from: "a.cut", thread: "M6" },
+    ];
+    const { p } = await edited([{ cmd: "setBar", args: { id: "b5", set: { ops } } }]);
+    const machining = p.problems.filter((x) => x.code === "machining");
+    expect(machining.map((x) => x.title).sort()).toEqual([
+      "A hole off its piece at b5",
+      "A tap with too little wall at b5",
+    ]);
+    // The CLI's message is the check's, as before; only the titles tell them apart now.
+    expect(machining.map((x) => x.raw)).toHaveLength(2);
+    expect(machining.map((x) => x.raw)).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/: off the piece, a shop cannot make it there$/),
+        expect.stringMatching(/ less than half its circle of wall$/),
+      ]),
+    );
+  });
 
   it("offers to join the corner-to-corner brace's open ends, and the join works (D4)", async () => {
     const { s, p } = await edited([brace([0, 600, 0], [1000, 600, 750])]);

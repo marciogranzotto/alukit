@@ -19,6 +19,7 @@ import {
   parseSize,
   removeHole,
   sizeText,
+  switchFrom,
 } from "./holes.ts";
 import { faceWords } from "./words.ts";
 
@@ -81,7 +82,14 @@ function HoleRow({ m, id, i, op }: { m: Model; id: string; i: number; op: O }) {
             aria-label={`Hole ${i + 1}: from end`}
             value={fromOf(op)}
             disabled={off}
-            onChange={(e) => change({ from: (e.currentTarget as HTMLSelectElement).value })}
+            onChange={(e) => {
+              // The hole stays where it is and its number is converted (re-check N6).
+              setBad(undefined);
+              const to = (e.currentTarget as HTMLSelectElement).value as From;
+              const step = switchFrom(m, id, i, to);
+              if ("why" in step) setBad(step.why);
+              else void send([step], `change ${id}'s hole ${i + 1}`);
+            }}
           >
             {FROMS.map((x) => (
               <option key={x.value} value={x.value}>

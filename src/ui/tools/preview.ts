@@ -4,7 +4,7 @@ import type { Viewer } from "../../viewer/scene.ts";
 import { type DryRun, dryRun } from "../client/dryrun.ts";
 import { model } from "../store.ts";
 import type { JointWords } from "./joint.ts";
-import { CORNER_RULES, jointPreview } from "./state.ts";
+import { CORNER_RULES, jointPreview, lastResult } from "./state.ts";
 
 /**
  * The joint preview (S5.6, D-UX-11), for every gesture that may join bars: drawing a bar, dragging
@@ -26,6 +26,9 @@ export const PAUSE_MS = 250;
 export const SNAP_MS = 60;
 
 export type Cmd = { cmd: string; args: Record<string, unknown> };
+
+/** A batch as it is sent: the gate compares what is sent, whatever built it. */
+type Batch = readonly { cmd: string; args?: unknown }[];
 
 /** What a gesture would commit now, and how its dry run reads. */
 export interface PreviewAsk {
@@ -53,8 +56,67 @@ export interface JointPreviewer {
   /**
    * The words of the dry run's refusal when it was of exactly these commands, so a commit the core
    * already refused is not sent (review m3: Enter posted a step the preview knew was refused).
+   * The same as `shownRefusal`, which every commit now asks (re-check N4).
    */
   refused(cmds: readonly Cmd[] | undefined): string | undefined;
+}
+
+/**
+ * A preview's answer as the gate reads it (re-check N4): what it dry-ran, at which revision, and
+ * the core's refusal in the words it shows, if it refused.
+ */
+export interface ShownAnswer {
+  /** The commands it dry-ran, as JSON. */
+  key: string;
+  /** The revision the app held when it asked. */
+  rev: number | undefined;
+  /** The refusal the preview shows; undefined when the step would be made. */
+  refused: string | undefined;
+}
+
+/**
+ * The refusal a preview shows for exactly these commands, at the revision the app holds now: the
+ * one rule every previewed commit asks before it sends (re-check N4; review m3 had it in Move and
+ * Duplicate only, so a refused Mirror or Rotate still posted). A preview of other commands, or of
+ * an older revision, says nothing about these: they are sent, and the server judges them.
+ */
+export function refusalOf(
+  cmds: Batch | undefined,
+  shown: ShownAnswer | undefined,
+): string | undefined {
+  if (!cmds || !shown || shown.refused === undefined) return undefined;
+  if (shown.rev !== model.peek()?.rev) return undefined;
+  return shown.key === JSON.stringify(cmds) ? shown.refused : undefined;
+}
+
+/**
+ * The refusal the joint preview shows for these commands, as `refusalOf` reads it. Every gesture,
+ * the draw tool and the length label preview through `createPreviewer`, which writes the one
+ * `jointPreview`, so this one check covers them all.
+ */
+export function shownRefusal(cmds: Batch | undefined): string | undefined {
+  const j = jointPreview.peek();
+  return refusalOf(
+    cmds,
+    j && { key: j.key, rev: j.rev, refused: j.shape === "refused" ? j.text : undefined },
+  );
+}
+
+/**
+ * Holds a commit in the command bar when its preview already shows the core refusing it: the
+ * refusal becomes Enter's answer, said once (`lastResult.held`: the bar shows it as the result
+ * and no longer as the preview; re-check N9), and nothing is sent. True when it held.
+ */
+export function heldByPreview(cmds: Batch): boolean {
+  const why = shownRefusal(cmds);
+  if (why === undefined) return false;
+  lastResult.value = {
+    rev: model.peek()?.rev ?? 0,
+    created: [],
+    error: why,
+    held: JSON.stringify(cmds),
+  };
+  return true;
 }
 
 /**
@@ -83,6 +145,8 @@ export function createPreviewer(
   }
 
   async function run(key: string, a: PreviewAsk, cmds: Cmd[], prefer: CornerRule | undefined) {
+    // The revision asked about: a refusal holds a commit only while the app still holds it.
+    const rev = model.peek()?.rev;
     const t0 = performance.now();
     const r = await dryRun(cmds);
     const ms = Math.round(performance.now() - t0);
@@ -98,6 +162,7 @@ export function createPreviewer(
       shape: w.shape,
       ms,
       joins: w.joins,
+      rev,
     };
     viewer.setLabel("joint", a.at, w.joins ? `${w.text} · Tab: flip` : w.text);
   }
@@ -150,6 +215,7 @@ export function createPreviewer(
           shape: w.shape,
           ms: j.ms,
           joins: w.joins,
+          rev: model.peek()?.rev,
         };
         viewer.setLabel("joint", a.at, `${w.text} · Tab: flip`);
         return;
@@ -161,10 +227,6 @@ export function createPreviewer(
       clear();
       flipped = undefined;
     },
-    refused(cmds) {
-      const j = jointPreview.peek();
-      if (!cmds || !j || j.shape !== "refused") return undefined;
-      return j.key === JSON.stringify(cmds) ? j.text : undefined;
-    },
+    refused: shownRefusal,
   };
 }

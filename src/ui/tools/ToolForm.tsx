@@ -14,6 +14,7 @@ import {
 } from "./commands.ts";
 import { BinList, connectReplacing, FaceForm } from "./forms/FaceForm.tsx";
 import { FrameForm } from "./forms/FrameForm.tsx";
+import { refusalOf } from "./preview.ts";
 import {
   activeTool,
   type ConnectPick,
@@ -360,6 +361,8 @@ function PatternPanel() {
   // (docs/ux/polish-editing-ui-decisions.md 4).
   const drawWhy = "why" in repeat ? repeat.why : bar ? undefined : "arm a bar to draw first";
   const pitch = typedNumber(s.pitch, params);
+  // Create is the commit its preview dry-ran: one the core refuses is not offered (re-check N4).
+  const refused = "why" in c ? undefined : refusalOf([c], patternPreview.value?.shown);
   const field = (k: "pitch" | "count" | "along", label: string) => (
     <label>
       {label}{" "}
@@ -412,9 +415,10 @@ function PatternPanel() {
           type="button"
           class="tp-btn"
           data-testid="pattern-apply"
-          disabled={"why" in c || busy.value}
+          disabled={"why" in c || busy.value || refused !== undefined}
+          title={refused !== undefined ? `Create would be refused: ${refused}` : undefined}
           onClick={async () => {
-            if ("why" in c) return;
+            if ("why" in c || refusalOf([c], patternPreview.peek()?.shown) !== undefined) return;
             patternOutcome.value = await sendCommands([c], "pattern", { inline: true });
           }}
         >

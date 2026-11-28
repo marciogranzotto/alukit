@@ -60,8 +60,14 @@ export interface MirrorDeps {
 
 /**
  * What a mirror's dry run says it makes, or why the core refuses it: the images, what joins
- * them (the joints mirrored with them, then the joins at their ends; review B2), what stays open
- * because its joint's bar has no image, their cuts, and what is removed.
+ * them (the joints mirrored with them, then the joins at their ends; review B2), what stays open,
+ * their cuts, and what is removed.
+ *
+ * One outcome per end, the step's (re-check N2): `mirror` reports the images' ends whose joint it
+ * could not land (`info.open`), but the step goes on to an `autoConnect` at each image's end, so
+ * an end is said to stay open only when nothing in the whole step claims it, as the dry run's
+ * `effects.claimed` says. Whatever lands a joint, the mirror or a join after it, the words follow
+ * what the core will do, never "joins" and "stays open" for one end.
  */
 export function mirrorWords(r: DryRun): JointWords {
   if (!r.ok) {
@@ -72,7 +78,8 @@ export function mirrorWords(r: DryRun): JointWords {
     | undefined;
   const made = (r.results[0]?.created ?? []).filter((id) => info?.joined?.[id] === undefined);
   const joins = copiedJoins(r);
-  const open = info?.open ?? [];
+  const claimed = new Set(r.effects.claimed);
+  const open = (info?.open ?? []).filter((end) => !claimed.has(end));
   const cuts = [...new Set(made.map((id) => r.effects.added[id]).filter((c) => c !== undefined))];
   const removed = r.effects.removed;
   const parts = [

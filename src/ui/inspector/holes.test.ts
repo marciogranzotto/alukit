@@ -2,12 +2,23 @@ import { cp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { scratchFixtures } from "#core/testing.ts";
+import { capture } from "../../cli/testing.ts";
 import type { V3 } from "../../mesh/model.ts";
 import { type ActionContext, actionsFor, titleOf } from "../actions/registry.ts";
 import type { Model } from "../model.ts";
 import { viewOf } from "../testing.ts";
+import type { Cmd } from "../tools/preview.ts";
 import { barActions, holeHere } from "./barActions.ts";
-import { addHole, changeHole, holeOp, holesOf, holeWords, parseSize, removeHole } from "./holes.ts";
+import {
+  addHole,
+  changeHole,
+  holeOp,
+  holesOf,
+  holeWords,
+  parseSize,
+  removeHole,
+  switchFrom,
+} from "./holes.ts";
 
 /**
  * The holes a person adds (docs/ux/editing-audit.md E4.4, E-UX-22) on base-frame/cli: b1 is the
@@ -140,5 +151,71 @@ describe("holes (E4.4)", () => {
     const hit = c.hit;
     if (!hit) throw new Error("no hit");
     expect(holeHere({ ...c, hit: { ...hit, face: "b" } })).toBeUndefined();
+  });
+});
+
+describe("switching where a hole counts from keeps it where it is (review N6)", () => {
+  /**
+   * The brace's front base rail b5, 1000 between the design points, butted on the 40 × 40 posts
+   * at both ends: end a's cut is 40 along the axis from design point a, end b's 960, and the
+   * piece is 920. Its hole, written without `from`, is 300 from design point a: 260 on the cut
+   * list. Each switch is one setBar whose number is converted, so the cut list puts the hole at
+   * the same place on the piece after every switch (counted from end b, 660 is 920 − 260): the
+   * hole stays on the metal, as a CAD dimension re-attached to another reference keeps the
+   * geometry and reads the new distance.
+   */
+  const B5 = (ops: unknown[]) => ({ cmd: "setBar", args: { id: "b5", set: { ops } } });
+  /** The cut list's holes on b5's piece, each counted from the piece's end a. */
+  const machiningOf = async (dir: string) => {
+    const out = JSON.parse((await capture(["cutlist", dir, "--format", "json"])).out) as {
+      groups: {
+        lines: {
+          sources: string[];
+          cut_mm: number;
+          machining?: { from: string; at_mm: number }[];
+        }[];
+      }[];
+    };
+    const line = out.groups.flatMap((g) => g.lines).find((l) => l.sources.includes("b5"));
+    return line?.machining?.map(({ from, at_mm, ...rest }) => ({
+      ...rest,
+      from: "a",
+      at_mm: from === "b" ? line.cut_mm - at_mm : at_mm,
+    }));
+  };
+
+  it.each([
+    ["a.cut", 260],
+    ["b.cut", 660],
+    ["b", 700],
+  ] as const)(
+    "from design point a to %s: 300 becomes %s, and the cut list is unchanged",
+    async (to, at) => {
+      const dir = join(root, `brace-n6-${to}`);
+      await cp(join(root, "brace"), dir, { recursive: true });
+      const m = await viewOf(dir, [B5([{ op: "hole", face: "+y", at_mm: 300, d_mm: 7 }])]);
+      const before = await machiningOf(dir);
+      expect(before).toEqual([{ op: "hole", face: "+y", from: "a", at_mm: 260, d_mm: 7 }]);
+      const step = switchFrom(m, "b5", 0, to);
+      expect(step).toEqual(B5([{ op: "hole", face: "+y", at_mm: at, from: to, d_mm: 7 }]));
+      const after = await viewOf(dir, [step as Cmd]);
+      expect(await machiningOf(dir)).toEqual(before);
+      // And back to where it started, the number with it.
+      expect(switchFrom(after, "b5", 0, "a")).toEqual(
+        B5([{ op: "hole", face: "+y", at_mm: 300, d_mm: 7 }]),
+      );
+    },
+  );
+
+  it("keeps a distance written over params an expression that follows them", async () => {
+    const dir = join(root, "brace-n6-expr");
+    await cp(join(root, "brace"), dir, { recursive: true });
+    const m = await viewOf(dir, [B5([{ op: "hole", face: "+y", at_mm: "2 * 150", d_mm: 7 }])]);
+    expect(switchFrom(m, "b5", 0, "a.cut")).toEqual(
+      B5([{ op: "hole", face: "+y", at_mm: "2 * 150 - 40", from: "a.cut", d_mm: 7 }]),
+    );
+    expect(switchFrom(m, "b5", 0, "b.cut")).toEqual(
+      B5([{ op: "hole", face: "+y", at_mm: "960 - (2 * 150)", from: "b.cut", d_mm: 7 }]),
+    );
   });
 });
