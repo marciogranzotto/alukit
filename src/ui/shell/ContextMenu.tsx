@@ -14,6 +14,7 @@ import {
 import { select, selection } from "../focus.ts";
 import { extendHook } from "../hook.ts";
 import { onKey } from "../keys.ts";
+import { capsText } from "../platform.ts";
 import { model, tell } from "../store.ts";
 import { activeTool, gesture } from "../tools/state.ts";
 import { type SizeBox, sizeOf } from "../viewport/size.ts";
@@ -23,8 +24,8 @@ import { viewer } from "../viewport/viewer.ts";
  * The context menu (docs/ux/editing-audit.md E-UX-1, E-UX-2, E0.4): the actions that belong to
  * what it was opened on, from the action registry, by group, each with its keys; one that cannot
  * run now is greyed and says why. WAI-ARIA's menu pattern: it takes focus when it opens and gives
- * it back when it closes; ↑ ↓ Home End move, a typed letter jumps to the next entry starting with
- * it, Enter or Space runs one, Esc or Tab closes it, and so does a press outside it or a new
+ * it back when it closes; ↑ ↓ Home End move, a typed letter goes to the entry whose access key it
+ * is (underlined; review m11), else to the next entry starting with it, Enter or Space runs one, Esc or Tab closes it, and so does a press outside it or a new
  * revision (what it was opened on may have changed). `openMenu` opens it; `connectMenu` has the
  * view open it on a right-click that did not move. Owner: E2.
  */
@@ -70,19 +71,66 @@ export interface MenuEntry {
   enabled: true | string;
   /** Each key that runs it, as caps. */
   keys: string[][];
+  /** Its access key, a lower-case letter of its title, no other entry's (review m11). */
+  access?: string;
 }
 
-/** What the menu lists for a context, in its order. */
+/** What the menu lists for a context, in its order, each with its access key. */
 export function menuEntries(ctx: ActionContext): MenuEntry[] {
-  return actionsFor(ctx)
+  const listed = actionsFor(ctx)
     .map(({ action, enabled }) => ({
       id: action.id,
       title: titleOf(action, ctx),
       group: action.group,
       enabled,
       keys: (action.keys ?? []).map(keyCaps),
+      ...(action.access ? { access: action.access.toLowerCase() } : {}),
     }))
     .sort((a, b) => ORDER.indexOf(a.group) - ORDER.indexOf(b.group));
+  return withAccessKeys(listed);
+}
+
+/**
+ * Gives each entry its own access key, as a menu's mnemonics are (review m11: the letter jump
+ * took D to Delete, whose dialog then took a typed space): first the letters actions ask for;
+ * then an entry's own key's letter (Duplicate's D of Ctrl+D, Hide's H); then the first letter of
+ * a word of its title; then any letter of it. A letter is used once; an entry left with none is
+ * reached by the arrows.
+ */
+export function withAccessKeys(entries: readonly MenuEntry[]): MenuEntry[] {
+  const used = new Set(entries.flatMap((e) => (e.access ? [e.access] : [])));
+  const out = entries.map((e) => ({ ...e }));
+  const take = (e: MenuEntry, letters: readonly string[]) => {
+    const l = letters.find(
+      (x) => /^[a-z]$/.test(x) && !used.has(x) && e.title.toLowerCase().includes(x),
+    );
+    if (l === undefined) return;
+    e.access = l;
+    used.add(l);
+  };
+  for (const e of out) {
+    const own = e.keys.map((k) => (k[k.length - 1] ?? "").toLowerCase());
+    if (!e.access) take(e, own);
+  }
+  for (const e of out) {
+    if (e.access) continue;
+    const words = e.title.toLowerCase().match(/[a-z]+/g) ?? [];
+    take(e, [...words.map((w) => w[0] as string), ...words.join("")]);
+  }
+  return out;
+}
+
+/** A title with its access key's first appearance underlined. */
+function AccessTitle({ title, access }: { title: string; access?: string | undefined }) {
+  const i = access ? title.toLowerCase().indexOf(access) : -1;
+  if (i < 0) return <>{title}</>;
+  return (
+    <>
+      {title.slice(0, i)}
+      <u class="access-key">{title[i]}</u>
+      {title.slice(i + 1)}
+    </>
+  );
 }
 
 /** What the menu is about, as its heading says it. */
@@ -183,6 +231,12 @@ function MenuBox({ r }: { r: MenuRequest }) {
             return true;
         }
         if (e.key.length !== 1) return false;
+        // An entry's access key goes to it (it does not run it: Enter does, as for any entry).
+        const byAccess = entries.findIndex((x) => x.access === e.key.toLowerCase());
+        if (byAccess >= 0) {
+          move(byAccess);
+          return true;
+        }
         // Type-ahead: the next entry whose title starts with what was typed.
         const now = performance.now();
         const t = typedAhead.current;
@@ -245,8 +299,10 @@ function MenuBox({ r }: { r: MenuRequest }) {
               onPointerEnter={() => move(i)}
               onClick={() => activate(i)}
             >
-              <span class="label">{e.title}</span>
-              {e.keys[0] && <kbd class="keys">{e.keys[0].join("+")}</kbd>}
+              <span class="label">
+                <AccessTitle title={e.title} access={e.access} />
+              </span>
+              {e.keys[0] && <kbd class="keys">{capsText(e.keys[0])}</kbd>}
               {why && <span class="why">{why}</span>}
             </button>
           </Fragment>
@@ -305,6 +361,10 @@ const OPEN_MENU: Action = {
  */
 export function outlineMenu(e: MouseEvent, ids: readonly string[]): void {
   e.preventDefault();
+  // A menu open now was opened by the key this event trails (Shift+F10 and the Menu key send
+  // `contextmenu` after themselves): opening it again would reset it and lose a letter typed in
+  // between (review m11's Shift+F10, D). A right-click elsewhere closed it on its pointerdown.
+  if (menu.peek()) return;
   const m = model.peek();
   if (!m || ids.length === 0) return;
   const sel = selection.peek();
@@ -347,7 +407,15 @@ declare module "../hook.ts" {
     menu():
       | {
           title: string;
-          entries: { id: string; title: string; enabled: boolean; why?: string; keys: string[] }[];
+          entries: {
+            id: string;
+            title: string;
+            enabled: boolean;
+            why?: string;
+            keys: string[];
+            /** Its access key (review m11). */
+            access?: string;
+          }[];
         }
       | undefined;
   }
@@ -364,7 +432,8 @@ extendHook({
         title: e.title,
         enabled: e.enabled === true,
         ...(e.enabled === true ? {} : { why: e.enabled }),
-        keys: e.keys.map((k) => k.join("+")),
+        keys: e.keys.map((k) => capsText(k)),
+        ...(e.access ? { access: e.access } : {}),
       })),
     };
   },

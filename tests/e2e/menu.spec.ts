@@ -83,35 +83,39 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
     "duplicate",
     "mirror",
     "align",
-    "join-end",
+    // No Join: b1's foot meets nothing and its top is joined, so the check finds no open corner
+    // there (review m12); Edit for its joints (M7). No Show on a drawn bar: Fit frames it (m10).
     "replace",
     "split-here",
     "split-at",
     "reverse",
     "add-hole",
+    "edit-joint",
     "fit",
-    "show",
   ];
   expect(ids.filter((id) => seeded.includes(id))).toEqual(seeded);
   for (const id of seeded) {
     expect(hook?.entries.find((e) => e.id === id)?.enabled, id).toBe(true);
   }
   const item = (id: string) => menu.locator(`[data-action="${id}"]`);
+  // The caps are the platform's (review m5): ⌘ on macOS, Ctrl elsewhere.
+  const mac = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.userAgent));
+  const mod = mac ? "⌘" : "Ctrl\\+";
   await expect(item("delete")).toHaveText(/^Delete\s*Delete/);
-  await expect(item("copy")).toHaveText(/^Copy\s*Ctrl\+C/);
-  await expect(item("duplicate")).toHaveText(/^Duplicate\s*Ctrl\+D/);
+  await expect(item("copy")).toHaveText(new RegExp(`^Copy\\s*${mod}C`));
+  await expect(item("duplicate")).toHaveText(new RegExp(`^Duplicate\\s*${mod}D`));
   await expect(item("mirror")).toHaveText(/^Mirror…/);
   await expect(item("align")).toHaveText(/^Align to a face…/);
-  await expect(item("join-end")).toHaveText(/^Join b1\.a/);
   await expect(item("replace")).toHaveText(/^Replace profile…/);
   await expect(item("split-here")).toHaveText(/^Split b1 here, \d+ mm from end a/);
   await expect(item("split-at")).toHaveText(/^Split b1 at…/);
   await expect(item("reverse")).toHaveText(/^Reverse b1/);
   await expect(item("add-hole")).toHaveText(
-    /^Add a hole on b1's face [+-][xy], \d+ mm from end a's cut…/,
+    /^Add a hole on b1's face [+-][xy] \(world [+-][XYZ]\), \d+ mm from end a's cut…/,
   );
+  await expect(item("edit-joint")).toHaveText(/^Edit (c\d+|a joint of b1)…/);
   await expect(item("fit")).toHaveText(/^Fit to the selection\s*F/);
-  await expect(item("select-all")).toHaveText(/^Select all\s*Ctrl\+A/);
+  await expect(item("select-all")).toHaveText(new RegExp(`^Select all\\s*${mod}A`));
   // The first entry has the focus; the arrow keys move it, and a letter jumps to its entry.
   const items = menu.getByRole("menuitem");
   await expect(items.first()).toBeFocused();

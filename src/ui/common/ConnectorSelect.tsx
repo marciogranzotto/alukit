@@ -137,13 +137,26 @@ export interface ConnectorSelectProps {
   id?: string;
   /** What the connector joins: butts unless it says. */
   joins?: Joins;
+  /**
+   * A corner's joint (the box frame's): the connectors that fit and make a corner (brackets, end
+   * connectors) first, the other fitting ones (plates, shoes, extenders) after (review m13).
+   */
+  corner?: boolean;
 }
 
-/** The select: the caller's lead choices, then "Fits these bars", then "Other connectors". */
+/** The families whose connectors hold a butt corner: a bracket outside, an end connector inside. */
+export const CORNER_FAMILIES: ReadonlySet<string> = new Set(["bracket", "end-connector"]);
+
+/**
+ * The select: the caller's lead choices, then "Fits these bars" (for a corner, "Corner joints
+ * that fit", then "Other connectors that fit"), then "Other connectors".
+ */
 export function ConnectorSelect(p: ConnectorSelectProps) {
   const c = useConnectors(p.systems, p.joins);
   const known = [...c.fit, ...c.other].some((e) => e.id === p.value);
   const leading = p.lead.some((l) => l.value === p.value);
+  const corners = p.corner ? c.fit.filter((e) => CORNER_FAMILIES.has(e.family)) : [];
+  const rest = p.corner ? c.fit.filter((e) => !CORNER_FAMILIES.has(e.family)) : c.fit;
   return (
     <select
       class="insp-select connector-select"
@@ -167,16 +180,29 @@ export function ConnectorSelect(p: ConnectorSelectProps) {
         </option>
       ) : (
         <>
+          {corners.length > 0 && (
+            <optgroup label={p.systems.length === 0 ? "Corner joints" : "Corner joints that fit"}>
+              {corners.map((e) => (
+                <option key={e.id} value={e.id} data-fits="yes" data-corner="yes" title={e.name}>
+                  {connectorLabel(e)}
+                </option>
+              ))}
+            </optgroup>
+          )}
           <optgroup
             label={
               p.systems.length === 0
-                ? "Connectors"
-                : c.fit.length > 0
-                  ? "Fits these bars"
-                  : `None here fits ${p.systems.join(", ")}`
+                ? corners.length > 0
+                  ? "Other connectors"
+                  : "Connectors"
+                : c.fit.length === 0
+                  ? `None here fits ${p.systems.join(", ")}`
+                  : corners.length > 0
+                    ? "Other connectors that fit"
+                    : "Fits these bars"
             }
           >
-            {c.fit.map((e) => (
+            {rest.map((e) => (
               <option key={e.id} value={e.id} data-fits="yes" title={e.name}>
                 {connectorLabel(e)}
               </option>

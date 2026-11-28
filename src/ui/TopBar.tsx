@@ -2,6 +2,7 @@ import { signal } from "@preact/signals";
 import type { ComponentChildren, RefObject } from "preact";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { compareIds } from "#core/ids.ts";
+import { keyText } from "./actions/registry.ts";
 import { StatusGlyph } from "./common/StatusGlyph.tsx";
 import { onKey } from "./keys.ts";
 import { openSheet } from "./sheets/registry.ts";
@@ -59,7 +60,9 @@ export function TopBar() {
         disabled={undoWhy !== undefined}
         title={
           undoWhy ??
-          (s?.undo ? `Undo step ${s.undo.rev}, ${stepLabel(s.undo)} (Ctrl+Z)` : undefined)
+          (s?.undo
+            ? `Undo step ${s.undo.rev}, ${stepLabel(s.undo)} (${keyText("mod+z")})`
+            : undefined)
         }
         onClick={requestUndo}
       >
@@ -72,7 +75,9 @@ export function TopBar() {
         disabled={redoWhy !== undefined}
         title={
           redoWhy ??
-          (s?.redo ? `Redo step ${s.redo.rev}, ${stepLabel(s.redo)} (Ctrl+Shift+Z)` : undefined)
+          (s?.redo
+            ? `Redo step ${s.redo.rev}, ${stepLabel(s.redo)} (${keyText("mod+shift+z")})`
+            : undefined)
         }
         onClick={requestRedo}
       >

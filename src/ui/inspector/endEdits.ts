@@ -5,7 +5,7 @@ import type { Hit } from "../../viewer/scene.ts";
 import type { Model } from "../model.ts";
 import { endAxis } from "../tools/ends.ts";
 import type { Cmd } from "../tools/preview.ts";
-import { isObject, written } from "./words.ts";
+import { faceWords, isObject, written } from "./words.ts";
 
 /**
  * A bar end's fields as the inspector edits them (docs/ux/editing-audit.md E4.1): its cut
@@ -154,7 +154,7 @@ export function faceStops(m: Model, bar: string, e: End): FaceStop[] {
         s,
         by,
         angled: angled(axis.u, dir),
-        label: `${id}'s face ${face} · ${by === 0 ? "where it is" : `${Math.abs(by)} mm ${by > 0 ? "longer" : "shorter"}`}`,
+        label: `${id}'s ${faceWords(m, id, face)} · ${by === 0 ? "where it is" : `${Math.abs(by)} mm ${by > 0 ? "longer" : "shorter"}`}`,
       });
     }
   }

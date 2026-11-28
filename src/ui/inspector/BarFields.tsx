@@ -21,9 +21,10 @@ import { contextBatch, contextOf } from "./context.ts";
 import { EndRows } from "./Ends.tsx";
 import { CommitInput, Row, RowErrors, readOnly, useSend, WordsRow } from "./Fields.tsx";
 import { HoleRows } from "./Holes.tsx";
+import { JointRows } from "./Joints.tsx";
 import { type LengthEnd, lengthMode, lengthPatch } from "./length.ts";
 import { barsLike, chosenOption, replaceBatch } from "./replace.ts";
-import { isObject, written } from "./words.ts";
+import { isObject, worldAxis, written } from "./words.ts";
 
 /**
  * A bar's fields, edited in place (docs/ux/plan.md S5.3, F5, U3): its length (or what drives
@@ -435,13 +436,6 @@ export function anchorWords(a: string): string {
   return a;
 }
 
-/** A world direction in words: the axis it runs along (`+Y`), else none. */
-function worldAxis(v: readonly number[] | undefined): string | undefined {
-  if (!v) return undefined;
-  const i = [0, 1, 2].find((k) => Math.abs(Math.abs(v[k] as number) - 1) < 1e-6);
-  return i === undefined ? undefined : `${(v[i] as number) > 0 ? "+" : "-"}${"XYZ"[i]}`;
-}
-
 /**
  * The offset (`off_mm`, §4.4): the section moved from its anchor along its own x and y, each
  * named by the world direction it runs in when it runs along one. A param is written as typed
@@ -768,6 +762,7 @@ export function BarFields({ m, id }: { m: Model; id: string }) {
           <OffsetRow m={m} id={id} />
           <RollRow m={m} id={id} />
           <EndRows m={m} id={id} />
+          <JointRows m={m} id={id} />
           <HoleRows m={m} id={id} />
           <LabelRows m={m} id={id} />
           <ContextRow m={m} id={id} />

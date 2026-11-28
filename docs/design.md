@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core", 115–119 in "Editing polish, app", 120–124 in "Review fixes, joins" and 125–129 in "Review fixes, machining and speed"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "Review fixes, machining and speed". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core", 115–119 in "Editing polish, app", 120–124 in "Review fixes, joins", 125–129 in "Review fixes, machining and speed" and 130–134 in "Review fixes, app"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "Review fixes, app". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -907,6 +907,37 @@ fixture and golden outputs); problems moved where M1 says.
   brought onto a free end; a frame moved whole is one `transform`. `autoConnect`'s rule is
   unchanged (rm 12, 13); `move.spec` holds the preview and the step under 500 ms at the server.
   Call 129.
+
+### Review fixes, app
+
+The [editing review](ux/review-editing.md)'s app-side majors (M2, M4, M5, M7) and its minors and
+nits, but m2, n2 and n3's sum, which are the core's
+([`ux/review-fixes-app-decisions.md`](ux/review-fixes-app-decisions.md), cited as "rfa"): no
+command, schema, CLI path, golden value or derived output changes; one Forseti item class changes
+(its 180° extender is a splice, rfa 15). Each fix has a test that failed
+first, but three nits.
+
+- §8 Inspector: **a bar's ends say what the core says of them**, "open" by the check and Join by
+  the problem list; a face joint's plate reads "held by c36 (face joint)"; **a bar lists its
+  joints**, face joints included, each with Edit, and the menu has Edit c36… (rfa 4; M7, m12).
+  Call 130.
+- §8 Gestures, Move: **Esc ends a held drag** whatever is typed; **a refused step is not sent** on
+  Enter; **a part's slide snaps** to the 10 mm grid or another station, Shift free; a gesture's
+  field is named for it; the hover tip hides during one (rfa 2, 6, 7, 17, 18; M4, m3, m4, m15,
+  n5). Call 131.
+- §8 The context menu: **each entry its own access key**, underlined; Shift+F10 then a letter
+  keeps the letter; **Show** draws a hidden selection again and is offered only then; Delete's
+  dialog focuses Cancel and names one thing (rfa 13, 14; m10, m11, n1). Call 132.
+- §8 Box frame: **Joined with lists the corner joints that fit first**; still none chosen (rfa 15;
+  m13). Call 133.
+- §8 Labels: **every label and tip draws the tip's ink** in both themes, AA held by
+  `labels.spec`; labels keep clear of the length label; the gizmo clear of the tool rail; **faces
+  named with their world direction**; ⌘ ⌥ ⇧ on a Mac (rfa 3, 8, 9, 10, 12; M5, m5, m6, m7, m9).
+  Call 134.
+- §8 Pattern: its copies drawn and its dry run read before Create, the prompt moving on (rfa 11;
+  m8). The inspector: the hole form keeps the focus where it is typed; a param's Edit focuses its
+  field (rfa 1, 5; M2, m1). Outline: Shift + arrow extends the selection (rfa 16; m14). Words:
+  Move "writes"; the verbs of Select or Move say "press Esc first" (rfa 18; n3, n4).
 
 ## Draft 2.2 — what changed (2026-11-26)
 
@@ -3198,7 +3229,11 @@ step: the revision does not move.
   focusable and says why under its title. A press outside it, a new revision, a resize or a chord
   closes it. It lists the registry's actions that apply, by group (select, view, edit, transform,
   bar, connection, pattern, part); a joint marker's menu offers its one joint's Edit and Change
-  connector (e0 10–13; e2 1, 2; e5 28). Call 79.
+  connector (e0 10–13; e2 1, 2; e5 28). Call 79. *2.3* (the review fixes, app): **each entry has
+  its own access key**, underlined (an action may name it, as Delete's L; else its own key's
+  letter, as Duplicate's D; else a word's first letter), and a typed letter goes to that entry
+  without running it, else jumps as before; the `contextmenu` event Shift+F10 sends after itself
+  no longer opens the menu again over a letter typed at once (rfa 14). Call 132.
 - **The selection header's buttons** are the registry's edit and transform actions (Delete,
   Duplicate, Copy, Paste, Mirror…, Align to a face…), each its title and first key, greyed with
   its `when` while it cannot run, read-only included (e2 3, 4).
@@ -3226,6 +3261,10 @@ step: the revision does not move.
   "n hidden · Show all" ("isolated · " first), and the outline strikes a hidden row's id. **What
   was built differs from E-UX-9**: isolate hides the rest, rather than ghosting it, so nothing put
   out of the way is picked or snapped to, and Show's ghost stays Show's (e2 11–14). Call 85.
+  *2.3* (the review fixes, app): the menu's **Show**, beside Hide, draws a hidden selection again
+  and is offered only then (an outline row's menu); on a drawn entity it framed and pulsed it,
+  which Fit already does, and read as un-hide (rfa 13). A problem's, a toast's or a chip's Show
+  still frames what it is about. In the outline, Shift + ↑ or ↓ extends the selection (rfa 16).
 - **The size readout**: the bounding box, in world axes, of what draws the selection, or of every
   body when nothing is selected, as W × D × H in millimetres in the status bar; while Alt is held
   the same box is drawn in the view with W, D and H by its edges (e2 16, 17).
@@ -3235,7 +3274,15 @@ step: the revision does not move.
   which said a pinch zooms, because the lens zoom left the field of view that the fits and the
   projection switch read behind (e2 18, 19). Call 88.
 - **Labels over the view** stay inside it and clear of the gizmo's footprint, so a label cannot
-  take a press meant for a ring (e2 21, 23).
+  take a press meant for a ring (e2 21, 23). *2.3* (the review fixes, app): and clear of the
+  selection's length label, which marks itself `data-keep-clear`; every label and tip draws the
+  tip's ink, `--tip-ink`, on its dark ground in both themes (WCAG 2.2 AA, held by `labels.spec`),
+  and the gizmo's letters the ink their disc needs; the orientation gizmo stands right of the
+  tool rail when the rail reaches down to it ([rfa](ux/review-fixes-app-decisions.md) 3, 9, 10).
+  A bar's face is named with the world direction it looks along wherever a person reads it,
+  "face -y (world +X)": the snap tips, the menu, the hole, part and end-stop selects; a snap's
+  machine label stays the section's (rfa 12). On a Mac the caps are ⌘ ⌥ ⇧, in Apple's order
+  (rfa 8). Call 134.
 
 ### Tools
 
@@ -3287,7 +3334,9 @@ s5 9).
   (s5 14, 15). *2.3*: W, D, H, the shelf, the params switch and Joined with are up front, the
   corner, the rings and the corner rule under More options; while the project names no default
   butt connector, Joined with offers the bracket that fits the most systems as one click beside
-  its list, never chosen for the person (pu 3).
+  its list, never chosen for the person (pu 3). *2.3* (the review fixes, app): the list puts the
+  corner joints that fit first (the catalog's brackets and end connectors), the other fitting
+  connectors after; still nothing is chosen (rfa 15). Call 133.
 - **Connect** (`C`): pick a through bar and butting ends (`butt`), two ends (`miter`,
   `splice`), a face and the ends it carries (`pivot`), or two or more layers, head to nut (`face`,
   resting or fastened, with every field §4.5 gives it; *2.3*). A pivot is one batch with the
@@ -3301,7 +3350,10 @@ s5 9).
   and count. A pattern by a direction or by offsets is written by command in v1. *2.3*: **Draw
   the bar to repeat** makes a new bar the template: the next bar drawn commits with its pattern as
   one step (`addBar`, its `autoConnect`s, `addPattern` of the id the document gives next, sent
-  strict), and the app returns to Select with the pattern selected (pu 4).
+  strict), and the app returns to Select with the pattern selected (pu 4). *2.3* (the review
+  fixes, app): while the form holds a pattern it can make, its copies are drawn as ghosts and its
+  dry run is read by Create ("makes 2 copies: 2 bars more", the cuts that move, the problems it
+  would raise, or why it would be refused); the prompt moves on as the form fills (rfa 11).
 - **Measure** (`M`): two snapped points, the distance and its components.
 
 **End handles** (*2.3*, after the UX redesign; [ends](ux/drag-ends-decisions.md) 1–11). One bar
@@ -3329,7 +3381,8 @@ Move). The selection, or what is pressed when it is not selected, moves by a dra
 release) or by two clicks (a base point, then where it goes), on the end handles' drag machinery.
 The base point and where it goes snap to ends, faces, grooves and parts' points, not the moved
 set's own; Shift moves freely in a plane parallel to the work plane; `→ ← ↑` lock X, Y or Z, and
-parts alone on one bar slide along it. A value typed meanwhile is the distance along the lock or
+parts alone on one bar slide along it (*2.3*, the review fixes, app: by the arrow, onto the
+10 mm grid of stations or another part's station within 5 mm, Shift by the millimetre; rfa 17). A value typed meanwhile is the distance along the lock or
 the way the pointer went (`200`, `=D`), the offset (`0, 200, 0`) or where the base point goes
 (`[0, 0, H]`); a param is kept. The moved bars are drawn where they would be, with the overlay's
 one ghost material; after a snap or a pause, the dry run says what follows, frees, joins or is
@@ -3417,7 +3470,11 @@ moved, turned, mirrored or copied bars drawn on the overlay's one ghost material
 a left-handed frame; a dry run only after a snap, a typed value or a 250 ms rest, so a ring's
 60-move drag asks at most 4 (measured; the audit's bound is 8) (e3 5, 11; move 17). The gizmo is
 one at a time, and each user takes it away only while the view still shows the one it set
-(e3 14).
+(e3 14). *2.3* (the review fixes, app): **Esc ends a held drag**, whatever is typed, and the
+release sends nothing; a click-move gesture keeps its levels (rfa 2). **A step the preview
+refused is not sent**: Enter keeps the gesture open and the bar says why, in the app's words
+(rfa 6). A gesture's value field is named for the gesture ("Drag end b3.b: cut length"), and the
+hover tip hides while one runs (rfa 7, 18). Call 131.
 
 ### The inspector
 
@@ -3452,12 +3509,18 @@ overwritten.
   end from its joint in the same step and declares `cut: "angle"` when it is angled. **Free from
   c9** drops the end from the joint that claims it, one step (the joint goes when it was its last
   end). *2.3*: before this, a failed claim read as an open end, with a Join that `autoConnect`
-  refused (the audit's D2) (e4 1–6). Calls 95, 96.
+  refused (the audit's D2) (e4 1–6). Calls 95, 96. *2.3* (the review fixes, app): an end reads
+  "open" only where the check's `unconnected` finds an unjoined corner; one a face joint holds by
+  its bar reads "held by c36 (face joint)", one a through bar carries "b1.b and b7.a butt on it
+  here (c1)", one that meets nothing "nothing joins it". **Join** is offered where the problem
+  list's "Join with the default butt" would join, else the problem's own reason stands in its
+  place. **Its joints**: a row lists every joint the bar takes part in, face joints included, each
+  with **Edit**, and the menu has **Edit c36…** (rfa 4). Call 130.
 - **Its actions**, in the menu and in the inspector's action row: **Split here** at the menu's
   station, rounded to the millimetre (the menu has no snap: built otherwise than E-UX-21's
   snapped station); **Split at…** a typed distance, with a splice when asked, a bar in a run
   always spliced; **Reverse**, which says first why not (a bar in a run, a free end b); and **Add a
-  hole on b1's face +x, 20 mm from end a's cut…**, offered over a bar's side face only, which opens
+  hole on b1's face +x (world +Y), 20 mm from end a's cut…**, offered over a bar's side face only, which opens
   the hole form there. **Each hole is a row** (face, distance, end, size as a drill or a thread such
   as `M6`, depth, empty for through) that edits and removes it; *2.3* (review M3, rm 8; call 126):
   the distance counts from end a's cut, end b's cut, design point a or design point b, the row
@@ -4508,6 +4571,31 @@ reasons. Marking the room is the run's own change, in its project.
      a change of which ends `autoConnect` takes must change the app's rule with it, which
      `moves.test` checks against a join at every end. Rotate, Align and Duplicate still ask
      every end (rm 12, 13).
+130. *New in 2.3, review fixes (app), open.* A bar end's words and its Join take the core's
+     verdicts, not the app's: "open" where the check's `unconnected` names the end, Join where the
+     problem list's "Join with the default butt" fix would join it (else that problem's reason
+     stands in Join's place, and Join is disabled until the revision's problems arrive); an end a
+     face joint holds by its bar is "held by". A bar lists its joints with Edit, and its menu's
+     Edit opens its one joint, or the list (rfa 4).
+131. *New in 2.3, review fixes (app), open.* Esc ends a held drag whatever is typed (a click-move
+     gesture keeps D-UX-18's levels); Enter does not send a step the preview's last answer refused
+     for exactly those commands; a part slid by its arrow lands on the 10 mm grid of stations from
+     end a, or on another part's station within 5 mm, and Shift slides it by the millimetre
+     (rfa 2, 6, 17).
+132. *New in 2.3, review fixes (app), open.* Every menu entry has its own access key: an action's
+     own choice first (Delete: L), then its key's letter, a word's first letter, any letter; a
+     typed letter moves to the entry and Enter runs it. The menu's Show is offered only for a
+     hidden selection and draws it again; Delete's dialog focuses Cancel (rfa 13, 14).
+133. *New in 2.3, review fixes (app), open.* The box frame's Joined with lists the corner joints
+     that fit (the `bracket` and `end-connector` subtypes) before the other fitting connectors and
+     preselects none, which declines the review's "one preselected": call 118 and review B1 keep
+     the corners' joint the person's choice. The Forseti importer classes its 180° extender
+     ("Conector Prolongador") as a splice, not an end connector, so no butt list offers it (rfa 15).
+134. *New in 2.3, review fixes (app), open.* Every label and tip over the view draws `--tip-ink`;
+     the view's labels keep clear of overlays marked `data-keep-clear`; the gizmo stands right of
+     the tool rail when the rail reaches it; a bar's face is named "face -y (world +X)" wherever a
+     person reads it, a snap keeping its section-axis label for machines; a Mac's caps are
+     ⌥ ⇧ ⌘ by the user agent (rfa 3, 8, 9, 10, 12).
 
 ## 15. Review 1 resolution
 

@@ -113,7 +113,9 @@ describe("holes (E4.4)", () => {
     expect(holeHere(c)).toEqual({ bar: "b1", face: "+y", at_mm: 300, from: "a.cut" });
     const entry = actionsFor(c).find((x) => x.action.id === "add-hole");
     expect(entry && titleOf(entry.action, c)).toBe(
-      "Add a hole on b1's face +y, 300 mm from end a's cut…",
+      // The face with the way it looks in the world (review m9): b1's +y looks along world +Y,
+      // the hit's normal.
+      "Add a hole on b1's face +y (world +Y), 300 mm from end a's cut…",
     );
     // b9, the front base rail, is cut back 40 at each end where it butts on the posts: the
     // station 300.4 from its design point is 260 from its cut, as the cut list will say.
@@ -131,7 +133,8 @@ describe("holes (E4.4)", () => {
     expect(holeHere(rail)).toEqual({ bar: "b9", face: "+y", at_mm: 260, from: "a.cut" });
     const railEntry = actionsFor(rail).find((x) => x.action.id === "add-hole");
     expect(railEntry && titleOf(railEntry.action, rail)).toBe(
-      "Add a hole on b9's face +y, 260 mm from end a's cut…",
+      // b9's +y face looks up, world +Z, the hit's normal.
+      "Add a hole on b9's face +y (world +Z), 260 mm from end a's cut…",
     );
     // On an end face, no hole: holes go in a side.
     const hit = c.hit;

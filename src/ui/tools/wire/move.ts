@@ -3,7 +3,7 @@ import type { V3 } from "../../../mesh/model.ts";
 import type { GizmoPart, GizmoSpec } from "../../../viewer/gizmo.ts";
 import type { MarkerKind } from "../../../viewer/overlay.ts";
 import type { Grab, Hit, ToolHandler, ToolPointer, Viewer } from "../../../viewer/scene.ts";
-import { rayLineParams, type Snap, type SnapTargets } from "../../../viewer/snap.ts";
+import { GRID_MM, rayLineParams, type Snap, type SnapTargets } from "../../../viewer/snap.ts";
 import { rayPlane } from "../../../viewer/workplane.ts";
 import { duplicateBatch, transformBatch } from "../../edit/batches.ts";
 import {
@@ -16,6 +16,7 @@ import {
 import { crossedEnds, select, selection } from "../../focus.ts";
 import { chord, describeKeys, onKey } from "../../keys.ts";
 import type { Model } from "../../model.ts";
+import { modifierWord } from "../../platform.ts";
 import { model } from "../../store.ts";
 import type { GestureSpec, Gestures } from "../drag.ts";
 import {
@@ -86,8 +87,32 @@ export interface MoveDeps {
 
 /** A move on: the gesture, and what a gizmo's arrow tells it. */
 interface MoveSpec extends GestureSpec {
-  /** An arrow dragged: the world offset from its press. */
-  dragged(delta: V3 | undefined): void;
+  /** An arrow dragged: the world offset from its press; `free` (Shift) leaves the grid. */
+  dragged(delta: V3 | undefined, free?: boolean): void;
+}
+
+/** The step a part's slide snaps to along its bar (§8's grid, 10 mm), and half of it for a station. */
+const SLIDE_MM = GRID_MM;
+
+/**
+ * Where a part's slide by `s` along its bar lands (review m15): on another part's station of the
+ * same bar within half a grid step, else on the 10 mm grid of stations counted from end a, as
+ * drawing snaps to the grid; `free` (Shift), on the whole millimetre. The offset along the bar.
+ */
+export function slideStop(m: Model, set: MoveSet, bar: string, s: number, free: boolean): number {
+  if (free) return Math.round(s);
+  const moving = new Set(set.parts);
+  const at = set.parts.map((p) => m.derived.parts[p]?.s_mm).find((x) => x !== undefined);
+  if (at === undefined) return Math.round(s);
+  const doc = m.doc as { parts?: Record<string, { on?: { bar?: string } }> };
+  const stations = Object.entries(m.derived.parts)
+    .filter(
+      ([id, p]) => !moving.has(id) && doc.parts?.[id]?.on?.bar === bar && p.s_mm !== undefined,
+    )
+    .map(([, p]) => p.s_mm as number);
+  const near = stations.find((x) => Math.abs(x - (at + s)) <= SLIDE_MM / 2);
+  if (near !== undefined) return near - at;
+  return Math.round((at + s) / SLIDE_MM) * SLIDE_MM - at;
 }
 
 const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -122,6 +147,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
     let now: Offset = offsetOf([0, 0, 0]);
     let why: string | undefined;
     let detach = false;
+    let arrowFree = false;
     let label = "";
     let arrow: V3 | undefined;
     let copies: { count?: number; divide?: number } = {};
@@ -191,7 +217,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
         kind,
         title,
         prompt: prompt(),
-        reading: `${reading}${detach && !copy ? " · detached (Alt)" : ""}`,
+        reading: `${reading}${detach && !copy ? ` · detached (${modifierWord("alt")})` : ""}`,
         snap: label,
       };
       if (why || dist < 0.005) {
@@ -246,10 +272,12 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
           else if (o) now = o;
           label = "typed";
         } else if (arrow) {
-          // An arrow dragged: along it, in whole millimetres, from the press.
+          // An arrow dragged: along it, from the press; a part's slide on its bar lands on the
+          // grid of stations or another part's station, Shift free (review m15).
           const u = axisU();
           const s = u ? dot(arrow, u) : 0;
-          now = offsetOf(u ? scale(u, Math.round(s)) : [0, 0, 0]);
+          const along = slide && !lock ? slideStop(m, set, slide.bar, s, arrowFree) : Math.round(s);
+          now = offsetOf(u ? scale(u, along) : [0, 0, 0]);
           label = `along ${slide?.bar ?? lock ?? ""}`;
         } else if (e) {
           const ray = viewer.ray(e.clientX, e.clientY);
@@ -280,15 +308,17 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
           return { why: "click a base point, then where the copy goes, or type an offset" };
         }
         if (norm(now.d) < 0.005) return "nothing";
+        // What the preview's dry run already refused stays a refusal here, in its words, and the
+        // gesture stays on to change it (review m3); nothing is sent to be refused again.
         if (copy) {
           const b = copyBatch();
           if ("why" in b) return b;
-          return { commands: b, what: `copy ${idList(set.ids)}` };
+          const refused = preview.refused(b);
+          return refused ? { why: refused } : { commands: b, what: `copy ${idList(set.ids)}` };
         }
-        return {
-          commands: transformBatch(set, now.written, detach, rule(), { m, by: now.d }),
-          what: `move ${idList(set.ids)}`,
-        };
+        const commands = transformBatch(set, now.written, detach, rule(), { m, by: now.d });
+        const refused = preview.refused(commands);
+        return refused ? { why: refused } : { commands, what: `move ${idList(set.ids)}` };
       },
       press(e) {
         // Duplicate: the first click is the base point (point to point, E3.5), the next commits.
@@ -321,8 +351,9 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
       flip() {
         void preview.flip();
       },
-      dragged(delta) {
+      dragged(delta, free) {
         arrow = delta;
+        arrowFree = free === true;
         this.update(undefined);
       },
       stop() {
@@ -396,13 +427,13 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
       return;
     }
     if (g.phase === "move") {
-      live?.dragged(g.delta);
+      live?.dragged(g.delta, g.shift);
       return;
     }
     // A drag commits where it let go; a click on the arrow leaves the slide on, to type the
     // distance or click where it goes. Either way the pointer steers from here.
     if (norm(g.delta) >= 0.5) {
-      live?.dragged(g.delta);
+      live?.dragged(g.delta, g.shift);
       gestures.enter();
     }
     live?.dragged(undefined);
@@ -445,7 +476,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
         y: e.clientY,
         text:
           n > 0
-            ? "drag to move the selection, or click a base point; Alt frees what joins it"
+            ? `drag to move the selection, or click a base point; ${modifierWord("alt")} frees what joins it`
             : "drag a bar or a part to move it",
       };
     },

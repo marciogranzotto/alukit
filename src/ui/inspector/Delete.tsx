@@ -4,7 +4,6 @@ import { compareIds } from "#core/ids.ts";
 import { dryRun } from "../client/dryrun.ts";
 import { Errors } from "../Feedback.tsx";
 import { select, selection } from "../focus.ts";
-import { plural } from "../format.ts";
 import type { Model } from "../model.ts";
 import { Dialog } from "../shell/Dialog.tsx";
 import { busy, type CommandOutcome, model, sendCommands, summary, tell } from "../store.ts";
@@ -222,7 +221,10 @@ function DeleteDialog({ a }: { a: Asking }) {
     ? a.copies.length === 1
       ? `Leave ${a.copies[0]?.id} out?`
       : `Leave ${a.copies.length} copies out?`
-    : `Delete ${plural(n, "thing")}?`;
+    : // One thing goes: it is named (review n1); more, each selected named and the count after.
+      n === 1 && a.ids.length === 1
+      ? `Delete ${a.ids[0]}?`
+      : `Delete ${listWords(a.ids)}${n > a.ids.length ? `, ${n} things in all` : ""}?`;
   return (
     <Dialog title={title} onClose={() => (asking.value = undefined)} testid="delete-dialog">
       {a.note && <p class="note">{a.note}</p>}
@@ -281,7 +283,6 @@ function DeleteDialog({ a }: { a: Asking }) {
           type="button"
           class="btn primary"
           data-testid="delete-confirm"
-          data-autofocus
           disabled={busy.value || (removed.length === 0 && a.copies.length === 0)}
           onClick={() => void confirm(a)}
         >
@@ -289,9 +290,19 @@ function DeleteDialog({ a }: { a: Asking }) {
             ? a.copies.length === 1
               ? "Leave this copy out"
               : "Leave these copies out"
-            : `Delete all ${n}`}
+            : n === 1
+              ? "Delete"
+              : `Delete all ${n}`}
         </button>
-        <button type="button" class="btn" onClick={() => (asking.value = undefined)}>
+        {/* The least destructive answer has the focus (WAI-ARIA APG, alert dialog; review m11):
+            a key typed on, meant for something else, cancels rather than deletes. */}
+        <button
+          type="button"
+          class="btn"
+          data-testid="delete-cancel"
+          data-autofocus
+          onClick={() => (asking.value = undefined)}
+        >
           Cancel
         </button>
         <span class="spacer" />

@@ -173,7 +173,10 @@ async function boxFrame(page: Page, joint: string): Promise<void> {
   await form.getByTestId("frame-w").fill("1000");
   await form.getByTestId("frame-d").fill("600");
   await form.getByTestId("frame-h").fill("800");
-  const fits = form.locator('[data-testid="frame-joint"] optgroup[label="Fits these bars"] option');
+  // A bracket makes a corner: the corner joints that fit come first (the editing review's m13).
+  const fits = form.locator(
+    '[data-testid="frame-joint"] optgroup[label="Corner joints that fit"] option',
+  );
   await expect(fits.first()).toBeAttached();
   await expect(fits.filter({ hasText: "CT38-06" })).toHaveCount(1);
   await form.getByTestId("frame-joint").selectOption(joint);

@@ -204,7 +204,7 @@ export function createMirror(viewer: Viewer, gestures: Gestures, deps: MirrorDep
     applies: (c) => membersCount(c) > 0,
     when(c) {
       if (summary.peek()?.status.readOnly === true) return "the project is read-only";
-      if (!pointerTool()) return "in Select or Move";
+      if (!pointerTool()) return "works in Select or Move: press Esc first";
       const copy = [...c.selection].find((id) => id.includes("@"));
       if (copy) return `${copy} is a pattern copy: mirror ${copy.split("@")[0]}, its template`;
       return membersCount(c) > 0 ? true : "select the bars, parts or points to mirror";

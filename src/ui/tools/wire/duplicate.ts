@@ -2,7 +2,12 @@ import { signal } from "@preact/signals";
 import { idList } from "#core/commands/words.ts";
 import { compareIds } from "#core/ids.ts";
 import type { ToolPointer } from "../../../viewer/scene.ts";
-import { type Action, type ActionContext, registerAction } from "../../actions/registry.ts";
+import {
+  type Action,
+  type ActionContext,
+  keyText,
+  registerAction,
+} from "../../actions/registry.ts";
 import { membersOf, minCorner } from "../../edit/geometry.ts";
 import type { Model } from "../../model.ts";
 import { summary } from "../../store.ts";
@@ -69,7 +74,7 @@ export function copyActions(mover: MoveTool, pointer: () => ToolPointer | undefi
     applies: (c) => copied(c.m, c.selection).length > 0,
     when(c) {
       if (summary.peek()?.status.readOnly === true) return "the project is read-only";
-      if (!pointerTool()) return "in Select or Move";
+      if (!pointerTool()) return "works in Select or Move: press Esc first";
       if (c.from === "key" && !onTheView()) return "the focus is not on the view";
       const pc = patternCopy(c, "duplicate");
       if (pc) return pc;
@@ -112,10 +117,10 @@ export function copyActions(mover: MoveTool, pointer: () => ToolPointer | undefi
     applies: () => clipboard.peek().length > 0,
     when(c) {
       if (summary.peek()?.status.readOnly === true) return "the project is read-only";
-      if (!pointerTool()) return "in Select or Move";
+      if (!pointerTool()) return "works in Select or Move: press Esc first";
       if (c.from === "key" && !onTheView()) return "the focus is not on the view";
       const ids = clipboard.peek();
-      if (ids.length === 0) return "copy something first (Ctrl+C)";
+      if (ids.length === 0) return `copy something first (${keyText("mod+c")})`;
       const gone = ids.filter(
         (id) => !(c.m.derived.bars[id] || c.m.derived.parts?.[id] || c.m.derived.nodes[id]),
       );

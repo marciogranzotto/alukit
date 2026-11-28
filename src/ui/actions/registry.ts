@@ -3,6 +3,7 @@ import type { Hit } from "../../viewer/scene.ts";
 import { selection } from "../focus.ts";
 import { type KeyHelpRow, type KeyHelpSection, type KeyScope, keyHelp, onKey } from "../keys.ts";
 import type { Model } from "../model.ts";
+import { capsText, isMac } from "../platform.ts";
 import { model } from "../store.ts";
 
 /**
@@ -54,6 +55,11 @@ export interface Action {
   group: ActionGroup;
   /** Its keys, each `mod+d`, `h`, `shift+h`, `delete`: any of them runs it. */
   keys?: readonly string[];
+  /**
+   * Its access key in a menu, a letter of its title, when the menu's own choice would not do
+   * (review m11: Delete is L, so D is Duplicate's, whose key is ⌘D). The menu gives the others one.
+   */
+  access?: string;
   /** The keys' scope in keys.ts; `app` unless it says. */
   scope?: KeyScope;
   /** What the help says the keys do; the title when the title is words. */
@@ -117,6 +123,13 @@ export function keyMatches(
   return symbol(b.key) || e.shiftKey === b.shift;
 }
 
+/** A binding as text, as the menu and the titles write it: `mod+z` is `Ctrl+Z`, `⌘Z` on a Mac. */
+export function keyText(k: string): string {
+  return capsText(keyCaps(k));
+}
+
+const MAC_CAPS: Readonly<Record<string, string>> = { mod: "⌘", shift: "⇧", alt: "⌥" };
+
 /** The keys' names as written on their caps, for the help and the menu. */
 const CAPS: Readonly<Record<string, string>> = {
   mod: "Ctrl",
@@ -139,6 +152,15 @@ const CAPS: Readonly<Record<string, string>> = {
 export function keyCaps(k: string): string[] {
   const b = parseKey(k);
   const cap = CAPS[b.key] ?? (/^f\d+$/.test(b.key) ? b.key.toUpperCase() : b.key.toUpperCase());
+  // A Mac's order is Option, Shift, Command (⌥⇧⌘), as its menus write a chord.
+  if (isMac()) {
+    return [
+      ...(b.alt ? [MAC_CAPS.alt as string] : []),
+      ...(b.shift ? [MAC_CAPS.shift as string] : []),
+      ...(b.mod ? [MAC_CAPS.mod as string] : []),
+      cap,
+    ];
+  }
   return [
     ...(b.mod ? [CAPS.mod as string] : []),
     ...(b.shift ? [CAPS.shift as string] : []),

@@ -50,7 +50,8 @@ test("places a part on a face, patterns it along a bar, and measures", async ({ 
   await page.locator('.card[data-id="test:FOOT-M8"]').click();
   await page.getByTestId("palette-set").click();
   await expect(page.getByTestId("tool-place")).toHaveClass(/on/);
-  await click(page, [300, 20, 120], /^b9 (\+y face|groove \+y\.1) at 300$/);
+  // A face is said with the way it looks in the world (review m9).
+  await click(page, [300, 20, 120], /^b9 (\+y face \(world \+Z\)|groove \+y\.1) at 300$/);
   await waitDrawn(page, 1);
   expect(await derivedParts(served.dir)).toMatchObject({
     p1: { item: "test:FOOT-M8", bar: "b9", s_mm: 300 },

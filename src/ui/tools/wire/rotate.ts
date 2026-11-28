@@ -9,6 +9,7 @@ import { type Axis, centreOf, ghostsOf, snapAngle, turn, typedAngle } from "../.
 import { select, selection } from "../../focus.ts";
 import { chord, describeKeys, onKey } from "../../keys.ts";
 import type { Model } from "../../model.ts";
+import { modifierWord } from "../../platform.ts";
 import { model } from "../../store.ts";
 import type { GestureSpec, Gestures } from "../drag.ts";
 import { type MoveSet, moveSet, moveWords } from "../moves.ts";
@@ -143,7 +144,7 @@ export function createRotateTool(viewer: Viewer, gestures: Gestures, deps: Rotat
         title,
         prompt:
           "type the angle, or drag a ring; X, Y or Z for the axis; click a snap to move the centre",
-        reading: `${why ?? `${num(now)}° ${where}`}${detach ? " · detached (Alt)" : ""}`,
+        reading: `${why ?? `${num(now)}° ${where}`}${detach ? ` · detached (${modifierWord("alt")})` : ""}`,
         snap: label,
       };
       if (why || now === 0) {

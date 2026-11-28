@@ -214,7 +214,10 @@
   white-space: pre;
 }
 
-/* A tool's label at a world point (Viewer.setLabel) */
+/*
+ * A tool's label at a world point (Viewer.setLabel): the tip's box, dark in both themes, so its
+ * text is the tip's ink, never the page's (review M5: the light theme's text-1 on it was 1.2:1).
+ */
 .view-label {
   position: absolute;
   left: 0;
@@ -223,6 +226,7 @@
   padding: 1px 6px;
   border-radius: var(--radius-control);
   background: var(--bg-tip);
+  color: var(--tip-ink);
   border: 1px solid var(--tool);
   font-size: var(--fs-small);
   white-space: nowrap;
@@ -377,8 +381,9 @@
   background: currentColor;
 }
 
+/* The letter's ink, chosen per axis colour by the gizmo (`inkOn`): the light or the dark one */
 .gizmo-end.pos::first-line {
-  color: var(--sel-ink);
+  color: var(--gizmo-ink, var(--sel-ink));
 }
 
 .gizmo-end.neg {

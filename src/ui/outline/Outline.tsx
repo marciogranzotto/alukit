@@ -181,12 +181,23 @@ export function Outline() {
     const it = items[i];
     if (!it) return;
     let handled = true;
+    // Shift + an arrow extends the selection to the row it moves to (WAI-ARIA APG, tree view,
+    // multi-select; review m14), the row it leaves included.
+    const extend = (next: Item | undefined) => {
+      if (!e.shiftKey || !next) return;
+      const ids = [it, next].flatMap((x) =>
+        x.row ? [x.row.id] : x.group?.ref ? [x.group.ref] : [],
+      );
+      if (ids.length > 0) select(ids, "add");
+    };
     switch (e.key) {
       case "ArrowDown":
         focusItem(items[i + 1]);
+        extend(items[i + 1]);
         break;
       case "ArrowUp":
         focusItem(items[i - 1]);
+        extend(items[i - 1]);
         break;
       case "Home":
         focusItem(items[0]);

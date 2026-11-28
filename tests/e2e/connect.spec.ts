@@ -154,7 +154,7 @@ test("a pivot carries the ends picked, pointing them at itself in one step", asy
   // The hinge the document's pivots use is suggested.
   await expect(panel.getByTestId("pivot-connector")).toHaveValue("test-geo:HNG-15");
   // The base: a station on the front base rail's top face, its +y (b9: y 0 to 40, z 80 to 120).
-  await click(page, [980, 20, 120], /^base: b9 \+y face at 980$/);
+  await click(page, [980, 20, 120], /^base: b9 \+y face \(world \+Z\) at 980$/);
   await expect(panel.getByTestId("pivot-base")).toContainText("b9");
   // The strut's foot: its lower quarter picks its end a.
   await click(page, [980, 150, 150], /^end b35\.a$/);

@@ -13,7 +13,7 @@ import {
   pickedPlane,
   planeBatch,
 } from "./endEdits.ts";
-import { endWords } from "./words.ts";
+import { endWords, faceWords } from "./words.ts";
 
 /**
  * A bar end's edits in the inspector (docs/ux/editing-audit.md E4.1) on fixtures: tests/fixtures/
@@ -102,7 +102,7 @@ describe("an end's plane", () => {
       ["b1", "+x", 280, false],
       ["b1", "-x", 320, false],
     ]);
-    expect(faces[0]?.label).toBe("b1's face +x · 280 mm longer");
+    expect(faces[0]?.label).toBe("b1's face +x (world +Y) · 280 mm longer");
     // Nothing lies beyond b2's free end b; b1's +x face, where its end a butts, is no stop for
     // end b, which would leave nothing to cut.
     expect(faceStops(ends, "b2", "b")).toEqual([]);
@@ -202,7 +202,11 @@ describe("freeing an end from what claims it", () => {
     const m = await viewOf(await fresh("base-frame", "cli"), d?.commands ?? []);
     expect(m.claims["b5.a"]).toBeUndefined();
     expect(m.claims["b5.b"]).toEqual(["c1"]);
-    expect(endWords(m, "b5", "a")).toMatchObject({ open: true });
+    // Unclaimed now, but the post still butts on b5 at that corner: the check counts the through
+    // bar's end there joined (§5.5), so it is not open and no Join is offered (review M7).
+    const w = endWords(m, "b5", "a");
+    expect(w.open).toBe(false);
+    expect(w.text).toBe("b1.b and b7.a butt on it here (c1), square");
   });
 
   it("frees the audit's brace from its corner butt", async () => {
@@ -214,5 +218,16 @@ describe("freeing an end from what claims it", () => {
     expect(detachBatch(m, "b13", "a")?.commands).toEqual([
       { cmd: "removeEntity", args: { id: "c9" } },
     ]);
+  });
+});
+
+describe("a face in words (review m9)", () => {
+  it("names a bar's face with the world direction it looks along", () => {
+    // b1 runs along +X centred on y = 0, its section's x along world +Y (above): its +x face
+    // looks +Y, its −x face −Y, and its ±y faces up and down.
+    expect(faceWords(ends, "b1", "+x")).toBe("face +x (world +Y)");
+    expect(faceWords(ends, "b1", "-x")).toBe("face -x (world -Y)");
+    expect(faceWords(ends, "b1", "+y")).toMatch(/^face \+y \(world [+-]Z\)$/);
+    expect(faceWords(ends, "b1", "-y")).not.toBe(faceWords(ends, "b1", "+y"));
   });
 });

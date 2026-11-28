@@ -113,7 +113,7 @@ export function createAlign(viewer: Viewer, gestures: Gestures): () => void {
     applies: (c) => [...c.selection].some((id) => c.m.derived.bars[id] || c.m.derived.parts?.[id]),
     when(c) {
       if (summary.peek()?.status.readOnly === true) return "the project is read-only";
-      if (!pointerTool()) return "in Select or Move";
+      if (!pointerTool()) return "works in Select or Move: press Esc first";
       const set = moveSet(c.m, c.selection);
       return "why" in set ? set.why.replace("to move", "to align") : true;
     },

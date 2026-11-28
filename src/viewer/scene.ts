@@ -1475,8 +1475,20 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
   const labels = new Labels(
     container,
     (p) => project(p),
-    () => gizmoBoxes(),
+    () => [...gizmoBoxes(), ...keptClear()],
   );
+
+  /**
+   * The app's own labels over the view that a tool's label keeps clear of (`data-keep-clear`: the
+   * selection's length label), so a readout never lands on it (review m6). Read from the page, as
+   * the app places them; the viewer imports nothing from the app.
+   */
+  function keptClear(): PageBox[] {
+    const scope = container.closest(".viewport") ?? container.parentElement ?? container;
+    return [...scope.querySelectorAll<HTMLElement>("[data-keep-clear]")]
+      .filter((el) => el.style.visibility !== "hidden" && el.offsetParent !== null)
+      .map((el) => el.getBoundingClientRect());
+  }
 
   /** The shown gizmo's footprint on the page, which the labels keep clear of. */
   function gizmoBoxes(): PageBox[] {
@@ -1676,11 +1688,14 @@ export function createViewer(container: HTMLElement, initialTheme: ViewTheme): V
       mmPerPx: mmPerPxAt(g.at),
     });
   }
-  function emitGizmo(phase: GizmoDrag["phase"], e: { clientX: number; clientY: number }): void {
+  function emitGizmo(
+    phase: GizmoDrag["phase"],
+    e: { clientX: number; clientY: number; shiftKey?: boolean },
+  ): void {
     const d = gizmoDragging;
     if (!d) return;
     const r = gizmoDrag(d.part, d.at, d.from, ray(e.clientX, e.clientY));
-    for (const cb of gizmoCbs) cb({ part: d.part, phase, ...r });
+    for (const cb of gizmoCbs) cb({ part: d.part, phase, ...r, shift: e.shiftKey === true });
   }
   const el = renderer.domElement;
   const onDown = (e: PointerEvent) => {

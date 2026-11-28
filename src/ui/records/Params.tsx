@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { compareIds } from "#core/ids.ts";
 import { Errors } from "../Feedback.tsx";
 import { select } from "../focus.ts";
@@ -69,6 +69,20 @@ function ParamRow({
   const [editing, setEditing] = useState<string | undefined>(undefined);
   const [outcome, setOutcome] = useState<CommandOutcome>();
   const row = useRef<HTMLTableRowElement>(null);
+  const field = useRef<HTMLInputElement>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const open = editing !== undefined;
+  // The field takes the focus, its text selected, when it opens: typing after Edit replaces the
+  // value, as the inspector's own fields take what is typed (review m1).
+  useLayoutEffect(() => {
+    if (!open) return;
+    field.current?.focus();
+    field.current?.select();
+  }, [open]);
+  const cancel = () => {
+    setEditing(undefined);
+    editButton.current?.focus();
+  };
   const pointed = pointedParam.value;
   useEffect(() => {
     if (pointed?.name !== name) return;
@@ -84,7 +98,7 @@ function ParamRow({
       { inline: true },
     );
     setOutcome(r);
-    if (r.ok) setEditing(undefined);
+    if (r.ok) cancel();
   };
   const remove = async () => {
     setOutcome(
@@ -109,15 +123,21 @@ function ParamRow({
           ) : (
             <form class="inline-form" onSubmit={(e) => void set(e)}>
               <input
+                ref={field}
                 data-testid="param-edit"
                 aria-label={`${name}: a number or an expression`}
                 value={editing}
                 onInput={(e) => setEditing((e.currentTarget as HTMLInputElement).value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Escape") return;
+                  e.stopPropagation();
+                  cancel();
+                }}
               />
               <button type="submit" class="btn" data-testid="param-set" disabled={busy.value}>
                 Set
               </button>
-              <button type="button" class="btn" onClick={() => setEditing(undefined)}>
+              <button type="button" class="btn" onClick={cancel}>
                 Cancel
               </button>
             </form>
@@ -131,6 +151,7 @@ function ParamRow({
         </td>
         <td class="actions">
           <button
+            ref={editButton}
             type="button"
             class="btn"
             data-testid="param-change"

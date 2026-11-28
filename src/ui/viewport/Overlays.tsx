@@ -9,8 +9,9 @@ import { problemList } from "../problems/source.ts";
 import { model } from "../store.ts";
 import { resolveTargets, type Targets } from "../targets.ts";
 import { theme } from "../theme/theme.ts";
-import { viewTheme } from "../theme/tokens.ts";
+import { inkOn, viewTheme } from "../theme/tokens.ts";
 import { LengthLabel } from "../tools/LengthEdit.tsx";
+import { gesture } from "../tools/state.ts";
 import { colourBy, drawnCorners, ghostsRest, viewer } from "./viewer.ts";
 import { endsWords, hoverWords, itemCode, legendItems } from "./words.ts";
 
@@ -77,7 +78,8 @@ export function HoverLabel() {
   const m = model.value;
   const p = pointer.value;
   const id = h?.from === "view" ? h.ids[0] : undefined;
-  if (id === undefined || !m || !p) return null;
+  // Not while a gesture runs: the readout by the pointer says what matters then (review n5).
+  if (id === undefined || !m || !p || gesture.value) return null;
   const lines = hoverWords(m, id, drawnCorners.value);
   return (
     <div
@@ -110,7 +112,7 @@ export function SelectionLabel() {
   if (!m || !id || !bar) return null;
   // The cut is a button: a click types a new length into it (S5's LengthLabel).
   return (
-    <div class="sel-label anchored" ref={host} data-testid="selection-label">
+    <div class="sel-label anchored" ref={host} data-testid="selection-label" data-keep-clear>
       <LengthLabel m={m} id={id} ends={endsWords(m, id) ?? ""} />
     </div>
   );
@@ -236,6 +238,28 @@ const title = (view: string) => `${view[0]?.toUpperCase()}${view.slice(1)} view`
 export function Gizmo() {
   const host = useRef<HTMLDivElement>(null);
   const t = viewTheme(theme.value).overlay.axis;
+  // Clear of the tool rail (review m7): in a short view the rail reaches down to the gizmo's
+  // corner and covers its axis buttons, so the gizmo then stands right of the rail, measured
+  // whenever the view or the rail changes size.
+  useEffect(() => {
+    const root = host.current;
+    const view = root?.closest<HTMLElement>(".viewport");
+    const rail = view?.querySelector<HTMLElement>('[data-testid="tool-rail"]');
+    if (!root || !view || !rail) return;
+    const clear = () => {
+      root.style.left = "";
+      const r = rail.getBoundingClientRect();
+      const g = root.getBoundingClientRect();
+      if (r.bottom + 8 > g.top && r.left < g.right) {
+        root.style.left = `${Math.ceil(r.right - view.getBoundingClientRect().left + 8)}px`;
+      }
+    };
+    clear();
+    const watch = new ResizeObserver(clear);
+    watch.observe(view);
+    watch.observe(rail);
+    return () => watch.disconnect();
+  }, []);
   useEffect(() => {
     const v = viewer.value;
     const root = host.current;
@@ -292,7 +316,11 @@ export function Gizmo() {
             key={`${a.axis}-${end}`}
             class={`gizmo-end ${end}`}
             data-end={`${a.axis}-${end}`}
-            style={{ color: css(t[a.axis]) }}
+            // The letter's ink is the one that reads on its axis's colour (WCAG 1.4.3).
+            style={{
+              color: css(t[a.axis]),
+              "--gizmo-ink": `var(--${inkOn(t[a.axis], theme.value)})`,
+            }}
             title={title(a[end])}
             aria-label={title(a[end])}
             onClick={() => v?.setView(a[end], undefined, true)}

@@ -184,7 +184,9 @@ test("the menu offers Hide and Isolate on the selection, and Show all on the str
   const menu = page.getByTestId("context-menu");
   await expect(menu).toBeVisible();
   await expect(menu.locator('[data-action="hide"]')).toContainText("H");
-  await expect(menu.locator('[data-action="isolate"]')).toContainText("Shift+H");
+  // The caps are the platform's (the editing review's m5): ⇧H on macOS, Shift+H elsewhere.
+  const mac = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.userAgent));
+  await expect(menu.locator('[data-action="isolate"]')).toContainText(mac ? "⇧H" : "Shift+H");
   await menu.locator('[data-action="hide"]').click();
   expect(await hidden(page)).toEqual(["b5"]);
   // Show all is the strip's button too, and the menu's when anything is hidden.

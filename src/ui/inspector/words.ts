@@ -1,6 +1,8 @@
+import { TOL } from "#core/tolerances.ts";
 import type { V3 } from "../../mesh/model.ts";
 import { mm } from "../format.ts";
 import type { Model } from "../model.ts";
+import { barJoints, holdingJoints, JOINT_NOUN, openCorner } from "./joints.ts";
 
 /**
  * The inspector's words (docs/ux/plan.md S5.3, U12, U18, U19): what a ref in the selection is,
@@ -151,6 +153,26 @@ export function axisOf(d: V3 | undefined): "x" | "y" | "z" | undefined {
   return near(0) ? "x" : near(1) ? "y" : near(2) ? "z" : undefined;
 }
 
+/** A world direction in words: the axis it runs along (`+Y`), else none. */
+export function worldAxis(v: readonly number[] | undefined): string | undefined {
+  if (!v) return undefined;
+  const i = [0, 1, 2].find((k) => Math.abs(Math.abs(v[k] as number) - 1) < 1e-6);
+  return i === undefined ? undefined : `${(v[i] as number) > 0 ? "+" : "-"}${"XYZ"[i]}`;
+}
+
+/**
+ * A bar's face in words, with the world direction it faces when that is along an axis (review
+ * m9): on a 40 × 80 rolled a quarter turn the face that looks along +X is the section's −y, so
+ * "face -y (world +X)". As the Offset rows name the section's axes.
+ */
+export function faceWords(m: Model, bar: string, face: string): string {
+  const fr = m.derived.bars[bar]?.frame;
+  const along = face.endsWith("x") ? fr?.x : face.endsWith("y") ? fr?.y : undefined;
+  const sign = face.startsWith("-") ? -1 : 1;
+  const w = along ? worldAxis(along.map((c) => c * sign)) : undefined;
+  return `face ${face}${w ? ` (world ${w})` : ""}`;
+}
+
 /** What a bar is by the way it runs: a post stands, a rail lies along X or Y, any other a bar. */
 export function barRole(m: Model, id: string): "post" | "rail along X" | "rail along Y" | "bar" {
   const a = axisOf(barDir(m, id));
@@ -273,7 +295,9 @@ function claimWords(m: Model, ref: string, name: string): Words {
  * `autoConnect` applies, so an end a joint claims is never called open: when the joint fails (an
  * angled end that declares no cut, two joints on one end, a miter of two sections), its plane falls
  * back to the default, and the words still name the joint, then say it fails (D2). An end no
- * provider claims is open, unless a butt bears on it as on a bar's end.
+ * provider claims is joined when a butt bears on it as on a bar's end; open when the check says
+ * so (it meets other ends there, `unconnected`); held when a face joint holds its bar; and else
+ * only unjoined (review M7).
  */
 export function endWords(m: Model, bar: string, e: "a" | "b"): Words & { open: boolean } {
   const d = m.derived.bars[bar];
@@ -318,7 +342,47 @@ export function endWords(m: Model, bar: string, e: "a" | "b"): Words & { open: b
       };
     }
   }
-  return { text: `open: nothing joins it, ${how}`, refs: [], open: true };
+  // The bar a butt at this point bears on: its end here is the corner's through end, which the
+  // check counts joined (§5.5) though the butt leaves it unclaimed (`through_end` at the other end).
+  const P = e === "a" ? d.a : d.b;
+  for (const [cid, butt] of Object.entries(buttsOf(m))) {
+    const on = butt.ends
+      .filter((x) => (x.on.split(" ")[0] as string).split(".")[0] === bar && meets(m, x.end, P))
+      .map((x) => x.end);
+    if (on.length > 0) {
+      return {
+        text: `${listWords(on)} ${on.length === 1 ? "butts" : "butt"} on it here (${cid}), ${how}`,
+        refs: [cid],
+        open: false,
+      };
+    }
+  }
+  // Open is the check's word (§5.5): an end loose where it meets others. An end a face joint
+  // holds by its bar's body is held, and an end nothing meets is only unjoined (review M7, m12).
+  if (openCorner(m, ref)) return { text: `open: nothing joins it, ${how}`, refs: [], open: true };
+  const held = holdingJoints(barJoints(m, copyOf(bar)?.template ?? bar));
+  if (held.length > 0) {
+    const names = held.map((j) => `${j.id} (${JOINT_NOUN[j.type] ?? j.type})`);
+    return {
+      text: `held by ${listWords(names)}, ${how}`,
+      refs: held.map((j) => j.id),
+      open: false,
+    };
+  }
+  return { text: `nothing joins it, ${how}`, refs: [], open: false };
+}
+
+/**
+ * Whether a bar end (`b1.a`) lies at the point P, as the check groups ends at a point (TOL.len;
+ * the view model's points are derive's, written to 0.001 mm).
+ */
+function meets(m: Model, endRef: string, P: readonly number[]): boolean {
+  const [b, e] = endRef.split(".") as [string, string];
+  const q = m.derived.bars[b]?.[e === "b" ? "b" : "a"];
+  return (
+    q !== undefined &&
+    Math.hypot(q[0] - (P[0] as number), q[1] - (P[1] as number), q[2] - (P[2] as number)) <= TOL.len
+  );
 }
 
 /** A list in words: `a`, `a and b`, `a, b and c`. */

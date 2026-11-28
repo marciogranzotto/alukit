@@ -15,7 +15,10 @@ import { fieldDone, fieldWanted, type Gesture, gesture, lastResult, typed } from
  *   takes a length (D-UX-17), and Enter commits what is typed.
  *
  * Esc steps back one level (D-UX-18): what is typed, then the gesture, which leaves the document
- * as it was. Tab flips the previewed joint. The whole gesture is one batch, one step (§7.1: a
+ * as it was. During a drag (the button still held), Esc ends the gesture whatever is typed, as
+ * Blender and Fusion cancel a transform; Backspace edits the typed value (review M4: the first Esc
+ * only took the digits back, and the release then committed the drag). Tab flips the previewed
+ * joint. The whole gesture is one batch, one step (§7.1: a
  * tab holds no unsaved state; a drag is a local preview, committed as one command on release).
  * What a gesture moves and how it reads the pointer is its `GestureSpec`'s: an end handle, Move,
  * Duplicate and Paste, Rotate, Mirror and Align (docs/ux/e3-decisions.md). Owner: E3 (S5 built it).
@@ -61,7 +64,10 @@ export interface Gestures {
   release(e: ToolPointer): void;
   /** A press while a click-move gesture is on: it commits there. True when one was on. */
   press(e: ToolPointer): boolean;
-  /** Esc: the typed value, then the gesture. True when there was something to take back. */
+  /**
+   * Esc: the typed value, then the gesture; during a drag, the gesture at once. True when there was
+   * something to take back.
+   */
   back(): boolean;
   /** Enter: commits what is typed, or where the gesture is. */
   enter(): boolean;
@@ -191,7 +197,8 @@ export function createGestures(_viewer: Viewer): Gestures {
     },
     back() {
       if (!spec) return false;
-      if (typed.peek()) {
+      // A drag ends here, typed or not: its release must find nothing to commit.
+      if (typed.peek() && !held) {
         typed.value = "";
         fieldDone.value++;
         spec.update(last);

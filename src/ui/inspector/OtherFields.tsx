@@ -25,7 +25,7 @@ import { CommitInput, Row, RowErrors, useSend, WordsRow } from "./Fields.tsx";
 import { pointRefWords } from "./length.ts";
 import { PartReplaceForm } from "./PartReplace.tsx";
 import { EditErrors, editOff, SelectRow, TextRow, useEdit } from "./rows.tsx";
-import { isObject, labelOf, listWords, pointWords, written } from "./words.ts";
+import { faceWords, isObject, labelOf, listWords, pointWords, written } from "./words.ts";
 
 /**
  * The fields of a part, a connection, a node and a run (docs/ux/plan.md S5.3; the editing
@@ -49,6 +49,11 @@ function memberOption(m: Model, id: string): string {
  * The faces of the section a station's bar (or a run's first bar) is made of, then its grooves
  * unless `grooves` is false (a pivot's base sits on a face, §4.5).
  */
+/** A station's bar: itself, or a run's first bar, whose faces the run's are. */
+function barOfMember(m: Model, bar: string): string {
+  return bar.startsWith("r") ? (m.derived.runs[bar]?.bars[0] ?? bar) : bar;
+}
+
 function facesOf(m: Model, bar: string, grooves = true): string[] {
   const first = bar.startsWith("r") ? (m.derived.runs[bar]?.bars[0] ?? bar) : bar;
   const section = m.display.bars[first]?.section;
@@ -125,7 +130,10 @@ function StationRows({
             value: f,
             label: f,
           })),
-          ...faces.map((f) => ({ value: f, label: f.includes(".") ? `groove ${f}` : `face ${f}` })),
+          ...faces.map((f) => ({
+            value: f,
+            label: f.includes(".") ? `groove ${f}` : faceWords(m, barOfMember(m, bar), f),
+          })),
         ]}
         title={at === "on" ? "The face or groove it sits on" : "The face the base is on"}
         what={what}

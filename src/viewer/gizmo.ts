@@ -68,6 +68,8 @@ export interface GizmoDrag {
   delta: V3;
   /** A ring's turn from the press, degrees, counter-clockwise looking down its axis. */
   angle?: number;
+  /** Shift held: the drag goes free of its snaps (a part's slide off the grid, review m15). */
+  shift?: boolean;
 }
 
 /** An arrow's length on the screen, CSS pixels; the rings and squares scale with it. */

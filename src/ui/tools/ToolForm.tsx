@@ -28,6 +28,7 @@ import {
   toolPrompt,
 } from "./state.ts";
 import { typedNumber, typedWords } from "./typed.ts";
+import { patternPreview } from "./wire/pattern.ts";
 
 /**
  * The active tool's long form, above the inspector (D-UX-5): Connect's picks, face and pivot
@@ -396,6 +397,14 @@ function PatternPanel() {
       {!("why" in pitch) && typeof pitch.written === "string" && (
         <p class="hint-text" data-testid="pattern-pitch-words">
           pitch {typedWords(pitch)}
+        </p>
+      )}
+      {/* What Create would make, from a dry run, its copies drawn as ghosts (review m8). */}
+      {!("why" in c) && patternPreview.value && (
+        <p class="hint-text" data-testid="pattern-preview" aria-live="polite">
+          {patternPreview.value.error
+            ? `Create would be refused: ${patternPreview.value.text}`
+            : patternPreview.value.text}
         </p>
       )}
       <div class="tp-row">

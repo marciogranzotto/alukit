@@ -93,10 +93,10 @@ export function createPlaceTool(ctx: WireContext): Wire {
       show(
         e,
         "why" in w
-          ? `${at.snap.label} · ${w.why}`
+          ? `${at.snap.tip ?? at.snap.label} · ${w.why}`
           : w.words
-            ? `${at.snap.label} · ${w.words}`
-            : at.snap.label,
+            ? `${at.snap.tip ?? at.snap.label} · ${w.words}`
+            : (at.snap.tip ?? at.snap.label),
         at.snap.label,
       );
     },

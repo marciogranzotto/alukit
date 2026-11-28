@@ -2818,7 +2818,7 @@
     },
     "CN30-04": {
       "kind": "connector",
-      "subtype": "end-connector",
+      "subtype": "splice",
       "name": "Conector Prolongador 180° P/ Perfis Base 30, 40, 45 e 50 (Para Perfil: Base 30)",
       "code": "CN30-04",
       "brand": "Forseti",
@@ -2909,7 +2909,7 @@
     },
     "CN40-04": {
       "kind": "connector",
-      "subtype": "end-connector",
+      "subtype": "splice",
       "name": "Conector Prolongador 180° P/ Perfis Base 30, 40, 45 e 50 (Para Perfil: Base 40)",
       "code": "CN40-04",
       "brand": "Forseti",
@@ -3014,7 +3014,7 @@
     },
     "CN45-04": {
       "kind": "connector",
-      "subtype": "end-connector",
+      "subtype": "splice",
       "name": "Conector Prolongador 180° P/ Perfis Base 30, 40, 45 e 50 (Para Perfil: Base 45 Básico)",
       "code": "CN45-04",
       "brand": "Forseti",
@@ -3104,7 +3104,7 @@
     },
     "CN50-04": {
       "kind": "connector",
-      "subtype": "end-connector",
+      "subtype": "splice",
       "name": "Conector Prolongador 180° P/ Perfis Base 30, 40, 45 e 50 (Para Perfil: Base 50)",
       "code": "CN50-04",
       "brand": "Forseti",

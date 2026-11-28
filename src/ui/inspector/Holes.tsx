@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Errors } from "../Feedback.tsx";
 import type { Model } from "../model.ts";
 import { busy } from "../store.ts";
@@ -20,6 +20,7 @@ import {
   removeHole,
   sizeText,
 } from "./holes.ts";
+import { faceWords } from "./words.ts";
 
 /**
  * A bar's holes in the inspector (docs/ux/editing-audit.md E4.4, E-UX-22): each hole a person
@@ -59,7 +60,7 @@ function HoleRow({ m, id, i, op }: { m: Model; id: string; i: number; op: O }) {
           >
             {FACES.map((f) => (
               <option key={f} value={f}>
-                face {f}
+                {faceWords(m, id, f)}
               </option>
             ))}
           </select>
@@ -131,7 +132,9 @@ function HoleRow({ m, id, i, op }: { m: Model; id: string; i: number; op: O }) {
 
 /**
  * The form that adds a hole: a face, a distance from where it counts (end a's cut unless the menu
- * said otherwise; review M3), a size, a depth (empty: through).
+ * said otherwise; review M3), a size, a depth (empty: through). It takes the focus once, when it
+ * opens, on the distance the menu offered, selected so that typing replaces it (review M2: a ref
+ * that focused on every render took each keystroke's focus).
  */
 function HoleForm({
   m,
@@ -146,6 +149,11 @@ function HoleForm({
   at: number;
   from: From;
 }) {
+  const atField = useRef<HTMLInputElement>(null);
+  useLayoutEffect(() => {
+    atField.current?.focus();
+    atField.current?.select();
+  }, []);
   const [f, setF] = useState<Face>(face);
   const [atText, setAt] = useState(String(at));
   const [from, setFrom] = useState<From>(from0);
@@ -189,15 +197,17 @@ function HoleForm({
       >
         {FACES.map((x) => (
           <option key={x} value={x}>
-            face {x}
+            {faceWords(m, id, x)}
           </option>
         ))}
       </select>
       <label>
         at{" "}
         <input
+          ref={atField}
           class="insp-input"
           data-testid="hole-at"
+          aria-label="Distance, mm"
           size={6}
           value={atText}
           onInput={(e) => setAt((e.currentTarget as HTMLInputElement).value)}
@@ -222,10 +232,10 @@ function HoleForm({
         <input
           class="insp-input"
           data-testid="hole-size"
+          aria-label="Size: a drill in mm, or a thread such as M6"
           size={6}
           value={size}
           placeholder="7 or M6"
-          ref={(el) => el?.focus()}
           onInput={(e) => setSize((e.currentTarget as HTMLInputElement).value)}
         />
       </label>
@@ -234,6 +244,7 @@ function HoleForm({
         <input
           class="insp-input"
           data-testid="hole-depth"
+          aria-label="Depth, mm; empty is through"
           size={5}
           value={depth}
           placeholder="through"
