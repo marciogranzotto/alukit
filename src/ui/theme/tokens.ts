@@ -1,5 +1,6 @@
 import type { ViewTheme } from "../../viewer/theme.ts";
 import type { Model } from "../model.ts";
+import { contrast } from "./contrast.ts";
 
 /**
  * The design tokens as numbers, for three.js (docs/ux/plan.md §5.3; docs/ux/contracts.md): the
@@ -26,6 +27,7 @@ export const COLOUR_TOKENS = [
   "sel-ink",
   "act",
   "act-fill",
+  "act-ink",
   "tool",
   "ready",
   "blocked",
@@ -49,6 +51,7 @@ const DARK: Readonly<Record<ColourToken, number>> = {
   "sel-ink": 0x201304,
   act: 0x74b4ff,
   "act-fill": 0x2e6bc6,
+  "act-ink": 0xffffff,
   tool: 0x3cc8e6,
   ready: 0x4fcb8d,
   blocked: 0xff7a6e,
@@ -71,6 +74,7 @@ const LIGHT: Readonly<Record<ColourToken, number>> = {
   "sel-ink": 0x201304,
   act: 0x1f63c6,
   "act-fill": 0x1f63c6,
+  "act-ink": 0xffffff,
   tool: 0x0b7f9a,
   ready: 0x1b7a4b,
   blocked: 0xc2362b,
@@ -254,4 +258,17 @@ function scale(rgb: number, k: number): number {
 /** A swatch's colour as CSS, for a style attribute. */
 export function swatchCss(rgb: number): string {
   return `#${rgb.toString(16).padStart(6, "0")}`;
+}
+
+/**
+ * The ink for text on a fill of colour `rgb` (an axis's disc on the gizmo): the light ink
+ * (`act-ink`) or the dark one (`sel-ink`), whichever contrasts more (WCAG 2.2, 1.4.3). One ink
+ * for every axis read 3.5:1 on the light theme's blue (docs/ux/review-fixes-app-decisions.md).
+ */
+export function inkOn(rgb: number, t: Theme): "act-ink" | "sel-ink" {
+  const c = COLOURS[t];
+  const fill = swatchCss(rgb);
+  return contrast(fill, swatchCss(c["act-ink"])) >= contrast(fill, swatchCss(c["sel-ink"]))
+    ? "act-ink"
+    : "sel-ink";
 }

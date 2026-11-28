@@ -252,14 +252,15 @@ be used now is disabled and says why.
 | Box frame | `G` | click the corner, type `1000, 600` and `Enter` (or click the far corner), then the height and `Enter` |
 | Connect | `C` | pick a through bar and the ends that butt, two ends for a miter or splice, or two or more bars for a face joint, then apply. A face joint takes a fastening (none, bolt, T-nut, screw) with its fastener, stack and stations; a pivot takes a station on a face as its base, then the ends it carries, and a hinge. A pick the type cannot take is left out, and the tip says why |
 | Place part | `P` | click a face or groove: the part goes there, one step. Type a distance first to place it that far from the nearer end |
-| Pattern | `X` | take the selection as the template, click the bar to repeat along, give pitch and count |
+| Pattern | `X` | take the selection as the template, click the bar to repeat along, give pitch and count: the copies are drawn and **Create** says what it will make before you press it |
 | Measure | `M` | two snapped points: the distance and its components |
 
 Changing what you drew (moving, turning, copying, mirroring, lengths and ends, holes, joints,
 patterns) is the next section, [Editing in the 3D view](#editing-in-the-3d-view).
 
 `Esc` steps back one level at a time: what is typed, the last pick, the gesture, the tool, then
-the selection. `Ctrl/Cmd+Z` undoes the last step, and `Shift` with it redoes.
+the selection. While you hold a drag, `Esc` ends it at once, even with a number typed, and
+letting go then changes nothing. `Ctrl/Cmd+Z` undoes the last step, and `Shift` with it redoes.
 
 **The command bar** at the foot of the 3D view shows the tool, what it asks next, the value you
 type and what it comes to, and the tool's options. Start typing a number (or `[`, `(`, a sign)
@@ -367,7 +368,8 @@ nothing is selected); hold **Alt** to see it as a box in the view.
 it, or on open ground for the current selection; right-click an outline row, or a group's
 heading, for the menu about it. **Shift+F10** or the **Menu** key opens it from the keyboard. It
 lists everything you can do to what it is about, with its key; an entry that cannot run now is
-grey and says why. `↑` `↓` move, a letter jumps, `Enter` runs, `Esc` closes. The buttons at the
+grey and says why. `↑` `↓` move, the underlined letter goes to its entry (`D` Duplicate, `L`
+Delete), `Enter` runs, `Esc` closes. On a Mac the keys read ⌘, ⌥ and ⇧. The buttons at the
 top of the inspector are the same actions: Delete, Duplicate, Copy, Paste, Mirror…, Align to a
 face….
 
@@ -376,7 +378,8 @@ face….
 **H** hides the selection, **Shift+H** isolates it (hides everything else), **Alt+H** (Option+H on
 a Mac) shows everything again; the menu has the same three. To hide the top ring and then look at
 one corner alone: select the `top` heading, press `H`; click a corner's marker, press `Shift+H`;
-then `Alt+H`. While anything is hidden the status bar says "n hidden · Show all". Hiding changes
+then `Alt+H`. While anything is hidden the status bar says "n hidden · Show all", and the menu of
+a hidden entity's outline row has **Show**, which draws it again. Hiding changes
 only what you see, like the section plane: it is not a step, and clicks and snaps pass over what
 is hidden.
 
@@ -402,7 +405,8 @@ is hidden.
 - **With params**, change the param instead: with nothing selected, the project panel lists the
   params; **Edit** beside `W`, type `1100`, `Enter`.
 - **A part alone** slides along its bar. Select the bracket: an arrow along its bar shows; drag
-  it, or press `D`, type `150` and `Enter` to move it 150 along the bar (from 300 to 450).
+  it, and it lands on the 10 mm grid or on another part's station (hold `Shift` to slide it
+  freely), or press `D`, type `150` and `Enter` to move it 150 along the bar (from 300 to 450).
 - **Rotate (`Q`)**. With a selection, three rings stand at its centre. Click a point for the
   centre (or press `Enter` for the selection's centre), press `X`, `Y` or `Z` for the axis (Z at
   first), type the angle (counter-clockwise looking down the axis) and `Enter`; or drag a ring,
@@ -439,7 +443,10 @@ is hidden.
 - **The Length field** in the inspector takes a number or an expression: `=D` makes the bar as
   long as `D` and keeps following it. The select beside it chooses which end moves: end b, end a,
   or both from the middle.
-- **Each end's row** says what joins it ("butts on b3 (c9)"; when the joint fails, why). It sets
+- **Each end's row** says what joins it ("butts on b3 (c9)"; when the joint fails, why; "held by
+  c36 (face joint)" for a plate's; "open" only where it meets other ends and nothing joins them,
+  with **Join**, or why it cannot be joined in its place). Under the ends, **Joints** lists every
+  joint the bar takes part in, each with **Edit**; the menu's **Edit c36…** does the same. It sets
   the end's **cut** (angle or square), an **extension**, and where it stops: by its joint, **at a
   face** (the faces its line meets, nearest first), **flush with an end**, or **Pick in the view**
   and click the face. **Free from c9** takes the end out of its joint.
@@ -452,8 +459,8 @@ is hidden.
 - **Split and Reverse.** Right-click a bar where it should be cut: **Split b9 here, 400 mm from end
   a** splits it there (rounded to the millimetre); **Split b9 at…** takes a typed distance and adds
   a splice when asked. **Reverse b9** swaps its ends. Both are also buttons in the inspector.
-- **Holes.** Right-click a bar's side: **Add a hole on b1's face +x, 20 mm from end a…** opens the
-  hole form there; set the distance, the end, the size (a drill such as `7`, or a thread such as
+- **Holes.** Right-click a bar's side: **Add a hole on b1's face +x (world +Y), 20 mm from end a…**
+  opens the hole form there, its distance ready to type over; set the distance, the end, the size (a drill such as `7`, or a thread such as
   `M6`) and the depth (empty for through), then **Add the hole**. Each hole is then a row that edits and
   removes it.
 
@@ -506,14 +513,16 @@ is hidden.
 
 Select the back top rail (b14) and press `Delete` (or right-click it, **Delete**): what goes at
 once goes, and otherwise a dialog lists what else would be removed and what changes (here, the
-two butts it leaves keep their other ends) before **Delete**. `Ctrl/Cmd+Z` undoes the last step,
+two butts it leaves keep their other ends) before **Delete**; **Cancel** has the focus, so a key
+pressed by mistake deletes nothing. `Ctrl/Cmd+Z` undoes the last step,
 whoever made it (the top bar's Undo button names the step it takes back), one press per step;
 `Shift+Ctrl/Cmd+Z` redoes.
 
 ### By mouse alone, by keyboard alone
 
 Every edit has a mouse path (the tool rail, the menu, the inspector's buttons) and a keyboard path
-(the keys in `?`, `Shift+F10` for the menu); typed values work in both. To move the shelf by
+(the keys in `?`, `Shift+F10` for the menu; in the outline `↑` `↓` move and `Shift` with them
+extends the selection); typed values work in both. To move the shelf by
 mouse: click the `shelf` heading, click **Move** on the rail, type `0, 0, 150`, click in the
 view. To delete the back top rail: right-click its outline row, **Delete**, then the dialog's
 **Delete**; the top bar's **Undo** takes it back.

@@ -6,6 +6,7 @@ import { select } from "../focus.ts";
 import type { Model } from "../model.ts";
 import { busy, type CommandOutcome, sendCommands } from "../store.ts";
 import { readOnly } from "./Fields.tsx";
+import { type BarJoint, barJoints } from "./joints.ts";
 import { explodeEdit } from "./pattern.ts";
 import type { Edit } from "./rows.tsx";
 import { connectionType, copyOf, isObject, patternOf, refKind, written } from "./words.ts";
@@ -22,7 +23,8 @@ import { connectionType, copyOf, isObject, patternOf, refKind, written } from ".
 /** What an action asked the inspector to open for an entity, until the inspector takes it. */
 export interface Asked {
   id: string;
-  what: "edit" | "connector" | "replace";
+  /** `joints`: a bar's Joints row, from its menu's "Edit a joint of b5…" (review M7). */
+  what: "edit" | "connector" | "replace" | "joints";
   /** Counts the asks, so asking again for the same thing opens it again. */
   n: number;
 }
@@ -99,6 +101,51 @@ const EDIT_CONNECTION: Action = {
     return copy === true ? canEdit() : copy;
   },
   run: (c) => askConnection(c, "edit"),
+};
+
+/** Opens a connection's fields from elsewhere (a bar's Joints row): selects it, then asks. */
+export function editConnection(id: string): void {
+  select([id], "replace");
+  ask(id, "edit");
+}
+
+/** The one document bar the context is about (a pattern copy has no joints of its own). */
+function oneDocBar(c: ActionContext): string | undefined {
+  const id = one(c);
+  return id && refKind(c.m, id) === "bar" && !id.includes("@") ? id : undefined;
+}
+
+/**
+ * The joint a bar's menu edits (review M7: a face joint cannot be reached from the plate): its one
+ * joint, or the one at the end whose face the menu was opened on; undefined when there are more.
+ */
+function barJoint(c: ActionContext): { bar: string; joints: BarJoint[]; one?: string } | undefined {
+  const bar = oneDocBar(c);
+  if (!bar) return undefined;
+  const joints = barJoints(c.m, bar);
+  if (joints.length === 0) return undefined;
+  const face = c.hit?.id === bar ? c.hit.face : undefined;
+  const atEnd = face === "a" || face === "b" ? joints.filter((j) => j.ends.includes(face)) : [];
+  const one = joints.length === 1 ? joints[0]?.id : atEnd.length === 1 ? atEnd[0]?.id : undefined;
+  return { bar, joints, ...(one ? { one } : {}) };
+}
+
+const EDIT_JOINT: Action = {
+  id: "edit-joint",
+  title: (c) => {
+    const j = barJoint(c);
+    return j?.one ? `Edit ${j.one}…` : `Edit a joint of ${j?.bar ?? "the bar"}…`;
+  },
+  group: "connection",
+  help: "Edit a joint the bar takes part in, face joints included",
+  applies: (c) => barJoint(c) !== undefined,
+  when: (c) => (barJoint(c) ? canEdit() : "select a bar with a joint"),
+  run(c) {
+    const j = barJoint(c);
+    if (!j) return;
+    if (j.one) editConnection(j.one);
+    else ask(j.bar, "joints");
+  },
 };
 
 /** The connection types a connector is chosen for: a face joint names fasteners instead. */
@@ -193,7 +240,9 @@ const REPLACE_PART: Action = {
 
 /** Registers the connection, pattern and part actions; returns the undo. */
 export function editActions(): () => void {
-  const offs = [EDIT_CONNECTION, CHANGE_CONNECTOR, EXPLODE, REPLACE_PART].map(registerAction);
+  const offs = [EDIT_CONNECTION, EDIT_JOINT, CHANGE_CONNECTOR, EXPLODE, REPLACE_PART].map(
+    registerAction,
+  );
   return () => {
     for (const off of offs) off();
   };

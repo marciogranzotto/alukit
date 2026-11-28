@@ -155,34 +155,26 @@ describe("the seeded actions", () => {
     offs.push(inspectorActions(), viewActions());
     const c: ActionContext = { m: cart, selection: new Set(["b1"]), from: "view" };
     const entries = menuEntries(c);
-    expect(entries.map((e) => e.id)).toEqual([
-      "delete",
-      "join-end",
-      "replace",
-      "fit",
-      "show",
-      "hide",
-      "isolate",
-    ]);
+    // No Show on a drawn bar (review m10), and no Join: b1's foot meets nothing and its top is
+    // joined, so the check finds no open corner on it (m12).
+    expect(entries.map((e) => e.id)).toEqual(["delete", "replace", "fit", "hide", "isolate"]);
     const by = Object.fromEntries(entries.map((e) => [e.id, e]));
     expect(by.delete?.enabled).toBe(true);
     expect(by.replace?.enabled).toBe(true);
-    expect(by.show?.enabled).toBe(true);
     // No view in a unit test: Fit says why.
     expect(by.fit?.enabled).toBe("the view is not ready");
-    // b1's end a is open (inspector.test.ts) and its end b is joined: the menu by end b says so.
+    // By its end b, still no Join; asked about end a from its row, Join says why it cannot.
     const nearB = menuEntries({
       ...c,
       hit: { id: "b1", p: cart.derived.bars.b1?.b as never, normal: [0, 0, 1], face: "b" },
     }).find((e) => e.id === "join-end");
-    expect(nearB?.title).toBe("Join b1.b");
-    expect(nearB?.enabled).toMatch(/^b1\.b /);
+    expect(nearB).toBeUndefined();
     const a = actionsFor({ ...c, ref: "b1.a" }).find((x) => x.action.id === "join-end");
-    expect(a?.enabled).toBe(true);
+    expect(a?.enabled).toMatch(/^b1\.a nothing joins it/);
     // A part has no ends to join and no profile to replace.
     const part = Object.keys(cart.derived.parts)[0] as string;
     const onPart = menuEntries({ ...c, selection: new Set([part]) }).map((e) => e.id);
-    expect(onPart).toEqual(["delete", "fit", "show", "hide", "isolate"]);
+    expect(onPart).toEqual(["delete", "fit", "hide", "isolate"]);
     // Delete works in Select only, and says so in a tool.
     activeTool.value = "draw";
     expect(runAction("delete", c)).toBe("Delete works in Select: press Esc first");
@@ -204,7 +196,6 @@ describe("the selection verbs and the view's visibility (E2.2, E2.4)", () => {
       "select-connected",
       "select-assembly",
       "fit",
-      "show",
       "hide",
       "isolate",
     ]);

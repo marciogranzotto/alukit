@@ -1,7 +1,8 @@
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
-import { helpSections } from "../actions/registry.ts";
+import { helpSections, keyCaps } from "../actions/registry.ts";
 import { describeKeys, type KeyHelpRow, letterKeys, onKey, setLetterKeys } from "../keys.ts";
+import { isMac } from "../platform.ts";
 import { navigation, setNavigation } from "../viewport/navigation.ts";
 import { Dialog } from "./Dialog.tsx";
 import { showStart } from "./start.ts";
@@ -37,8 +38,8 @@ function describeOthers(): () => void {
       title: "Everywhere",
       order: 60,
       rows: [
-        { keys: ["Ctrl", "Z"], does: "Undo the last step (it says whose step it is)" },
-        { keys: ["Ctrl", "Shift", "Z"], does: "Redo" },
+        { keys: keyCaps("mod+z"), does: "Undo the last step (it says whose step it is)" },
+        { keys: keyCaps("mod+shift+z"), does: "Redo" },
         { keys: ["?"], does: "This help" },
         { keys: ["Esc"], does: "Leave Show, close a dialog or the catalog" },
       ],
@@ -61,13 +62,20 @@ const SNAPS: readonly [string, string][] = [
   ["free", "nowhere in particular: Shift-drawing, or nothing near"],
 ];
 
-/** A row's keys: each chord's caps joined by +, its alternatives after "or". */
+/** A modifier as a Mac's keyboard writes it (review m5): the rows name Ctrl, Alt and Shift. */
+const MAC_CAP: Readonly<Record<string, string>> = { Ctrl: "⌘", Alt: "⌥", Shift: "⇧" };
+
+/**
+ * A row's keys: each chord's caps joined by +, its alternatives after "or"; on a Mac the
+ * modifiers are ⌘ ⌥ ⇧, run together with the key as its menus write them.
+ */
 function Caps({ row }: { row: KeyHelpRow }) {
+  const mac = isMac();
   const chord = (keys: readonly string[]) =>
     keys.map((k, i) => (
       <span key={k}>
-        {i > 0 && " + "}
-        <kbd>{k}</kbd>
+        {i > 0 && !mac && " + "}
+        <kbd>{mac ? (MAC_CAP[k] ?? k) : k}</kbd>
       </span>
     ));
   return (
@@ -111,7 +119,7 @@ function HelpDialog() {
               onChange={(e) => setLetterKeys((e.currentTarget as HTMLInputElement).checked)}
             />{" "}
             Single-key shortcuts (a letter, a digit, <kbd>/</kbd>, <kbd>?</kbd>). Off, only the
-            buttons and the keys with Ctrl or Cmd act; typing into a tool still works.
+            buttons and the keys with {isMac() ? "⌘" : "Ctrl"} act; typing into a tool still works.
           </label>
           <fieldset class="help-switch help-nav">
             <legend>Navigating the view</legend>

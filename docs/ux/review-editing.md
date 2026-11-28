@@ -52,7 +52,7 @@ seven majors after them, a designer could build and change a small-to-medium fra
 and trust what it orders. Until then they must check every copy and every clicked rail by hand,
 which is the work AluKit exists to remove.
 
-**Counts:** 3 blockers, 7 majors, 14 minors, 5 nits.
+**Counts:** 3 blockers, 7 majors, 14 minors, 5 nits. *(Corrected 2026-11-27: the minors' table lists 15, m1–m15; the count said 14.)*
 
 ## 2. Method
 
@@ -185,6 +185,8 @@ nothing warns.** (A8)
   The e2e uses `fill`, which sets the value without keystrokes, so it never sees it.
 - *Fix:* focus once when the form opens (an effect with no dependencies, or `autoFocus`), on the
   field the menu entry named (the distance it offered). Test it by typing, not `fill`.
+- **Fixed** (2026-11-27, [review fixes, app](review-fixes-app-decisions.md) 1): the form focuses and selects the distance once, when it
+  opens; `edit.spec` types 20 and M6 and stores them so.
 
 **M3. A hole's distance means two things.**
 
@@ -209,6 +211,8 @@ nothing warns.** (A8)
   first Esc only clears the digits.
 - *Fix:* during a drag, Esc ends the gesture whatever is typed; Backspace clears digits. Blender
   and Fusion cancel a transform on Esc. Keep the levels for the click-click gestures.
+- **Fixed** (2026-11-27, [review fixes, app](review-fixes-app-decisions.md) 2): Esc ends a held drag whatever is typed; a click-move
+  gesture keeps its levels; `ends.spec` holds it.
 
 **M5. In the light theme the tools' labels in the view are unreadable.**
 
@@ -219,6 +223,8 @@ nothing warns.** (A8)
   `tokens.css` says the tip is "dark in both themes, its text is `--tip-ink`".
 - *Fix:* `color: var(--tip-ink)`. WCAG 2.2 1.4.3 asks 4.5:1; the project's own rule is AA in both
   themes. A test that reads every overlay label's contrast in both themes would hold it.
+- **Fixed** (2026-11-27, [review fixes, app](review-fixes-app-decisions.md) 3): every view label draws `--tip-ink`, the gizmo's letters the
+  ink their disc needs; `labels.spec` reads every label and tip in both themes, ≥ 4.5:1.
 
 ![Light theme, Move: the readout under the length label is dark on dark](img/review-editing/06-move-label-1440-light.png)
 
@@ -249,26 +255,29 @@ nothing warns.** (A8)
   "held by c36 (face joint)" on the ends rather than "open"; offer Join only where it would
   succeed (the `unconnected` problem already checks that, e1 9). Tekla edits a connection from its
   symbol (audit §4.5); here the bar is what a person clicks.
+- **Fixed** (2026-11-27, [review fixes, app](review-fixes-app-decisions.md) 4): the ends say "held by c36 (face joint)", "open" only by the
+  check, Join only where the problem list joins (else its reason); a **Joints** row lists the
+  bar's joints with Edit, and the menu has **Edit c36…**; `bar-joints.spec` holds both.
 
 ### Minors
 
 | # | Finding | Evidence | Fix |
 |---|---|---|---|
-| m1 | **Edit** on a param opens its field without focusing it: typing goes nowhere (A2 (i), whose guide line says "Edit beside W, type 1100") | *Measured* twice: the focus stays on "Edit W" | Focus and select the field on Edit, as the inspector's own fields do |
-| m2 | Duplicate copies the label and tags: the rail 300 below the top reads "top rail, front" and is tagged `top`, so **Select tagged top** and `H` take it | *Measured*: b18's label and tags | Keep the tags but number the copy's label ("top rail, front 2"), as CAD tools number copied instances (**inferred**) |
-| m3 | A refused Move speaks the API: "give joined: \"detach\" to free it"; and Enter sends a step the preview already knew was refused (HTTP 422) | *Measured* | Say "hold Alt to detach it"; keep the gesture open and say it in the bar instead of posting |
-| m4 | Every gesture's field is named "Draw bar: value" for a screen reader (Move, Duplicate, Mirror, Align, an end drag) | *Measured* (accessibility tree); *read* `tools/CommandBar.tsx:455` passes `tool="draw"` | Name it by the gesture: "Move: offset", "Mirror: plane at" |
-| m5 | Key caps say Ctrl on macOS (menu "Ctrl+D", inspector "Ctrl+C", help "Ctrl Z"), Alt for Option | *Measured* on a Mac user agent; *read* `actions/registry.ts:122` `mod: "Ctrl"` | ⌘ and ⌥ on macOS (Apple HIG, keyboards) |
-| m6 | The selection's length label and the tool's readout collide: on top of each other at 1000 × 700, touching at 1440 | *Measured* (label rectangles, screenshots) | Put the selection label in the labels' `avoid` list (`viewer/labels.ts`), or show one combined label while a gesture runs |
-| m7 | At 1000 × 700 the orientation gizmo lies under the tool rail; its axis buttons are covered | *Measured*: gizmo at (284, 252) 72 × 72, rail down to y = 321 | Anchor the gizmo below the rail's measured height, or bottom-right |
-| m8 | Pattern previews nothing before **Create**, and its prompt stays "Click the bar to repeat along" after along, pitch and count are set | *Measured* twice | Ghost copies and a dry-run reading, as Duplicate's `4x` has; a prompt that moves on |
-| m9 | Faces are named in section axes only: on a rolled 40 × 80 leg the face that looks +X is "-y" in the snap tip, the menu, and the hole and part face selects; the Offset rows already say "(world +Y)" | *Measured*: b3 rolled 90° has section y along world −X | Add the world direction everywhere a face is named: "face −y (+X)" |
-| m10 | The menu's **Show**, beside Hide, zooms to the bar and opens a callout that says only "b5 / b5"; it reads as un-hide, and **Fit to the selection** is right above it | *Measured* | Drop it from a visible entity's menu, or name it for what it does |
-| m11 | The menu's letter jump takes `D` to **Delete**, not Duplicate (whose key is Ctrl+D); the dialog then focuses "Delete all n", so a typed space deletes | *Measured*: Shift+F10, D, Enter, then typing an offset deleted b18 and its two joints | Give each entry its own access key (Duplicate D, Delete L), as menu access keys do |
-| m12 | **Join** on an end that cannot be joined is offered and then refused (the plate, a face-drawn rail) | *Measured* | Offer Join only where `autoConnect` would make it, as the `unconnected` problem already decides (e1 9) |
-| m13 | The start card's **Joined with** lists all 33 connectors that fit the profile, with no default, including a 180° extender, a latch plate and an X plate that cannot make a corner | *Measured* | Corner brackets first, one preselected, the rest under "other connectors"; MISUMI offers a bracket only where two bars join (audit §4.5) |
-| m14 | In the outline, Shift + arrow does not extend the selection | *Measured*; *read* `outline/Outline.tsx` handles Ctrl and Meta only | WAI-ARIA APG tree view, multi-select: Shift + arrow extends |
-| m15 | A part dragged along its bar lands on any millimetre (427 for a drag toward 450), while drawing snaps to a 10 mm grid | *Measured* | Snap the slide to the grid and to other stations; Shift for free |
+| m1 | **Edit** on a param opens its field without focusing it: typing goes nowhere (A2 (i), whose guide line says "Edit beside W, type 1100") | *Measured* twice: the focus stays on "Edit W" | Focus and select the field on Edit, as the inspector's own fields do — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 5) |
+| m2 | Duplicate copies the label and tags: the rail 300 below the top reads "top rail, front" and is tagged `top`, so **Select tagged top** and `H` take it | *Measured*: b18's label and tags | Keep the tags but number the copy's label ("top rail, front 2"), as CAD tools number copied instances (**inferred**) — **Left for the core**: the copy is the core's `array` command, and the CLI's copy must number it the same way ([review fixes, app](review-fixes-app-decisions.md)) |
+| m3 | A refused Move speaks the API: "give joined: \"detach\" to free it"; and Enter sends a step the preview already knew was refused (HTTP 422) | *Measured* | Say "hold Alt to detach it"; keep the gesture open and say it in the bar instead of posting — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 6) |
+| m4 | Every gesture's field is named "Draw bar: value" for a screen reader (Move, Duplicate, Mirror, Align, an end drag) | *Measured* (accessibility tree); *read* `tools/CommandBar.tsx:455` passes `tool="draw"` | Name it by the gesture: "Move: offset", "Mirror: plane at" — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 7) |
+| m5 | Key caps say Ctrl on macOS (menu "Ctrl+D", inspector "Ctrl+C", help "Ctrl Z"), Alt for Option | *Measured* on a Mac user agent; *read* `actions/registry.ts:122` `mod: "Ctrl"` | ⌘ and ⌥ on macOS (Apple HIG, keyboards) — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 8) |
+| m6 | The selection's length label and the tool's readout collide: on top of each other at 1000 × 700, touching at 1440 | *Measured* (label rectangles, screenshots) | Put the selection label in the labels' `avoid` list (`viewer/labels.ts`), or show one combined label while a gesture runs — **Fixed**, by the avoid list ([review fixes, app](review-fixes-app-decisions.md) 9) |
+| m7 | At 1000 × 700 the orientation gizmo lies under the tool rail; its axis buttons are covered | *Measured*: gizmo at (284, 252) 72 × 72, rail down to y = 321 | Anchor the gizmo below the rail's measured height, or bottom-right — **Fixed**, beside the rail when it reaches the gizmo ([review fixes, app](review-fixes-app-decisions.md) 10) |
+| m8 | Pattern previews nothing before **Create**, and its prompt stays "Click the bar to repeat along" after along, pitch and count are set | *Measured* twice | Ghost copies and a dry-run reading, as Duplicate's `4x` has; a prompt that moves on — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 11) |
+| m9 | Faces are named in section axes only: on a rolled 40 × 80 leg the face that looks +X is "-y" in the snap tip, the menu, and the hole and part face selects; the Offset rows already say "(world +Y)" | *Measured*: b3 rolled 90° has section y along world −X | Add the world direction everywhere a face is named: "face −y (+X)" — **Fixed**, written "face −y (world +X)" ([review fixes, app](review-fixes-app-decisions.md) 12) |
+| m10 | The menu's **Show**, beside Hide, zooms to the bar and opens a callout that says only "b5 / b5"; it reads as un-hide, and **Fit to the selection** is right above it | *Measured* | Drop it from a visible entity's menu, or name it for what it does — **Fixed**: Show draws a hidden selection again, offered only then ([review fixes, app](review-fixes-app-decisions.md) 13) |
+| m11 | The menu's letter jump takes `D` to **Delete**, not Duplicate (whose key is Ctrl+D); the dialog then focuses "Delete all n", so a typed space deletes | *Measured*: Shift+F10, D, Enter, then typing an offset deleted b18 and its two joints | Give each entry its own access key (Duplicate D, Delete L), as menu access keys do — **Fixed**, and Delete's dialog focuses Cancel ([review fixes, app](review-fixes-app-decisions.md) 14) |
+| m12 | **Join** on an end that cannot be joined is offered and then refused (the plate, a face-drawn rail) | *Measured* | Offer Join only where `autoConnect` would make it, as the `unconnected` problem already decides (e1 9) — **Fixed** with M7 ([review fixes, app](review-fixes-app-decisions.md) 4) |
+| m13 | The start card's **Joined with** lists all 33 connectors that fit the profile, with no default, including a 180° extender, a latch plate and an X plate that cannot make a corner | *Measured* | Corner brackets first, one preselected, the rest under "other connectors"; MISUMI offers a bracket only where two bars join (audit §4.5) — **Fixed** in part: corner joints first, the rest after, the 180° extender classed a splice and no longer offered; **declined**: one preselected, since call 118 and review B1 keep the corners' joint the person's choice ([review fixes, app](review-fixes-app-decisions.md) 15) |
+| m14 | In the outline, Shift + arrow does not extend the selection | *Measured*; *read* `outline/Outline.tsx` handles Ctrl and Meta only | WAI-ARIA APG tree view, multi-select: Shift + arrow extends — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 16) |
+| m15 | A part dragged along its bar lands on any millimetre (427 for a drag toward 450), while drawing snaps to a 10 mm grid | *Measured* | Snap the slide to the grid and to other stations; Shift for free — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 17) |
 
 ![1000 × 700, light: the Duplicate readout over the length label (m6)](img/review-editing/07-labels-collide-1000-light.png)
 
@@ -278,11 +287,11 @@ nothing warns.** (A8)
 
 | # | Finding | Fix |
 |---|---|---|
-| n1 | The delete dialog: "Delete 1 thing?" and **Delete all 1** | "Delete b14?" and **Delete** (all n only when n > 1) |
-| n2 | Undo names repeat the verb: "change b1's roll, change b2's roll and 2 more" | "change the roll of b1, b2, b3 and b4" |
-| n3 | Move's label "keeps b18.a z: H - 300 - 100" reads as "unchanged" and leaves the sum unsimplified | "writes z = H − 400" |
-| n4 | The inspector's verbs disabled under another tool say "in Select or Move", where Delete says "press Esc first" | One wording: "press Esc first" |
-| n5 | The hover tip stays up during a drag, over the readout | Hide it while a gesture runs |
+| n1 | The delete dialog: "Delete 1 thing?" and **Delete all 1** | "Delete b14?" and **Delete** (all n only when n > 1) — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 14) |
+| n2 | Undo names repeat the verb: "change b1's roll, change b2's roll and 2 more" | "change the roll of b1, b2, b3 and b4" — **Left for the core**: the undo names are the core's (`core/commands/words.ts`) ([review fixes, app](review-fixes-app-decisions.md)) |
+| n3 | Move's label "keeps b18.a z: H - 300 - 100" reads as "unchanged" and leaves the sum unsimplified | "writes z = H − 400" — **Fixed** in part: "writes"; folding the sum is the core's ([review fixes, app](review-fixes-app-decisions.md) 18) |
+| n4 | The inspector's verbs disabled under another tool say "in Select or Move", where Delete says "press Esc first" | One wording: "press Esc first" — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 18) |
+| n5 | The hover tip stays up during a drag, over the readout | Hide it while a gesture runs — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 18) |
 
 ## 5. Beyond §12, by theme
 

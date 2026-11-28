@@ -325,6 +325,7 @@ export function FrameForm({
           value={joint}
           systems={systems}
           lead={lead}
+          corner
           disabled={busy.value}
           onChange={(v) => setOptions({ joint: v })}
         />

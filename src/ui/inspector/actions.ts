@@ -1,10 +1,11 @@
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { type Action, type ActionContext, registerAction } from "../actions/registry.ts";
-import { busy, sendCommands } from "../store.ts";
+import { busy, problems, sendCommands } from "../store.ts";
 import { activeTool } from "../tools/state.ts";
 import { startDelete } from "./Delete.tsx";
 import { readOnly } from "./Fields.tsx";
+import { joinVerdict } from "./joints.ts";
 import { endWords } from "./words.ts";
 
 /**
@@ -61,6 +62,7 @@ const DELETE: Action = {
   title: (c) => ([...c.selection].every((id) => id.includes("@")) ? "Leave out" : "Delete"),
   group: "edit",
   keys: ["delete", "backspace"],
+  access: "l",
   help: "Delete the selection in Select; what else goes is listed first",
   applies: (c) => c.selection.size > 0,
   when(c) {
@@ -79,12 +81,21 @@ const JOIN_END: Action = {
     return "why" in e ? "Join an end" : `Join ${e.bar}.${e.end}`;
   },
   group: "bar",
-  applies: (c) => oneBar(c) !== undefined || END.test(c.ref ?? ""),
+  // On a bar the check finds open at an end (review M7: not on a plate a face joint holds).
+  applies: (c) => {
+    if (END.test(c.ref ?? "")) return true;
+    const bar = oneBar(c);
+    return bar !== undefined && (["a", "b"] as const).some((e) => endWords(c.m, bar, e).open);
+  },
   when(c) {
     const e = joinEnd(c);
     if ("why" in e) return e.why;
     const w = endWords(c.m, e.bar, e.end);
     if (!w.open) return `${e.bar}.${e.end} ${w.text}`;
+    // Offered only where the problem list offers the join, the rule autoConnect applies (m12).
+    const v = joinVerdict(c.m, `${e.bar}.${e.end}`, problems.peek());
+    if (v === undefined) return "checking whether the default butt can join it";
+    if (!v.ok) return v.why;
     if (readOnly()) return "the project is read-only";
     if (busy.peek()) return "a step is on its way";
     return true;

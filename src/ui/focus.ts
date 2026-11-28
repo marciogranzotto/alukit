@@ -162,6 +162,13 @@ export function isolate(m: Model, refs: readonly string[]): void {
   hidden.value = new Set(drawnBodies(m).filter((id) => !keep.has(id)));
 }
 
+/** Shows again what draws the refs, where it is hidden (the menu's Show, review m10). */
+export function unhide(m: Model, refs: readonly string[]): void {
+  const on = new Set(bodiesOf(m, refs));
+  const next = [...hidden.peek()].filter((id) => !on.has(id));
+  if (next.length !== hidden.peek().size) hidden.value = new Set(next);
+}
+
 /** Shows everything again. */
 export function showAll(): void {
   if (hidden.peek().size > 0) hidden.value = new Set();

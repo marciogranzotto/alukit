@@ -114,6 +114,40 @@ test("Esc cancels a drag: no step, nothing written", async ({ page }) => {
   await expect(page.getByTestId("properties").locator("h2")).toContainText("b3");
 });
 
+test("Esc ends a drag with a cut typed: the release sends nothing (review M4)", async ({
+  page,
+}) => {
+  served = await serve("ux/ends");
+  await openTab(page, served, 0);
+  await pick(page, "b3");
+  const b = await handle(page, "b");
+  const before = await readFile(join(served.dir, "alukit.json"), "utf8");
+  await dragTo(page, b.at, await screen(page, [500, 100, 0]));
+  await expect.poll(() => page.evaluate(() => window.__alukit?.gesture()?.kind)).toBe("end");
+  // A cut typed while the button is still held, then Esc: the drag ends, whatever is typed.
+  await page.keyboard.type("500");
+  await expect(page.getByTestId("command-value")).toHaveValue("500");
+  await page.keyboard.press("Escape");
+  await expect.poll(() => page.evaluate(() => window.__alukit?.gesture())).toBeUndefined();
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.__alukit?.drawnRev())).toBe(0);
+  expect(await readFile(join(served.dir, "alukit.json"), "utf8")).toBe(before);
+
+  // A click-move gesture keeps its levels: the first Esc takes back what is typed, the second
+  // ends the gesture.
+  const again = await handle(page, "b");
+  await page.mouse.click(again.at[0], again.at[1]);
+  await expect.poll(() => page.evaluate(() => window.__alukit?.gesture()?.kind)).toBe("end");
+  await page.keyboard.type("450");
+  await page.keyboard.press("Escape");
+  await expect.poll(() => page.evaluate(() => window.__alukit?.gesture()?.kind)).toBe("end");
+  await expect(page.getByTestId("command-value")).toHaveValue("");
+  await page.keyboard.press("Escape");
+  await expect.poll(() => page.evaluate(() => window.__alukit?.gesture())).toBeUndefined();
+  expect(await page.evaluate(() => window.__alukit?.drawnRev())).toBe(0);
+});
+
 test("a length typed during a drag sets the cut: click the handle, type, Enter", async ({
   page,
 }) => {
@@ -303,7 +337,9 @@ test("stop at a face: b3's end b stops on b1's near face, from its row or picked
   // From the row: the faces b3's line meets, the nearest first.
   await page.getByTestId("end-plane-b").selectOption("face");
   const faces = page.getByTestId("end-face-b");
-  await expect(faces.locator("option").nth(1)).toHaveText("b1's face +x · 280 mm longer");
+  await expect(faces.locator("option").nth(1)).toHaveText(
+    "b1's face +x (world +Y) · 280 mm longer",
+  );
   await faces.selectOption({ index: 1 });
   await waitDrawn(page, 1);
   expect((await doc(served.dir)).bars.b3?.ends).toEqual({

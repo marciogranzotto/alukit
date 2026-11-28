@@ -6,7 +6,7 @@ import {
   type ActionContext,
   type ActionGroup,
   actionsFor,
-  keyCaps,
+  keyText,
   runAction,
   titleOf,
 } from "./registry.ts";
@@ -53,7 +53,7 @@ export function ActionButtons({ m }: { m: Model }) {
             }}
           >
             {title}
-            {first && <kbd>{keyCaps(first).join("+")}</kbd>}
+            {first && <kbd>{keyText(first)}</kbd>}
           </button>
         );
       })}

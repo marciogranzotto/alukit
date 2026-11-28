@@ -151,7 +151,7 @@ describe("the Move tool", () => {
       if ("why" in two) throw new Error(two.why);
       const up = await h.dry(transformBatch(two, [0, 0, 100], false, undefined));
       expect(moveWords(up as DryRun, false).text).toMatch(
-        /^this move would break a joint: .* · Alt: detach$/,
+        /^this move would break a joint: .* · hold Alt to detach it$/,
       );
       const freed = await h.dry(transformBatch(two, [0, 0, 100], true, undefined));
       // b1 no longer covers b2's end at the corner, so it loses its 20 too.

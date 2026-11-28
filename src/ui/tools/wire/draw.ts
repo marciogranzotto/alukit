@@ -195,8 +195,10 @@ export function createDrawTool(ctx: WireContext): Wire {
       plane: workPlane.value === GROUND ? undefined : workPlane.value,
     });
     const what = under ? under.label : current?.label;
+    // A face is said with the world direction it faces (review m9); `what` stays the machine's.
+    const said = under ? under.label : (current?.tip ?? current?.label);
     const text = [
-      t.kind === "empty" ? what : end?.label,
+      t.kind === "empty" ? said : end?.label,
       length !== undefined ? `${fmt(length)} mm` : undefined,
       t.kind === "error" ? t.why : undefined,
     ]

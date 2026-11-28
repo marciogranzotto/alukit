@@ -96,7 +96,8 @@ describe("holes (E4.4)", () => {
     expect(holeHere(c)).toEqual({ bar: "b1", face: "+y", at_mm: 300 });
     const entry = actionsFor(c).find((x) => x.action.id === "add-hole");
     expect(entry && titleOf(entry.action, c)).toBe(
-      "Add a hole on b1's face +y, 300 mm from end a…",
+      // The face with the way it looks in the world (review m9).
+      "Add a hole on b1's face +y (world +Y), 300 mm from end a…",
     );
     // On an end face, no hole: holes go in a side.
     const hit = c.hit;

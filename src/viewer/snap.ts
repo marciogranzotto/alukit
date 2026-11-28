@@ -30,6 +30,11 @@ export interface Snap {
   ref: SnapRef;
   /** What the indicator says: "end b1.b", "b1 -x face at 100". */
   label: string;
+  /**
+   * The label as a person reads it, when it says more: a face with the world direction it faces,
+   * "b3 -y face (world +X) at 560" (review m9). `label` stays the machine's.
+   */
+  tip?: string;
   kind: "point" | "line" | "grid" | "free";
   /** For a line: its direction, so a constrained line can meet it. */
   line?: { a: V3; t: V3; len: number };
@@ -40,6 +45,8 @@ export interface SnapPoint {
   p: V3;
   ref: SnapRef;
   label: string;
+  /** The label as a person reads it, when it says more (a face's world direction). */
+  tip?: string;
   rank: number;
   /** The entity it belongs to: its node, bar (a copy by its own id) or part. */
   of: string;
@@ -56,6 +63,14 @@ export interface SnapLine {
   /** A pattern copy's line: a point on it is written as coordinates, not a station. */
   copy: boolean;
   label: string;
+  /** A face's world direction, when it faces along an axis: `+X` (review m9). */
+  world?: string;
+}
+
+/** The world axis a unit vector runs along, signed (`-Y`), when it runs along one. */
+function worldDir(v: V3): string | undefined {
+  const i = [0, 1, 2].find((k) => Math.abs(Math.abs(v[k] as number) - 1) < 1e-6);
+  return i === undefined ? undefined : `${(v[i] as number) > 0 ? "+" : "-"}${"XYZ"[i]}`;
 }
 
 export interface SnapTargets {
@@ -242,11 +257,24 @@ export function snapTargets(m: SnapModel): SnapTargets {
     for (const face of FACES) {
       const [lx, ly] = faceLocal(bar.box_mm, face);
       const a = at(lx, ly);
-      lines.push({ bar: id, a, t, len, face, copy, label: `${id} ${face} face` });
+      const axis = face.endsWith("x") ? bar.frame.x : bar.frame.y;
+      const sign = face.startsWith("-") ? -1 : 1;
+      const world = worldDir([axis[0] * sign, axis[1] * sign, axis[2] * sign]);
+      lines.push({
+        bar: id,
+        a,
+        t,
+        len,
+        face,
+        copy,
+        label: `${id} ${face} face`,
+        ...(world ? { world } : {}),
+      });
       points.push({
         p: addScaled(a, t, len / 2),
         ref: copy ? { kind: "free" } : { kind: "station", bar: id, at_mm: q(len / 2), face },
         label: `${id} ${face} face centre`,
+        ...(world ? { tip: `${id} ${face} face (world ${world}) centre` } : {}),
         rank: 1,
         of: id,
       });
@@ -344,6 +372,7 @@ export function lineSnap(l: SnapLine, s: number): Snap {
     p,
     ref,
     label: `${l.label} at ${at}`,
+    ...(l.world ? { tip: `${l.label} (world ${l.world}) at ${at}` } : {}),
     kind: "line",
     line: { a: l.a, t: l.t, len: l.len },
   };
@@ -374,7 +403,17 @@ export function findSnap(targets: SnapTargets, o: SnapOptions): Snap | undefined
     const score = Math.sqrt(d2) + pt.rank * 3;
     const z = depth(pt.p);
     if (!best || score < best.score - 0.5 || (score <= best.score + 0.5 && z < best.depth)) {
-      best = { snap: { p: pt.p, ref: pt.ref, label: pt.label, kind: "point" }, score, depth: z };
+      best = {
+        snap: {
+          p: pt.p,
+          ref: pt.ref,
+          label: pt.label,
+          ...(pt.tip ? { tip: pt.tip } : {}),
+          kind: "point",
+        },
+        score,
+        depth: z,
+      };
     }
   }
   if (best) return best.snap;

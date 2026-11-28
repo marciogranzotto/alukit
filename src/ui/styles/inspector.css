@@ -147,6 +147,23 @@ table.kv .btn {
   margin-top: var(--sp-1);
 }
 
+/* A bar's joints (review M7): one line each, its words, chips and Edit */
+.joint-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.joint-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+}
+
 /* The inspector's action row (E-UX-1): the registry's actions on the selection, as buttons */
 .insp-actions {
   display: flex;

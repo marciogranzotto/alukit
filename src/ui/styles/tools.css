@@ -546,13 +546,12 @@
 /*
  * The tools' labels in the view (S3's `setLabel`): the joint preview by the end, the box frame's
  * size by its corner. Above and right of their point, so the tip by the pointer (below and right)
- * never covers them.
+ * never covers them. Their text is the tip's ink, as every view label's (viewport.css).
  */
 .view-label[data-label="joint"],
 .view-label[data-label="frame"] {
   margin: 0 0 0 12px;
   translate: 0 calc(-100% - 10px);
-  color: var(--text-1);
 }
 
 /*

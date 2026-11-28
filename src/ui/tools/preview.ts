@@ -50,6 +50,11 @@ export interface JointPreviewer {
   clear(): void;
   /** `clear`, and forgets the flipped rule: the gesture ended. */
   reset(): void;
+  /**
+   * The words of the dry run's refusal when it was of exactly these commands, so a commit the core
+   * already refused is not sent (review m3: Enter posted a step the preview knew was refused).
+   */
+  refused(cmds: readonly Cmd[] | undefined): string | undefined;
 }
 
 /**
@@ -155,6 +160,11 @@ export function createPreviewer(
     reset() {
       clear();
       flipped = undefined;
+    },
+    refused(cmds) {
+      const j = jointPreview.peek();
+      if (!cmds || !j || j.shape !== "refused") return undefined;
+      return j.key === JSON.stringify(cmds) ? j.text : undefined;
     },
   };
 }

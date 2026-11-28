@@ -51,14 +51,13 @@ describe("the menu on a connection, a pattern and a part (E5.6)", () => {
       ["edit-connection", "Edit c9…"],
       ["change-connector", "Change connector…"],
       ["fit", "Fit to the selection"],
-      ["show", "Show"],
       ["hide", "Hide"],
       ["isolate", "Isolate"],
     ]);
     expect(splice.find((e) => e.id === "edit-connection")?.enabled).toBe(true);
     expect(ids(on("c13"))).toContain("change-connector");
     expect(ids(on("c1"))).toContain("change-connector");
-    expect(ids(on("c23"))).toEqual(["delete", "edit-connection", "fit", "show", "hide", "isolate"]);
+    expect(ids(on("c23"))).toEqual(["delete", "edit-connection", "fit", "hide", "isolate"]);
     // A pattern copy's connection is edited through its template: greyed, saying so.
     const copy = menuEntries(on("c26@1")).find((e) => e.id === "edit-connection");
     expect(copy?.enabled).toBe("c26@1 is a pattern copy: change c26, its template");
@@ -87,7 +86,6 @@ describe("the menu on a connection, a pattern and a part (E5.6)", () => {
       "delete",
       "explode-pattern",
       "fit",
-      "show",
       "hide",
       "isolate",
     ]);
@@ -95,20 +93,14 @@ describe("the menu on a connection, a pattern and a part (E5.6)", () => {
     expect(menuEntries(on("b26@2")).find((e) => e.id === "explode-pattern")?.title).toBe(
       "Explode pt1",
     );
-    expect(ids(on("p1"))).toEqual(["delete", "replace-part", "fit", "show", "hide", "isolate"]);
+    expect(ids(on("p1"))).toEqual(["delete", "replace-part", "fit", "hide", "isolate"]);
     expect(runAction("replace-part", on("p1"))).toBe(true);
     expect(asked.value).toMatchObject({ id: "p1", what: "replace" });
-    // A bar's menu is as the inspector and the view made it (the view's Hide and Isolate: E2).
-    expect(ids(on("b1"))).toEqual([
-      "delete",
-      "join-end",
-      "replace",
-      "fit",
-      "show",
-      "hide",
-      "isolate",
-    ]);
+    // A bar's menu is as the inspector and the view made it (the view's Hide and Isolate: E2),
+    // with Edit for its joints (review M7). The post's foot meets nothing and its top is joined,
+    // so the check finds no open corner and Join is not offered (m12).
+    expect(ids(on("b1"))).toEqual(["delete", "replace", "edit-joint", "fit", "hide", "isolate"]);
     // Two selected: none of these is about one thing.
-    expect(ids(on("c9", "c13"))).toEqual(["delete", "fit", "show", "hide", "isolate"]);
+    expect(ids(on("c9", "c13"))).toEqual(["delete", "fit", "hide", "isolate"]);
   });
 });

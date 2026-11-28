@@ -398,8 +398,14 @@ export const toolPrompt = computed<string>(() => {
       } Click again to drop a pick.`;
     case "place":
       return "Click a face or a groove of a bar to place the part there; type a distance first to set it from the nearer end.";
-    case "pattern":
-      return "Click the bar to repeat along (or type a bar or run).";
+    case "pattern": {
+      // The prompt moves on as the form fills (review m8): what, along what, then Create.
+      const s = patternState.value;
+      if (s.template.filter((id) => !id.includes("@")).length === 0)
+        return "Select what to repeat, then use selection.";
+      if (!s.along) return "Click the bar to repeat along (or type a bar or run).";
+      return `Repeats along ${s.along}: set the pitch and the count, then Create makes the copies drawn. Click another bar to repeat along it.`;
+    }
     case "measure":
       return measureState.value.a && !measureState.value.b
         ? "Click the second point."

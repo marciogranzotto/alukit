@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { contrast, failures, PAIRS } from "./contrast.ts";
-import { COLOUR_TOKENS, COLOURS, viewTheme } from "./tokens.ts";
+import { COLOUR_TOKENS, COLOURS, inkOn, viewTheme } from "./tokens.ts";
 
 /**
  * The tokens as numbers (tokens.ts) and as CSS (src/ui/styles/tokens.css) are one set of values,
@@ -95,6 +95,19 @@ describe("tokens", () => {
     // The view's bodies and edges are C's rendering spec (S3); the export keeps its own palette
     // (D-UX-24), which src/viewer/theme.test.ts holds with the view's contrast rules.
   });
+
+  // The gizmo's X, Y and Z are 10 px text on their axis's disc: 4.5:1 (review M5's sweep).
+  it.each(["dark", "light"] as const)(
+    "writes each gizmo letter in an ink that reads on its axis (%s)",
+    (theme) => {
+      const axes = viewTheme(theme).overlay.axis;
+      const css = (n: number) => `#${n.toString(16).padStart(6, "0")}`;
+      for (const rgb of [axes.x, axes.y, axes.z]) {
+        const ink = COLOURS[theme][inkOn(rgb, theme)];
+        expect(contrast(css(rgb), css(ink)), css(rgb)).toBeGreaterThanOrEqual(4.5);
+      }
+    },
+  );
 });
 
 // The rule (§5.3): no colour literal outside the tokens. A `#rrggbb` string or a 0xRRGGBB number

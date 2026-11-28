@@ -95,8 +95,10 @@ describe("words (U12, U18)", () => {
     expect(endWords(cart, "b7", "a").refs).toEqual(["c1", "b5"]);
     // The splice c9 joins b11.b and b12.a.
     expect(endWords(cart, "b11", "b").text).toMatch(/^spliced to b12\.a \(c9\)/);
-    // A post's foot: nothing joins it.
-    expect(endWords(cart, "b1", "a")).toMatchObject({ open: true });
+    // A post's foot: nothing joins it, and nothing meets it there, so the check finds no open
+    // corner and no Join is offered (review m12: autoConnect would refuse it).
+    expect(endWords(cart, "b1", "a")).toMatchObject({ open: false });
+    expect(endWords(cart, "b1", "a").text).toMatch(/^nothing joins it, /);
   });
 
   it("names the joint that claims an end even when the joint fails (D2)", async () => {

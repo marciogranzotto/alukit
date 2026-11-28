@@ -1,7 +1,7 @@
 import { useState } from "preact/hooks";
 import { EntityChips } from "../common/EntityChip.tsx";
 import type { Model } from "../model.ts";
-import { busy } from "../store.ts";
+import { busy, problems } from "../store.ts";
 import { typedNumber } from "../tools/typed.ts";
 import { endPick } from "../tools/wire/ends.ts";
 import {
@@ -16,6 +16,7 @@ import {
   planeKind,
 } from "./endEdits.ts";
 import { CommitInput, Row, RowErrors, readOnly, useSend } from "./Fields.tsx";
+import { joinVerdict } from "./joints.ts";
 import { endWords } from "./words.ts";
 
 /**
@@ -60,6 +61,7 @@ function EndRow({ m, id, e }: { m: Model; id: string; e: End }) {
   const picking = pick?.bar === id && pick.end === e;
   const off = readOnly() || busy.value;
   const ref = `${id}.${e}`;
+  const join = w.open ? joinVerdict(m, ref, problems.value) : undefined;
   const frees = free ? ` (frees it from ${free.from.join(", ")})` : "";
 
   const sendPlane = (plane: Record<string, unknown>, angled: boolean, words: string) =>
@@ -78,17 +80,30 @@ function EndRow({ m, id, e }: { m: Model; id: string; e: End }) {
       <Row label={`End ${e}`} fields={[`ends.${e}`, e]} testid={`row-end-${e}`}>
         <div class="end-words">
           {w.text} {w.refs.length > 0 && <EntityChips ids={w.refs} />}
-          {w.open && (
-            <button
-              type="button"
-              class="btn"
-              data-testid={`join-end-${e}`}
-              disabled={off}
-              title="Butt it into what meets it there, by the project's corner rule, as one step"
-              onClick={() => void send([{ cmd: "autoConnect", args: { end: ref } }], `join ${ref}`)}
-            >
-              Join
-            </button>
+          {w.open && join?.ok === false ? (
+            // The check's own reason the default butt cannot join it here: no Join to refuse.
+            <span class="sub" data-testid={`join-end-why-${e}`}>
+              {join.why}
+            </span>
+          ) : (
+            w.open && (
+              <button
+                type="button"
+                class="btn"
+                data-testid={`join-end-${e}`}
+                disabled={off || join === undefined}
+                title={
+                  join === undefined
+                    ? "Checking whether the default butt can join it here"
+                    : "Butt it into what meets it there, by the project's corner rule, as one step"
+                }
+                onClick={() =>
+                  void send([{ cmd: "autoConnect", args: { end: ref } }], `join ${ref}`)
+                }
+              >
+                Join
+              </button>
+            )
           )}
           {free && (
             <button

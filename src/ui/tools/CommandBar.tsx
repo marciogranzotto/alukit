@@ -373,16 +373,19 @@ let focusServed = 0;
 
 /**
  * The value field: what is typed, with what it comes to beside it. A drag gesture gives its own
- * reading and placeholder, and shows the joint preview as the draw tool does.
+ * reading and placeholder, and shows the joint preview as the draw tool does, and its own name for
+ * a screen reader ("Move b2: distance", review m4), never the draw tool's.
  */
 function ValueField({
   tool,
   reading,
   placeholder,
+  name,
 }: {
   tool: ToolName;
   reading?: string | undefined;
   placeholder?: string | undefined;
+  name?: string | undefined;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   // A layout effect: wired when the field is in the DOM, before the next key can arrive.
@@ -415,7 +418,7 @@ function ValueField({
   return (
     <>
       <label class="cb-value">
-        <span class="sr-only">{`${TOOL_NAMES[tool]}: value`}</span>
+        <span class="sr-only">{name ?? `${TOOL_NAMES[tool]}: value`}</span>
         <input
           class="cb-field"
           ref={ref}
@@ -483,7 +486,12 @@ function GestureBar({ g }: { g: Gesture }) {
       <span class="cb-prompt" data-testid="command-prompt" title={g.prompt} aria-live="polite">
         {g.prompt}
       </span>
-      <ValueField tool="draw" reading={g.reading} placeholder={how.placeholder} />
+      <ValueField
+        tool="draw"
+        reading={g.reading}
+        placeholder={how.placeholder}
+        name={`${g.title}: ${how.placeholder}`}
+      />
       {g.kind === "mirror" && <MirrorOptions />}
       <Result />
     </section>

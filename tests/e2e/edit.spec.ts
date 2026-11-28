@@ -467,7 +467,9 @@ test("holes (E-UX-22): a Ø7 hole 20 from end a on b1's +x face, as the CLI's se
   await pick(page, "b1");
   const menu = await contextMenu(page, await sideOf(page, served.dir, "b1", 300));
   await menu
-    .getByRole("menuitem", { name: /^Add a hole on b1's face [+-][xy], \d+ mm from end a…/ })
+    .getByRole("menuitem", {
+      name: /^Add a hole on b1's face [+-][xy] \(world [+-][XYZ]\), \d+ mm from end a…/,
+    })
     .click();
   const form = page.getByTestId("hole-form");
   await form.getByTestId("hole-face").selectOption("+x");
@@ -492,6 +494,39 @@ test("holes (E-UX-22): a Ø7 hole 20 from end a on b1's +x face, as the CLI's se
   await page.getByTestId("hole-0-remove").click();
   await waitDrawn(page, 3);
   expect((await written(served.dir)).bars?.b1).not.toHaveProperty("ops");
+});
+
+test("the hole form keeps the focus where the person types (review M2): typed 20 is stored as 20", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  served = await serve("base-frame/cli");
+  await openTab(page, served, 0);
+  await pick(page, "b1");
+  const menu = await contextMenu(page, await sideOf(page, served.dir, "b1", 300));
+  await menu.getByRole("menuitem", { name: /^Add a hole on b1's face/ }).click();
+  const form = page.getByTestId("hole-form");
+  // Typed key by key, as a hand does (`fill` sets the value without keystrokes): each key stays
+  // in the field it was typed in.
+  await form.getByTestId("hole-at").click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("20");
+  await expect(form.getByTestId("hole-at")).toHaveValue("20");
+  await expect(form.getByTestId("hole-at")).toBeFocused();
+  await form.getByTestId("hole-size").click();
+  await page.keyboard.type("M6");
+  await expect(form.getByTestId("hole-size")).toHaveValue("M6");
+  await page.keyboard.press("Enter");
+  await waitDrawn(page, 1);
+  expect((await written(served.dir)).bars?.b1).toMatchObject({
+    ops: [{ op: "hole", at_mm: 20, thread: "M6" }],
+  });
+  // Opened again from its button: the distance has the focus, selected, so typing replaces it.
+  await page.getByTestId("hole-new").click();
+  const at = page.getByTestId("hole-form").getByTestId("hole-at");
+  await expect(at).toBeFocused();
+  await page.keyboard.type("35");
+  await expect(at).toHaveValue("35");
 });
 
 test("a node's fields: moving the point three legs share moves every leg's end, as moveNode does", async ({

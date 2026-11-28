@@ -3,6 +3,7 @@ import type { Expr } from "#core/project/schema.ts";
 import type { V3 } from "../../mesh/model.ts";
 import type { DryRun } from "../client/dryrun.ts";
 import type { Model } from "../model.ts";
+import { modifierWord } from "../platform.ts";
 import type { JointWords } from "./joint.ts";
 import { parseTyped } from "./typed.ts";
 
@@ -156,7 +157,8 @@ export function moveWords(r: DryRun, detach: boolean): JointWords {
   if (!r.ok) {
     // The refusal's own words, without the batch's "command 1 (transform):" before them.
     const said = r.errors[0]?.message ?? r.why;
-    const hint = !detach && /joined: "detach"/.test(said) ? " · Alt: detach" : "";
+    const hint =
+      !detach && /joined: "detach"/.test(said) ? ` · hold ${modifierWord("alt")} to detach it` : "";
     const why = said.replace(/; give joined: "detach" to free (it|what joins it)/, "");
     return { text: `${why}${hint}`, shape: "refused", joins: false };
   }
@@ -180,7 +182,8 @@ export function moveWords(r: DryRun, detach: boolean): JointWords {
     ...(cuts.length > 0
       ? [`cut ${cuts.slice(0, 3).join(", ")}${cuts.length > 3 ? " …" : ""}`]
       : []),
-    ...(info?.kept?.length ? [`keeps ${info.kept[0]}`] : []),
+    // "writes", not "keeps": the move writes the expression anew (review n3).
+    ...(info?.kept?.length ? [`writes ${info.kept[0]}`] : []),
   ];
   return {
     text: parts.length > 0 ? parts.join(" · ") : "nothing else moves",

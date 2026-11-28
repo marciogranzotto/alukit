@@ -614,6 +614,9 @@ KIND_RULES: list[tuple[str, str, str, str | None]] = [
     ("name", r"(cantoneira|conector cantoneira)", "connector", "bracket"),
     ("name", r"conex[aã]o interna", "connector", "end-connector"),
     ("name", r"(conex[aã]o de topo|cubo de conex)", "connector", "cube"),
+    # The 180° extender joins two bars end to end, in line: a splice, never a corner (the editing
+    # review's m13 found it offered as a box frame's corner joint).
+    ("name", r"conector prolongador", "connector", "splice"),
     ("name", r"conector", "connector", "end-connector"),
     ("sku", r"(PL|PLT|PLQ|CA40|SFX|CFF20)[-0-9A-Z]*", "connector", "plate"),
     ("sku", r"PMV0\d-0\d-XX", "connector", "plate"),

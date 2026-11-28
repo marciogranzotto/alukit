@@ -94,6 +94,27 @@ test("adds an open item and resolves it, each one step that undo takes back", as
   expect(errors).toEqual([]);
 });
 
+test("Edit on a param takes the focus: typed after it, set with Enter; Esc gives it back (review m1)", async ({
+  page,
+}) => {
+  await openTab(page, served, 0);
+  const w = page.getByTestId("project-panel").getByTestId("params").locator('tr[data-param="W"]');
+  // As the guide's A2 line says: "Edit beside W, type 1100", with no click in the field.
+  await w.getByTestId("param-change").click();
+  await expect(w.getByTestId("param-edit")).toBeFocused();
+  await page.keyboard.type("1300");
+  await page.keyboard.press("Enter");
+  await waitDrawn(page, 1);
+  expect((await doc()).params?.W).toBe(1300);
+  // Esc cancels the field and the focus goes back to Edit, not to the page.
+  await w.getByTestId("param-change").click();
+  await page.keyboard.type("9");
+  await page.keyboard.press("Escape");
+  await expect(w.getByTestId("param-edit")).toHaveCount(0);
+  await expect(w.getByTestId("param-change")).toBeFocused();
+  expect(await page.evaluate(() => window.__alukit?.rev())).toBe(1);
+});
+
 test("sets a param and records a decision; a refusal is shown in the tab", async ({ page }) => {
   await openTab(page, served, 0);
   // The params are in the project panel, the inspector with nothing selected (D-UX-4, S2.12).

@@ -769,3 +769,41 @@ drawn and checked against but not built or bought. Each adds.*
 - **Test ids**: `frame-joint-suggested` (the box frame's bracket, a radio), `pattern-draw` (Pattern's
   Draw the bar to repeat), `draw-repeat` (the command bar's pending repeat); `frame-shelf` and
   `frame-params` are now outside More options (pu 3, 4).
+
+## Review fixes changes (the app)
+
+*The editing review's app-side fixes ([review-fixes-app-decisions.md](review-fixes-app-decisions.md),
+"rfa"). Each adds to an interface above; the owner stays the stream that made it.*
+
+- **A bar's joints** (`src/ui/inspector/joints.ts`, new, pure; E4's inspector): `openCorner(m, ref)`
+  (the check's `unconnected` diagnostic for an end that is open), `joinVerdict(m, ref, problems)`
+  (the problem list's verdict on Join: ok, or why not; undefined until that revision's problems
+  are read), `barJoints(m, bar)` (`BarJoint`: id, type, roles, the bar's ends in it, the others,
+  a face joint's stations), `holdingJoints`, `jointLine`, `JOINT_NOUN`. `Joints.tsx`
+  (`JointRows`, row `row-joints`, lines `joint-<id>`, buttons `joint-edit-<id>`) sits under the
+  ends in `BarFields.tsx`; `endWords` and `Ends.tsx` use the verdicts (rfa 4).
+- **Edit joint** (E5's `edit-actions.ts`): the action `edit-joint` ("Edit c36…", or "Edit a joint
+  of b35…" opening the row), `editConnection(id)`; `Asked.what` gains `"joints"` (rfa 4).
+- **Menu access keys** (E2's `ContextMenu.tsx`, S5's registry): `Action.access?` (a letter of its
+  title; Delete's is `l`), `MenuEntry.access`, `withAccessKeys(entries)`; the hook's `menu()`
+  entries carry `access`. `outlineMenu` leaves a menu that is already open as it is (rfa 14).
+- **Platform words** (`src/ui/platform.ts`, new): `isMac()`, `modifierWord(m)`, `capsText(caps)`;
+  the registry's `keyCaps` gives ⌥ ⇧ ⌘ on a Mac, and `keyText(k)` a key as one string (rfa 8).
+- **Tokens** (S1's `theme/tokens.ts`): `act-ink` joins the mirror; `inkOn(rgb, theme)`, the ink
+  of `act-ink` and `sel-ink` with the more contrast on a fill (the gizmo's letters) (rfa 3).
+- **Labels keep clear** (the viewer's `Labels`): an overlay marked `data-keep-clear` is avoided
+  like the gizmo; the selection label carries it (rfa 9).
+- **Snaps** (`viewer/snap.ts`): `Snap.tip?` and `SnapPoint.tip?`, the person's words for a bar
+  face ("b9 +y face (world +Z) at 300"); `label` is unchanged. `faceWords(m, bar, face)` and
+  `worldAxis(v)` live in `inspector/words.ts` (rfa 12).
+- **The gizmo's drag** (`viewer/gizmo.ts`): `GizmoDrag.shift?`; `slideStop(m, set, bar, s, free)`
+  in `tools/wire/move.ts` (rfa 17).
+- **The joint previewer** (S5's `tools/preview.ts`): `refused(cmds)`, its last refusal of exactly
+  those commands (rfa 6). **The command bar** (`CommandBar.tsx`): `ValueField`'s `name` (rfa 7).
+- **Pattern** (`tools/wire/pattern.ts`): `patternPreview` (the reading by Create),
+  `patternWords(r, count)`; the hook's `patternGhosts()` (rfa 11).
+- **Focus** (S2's `focus.ts`): `unhide(m, refs)`, the menu's Show (rfa 13).
+- **ConnectorSelect** (`common/ConnectorSelect.tsx`): `corner?` (corner joints first),
+  `CORNER_FAMILIES` (rfa 15).
+- **Test ids**: `row-joints`, `joint-<id>`, `joint-edit-<id>`, `join-end-why-<e>`,
+  `delete-cancel`, `pattern-preview`, `selection-label`.

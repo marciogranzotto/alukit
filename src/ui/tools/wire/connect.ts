@@ -73,7 +73,11 @@ export function createConnectTool(ctx: WireContext): Wire {
           pins: pins(),
           marker: snap ? { p: snap.p, kind: markerOf(snap) } : undefined,
         });
-        show(e, snap ? `base: ${snap.label}` : "click a face for the pivot's base", snap?.label);
+        show(
+          e,
+          snap ? `base: ${snap.tip ?? snap.label}` : "click a face for the pivot's base",
+          snap?.label,
+        );
         return;
       }
       const pick = connectPickAt(e);

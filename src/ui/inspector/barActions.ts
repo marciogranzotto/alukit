@@ -4,7 +4,7 @@ import { splitBatch } from "../edit/batches.ts";
 import type { Model } from "../model.ts";
 import { busy, sendCommands } from "../store.ts";
 import { readOnly } from "./Fields.tsx";
-import { isObject, written } from "./words.ts";
+import { faceWords, isObject, written } from "./words.ts";
 
 /**
  * A bar's actions (docs/ux/editing-audit.md E4.3, E4.4, E-UX-21, E-UX-22, E-UX-24): Split here,
@@ -131,7 +131,7 @@ const ADD_HOLE: Action = {
   title: (c) => {
     const h = holeHere(c);
     return h
-      ? `Add a hole on ${h.bar}'s face ${h.face}, ${h.at_mm} mm from end a…`
+      ? `Add a hole on ${h.bar}'s ${faceWords(c.m, h.bar, h.face)}, ${h.at_mm} mm from end a…`
       : "Add a hole here…";
   },
   group: "bar",

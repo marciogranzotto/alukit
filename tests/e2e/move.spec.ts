@@ -134,7 +134,7 @@ test("a joined bar moved with Alt: the joint is freed, as the preview says first
   await page.mouse.move(up[0], up[1], { steps: 10 });
   // Following, b2.a would leave b1: the preview says so, and how to free it.
   await expect(page.getByTestId("joint-preview")).toContainText("would break a joint");
-  await expect(page.getByTestId("joint-preview")).toContainText("Alt: detach");
+  await expect(page.getByTestId("joint-preview")).toContainText(/hold (Alt|Option) to detach it/);
   await page.keyboard.down("Alt");
   await page.mouse.move(up[0], up[1] - 2, { steps: 2 });
   await expect(page.getByTestId("joint-preview")).toContainText("frees c1");
