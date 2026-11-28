@@ -1010,3 +1010,20 @@ anything, and each has a default in place.
   - **7 majors:** an unpriced-machining problem titled as unsold, a hole form that loses keystrokes, hole distances from the design end while the cut list counts from the cut end, Esc not cancelling an end drag, light-theme label contrast, 2 s Move previews on 1,008 bars, and a plate's face joint unreachable from the plate.
   - **Plus 14 minors and 5 nits.**
   - Three fix agents started: joins, machining and speed, and the app.
+- **22:20**: Review fixes, joins, merged (gate PASS, 1,488 tests).
+  - **Patterns:** a template carries its bars' own joints, so pattern copies are cut and joined like the template; `explodePattern` and `array` copy them too.
+  - **Mirror:** carries them onto the bars at their images.
+  - **Draw:** an end lying on a bar's face butts on it.
+  - **Open ends:** an unjoined end warns, with a working Join fix, and a new order rule says "Ready, n warnings".
+  - The scenario checks would now have caught all three blockers.
+- **23:12**: Review fixes, machining and speed, merged (gate PASS, 1,506 tests).
+  - **Unpriced machining** says so.
+  - **Holes** count from the cut end (`"from": "a.cut"`, written by the app, the guide and the skill), and a hole past a cut is an error.
+  - **Speed:** a batch derives each state once, so Move on a 1,008-bar project went from 837 to 128 ms at the server, held by a new 500 ms test.
+  - Its merge gate hung on A4. The failure's page snapshot showed Replace's Find reading "40x4040x80": the field was bound to the bar's size suggestion, which arrives with the item's card, and a late card rewrote the field under the typing. Fixed so the field holds only what is typed and the size is its placeholder. A deterministic test holds the card until the field has focus: the old binding fails 5/5, the fix passes 10/10.
+- **23:27**: Review fixes, app, merged (gate PASS, 1,513 tests).
+  - **Keyboard:** the hole form keeps its keystrokes, and Esc ends an end drag.
+  - **Contrast:** every view label meets AA in both themes (new `labels.spec`).
+  - **Joints:** a bar's ends and its Join follow the core's `unconnected` verdict, and a plate reaches its face joint.
+  - **Minors and nits:** 14 of 15 minors and 4 of 5 nits fixed. The rest need the core and are recorded.
+  - **Importer:** it now classes the 180° extender as a splice (regenerated from the cached snapshot).
