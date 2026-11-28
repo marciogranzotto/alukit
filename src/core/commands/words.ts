@@ -7,13 +7,26 @@
 
 /**
  * What one command did: a sentence, a verb and a noun over ids, which a step merges with the
- * next phrase of the same verb and noun ("add bars b1, b2 and b3"), or a sentence with the bar
- * ends it leaves open or joins (`Said`).
+ * next phrase of the same verb and noun ("add bars b1, b2 and b3"), a change of some fields
+ * (`Change`), which a step merges likewise, or a sentence with the bar ends it leaves open or
+ * joins (`Said`).
  */
 export type Phrase =
   | string
   | { verb: string; one: string; many: string; ids: readonly string[] }
+  | Change
   | Said;
+
+/**
+ * A change of the same fields of entities (*2.3*, the editing review's n2;
+ * docs/ux/review-last-items-decisions.md 4): "change b1's roll and anchor" for one, and for
+ * several the fields said once, "change the roll and anchor of b1, b2, b3 and b4", never the verb
+ * again for each. `change` is how a person names the fields ("roll and anchor"), empty for none.
+ */
+export interface Change {
+  change: string;
+  ids: readonly string[];
+}
 
 /**
  * A sentence and the bar ends whose outcome it reports (*2.3*, the re-check's follow-up to N2;
@@ -63,20 +76,37 @@ export function fieldWords(keys: readonly string[]): string {
   );
 }
 
-/** "change b1's item and options". */
-export function changed(id: string, set: Readonly<Record<string, unknown>>): string {
-  const keys = Object.keys(set);
-  return keys.length > 0 ? `change ${id}'s ${fieldWords(keys)}` : `change ${id}`;
+/** "change b1's item and options", which a step merges with the next change of those fields. */
+export function changed(id: string, set: Readonly<Record<string, unknown>>): Change {
+  return { change: fieldWords(Object.keys(set)), ids: [id] };
 }
 
 export function render(p: Phrase): string {
   if (typeof p === "string") return p;
   if ("say" in p) return p.say;
+  if ("change" in p) {
+    const [one] = p.ids;
+    if (p.ids.length === 1) return p.change ? `change ${one}'s ${p.change}` : `change ${one}`;
+    return p.change ? `change the ${p.change} of ${idList(p.ids)}` : `change ${idList(p.ids)}`;
+  }
   return `${p.verb} ${p.ids.length > 1 ? p.many : p.one} ${idList(p.ids)}`;
 }
 
+/** `next` merged into `last` when both say the same of other ids, else undefined. */
+function merged(last: Phrase | undefined, next: Phrase): Phrase | undefined {
+  if (typeof last !== "object" || typeof next !== "object") return undefined;
+  if ("change" in last && "change" in next && last.change === next.change) {
+    return { change: last.change, ids: [...new Set([...last.ids, ...next.ids])] };
+  }
+  if ("verb" in last && "verb" in next && last.verb === next.verb && last.one === next.one) {
+    return { ...last, ids: [...last.ids, ...next.ids] };
+  }
+  return undefined;
+}
+
 /**
- * A step's phrases as one line: consecutive phrases of one verb and noun merged, the joints a
+ * A step's phrases as one line: consecutive phrases of one verb and noun, or of one change of
+ * fields, merged, the joints a
  * drawing step's `autoConnect`s made folded into "joined at n ends" after what it drew, at most
  * three parts and then how many more; then the ends the step leaves open, those a command left
  * open and no command of the step joined (`Said`), so no end is said to be both.
@@ -95,17 +125,9 @@ export function joinPhrases(parts: readonly { cmd: string; phrase: Phrase | unde
       joints++;
       continue;
     }
-    const last = out.at(-1);
-    if (
-      typeof phrase === "object" &&
-      "verb" in phrase &&
-      typeof last === "object" &&
-      "verb" in last &&
-      last.verb === phrase.verb &&
-      last.one === phrase.one
-    ) {
-      out[out.length - 1] = { ...last, ids: [...last.ids, ...phrase.ids] };
-    } else out.push(phrase);
+    const both = merged(out.at(-1), phrase);
+    if (both) out[out.length - 1] = both;
+    else out.push(phrase);
   }
   const texts = out.map(render);
   if (joints > 0) texts.push(`joined at ${joints} end${joints === 1 ? "" : "s"}`);

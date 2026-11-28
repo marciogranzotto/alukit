@@ -1103,3 +1103,33 @@ describe("what a dry run of mirror, array, splitBar and explodePattern adds (E1.
     expect(dry.effects.added).toEqual({ b35: 520, b36: 520, b37: 520, b38: 520, b39: 520 });
   });
 });
+
+describe("the editing review's last items through the CLI (m2, n3)", () => {
+  type Bars = Record<string, { a?: unknown; label?: string; tags?: string[] }>;
+  const bars = (dir: string) => (JSON.parse(read(join(dir, "alukit.json"))) as { bars: Bars }).bars;
+
+  it("numbers a copy's label and says the tags it carries, as the app's Duplicate does", async () => {
+    const dir = join(await scratchFixtures(), "cart");
+    const tag = [{ cmd: "tag", args: { ids: ["b26"], add: ["slat"] } }];
+    expect((await capture(["do", dir, JSON.stringify(tag)])).code).toBe(0);
+    const copy = [{ cmd: "array", args: { ids: ["b26"], along: "b9", pitch_mm: 100, count: 3 } }];
+    const dry = await capture(["do", dir, "--dry-run", JSON.stringify(copy)]);
+    // The slats and the butts they carry (the cart's c26 and c27); the slats carry the tag.
+    expect(dry.out).toContain("array: would create b35, c36, c37, b36, c38, c39; tagged slat");
+    expect((await capture(["do", dir, JSON.stringify(copy)])).code).toBe(0);
+    const b = bars(dir);
+    expect(b.b26).toMatchObject({ label: "slat", tags: ["slat"] });
+    expect(b.b35).toMatchObject({ label: "slat (2)", tags: ["slat"] });
+    expect(b.b36).toMatchObject({ label: "slat (3)", tags: ["slat"] });
+  });
+
+  it("writes a moved expression with its constants folded: Hb moved 50 up, then 20 down", async () => {
+    const dir = join(await scratchFixtures(), "cart");
+    const move = (dz: number) =>
+      capture(["move", dir, "--ids", "b20", "--by", `0,0,${dz}`, "--detach"]);
+    expect((await move(50)).code).toBe(0);
+    expect(bars(dir).b20?.a).toEqual(["W / 2 - 50", 150, "Hb + 50"]);
+    expect((await move(-20)).code).toBe(0);
+    expect(bars(dir).b20?.a).toEqual(["W / 2 - 50", 150, "Hb + 30"]);
+  });
+});

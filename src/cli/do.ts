@@ -5,6 +5,7 @@ import { parseJson } from "#catalog/json.ts";
 import { checkModel } from "#core/check/check.ts";
 import { modelOutputs, outputAccessors } from "#core/check/outputs.ts";
 import { applyBatchLive, batchOf, type CommandResult } from "#core/commands/apply.ts";
+import { taggedWords } from "#core/commands/copies.ts";
 import { type DryEffects, effectsOf, type PartEffect } from "#core/commands/dry.ts";
 import type { CommandError, State } from "#core/commands/types.ts";
 import { localDate } from "#core/dates.ts";
@@ -86,6 +87,8 @@ function resultLine(r: CommandResult, dry: boolean): string {
     r.created.length > 0 ? `${verb("created", "create")} ${r.created.join(", ")}` : "",
     r.removed.length > 0 ? `${verb("removed", "remove")} ${r.removed.join(", ")}` : "",
     r.changed.length > 0 ? `${verb("changed", "change")} ${r.changed.join(", ")}` : "",
+    // The tags a copy carries, as the app's preview says them (review m2).
+    taggedWords((r.info as { tagged?: Record<string, string[]> } | undefined)?.tagged),
   ].filter((s) => s !== "");
   return `${r.cmd}: ${parts.length > 0 ? parts.join("; ") : "no change"}`;
 }

@@ -300,7 +300,7 @@ nothing warns.** (A8)
 | # | Finding | Evidence | Fix |
 |---|---|---|---|
 | m1 | **Edit** on a param opens its field without focusing it: typing goes nowhere (A2 (i), whose guide line says "Edit beside W, type 1100") | *Measured* twice: the focus stays on "Edit W" | Focus and select the field on Edit, as the inspector's own fields do — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 5) |
-| m2 | Duplicate copies the label and tags: the rail 300 below the top reads "top rail, front" and is tagged `top`, so **Select tagged top** and `H` take it | *Measured*: b18's label and tags | Keep the tags but number the copy's label ("top rail, front 2"), as CAD tools number copied instances (**inferred**) — **Left for the core**: the copy is the core's `array` command, and the CLI's copy must number it the same way ([review fixes, app](review-fixes-app-decisions.md)) |
+| m2 | Duplicate copies the label and tags: the rail 300 below the top reads "top rail, front" and is tagged `top`, so **Select tagged top** and `H` take it | *Measured*: b18's label and tags | Keep the tags but number the copy's label ("top rail, front 2"), as CAD tools number copied instances (**inferred**) — **Left for the core**: the copy is the core's `array` command, and the CLI's copy must number it the same way ([review fixes, app](review-fixes-app-decisions.md)). **Fixed** (2026-11-28, [the review's last items](review-last-items-decisions.md) 1–3): the copy is "top rail, front (2)", the number in parentheses so a name's own number is not taken for it; it keeps the tag `top`, since tags have no kind, and the preview, the step's words and `alukit do` say "tagged top", one untag away; Mirror's images and an exploded pattern's copies alike |
 | m3 | A refused Move speaks the API: "give joined: \"detach\" to free it"; and Enter sends a step the preview already knew was refused (HTTP 422) | *Measured* | Say "hold Alt to detach it"; keep the gesture open and say it in the bar instead of posting — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 6). *Re-check: for Move and Duplicate; a refused Mirror still posts ([§9](#9-re-check-after-the-fixes-2026-11-27), N4); since fixed for every previewed commit ([re-check fixes, app](recheck-fixes-app-decisions.md) 1)* |
 | m4 | Every gesture's field is named "Draw bar: value" for a screen reader (Move, Duplicate, Mirror, Align, an end drag) | *Measured* (accessibility tree); *read* `tools/CommandBar.tsx:455` passes `tool="draw"` | Name it by the gesture: "Move: offset", "Mirror: plane at" — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 7) |
 | m5 | Key caps say Ctrl on macOS (menu "Ctrl+D", inspector "Ctrl+C", help "Ctrl Z"), Alt for Option | *Measured* on a Mac user agent; *read* `actions/registry.ts:122` `mod: "Ctrl"` | ⌘ and ⌥ on macOS (Apple HIG, keyboards) — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 8) |
@@ -324,8 +324,8 @@ nothing warns.** (A8)
 | # | Finding | Fix |
 |---|---|---|
 | n1 | The delete dialog: "Delete 1 thing?" and **Delete all 1** | "Delete b14?" and **Delete** (all n only when n > 1) — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 14) |
-| n2 | Undo names repeat the verb: "change b1's roll, change b2's roll and 2 more" | "change the roll of b1, b2, b3 and b4" — **Left for the core**: the undo names are the core's (`core/commands/words.ts`) ([review fixes, app](review-fixes-app-decisions.md)) |
-| n3 | Move's label "keeps b18.a z: H - 300 - 100" reads as "unchanged" and leaves the sum unsimplified | "writes z = H − 400" — **Fixed** in part: "writes"; folding the sum is the core's ([review fixes, app](review-fixes-app-decisions.md) 18) |
+| n2 | Undo names repeat the verb: "change b1's roll, change b2's roll and 2 more" | "change the roll of b1, b2, b3 and b4" — **Left for the core**: the undo names are the core's (`core/commands/words.ts`) ([review fixes, app](review-fixes-app-decisions.md)). **Fixed** (2026-11-28, [the review's last items](review-last-items-decisions.md) 4): "change the roll and anchor of b1, b2, b3 and b4", "… and n more" past four |
+| n3 | Move's label "keeps b18.a z: H - 300 - 100" reads as "unchanged" and leaves the sum unsimplified | "writes z = H − 400" — **Fixed** in part: "writes"; folding the sum is the core's ([review fixes, app](review-fixes-app-decisions.md) 18). **Fixed** (2026-11-28, [the review's last items](review-last-items-decisions.md) 5–7): every expression a command composes has its constants folded, exactly, "writes b17.a z: H - 400" |
 | n4 | The inspector's verbs disabled under another tool say "in Select or Move", where Delete says "press Esc first" | One wording: "press Esc first" — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 18) |
 | n5 | The hover tip stays up during a drag, over the readout | Hide it while a gesture runs — **Fixed** ([review fixes, app](review-fixes-app-decisions.md) 18) |
 
@@ -517,7 +517,7 @@ All fifteen minors and the five nits were checked; the minimum asked was about h
 | # | Verdict | Evidence (measured unless said) |
 |---|---|---|
 | m1 | Fixed | **Edit** beside W: the field has the focus with "1000" selected; `1100`, Enter: one step, and the focus back on Edit |
-| m2 | Not fixed (left for the core, as decided) | The duplicated rail b18 is "top rail, front", tagged `top`; **Select tagged top** and `H` take it |
+| m2 | Not fixed (left for the core, as decided); **since fixed** ([the review's last items](review-last-items-decisions.md) 1–3) | The duplicated rail b18 is "top rail, front", tagged `top`; **Select tagged top** and `H` take it. *Since: the copy is "top rail, front (2)" and still tagged `top`, which its preview and step words now say ("tagged top"), so one untag takes it out of Select tagged top* |
 | m3 | Fixed for Move and Duplicate | A move of b9 by `0, -100, 0`: "this move would break a joint: … · hold Option to detach it", and Enter sends nothing. A refused Mirror still posts (N4) |
 | m4 | Fixed | The gesture field is named "Move b9: distance" |
 | m5 | Fixed | On a Mac user agent the menu reads ⌘A, ⌘D, ⇧H, and the refusal "hold Option" |
@@ -532,8 +532,8 @@ All fifteen minors and the five nits were checked; the minimum asked was about h
 | m14 | Fixed | In the outline, b5 then Shift+↓ twice selects b5, b6, b7 |
 | m15 | Fixed | The bracket's arrow dragged toward 447 lands on 450, one step "move p1 by [0, 0, 150]"; no field needed |
 | n1 | Fixed | "Delete b14?" and **Delete** |
-| n2 | Not fixed (left for the core) | "change b1's roll and anchor, change b2's roll and anchor and 2 more" |
-| n3 | Fixed in part | "writes b17.a z: H - 300 - 100"; the sum is not folded (the core's) |
+| n2 | Not fixed (left for the core); **since fixed** ([the review's last items](review-last-items-decisions.md) 4) | "change b1's roll and anchor, change b2's roll and anchor and 2 more". *Since: "change the roll and anchor of b1, b2, b3 and b4"* |
+| n3 | Fixed in part; **since fixed** ([the review's last items](review-last-items-decisions.md) 5–7) | "writes b17.a z: H - 300 - 100"; the sum is not folded (the core's). *Since: "writes b17.a z: H - 400"* |
 | n4 | Fixed | The inspector's Duplicate under Draw: "works in Select or Move: press Esc first" |
 | n5 | Fixed | No hover tip while an end is dragged |
 

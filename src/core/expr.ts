@@ -553,6 +553,172 @@ export function freeNames(ast: Ast, out: Set<string> = new Set()): Set<string> {
   return out;
 }
 
+// ---------------------------------------------------------------------------------------------
+// Printing
+
+/**
+ * How tightly a node binds, the parser's levels lowest first: `or` 1, `and` 2, `not` 3, a
+ * comparison 4, `+ -` 5, `* /` 6, a sign 7, `^` 8, and an operand that needs no parentheses 9.
+ */
+function binding(a: Ast): number {
+  if (a.t === "unary") return a.op === "not" ? 3 : 7;
+  if (a.t !== "bin") return 9;
+  switch (a.op) {
+    case "or":
+      return 1;
+    case "and":
+      return 2;
+    case "+":
+    case "-":
+      return 5;
+    case "*":
+    case "/":
+      return 6;
+    case "^":
+      return 8;
+    default:
+      return 4;
+  }
+}
+
+/** `a` printed where its parent's grammar reads a node of level `min` or tighter. */
+function operand(a: Ast, min: number): string {
+  const s = formatExpr(a);
+  return binding(a) < min ? `(${s})` : s;
+}
+
+/**
+ * An expression as text, with the parentheses its grammar needs and no others, spaced as commands
+ * write it (`W / 2 - 20`): `parseExpr(formatExpr(ast))` is the same tree. A number prints as
+ * ECMAScript's `Number::toString`, the shortest decimal that names its double.
+ */
+export function formatExpr(a: Ast): string {
+  switch (a.t) {
+    case "num":
+      return String(a.v);
+    case "name":
+      return a.name;
+    case "sel":
+      return `${a.key}:${a.value}`;
+    case "unary":
+      return a.op === "not" ? `not ${operand(a.e, 3)}` : `${a.op}${operand(a.e, 7)}`;
+    case "member":
+      // A number's "." would read as its decimal point.
+      return `${a.e.t === "num" ? `(${formatExpr(a.e)})` : operand(a.e, 9)}.${a.name}`;
+    case "call":
+      return `${a.name}(${a.args.map((x) => operand(x, 1)).join(", ")})`;
+    case "bin": {
+      const own = binding(a);
+      // Left-associative, but for `^`, whose base is an operand and its exponent a signed term;
+      // a comparison takes sums on both sides, since comparisons do not chain.
+      const [l, r] = a.op === "^" ? [9, 7] : own === 4 ? [5, 5] : [own, own + 1];
+      return `${operand(a.l, l)} ${a.op} ${operand(a.r, r)}`;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Folding constants
+
+/** A decimal, `n × 10^-s`: the constants of a sum are added exactly in these. */
+interface Decimal {
+  n: bigint;
+  s: number;
+}
+
+/**
+ * A number's decimal: the shortest one that names its double (ECMAScript's `Number::toString`),
+ * which is the literal as written for any literal of up to 15 significant digits.
+ */
+function decimalOf(v: number): Decimal {
+  const m = /^(-?)(\d+)(?:\.(\d+))?(?:e([+-]\d+))?$/.exec(String(v));
+  if (!m) throw new ExprError(`${v} is not a finite number`);
+  const frac = m[3] ?? "";
+  const s = frac.length - Number(m[4] ?? 0);
+  const digits = BigInt(`${m[1]}${m[2]}${frac}`);
+  return s >= 0 ? { n: digits, s } : { n: digits * 10n ** BigInt(-s), s: 0 };
+}
+
+function addDecimals(a: Decimal, b: Decimal): Decimal {
+  const s = Math.max(a.s, b.s);
+  return { n: a.n * 10n ** BigInt(s - a.s) + b.n * 10n ** BigInt(s - b.s), s };
+}
+
+/** A decimal's magnitude in plain digits, with no exponent and no trailing zeros: "400", "0.3". */
+function decimalText(d: Decimal): string {
+  let n = d.n < 0n ? -d.n : d.n;
+  let s = d.s;
+  while (s > 0 && n % 10n === 0n) {
+    n /= 10n;
+    s--;
+  }
+  const digits = n.toString().padStart(s + 1, "0");
+  return s === 0 ? digits : `${digits.slice(0, -s)}.${digits.slice(-s)}`;
+}
+
+/** The terms of a sum, each with its sign, through `+`, `-`, signs and parentheses. */
+function addends(a: Ast, sign: 1 | -1, out: { sign: 1 | -1; a: Ast }[]): void {
+  if (a.t === "bin" && (a.op === "+" || a.op === "-")) {
+    addends(a.l, sign, out);
+    addends(a.r, a.op === "+" ? sign : (-sign as 1 | -1), out);
+  } else if (a.t === "unary" && (a.op === "-" || a.op === "+")) {
+    addends(a.e, a.op === "-" ? (-sign as 1 | -1) : sign, out);
+  } else out.push({ sign, a });
+}
+
+/**
+ * The most the constants of a sum may add up to in magnitude for a fold: 2^53. Below it, no
+ * partial sum of a finite term and these constants overflows, before the fold or after, so a fold
+ * never turns an error ("the sum is not finite") into a value, nor the reverse.
+ */
+const FOLD_BOUND = 2n ** 53n;
+
+/**
+ * Folds the constants of a sum of one symbol term and constants into one (design §4.9, *2.3*;
+ * the editing review's n3): `H - 300 - 100` is `H - 400`, `1200 - (H - 300)` is `1500 - H`.
+ * Compilers call it constant folding with reassociation. It never changes the real value the
+ * expression has: the constants are added in exact decimal arithmetic, so `H + 0.1 + 0.2` is
+ * `H + 0.3`. The double it evaluates to may differ in its last bits, since IEEE addition is not
+ * associative (why compilers fold so only under -fassociative-math); §5.2's snapping and output
+ * quantum absorb that, so no output changes (docs/ux/review-last-items-decisions.md).
+ *
+ * Only a sum whose terms are one symbol term (a param, a product, a call, an accessor; never a
+ * comparison or a condition) and two or more numbers is folded, and nothing inside its symbol
+ * term: a function's argument, a product's factor and a power stay as written, so a fold never
+ * crosses a function. There are no units in the language: every term of a sum is in its field's
+ * unit. Any other text, or text that does not parse, is returned as it is.
+ */
+export function foldConstants(src: string): string {
+  let ast: Ast;
+  try {
+    ast = parseExpr(src);
+  } catch {
+    return src;
+  }
+  const terms: { sign: 1 | -1; a: Ast }[] = [];
+  addends(ast, 1, terms);
+  const symbols = terms.filter((x) => x.a.t !== "num");
+  if (symbols.length !== 1 || terms.length - 1 < 2) return src;
+  const { sign, a: term } = symbols[0] as { sign: 1 | -1; a: Ast };
+  if (binding(term) < 6) return src; // a comparison, a condition: not a number to add to
+  let c: Decimal = { n: 0n, s: 0 };
+  let size: Decimal = { n: 0n, s: 0 };
+  for (const x of terms) {
+    if (x.a.t !== "num") continue;
+    const d = decimalOf(x.a.v);
+    c = addDecimals(c, x.sign > 0 ? d : { n: -d.n, s: d.s });
+    size = addDecimals(size, { n: d.n < 0n ? -d.n : d.n, s: d.s });
+  }
+  if (size.n > FOLD_BOUND * 10n ** BigInt(size.s)) return src;
+  const k = decimalText(c);
+  if (sign > 0) {
+    if (c.n === 0n) return formatExpr(term);
+    return `${operand(term, 5)} ${c.n < 0n ? "-" : "+"} ${k}`;
+  }
+  if (c.n === 0n) return `-${operand(term, 7)}`;
+  return c.n < 0n ? `-${operand(term, 7)} - ${k}` : `${k} - ${operand(term, 6)}`;
+}
+
 /** Evaluates a document value that must be a number: a number as is, or an expression. */
 export function evalNumber(x: number | string, scope: ExprScope): number {
   if (typeof x === "number") return finite(x, "the value");

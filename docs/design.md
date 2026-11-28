@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core", 115–119 in "Editing polish, app", 120–124 in "Review fixes, joins", 125–129 in "Review fixes, machining and speed", 130–134 in "Review fixes, app", 135–137 in "Re-check fixes, core" and 138–140 in "Re-check fixes, app"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "Re-check fixes, core". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core", 115–119 in "Editing polish, app", 120–124 in "Review fixes, joins", 125–129 in "Review fixes, machining and speed", 130–134 in "Review fixes, app", 135–137 in "Re-check fixes, core", 138–140 in "Re-check fixes, app" and 141–143 in "The review's last items"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "The review's last items". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -984,6 +984,30 @@ unpriced-machining reason do (xc, what moved). Each fix has a test that failed f
   **a step gives each end one outcome**, never "left open" for an end the step joins (xc 16). Call
   137.
 
+### The review's last items
+
+The [editing review](ux/review-editing.md)'s three items left for the core, m2, n2 and n3
+(re-listed at its §9.3), closed in the core so the CLI and the app agree
+([`ux/review-last-items-decisions.md`](ux/review-last-items-decisions.md), cited as "rl"). No
+schema field, command or diagnostic is added; `array` and `mirror` answer `tagged`. No golden
+value moves, and no output of the 59 fixture projects does (rl, what moved). Each fix has a test
+that failed first.
+
+- §6, §4.7, §8: **a copy of its own numbers its label and says its tags**: `array` (the app's
+  Duplicate and Paste), `mirror` and `explodePattern` give a copy its original's label with the
+  name's first free number, "top rail, front (2)", and keep its tags, which have no kind; `array`
+  and `mirror` answer the tags each copy carries (`tagged`), and their words, the app's previews
+  and `alukit do` say "tagged top", so a positional tag is one untag away. A live pattern's
+  copies are instances, named by their ids, unchanged (rl 1–3; m2). Call 141.
+- §6: **a step says one change of many entities once**: consecutive `set…` changes of the same
+  fields read "change the roll and anchor of b1, b2, b3 and b4", bounded as every id list, "… and
+  3 more" (rl 4; n2). Call 142.
+- §4.9, §6: **an expression a command composes has its constants folded**, exactly: `H - 300`
+  moved 100 down is `H - 400`, `W - 100` mirrored at 600 is `1300 - W`. Only a sum of one symbol
+  term and numbers, never inside a function, in exact decimal arithmetic; the real value is
+  unchanged, and the double within its rounding, which §5.2's quantum absorbs (rl 5–7; n3). Call
+  143.
+
 ## Draft 2.2 — what changed (2026-11-26)
 
 - **A shoe mitred square to a strut (gap G-A; §4.5, §16).** A plane's `normal` may name a bar:
@@ -1615,7 +1639,8 @@ A project is a folder, wherever its owner keeps it (D2, D9):
 Item ids in examples are illustrative, and examples are wrapped for reading; canonical form puts
 one entity per line (§2). `b5` is a flat bar resting on `b2`'s top face, held by T-nuts. Entities
 in `nodes`, `bars`, `runs`, `connections`, `parts` and `patterns` take `label`, `tags` and
-`only_in` (§4.10). Draft 2.1 adds two top-level keys, in schema order: `runs` after `bars` (§4.3)
+`only_in` (§4.10). A label is free text and a tag a bare word, with no kind (*2.3*, the review's
+last items: a copy keeps its tags and numbers its label, "top rail, front (2)", §6; call 141). Draft 2.1 adds two top-level keys, in schema order: `runs` after `bars` (§4.3)
 and `price_bands` after `costs` (§4.11).
 
 ### 4.3 Points and stations
@@ -2305,6 +2330,11 @@ G22–G24 (§4.6) are the worked cases.
   copy the same joints.
 - `skip` drops stations. `explodePattern` turns copies into ordinary entities when one needs an
   edit of its own.
+- *2.3* (the review's last items; [rl](ux/review-last-items-decisions.md) 3; call 141). **A
+  copy is the template's instance**: it takes the template's label and tags with every other field,
+  and its id numbers it (`b30@2`), as SolidWorks numbers a component's instances `<2>`. Exploded,
+  each copy is an entity of its own, so its label takes the name's first free number, "slat (2)",
+  as `array`'s copies do (§6).
 - `rail_holes` (part templates, and a `face` connection's `stations`, §4.5) puts stations at the
   holes of a rail or a run. `true` takes every hole of the pattern's `along`.
   `{ "along": "r1", "every": 2, "plus": ["first", "last", "joint"] }` (*2.1*) numbers the holes
@@ -2403,6 +2433,16 @@ A small, safe language; no JS `eval`.
 - Params may be valued fields: a measured wall width keeps its `meas` tag and its date.
 - The determinism rules of §5.2 apply (exact trig at special angles, snapping before `floor`,
   `ceil` and `round`, comparison within `tol.snap`).
+- *2.3* (the review's last items, n3; [rl](ux/review-last-items-decisions.md) 5–7; call 143).
+  **An expression a command composes has its constants folded** (`foldConstants`): a sum of one
+  symbol term (a param, a product, a call, an accessor) and two or more numbers is written with
+  one number, `H - 300 - 100` as `H - 400` and `1200 - (H - 300)` as `1500 - H`. The numbers are
+  added in exact decimal arithmetic, each read as the shortest decimal that names its double, so
+  the real value never changes; the double may differ in its last bits, as IEEE sums reassociated
+  do, which the output quantum and `tol.snap` absorb. Nothing inside the symbol term is folded (a
+  function's argument, a factor, a power), nor a sum of two symbol terms or of numbers alone, nor
+  numbers adding up past 2^53 in magnitude; the language has no units (the app converts them
+  before writing). Text a person writes is kept as written.
 
 A **check** is `{ "value", "op", "limit", "text", "severity" }`. It reports its **margin**
 (`limit − value` for `<` and `<=`, `value − limit` for `>` and `>=`, −|value − limit| for `==`;
@@ -2921,7 +2961,11 @@ the answer and the next snapshot (§7.1). A state whose lock pins what it names 
   `what` beside the words, `text` ([s1](ux/s1-decisions.md) 7), and (*2.3*, the editing polish)
   each step's commands, `commands`, in canonical form: each `{ cmd, args }` with its arguments as
   its schema reads them, in the schema's key order, so the log replays with `alukit do` (§7.1;
-  [pe](ux/polish-editing-decisions.md) 12, 13; call 113).
+  [pe](ux/polish-editing-decisions.md) 12, 13; call 113). *2.3* (the review's last items, n2;
+  [rl](ux/review-last-items-decisions.md) 4; call 142): consecutive `set…` changes of the same
+  fields are said once, "change the roll and anchor of b1, b2, b3 and b4" (one entity: "change
+  b1's roll and anchor"), the ids bounded as every list of ids in words, "… b1, b2, b3 and 3
+  more"; different changes are said apart, in the step's order.
 - **`addFrame`** (*2.3*, D-UX-8) adds a box frame in one step: four posts, a base and a top ring
   (either may be left out), an optional shelf ring (its top face `shelf_mm` above the base), and a
   butt at every corner by the corner rule (§4.5), with the connector and count given or the
@@ -2958,7 +3002,8 @@ the answer and the next snapshot (§7.1). A state whose lock pins what it names 
   numbers and an expression angle would have nothing to keep), exactly one of the two, nodes,
   bars, runs, parts and patterns' templates as one step (a connection named moves a butt's through
   body), keeping each in the form it is written: an inline point moves, an expression keeping its params (`W` moved by 100 is
-  `W + 100`, and the step's words say so); a node moves as `moveNode` moves it; a part on a
+  `W + 100`, and the step's words say so; *2.3*, its constants folded, `H - 300` moved by −100
+  being `H - 400`, §4.9); a node moves as `moveNode` moves it; a part on a
   station rides its bar, or, moved alone along it, changes `at_mm` (off it, it is refused); a part
   at a world pose moves its pose; a template moves and its copies follow. A quarter turn is exact
   and keeps expressions; another angle refuses a coordinate a param drives rather than write a
@@ -3016,6 +3061,17 @@ the answer and the next snapshot (§7.1). A state whose lock pins what it names 
   `autoConnect` after the mirror) is not said to be open, so the words read "mirror b13, making
   b14, joined at 2 ends", and "b14.b left open" only for an end nothing in the step joins.
   `autoConnect` answers the through bar's own end at a corner, which its butt covers (`covers`).
+- **A copy of its own** (*2.3*, the review's last items, m2;
+  [rl](ux/review-last-items-decisions.md) 1–3; call 141): what `array`, `mirror` and
+  `explodePattern` make keeps every field of its original but its label, which takes the name's
+  first free number from 2, written " (n)": b13's copy is "top rail, front (2)", the next
+  "top rail, front (3)", a copy of "(2)" the name's next free number; a number that is part of the
+  name ("rail 4040") stays the name's. Numbers are counted over every labelled entity. It keeps its
+  tags, which have no kind, so a tag that places the original (`top`) follows it as one that says
+  what it is (`leg`) does; `array` and `mirror` answer each copy's tags (`tagged`), their words say
+  "tagged top" after what they made, and the app's previews and `alukit do`'s line say it, so the person drops a tag in
+  one step. A live pattern's copies are instances, named by their ids (§4.7); `splitBar`'s pieces
+  are one member, both keeping its label and tags.
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
   moves (`cuts`, before and after), the bars it adds with their cuts, the parts it adds (`parts`,
@@ -3522,7 +3578,10 @@ starts the same session with the copies hanging from the pointer by their lowest
 first click places them. The step is one `array` along the offset's direction at its length, then
 an `autoConnect` at each new bar's end (the first 48), so a rail duplicated between two legs butts
 on both; the copies' coordinates are numbers, as `array` writes them, and they are selected after
-the step. Call 91.
+the step. Call 91. *2.3* (the review's last items, m2; [rl](ux/review-last-items-decisions.md)
+2; call 141): a copy's label takes the next free number, "top rail, front (2)" (§6), and the
+preview says the tags the copies carry, from `array`'s `tagged`, right after what it makes
+("makes b17 · tagged top · joins b1 (c15) · …"); Mirror's preview does the same for its images.
 
 **Mirror…** (*2.3*, E-UX-8; e3 6, 7), in the menu and the header, for bars, parts and points: a
 plane square to X at first (X, Y or Z, or `→ ← ↑`, turn it), through the selection's centre; it
@@ -4731,6 +4790,28 @@ reasons. Marking the room is the run's own change, in its project.
      along the axis (design points, or the long points derive counts a cut from), with the core's
      `plus` and `minus`, so an expression keeps its params; a bar that does not derive says so and
      sends nothing (xa 4).
+141. *New in 2.3, the review's last items, open.* A copy that is an entity of its own (`array`,
+     `mirror`, `explodePattern`) takes its original's label with the name's lowest free number from
+     2, " (n)", counted over every labelled entity, as Fusion's Paste New numbers an independent
+     copy and Blender a duplicate; a trailing " (n)" is a copy's number, any other trailing number
+     the name's. It keeps its tags: tags have no kind, so one that places the original cannot be
+     told from one that says what it is, and dropping or guessing would break checks that count
+     tags; `array` and `mirror` answer `tagged` and say "tagged top" in their words, previews and
+     `alukit do`'s line instead. A live pattern's copies stay the template's instances, and
+     `splitBar`'s pieces one member. A kind for tags (where against what) is left open (rl 1–3).
+142. *New in 2.3, the review's last items, open.* Consecutive `set…` changes of the same fields
+     are one phrase in a step's words, "change the roll and anchor of b1, b2, b3 and b4", ids
+     bounded by `idList` (four, else three "and n more"), as NLG aggregation combines messages
+     that share a predicate (Reiter and Dale 2000); only consecutive ones, so the words keep the
+     step's order (rl 4).
+143. *New in 2.3, the review's last items, open.* Every composer that writes an expression folds
+     its constants (`foldConstants`): a sum of one symbol term and two or more numbers, read through
+     signs and parentheses, gets one number, added in exact decimal arithmetic over each number's
+     shortest round-trip decimal; never inside a function, factor or power, never a sum of two
+     symbol terms or of numbers alone, never past 2^53 in total magnitude. The real value is
+     unchanged; the double may differ in its last bits, as reassociated IEEE sums do (why GCC
+     reassociates only under -fassociative-math), which the 0.01 mm quantum and `tol.snap` absorb:
+     4000 random sums hold equal exactly and at the quantum, and no fixture output moves (rl 5–7).
 
 ## 15. Review 1 resolution
 
