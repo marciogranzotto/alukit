@@ -9,6 +9,7 @@ import type { Expr, Face } from "../project/schema.ts";
 import { TOL } from "../tolerances.ts";
 import { atan2Deg } from "../trig.ts";
 import { cross, dist, dot, norm, sub, type V3 } from "../vec.ts";
+import { asCopy, taggedWords, tagsOf } from "./copies.ts";
 import {
   getEntity,
   isObject,
@@ -107,10 +108,11 @@ export const mirror: CommandDef<z.infer<typeof Mirror>> = {
         : []),
       ...others,
     ];
+    const tags = taggedWords(info?.tagged);
     // The ends left open are the step's to say (`joinPhrases`): a join later in the step may
     // close them (the re-check's follow-up to N2).
     return {
-      say: `mirror ${idList(a.ids)}, making ${idList(d.created)}${onto.length > 0 ? ` on ${idList([...new Set(onto)])}` : ""}${kept.length > 0 ? `; ${kept.join("; ")}` : ""}`,
+      say: `mirror ${idList(a.ids)}, making ${idList(d.created)}${onto.length > 0 ? ` on ${idList([...new Set(onto)])}` : ""}${tags ? `, ${tags}` : ""}${kept.length > 0 ? `; ${kept.join("; ")}` : ""}`,
       ...(open.length > 0 ? { open } : {}),
     };
   },
@@ -522,14 +524,18 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
 
   const created: string[] = [];
   const joined: Record<string, string> = {};
+  const tagged: Record<string, string[]> = {};
   for (const id of [...copied, ...implied]) {
     const kind = kindOf(id) as Kind;
     const copy = copyOf.get(id) as string;
-    const value = rewriteEntity(kind, id, getEntity(doc0, id), rw);
+    // An image is an entity of its own: its label numbered, its tags kept and said (review m2).
+    const value = asCopy(doc, rewriteEntity(kind, id, getEntity(doc0, id), rw));
     doc = withEntity(doc, copy, value);
     created.push(copy);
     const to = kind === "connections" ? joinedTo(value, copyOf) : undefined;
     if (to !== undefined) joined[copy] = to;
+    const tags = tagsOf(value);
+    if (tags.length > 0) tagged[copy] = tags;
   }
   checkAll(ctx, doc, created);
   // The bars outside the set that the images landed on other than themselves.
@@ -546,6 +552,7 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
       ...(rehomed.length > 0 ? { onto: Object.fromEntries(rehomed) } : {}),
       ...(Object.keys(joined).length > 0 ? { joined } : {}),
       ...(open.length > 0 ? { open } : {}),
+      ...(Object.keys(tagged).length > 0 ? { tagged } : {}),
     },
   );
 }
@@ -597,6 +604,8 @@ export interface MirrorInfo {
   joined?: Record<string, string>;
   /** The images' ends left open: their joint's member has no image to land on. */
   open?: string[];
+  /** Each image that carries tags, and its tags (review m2); absent when none does. */
+  tagged?: Record<string, string[]>;
 }
 
 interface Env {

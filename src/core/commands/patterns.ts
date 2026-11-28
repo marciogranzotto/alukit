@@ -4,6 +4,7 @@ import { evalNumber } from "../expr.ts";
 import { compareIds } from "../ids.ts";
 import { type Expr, Pattern, PatternId } from "../project/schema.ts";
 import { dot, unit, type V3 } from "../vec.ts";
+import { asCopy, taggedWords, tagsOf } from "./copies.ts";
 import {
   getEntity,
   isObject,
@@ -31,7 +32,9 @@ import { idList } from "./words.ts";
  * those outside kept; a station on the
  * pattern's bar slides along it, and inline points move. The copies no longer follow the
  * pattern's pitch, so each step is a number; coordinates written as expressions stay
- * expressions, so a copy still follows the params it was written with.
+ * expressions, so a copy still follows the params it was written with. A copy is an entity of
+ * its own, so its label is numbered ("slat (2)") and it says the tags it carries (`copies.ts`,
+ * *2.3*, the editing review's m2).
  */
 
 type O = Record<string, unknown>;
@@ -115,6 +118,7 @@ function makeCopies(
   created: string[];
   copies: Record<string, string>;
   joined: Record<string, string>;
+  tagged: Record<string, string[]>;
 } {
   if (spec.rail_holes !== undefined) {
     throw refusal(
@@ -132,6 +136,7 @@ function makeCopies(
   const created: string[] = [];
   const copies: Record<string, string> = {};
   const joined: Record<string, string> = {};
+  const tagged: Record<string, string[]> = {};
   for (const [k, step] of steps) {
     const ids = new Map<string, string>();
     for (const id of template) {
@@ -202,15 +207,19 @@ function makeCopies(
       },
     };
     for (const id of template) {
-      const value = rewriteEntity(kindOf(id) as Kind, id, getEntity(doc0, id), rw);
-      doc = withEntity(doc, ids.get(id) as string, value);
-      created.push(ids.get(id) as string);
-      copies[`${id}@${k}`] = ids.get(id) as string;
+      const made = ids.get(id) as string;
+      // An entity of its own: its label numbered, its tags kept and said (`asCopy`, review m2).
+      const value = asCopy(doc, rewriteEntity(kindOf(id) as Kind, id, getEntity(doc0, id), rw));
+      doc = withEntity(doc, made, value);
+      created.push(made);
+      copies[`${id}@${k}`] = made;
       const to = kindOf(id) === "connections" ? joinedTo(value, ids) : undefined;
-      if (to !== undefined) joined[ids.get(id) as string] = to;
+      if (to !== undefined) joined[made] = to;
+      const tags = tagsOf(value);
+      if (tags.length > 0) tagged[made] = tags;
     }
   }
-  return { doc, created, copies, joined };
+  return { doc, created, copies, joined, tagged };
 }
 
 /**
@@ -298,7 +307,10 @@ export const array: CommandDef<z.infer<typeof ArrayArgs>> = {
   group: "Parts and patterns",
   summary: "copy entities at a pitch along a bar, run or direction, as ordinary entities (§4.7)",
   args: ArrayArgs,
-  describe: (a, d) => `copy ${idList(a.ids)}, making ${idList(d.created)}`,
+  describe(a, d) {
+    const tags = taggedWords((d.info as { tagged?: Record<string, string[]> } | undefined)?.tagged);
+    return `copy ${idList(a.ids)}, making ${idList(d.created)}${tags ? `, ${tags}` : ""}`;
+  },
   apply: (ctx, a) =>
     guard(() => {
       const doc = ctx.state.doc;
@@ -322,11 +334,16 @@ export const array: CommandDef<z.infer<typeof ArrayArgs>> = {
       };
       const r = makeCopies(ctx, doc, spec, "array");
       checkAll(ctx, r.doc, r.created);
-      // The joints copied with the bars, and what each joins them to, for a preview's words.
+      // The joints copied with the bars, and what each joins them to, and the tags each copy
+      // carries (review m2), for a preview's words.
+      const info = {
+        ...(Object.keys(r.joined).length > 0 ? { joined: r.joined } : {}),
+        ...(Object.keys(r.tagged).length > 0 ? { tagged: r.tagged } : {}),
+      };
       return done(
         withDoc(ctx, r.doc),
         { created: r.created },
-        Object.keys(r.joined).length > 0 ? { joined: r.joined } : undefined,
+        Object.keys(info).length > 0 ? info : undefined,
       );
     }),
 };

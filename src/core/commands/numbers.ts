@@ -1,4 +1,4 @@
-import { type Ast, parseExpr } from "../expr.ts";
+import { type Ast, foldConstants, parseExpr } from "../expr.ts";
 import type { Expr } from "../project/schema.ts";
 import { QUANTUM, quantize } from "../quantum.ts";
 
@@ -7,7 +7,9 @@ import { QUANTUM, quantize } from "../quantum.ts";
  * quantised to its output quantum (0.01 mm, 0.01°), so a command never writes float noise and
  * its output is canonical. Where the input is an expression, the result stays an expression,
  * so a mirrored or split bar still follows its params: `W` mirrored about x = 600 is
- * `1200 - W`, not a number.
+ * `1200 - W`, not a number. An expression a composer writes has its constants folded (*2.3*, the
+ * editing review's n3; `foldConstants`): `H - 300` moved 100 down is `H - 400`, not
+ * `H - 300 - 100`, and `W - 100` mirrored about x = 600 is `1300 - W`.
  */
 
 export const len = (x: number) => quantize(x, QUANTUM.len_mm);
@@ -42,7 +44,7 @@ export function plus(e: Expr, d: number, q: (x: number) => number = len): Expr {
   if (typeof e === "number") return q(e + d);
   if (d === 0) return e;
   const left = rank(e) === "other" ? `(${e})` : e;
-  return d > 0 ? `${left} + ${q(d)}` : `${left} - ${q(-d)}`;
+  return foldConstants(d > 0 ? `${left} + ${q(d)}` : `${left} - ${q(-d)}`);
 }
 
 /**
@@ -51,25 +53,25 @@ export function plus(e: Expr, d: number, q: (x: number) => number = len): Expr {
  */
 export function offsetBy(e: Expr, sign: 1 | -1, d: Expr, q: (x: number) => number = len): Expr {
   if (typeof d === "number") return plus(e, sign * d, q);
-  if (e === 0) return sign > 0 ? d : `-${term(d)}`;
+  if (e === 0) return sign > 0 ? d : foldConstants(`-${term(d)}`);
   const left = typeof e === "number" ? String(q(e)) : rank(e) === "other" ? `(${e})` : e;
-  return `${left} ${sign > 0 ? "+" : "-"} ${term(d)}`;
+  return foldConstants(`${left} ${sign > 0 ? "+" : "-"} ${term(d)}`);
 }
 
 /** `-e`. */
 export function negate(e: Expr, q: (x: number) => number = len): Expr {
   if (typeof e === "number") return q(-e);
-  return `-${term(e)}`;
+  return foldConstants(`-${term(e)}`);
 }
 
 /** `2·at − e`: a coordinate reflected in the plane at `at`. */
 export function reflect(e: Expr, at: number): Expr {
   if (typeof e === "number") return len(2 * at - e);
-  return at === 0 ? negate(e) : `${len(2 * at)} - ${term(e)}`;
+  return at === 0 ? negate(e) : foldConstants(`${len(2 * at)} - ${term(e)}`);
 }
 
 /** `k − e`: a length measured from the other end, or an angle turned the other way. */
 export function minus(k: number, e: Expr, q: (x: number) => number = len): Expr {
   if (typeof e === "number") return q(k - e);
-  return k === 0 ? negate(e, q) : `${q(k)} - ${term(e)}`;
+  return k === 0 ? negate(e, q) : foldConstants(`${q(k)} - ${term(e)}`);
 }

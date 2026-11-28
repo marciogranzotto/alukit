@@ -424,9 +424,8 @@ test("several selected: four legs set to finish black in one step, which one Und
   );
   expect(black).toMatchObject({ qty: 4, sources: ["b1", "b2", "b3", "b4"] });
   await expect(finish).toHaveValue("black");
-  expect(await lastStepWords(served.dir)).toBe(
-    "change b1's options, change b2's options and 2 more",
-  );
+  // One change of four bars, said once (the editing review's n2).
+  expect(await lastStepWords(served.dir)).toBe("change the options of b1, b2, b3 and b4");
 
   // One Undo takes all four back.
   await page.getByTestId("undo").click();

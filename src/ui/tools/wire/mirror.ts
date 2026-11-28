@@ -1,3 +1,4 @@
+import { taggedWords } from "#core/commands/copies.ts";
 import { idList } from "#core/commands/words.ts";
 import { compareIds } from "#core/ids.ts";
 import type { V3 } from "../../../mesh/model.ts";
@@ -74,8 +75,10 @@ export function mirrorWords(r: DryRun): JointWords {
     return { text: r.errors[0]?.message ?? r.why, shape: "refused", joins: false };
   }
   const info = r.results[0]?.info as
-    | { joined?: Record<string, string>; open?: string[] }
+    | { joined?: Record<string, string>; open?: string[]; tagged?: Record<string, string[]> }
     | undefined;
+  // The tags the images carry, as the core says them (docs/ux/review-editing.md m2).
+  const tags = taggedWords(info?.tagged);
   const made = (r.results[0]?.created ?? []).filter((id) => info?.joined?.[id] === undefined);
   const joins = copiedJoins(r);
   const claimed = new Set(r.effects.claimed);
@@ -84,6 +87,7 @@ export function mirrorWords(r: DryRun): JointWords {
   const removed = r.effects.removed;
   const parts = [
     made.length > 0 ? `makes ${idList(made)}` : "makes nothing",
+    ...(tags ? [tags] : []),
     ...(joins.length > 3 ? [`${joins.length} joints`] : joins),
     ...(open.length > 0 ? [`${idList(open)} stay${open.length === 1 ? "s" : ""} open`] : []),
     ...(cuts.length > 0

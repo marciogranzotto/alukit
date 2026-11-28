@@ -228,8 +228,11 @@ describe("duplicate and array (E3.3)", () => {
       expect(r.created).toEqual(["b13", "c9", "c10"]);
       // Its cut is the top rail's: each end butts on a post, as b9's do.
       expect(r.effects.added.b13).toBe(920);
-      // The preview says so before the step.
-      expect(copyWords(r).text).toBe("makes b13 · joins b1 (c9) · joins b2 (c10) · cut 920");
+      // The preview says so before the step, and that the copy carries the top rail's tag
+      // (docs/ux/review-editing.md m2): one untag away from leaving Select tagged top.
+      expect(copyWords(r).text).toBe(
+        "makes b13 · tagged top · joins b1 (c9) · joins b2 (c10) · cut 920",
+      );
       expect(r.effects.claimed).toEqual(expect.arrayContaining(["b13.a", "b13.b"]));
       // Nothing wrong: only the frame's own note that its butts name no connector.
       expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);

@@ -731,12 +731,15 @@ test("A7: duplicate the top front rail 300 down, joined to the legs", async ({ p
   await u.press("ControlOrMeta+d");
   await u.press("ArrowUp");
   await u.type("-300");
-  await expect(page.getByTestId("joint-preview")).toContainText("makes b17");
+  await expect(page.getByTestId("joint-preview")).toContainText("makes b17 · tagged top");
   await u.press("Enter");
   await waitDrawn(page, 1);
   u.done();
   u.report("A7", 1);
-  expect(await lastStepWords(served.dir)).toBe("copy b13, making b17, joined at 2 ends");
+  // The copy is the frame's second "top rail, front", and carries the tag top (review m2).
+  expect(await lastStepWords(served.dir)).toBe(
+    "copy b13, making b17, tagged top, joined at 2 ends",
+  );
   // Butts at both ends, and its cut is the top rail's.
   const doc = await docOf(served.dir);
   const butts = Object.values(
@@ -746,6 +749,10 @@ test("A7: duplicate the top front rail 300 down, joined to the legs", async ({ p
     "b17.a",
     "b17.b",
   ]);
+  expect((doc.bars as Record<string, unknown>).b17).toMatchObject({
+    label: "top rail, front (2)",
+    tags: ["top"],
+  });
   const d = await derived(served.dir);
   expect(d.bars.b17?.cut_mm).toBe(d.bars.b13?.cut_mm);
   // The CLI's batch: one array 300 down, then a join at each new end.

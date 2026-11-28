@@ -211,8 +211,9 @@ test("a cut typed on the label over a param keeps the param driving it (D-UX-17)
   await page.getByTestId("length-field").fill("=L - 40");
   await page.getByTestId("length-field").press("Enter");
   await waitDrawn(page, 1);
-  // b3 is a free brace: its length is its cut, written over L from end a's y.
-  expect((await doc(served.dir)).bars.b3?.b).toEqual([500, "600 - (L - 40)", 0]);
+  // b3 is a free brace: its length is its cut, written over L from end a's y, 600 − (L − 40)
+  // with its constants folded (the editing review's n3).
+  expect((await doc(served.dir)).bars.b3?.b).toEqual([500, "640 - L", 0]);
   expect(await cutOf(served.dir, "b3")).toBe(360);
   // L changed on the CLI: the cut follows it.
   const r = await cli([

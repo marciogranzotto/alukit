@@ -1,3 +1,4 @@
+import { taggedWords } from "#core/commands/copies.ts";
 import { negate, plus } from "#core/commands/numbers.ts";
 import type { Expr } from "#core/project/schema.ts";
 import type { V3 } from "../../mesh/model.ts";
@@ -226,12 +227,19 @@ export function copyWords(r: DryRun): JointWords {
     const said = r.errors[0]?.message ?? r.why;
     return { text: said, shape: "refused", joins: false };
   }
-  const carried = (r.results[0]?.info as { joined?: Record<string, string> } | undefined)?.joined;
+  const info = r.results[0]?.info as
+    | { joined?: Record<string, string>; tagged?: Record<string, string[]> }
+    | undefined;
+  const carried = info?.joined;
   const made = (r.results[0]?.created ?? []).filter((id) => carried?.[id] === undefined);
   const joins = copiedJoins(r);
   const cuts = [...new Set(made.map((id) => r.effects.added[id]).filter((c) => c !== undefined))];
+  // The tags the copies carry, as the core says them, so a rail copied below the top says it is
+  // still tagged top, one untag from leaving Select tagged top (docs/ux/review-editing.md m2).
+  const tags = taggedWords(info?.tagged);
   const parts = [
     made.length > 0 ? `makes ${list(made)}` : "makes nothing",
+    ...(tags ? [tags] : []),
     ...(joins.length > 3 ? [`${joins.length} joints`] : joins),
     ...(cuts.length > 0
       ? [`cut ${cuts.slice(0, 3).join(", ")}${cuts.length > 3 ? " …" : ""}`]
