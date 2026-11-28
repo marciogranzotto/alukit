@@ -48,6 +48,15 @@ expression is the core transform's (its `kept` list).
 material: Pattern's ghosts use the ghost material Move and Duplicate already compile at startup
 (**read**, `viewer/overlay.ts`).
 
+**Tests that changed with the words they read**, each kept exact: the caps are the platform's
+where a spec reads them (`menu.spec`, `visibility.spec`, `move.spec`: ⌘, ⇧H and Option on a
+Mac's user agent, as the browser the tests run in reports it); the face tips and options carry
+"(world …)" (`tools.spec`, `connect.spec`, `ends.spec`, `edit.spec`, `holes.test.ts`,
+`endEdits.test.ts`); `first-run.spec` finds CT38-06 under "Corner joints that fit"; the menus'
+lists lost Show on a drawn entity and Join where nothing can be joined (`registry.test.ts`,
+`edit-actions.test.ts`, `menu.spec`); Move's refusal says "hold Alt to detach it"
+(`moves.test.ts`).
+
 ## 1. The hole form keeps the focus where it is typed (M2)
 
 The size field had a callback ref, `ref={(el) => el?.focus()}`, which Preact runs on every render,

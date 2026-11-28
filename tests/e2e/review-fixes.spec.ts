@@ -86,7 +86,10 @@ test("m3: a move the preview refuses is not sent on Enter; the bar says why in t
   const up = await screen(page, [1000, 300, 120]);
   await page.mouse.move(up[0], up[1], { steps: 10 });
   await expect(page.getByTestId("joint-preview")).toContainText("would break a joint");
-  await expect(page.getByTestId("joint-preview")).toContainText(/hold (Alt|Option) to detach it/);
+  const mac = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.userAgent));
+  await expect(page.getByTestId("joint-preview")).toContainText(
+    `hold ${mac ? "Option" : "Alt"} to detach it`,
+  );
   await page.keyboard.press("Enter");
   // Nothing posted: the gesture is still on, and its bar says why, never the API's syntax.
   await expect(page.getByTestId("tool-result")).toContainText("would break a joint");
