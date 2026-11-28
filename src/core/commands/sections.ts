@@ -28,6 +28,18 @@ export const SYM_ORDER: readonly Sym[] = ["x", "y", "d", "a"];
 /** The outline's tolerance for a symmetry: M1's for an outline against its nominal box. */
 const OUTLINE_TOL = 0.1;
 
+/**
+ * How far a vertex's reflection may lie from the outline for the section to be its own image
+ * (§3.5, §4.4; docs/ux/recheck-fixes-core-decisions.md 1–3): M1's 0.1 mm, or twice the local
+ * uncertainty the section states where that is more. Each of two mirrored edges may be off by it,
+ * so a trace of a symmetric profile misses its own reflection by up to twice it, and the data
+ * cannot tell a smaller asymmetry from the trace's own error.
+ */
+export function outlineTolerance(s: BuiltSection): number {
+  const local = s.uncertainty?.local_mm;
+  return local === undefined ? OUTLINE_TOL : Math.max(OUTLINE_TOL, 2 * local);
+}
+
 type Box = readonly [Vec2, Vec2];
 
 function centre(box: Box): Vec2 {
@@ -105,13 +117,18 @@ function segDist([px, py]: Vec2, [ax, ay]: Vec2, [bx, by]: Vec2): number {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
-function onBoundary(p: Vec2, rings: readonly Ring[]): boolean {
+function onBoundary(p: Vec2, rings: readonly Ring[], tol: number): boolean {
   for (const r of rings) {
     for (let i = 0; i < r.length; i++) {
-      if (segDist(p, r[i] as Vec2, r[(i + 1) % r.length] as Vec2) <= OUTLINE_TOL) return true;
+      if (segDist(p, r[i] as Vec2, r[(i + 1) % r.length] as Vec2) <= tol) return true;
     }
   }
   return false;
+}
+
+/** Whether a point lies on the section's outline or a hole's, within `outlineTolerance`. */
+export function onOutline(s: BuiltSection, p: Vec2): boolean {
+  return onBoundary(p, [s.draw.outline, ...s.draw.holes], outlineTolerance(s));
 }
 
 /** The coordinate along a face that grooves are numbered by (§4.3). */
@@ -175,15 +192,19 @@ export function mapAnchor(m: Map2, s: BuiltSection, anchor: string): string | un
   return anchorName(s, reflectPoint(m, s.bbox_mm, p));
 }
 
-/** Whether the section is its own image under the map: outline, grooves and datums. */
+/**
+ * Whether the section is its own image under the map: its grooves and datums exactly, its outline
+ * within `outlineTolerance`.
+ */
 export function hasSymmetry(s: BuiltSection, m: Sym): boolean {
   const box = s.bbox_mm;
   const w = box[1][0] - box[0][0];
   const h = box[1][1] - box[0][1];
   if ((m === "d" || m === "a") && !near(w, h)) return false;
   const rings = [s.draw.outline, ...s.draw.holes];
+  const tol = outlineTolerance(s);
   for (const r of rings)
-    for (const v of r) if (!onBoundary(reflectPoint(m, box, v), rings)) return false;
+    for (const v of r) if (!onBoundary(reflectPoint(m, box, v), rings, tol)) return false;
   for (const g of s.grooves) {
     if (mapGroove(m, s, `${g.face}.${grooveList(s, g.face).indexOf(g.at_mm) + 1}`) === undefined) {
       return false;

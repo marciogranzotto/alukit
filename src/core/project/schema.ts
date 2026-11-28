@@ -94,6 +94,7 @@ const Common = {
  * depends on may use (a part, a hole a person writes; §4.3, §4.4).
  */
 export const From = z.enum(["a", "b", "a.cut", "b.cut"]);
+export type From = z.infer<typeof From>;
 
 /** A station (§4.3): a position along a bar or a run, on a face or groove, offset. */
 export const Station = z
@@ -914,6 +915,7 @@ export const ORDER_RULES = [
   "stale-price",
   "no-connector",
   "unconnected",
+  "coincident",
 ] as const;
 export type OrderRule = (typeof ORDER_RULES)[number];
 export const RuleAction = z.enum(["block", "warn", "off"]);

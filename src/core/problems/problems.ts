@@ -123,8 +123,9 @@ export function problemsOf(input: ProblemsInput): ProblemsAnswer {
   const drafts: Draft[] = [];
 
   // 1. The check's diagnostics, in its order. A `check-error` reason quotes an error this way;
-  // an `unconnected` reason quotes an open end's line alone (the re-check's N8); a
-  // `no-connector` reason names the butts the check notes one by one.
+  // an `unconnected` reason (an open end, the re-check's N8) and a `coincident` one (two bars in
+  // one place, N5) quote the check's line alone; a `no-connector` reason names the butts the
+  // check notes one by one.
   const quoted = new Map<string, Draft>();
   const open = new Map<string, Draft>();
   const noted = new Map<string, Draft>();
@@ -133,7 +134,8 @@ export function problemsOf(input: ProblemsInput): ProblemsAnswer {
     drafts.push(p);
     const as = `${d.code}${d.entity ? ` ${d.entity}` : ""}: ${d.message}`;
     if (d.severity === "error" && !quoted.has(as)) quoted.set(as, p);
-    if (d.code === "unconnected" && !open.has(d.message)) open.set(d.message, p);
+    const alone = d.code === "unconnected" || d.code === "coincident";
+    if (alone && !open.has(d.message)) open.set(d.message, p);
     if (d.code === "butt-no-connector" && d.entity) noted.set(d.entity, p);
   }
 
@@ -145,7 +147,7 @@ export function problemsOf(input: ProblemsInput): ProblemsAnswer {
       let p =
         r.rule === "check-error"
           ? quoted.get(r.message)
-          : r.rule === "unconnected"
+          : r.rule === "unconnected" || r.rule === "coincident"
             ? (open.get(r.message) ?? reasons.get(key))
             : reasons.get(key);
       if (!p) {
@@ -243,7 +245,7 @@ function fromDiagnostic(d: Diagnostic, ctx: Ctx): Draft {
     id: "",
     code: d.code,
     group: SEVERITY[d.severity],
-    title: checkTitle(d.code, where, d.message),
+    title: checkTitle(d.code, where, d.reason),
     detail: sentence(d.message),
     raw: d.message,
     targets: refsOf(names, ctx),
@@ -371,12 +373,12 @@ function fromReason(r: Reason, ctx: Ctx): Draft {
     }
     case "missing-price": {
       const rate = /: no exchange rate for (\S+)$/.exec(r.message)?.[1];
-      const services = SERVICES.exec(r.message);
+      const services = r.services;
       if (rate) {
         p.title = `No exchange rate for ${rate}`;
         p.detail = `Prices in ${rate} cannot be converted into the project's currency: add the rate (fx) in the project's settings.`;
       } else if (services) {
-        Object.assign(p, machiningWords(services[1] as string, Number(services[2]), item, ctx));
+        Object.assign(p, machiningWords(services.of, services.count, item, ctx));
       } else if (r.message.endsWith(": no price")) {
         p.title = `No price for ${name}`;
         p.detailFor = (s) => `The order from ${s} waits for its price.`;
@@ -473,9 +475,6 @@ const projectItem = (item: string) => item.startsWith(PROJECT_ITEM);
  */
 const setPrice = (item: string): Fix[] =>
   projectItem(item) ? [{ label: "Set a price…", kind: "set-price", item }] : [];
-
-/** The order's reason for a supplier's machining no cost line prices (`order/rules.ts`). */
-const SERVICES = /^(.+): no price for (\d+) machining services?; cover them with a cost line$/;
 
 /**
  * A supplier's machining that nothing prices (review M1; design §4.11, "Machining in v1"): the

@@ -23,6 +23,7 @@ import { cmp, type Key, optText, type Reason, readOf, type Work } from "./types.
  * | `stale-price` | warn | the supplier whose price was read more than 30 days before the order |
  * | `no-connector` | warn | butts naming no connector, with no project default: their bars' suppliers |
  * | `unconnected` | warn | an open end, the check's warning (*2.3*, review fixes, joins): its bars' suppliers |
+ * | `coincident` | warn | two bars in one place, the check's warning (*2.3*, re-check N5): their suppliers |
  */
 
 export const RULE_DEFAULTS: Readonly<Record<OrderRule, RuleAction>> = {
@@ -36,6 +37,7 @@ export const RULE_DEFAULTS: Readonly<Record<OrderRule, RuleAction>> = {
   "stale-price": "warn",
   "no-connector": "warn",
   unconnected: "warn",
+  coincident: "warn",
 };
 
 /** A price is stale when read more than this many days before the order's date. */
@@ -69,6 +71,7 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
     to: Iterable<Key> | "all",
     message: string,
     entities: readonly string[] = [],
+    about: Pick<Reason, "services"> = {},
   ) => {
     const action = rules[rule];
     if (action === "off") return;
@@ -80,6 +83,7 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
         action,
         message,
         ...(entities.length > 0 ? { entities: [...entities] } : {}),
+        ...about,
       });
     }
   };
@@ -180,10 +184,12 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
   // the problem list keeps one problem with its Join fix. The rule already says what it is and
   // the check's line names the end, so the line is quoted alone (the re-check's N8: `check-error`'s
   // "code entity:" before it said the end and the rule twice).
+  // Two bars in one place (*2.3*, re-check N5) buy one bar too many, so the order warns the same
+  // way, quoting the check's line alone.
   for (const x of ctx.diagnostics) {
-    if (x.code !== "unconnected") continue;
+    if (x.code !== "unconnected" && x.code !== "coincident") continue;
     const names = [...new Set([...(x.entity ? [x.entity] : []), ...(x.refs ?? [])])];
-    add("unconnected", reach(names), x.message, names);
+    add(x.code, reach(names), x.message, names);
   }
 
   for (const [k, e] of services) {
@@ -193,6 +199,7 @@ export function orderReasons(ctx: RuleContext): Map<Key, Reason[]> {
       [e.key],
       `${what}: no price for ${e.count} machining service${e.count === 1 ? "" : "s"}; cover them with a cost line`,
       [e.item],
+      { services: { of: what, count: e.count } },
     );
   }
 

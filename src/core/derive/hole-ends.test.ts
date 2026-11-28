@@ -63,8 +63,11 @@ describe("a hole counted from a cut end (review M3)", () => {
   it("is the cut list's number: from end a's cut and from end b's cut", () => {
     const d = derive(frame([hole(20, "a.cut")]), items);
     expect(d.bars.get("b3")?.lengths.cut).toBe(960);
-    // Derive resolves it to its place along the axis from design point a: 20 + 20.
-    expect(d.bars.get("b3")?.ops).toEqual([{ op: "hole", face: "+y", from: "a", at: 40, d: 7 }]);
+    // Derive resolves it to its place along the axis from design point a: 20 + 20, and keeps
+    // what was written, which its messages name it by (re-check N3).
+    expect(d.bars.get("b3")?.ops).toEqual([
+      { op: "hole", face: "+y", from: "a", at: 40, d: 7, written: { from: "a.cut", at: 20 } },
+    ]);
     expect(railLine(frame([hole(20, "a.cut")]))?.machining).toEqual([
       { op: "hole", face: "+y", from: "a", at_mm: 20, d_mm: 7 },
     ]);
@@ -111,22 +114,23 @@ describe("a hole counted from a cut end (review M3)", () => {
 });
 
 describe("a hole off its piece (review M3)", () => {
-  it("is an error when it lies past a cut, as the cut list would print it", () => {
-    // 20 from design point a is 0 from end a's cut: half the Ø7 is off the piece.
+  it("is an error when it lies past a cut, named from what it counts from", () => {
+    // 20 from design point a is 0 from end a's cut: half the Ø7 is off the piece. The hole is
+    // named as it is written (re-check N3), the end it reaches past as the cut.
     expect(errors(frame([hole(20)]))).toEqual([
       [
         "machining",
         "b3",
-        "the Ø7.00 hole on face +y, 0.00 mm from end a's cut, reaches 3.50 mm past end a's cut face: off the piece, a shop cannot make it there",
+        "the Ø7.00 hole on face +y, 20.00 mm from design point a, reaches 3.50 mm past end a's cut face: off the piece, a shop cannot make it there",
       ],
     ]);
     // A hole 40 outside design point a: the cut list would print it at −60, as the review saw.
     expect(errors(frame([hole(-40)]))[0]?.[2]).toBe(
-      "the Ø7.00 hole on face +y, -60.00 mm from end a's cut, reaches 63.50 mm past end a's cut face: off the piece, a shop cannot make it there",
+      "the Ø7.00 hole on face +y, -40.00 mm from design point a, reaches 63.50 mm past end a's cut face: off the piece, a shop cannot make it there",
     );
-    // Past end b, counted from it.
+    // Past end b, counted from end a's cut.
     expect(errors(frame([hole(961, "a.cut")]))[0]?.[2]).toBe(
-      "the Ø7.00 hole on face +y, -1.00 mm from end b's cut, reaches 4.50 mm past end b's cut face: off the piece, a shop cannot make it there",
+      "the Ø7.00 hole on face +y, 961.00 mm from end a's cut, reaches 4.50 mm past end b's cut face: off the piece, a shop cannot make it there",
     );
   });
 

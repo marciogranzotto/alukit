@@ -2,7 +2,7 @@ import type { Diagnostic } from "../diagnostics.ts";
 import { compareIds } from "../ids.ts";
 import type { ItemSource } from "../items.ts";
 import { type Doc, parseProject } from "../project/parse.ts";
-import type { Expr, Face } from "../project/schema.ts";
+import type { Expr, Face, From } from "../project/schema.ts";
 import { projectItems } from "../project-items/source.ts";
 import type { V3 } from "../vec.ts";
 import { attach } from "./attach.ts";
@@ -54,6 +54,12 @@ export interface HoleOp {
   cbore?: { d: number; depth: number };
   /** The connection that generated it. */
   by?: string;
+  /**
+   * A hole a person wrote: the reference it counts from and its distance from there, as written
+   * (§4.4), so every message names it as the person does (re-check N3). A generated hole counts
+   * from design point a, as `from` and `at` say.
+   */
+  written?: { from: From; at: number };
 }
 
 /**
@@ -300,6 +306,7 @@ function resolveOps(ctx: Ctx, id: string, l: BarLengths): ResolvedOp[] {
       ...(cbore?.d !== undefined && cbore.depth !== undefined
         ? { cbore: { d: cbore.d, depth: cbore.depth } }
         : {}),
+      written: { from, at: written },
     });
   });
   return out;

@@ -39,6 +39,7 @@ export const RULE_WORDS: Readonly<Record<string, string>> = {
   "option-not-sold": "Option not sold",
   "no-connector": "No connector",
   unconnected: "Open end",
+  coincident: "Two bars in one place",
 };
 
 export function ProblemRow({

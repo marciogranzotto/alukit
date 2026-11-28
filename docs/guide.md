@@ -183,6 +183,9 @@ Check after each batch: `alukit check <dir>` exits 1 on an error, prints warning
 end, an item with no offer) and reports your checks. An unconnected end is one that meets another
 bar's end, or lies on a bar's face or runs into it, with no joint: "b13.a lies on b3's +x face
 with no connection". `autoConnect { "end": "b13.a" }` joins it, and the order warns until it is.
+Two bars of one section standing in one place, a paste or a duplicate on top of the original, are
+a warning too ("b13 stands where b9 does: … so the BOM counts it twice; remove one of them"), and
+the order warns of them under `coincident`.
 
 ## Drawing in the viewer
 
@@ -442,7 +445,14 @@ is hidden.
   posts, mirrored at `=W / 2`, is cut as the brace and butted on the opposite posts, and the
   preview says so before the click ("makes b18 · joins b4 (c15) · joins b3 (c16) · cut 1049.97").
   An end that nothing joins, its joint having no bar at its image and nothing to butt on there,
-  stays open, and the preview says that too; an end the step joins is said joined, never both.
+  stays open, and the preview says that too; an end the step joins is said joined, never both,
+  and so do the step's words in Undo and the history ("mirror b13, making b14, joined at 2 ends").
+  Mirror makes no twin: a bar whose image is itself (a rail across the plane) or a bar already
+  standing there is not copied, and a part mirrored with it lands on that bar ("b9 is its own
+  image"); mirroring only such a bar is refused, since it would make nothing. When a mirror is
+  refused with "include b1", including b1 works: the advice names every bar it needs, or the
+  refusal says why including it would be refused too. Profiles traced from the vendor's drawings,
+  such as Forseti's 40 × 80, mirror as themselves.
 
 ### Lengths and ends
 
@@ -479,7 +489,8 @@ is hidden.
   ends are cut back or extended. Each hole is then a row that edits and removes it ("20 mm from
   end a's cut"). Changing what a hole counts from keeps it where it is and shows the new number:
   a hole 300 from design point a on a rail cut back 40 reads 260 from end a's cut. A hole that
-  reaches past a cut is an error: off the piece, no shop can make it there. In the document,
+  reaches past a cut is an error: off the piece, no shop can make it there. Every message about a
+  hole names it as you wrote it ("the tap M6 20.00 from end a's cut"). In the document,
   `"from": "a.cut"`; without `from`, a hole counts from design point a.
 
 ### Several selected, profiles and nodes
@@ -592,6 +603,7 @@ with `alukit do`'s `addCost` (`"covers": { "supplier": "…", "services": true }
 | `stale-price` | warns | the price was read more than 30 days before `--as-of` (today by default) |
 | `no-connector` | warns | butts name no connector and the project names no default butt connector, so nothing is bought to join them |
 | `unconnected` | warns | an end meets another bar's end, or lies on a bar, with no joint: nothing holds it, so nothing is bought to |
+| `coincident` | warns | two bars of one section stand in one place, so one bar too many is bought |
 
 Set a rule to `block`, `warn` or `off` in the document's `order_rules`. `alukit order` exits 1
 while any supplier is blocked, which is what you want in a script. The cart is blocked, on

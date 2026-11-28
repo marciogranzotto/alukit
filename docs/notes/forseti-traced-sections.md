@@ -60,12 +60,24 @@ with their own vector outlines, δ came out within 0.005, 0.004, 0.011 and 0.005
 +0.89, −0.76, −0.24 and −1.04 % off, the inertias within 1.81 %, an inertia's error at most 2.1
 times its area's (an edge's error weighs by its distance from the axis squared). Two earlier
 versions failed this and were dropped: one scale for both axes, with the bores fitted (δ off by
-0.015 to 0.025 mm), and calibration on the vector extension lines (the rasters sit up to half a
-pixel off their own vector overlay, locally).
+0.015 to 0.025 mm), and calibration on the vector extension lines (the rasters sit off their own
+vector overlay, locally).
 
-**Uncertainty**, stated in each section's `from.note`: ±(the margin's standard error ⊕ 0.011 mm,
-the method's largest error above) overall, 0.011 to 0.013 mm; ±half a pixel locally, 0.07 to
-0.15 mm.
+**Uncertainty**, stated in each section's `from.note` and, *since the re-check fixes*, as data in
+`from.uncertainty: { overall_mm, local_mm }`, which the core reads (mirror and reverse judge a
+traced outline's symmetry within twice `local_mm`;
+[recheck-fixes-core-decisions](../ux/recheck-fixes-core-decisions.md) 1–3): ±(the margin's
+standard error ⊕ 0.011 mm, the method's largest error above) overall, 0.011 to 0.013 mm;
+±1.5 pixels locally, 0.22 to 0.44 mm.
+
+*Corrected 2026-11-28.* This note first stated ±half a pixel locally (0.07 to 0.15 mm), the 50 %
+contour's own error. Measured on the same four ground-truth pages, a trace lies up to 1.11, 0.67,
+1.45 and 1.23 px from the vector outline over its raster (PF40-00, PF40-01, PF45-12, PF40-03), the
+worst at a sharp corner: a raster places an edge by a pixel or more, and a trace follows its image.
+`import_forseti.py check-traces` measures it again and fails above `TRACE_LOCAL_PX` (1.5, in
+`tables.py`). The δ, areas and inertias above are unchanged: they are whole-outline measures, and
+the local error averages out in them. The groove ranges that carry the trace's uncertainty widen
+with it.
 
 ## The check, and the tolerance
 
@@ -97,14 +109,14 @@ uncertainty overall / locally. All **verified** by the build and `alukit catalog
 | Profile | Source | Points | Holes | Area | Ix, Iy | Uncertainty (mm) | Fidelity |
 |---|---|---|---|---|---|---|---|
 | PF20-11, 20x20 V-slot | vector, p. 10 | 104 | 1 | +0.60 % | +1.42 %, +1.41 % (accepted) | – | exact |
-| PF20-21, 20x20 | raster, p. 10 (image 88) | 585 | 1 | −1.34 % | −0.24 %, −0.62 % | ±0.012 / ±0.13 | traced |
-| PF30-01, 30x30 básico | raster, p. 13 (137) | 636 | 5 | −1.20 % | −1.27 %, −0.79 % | ±0.012 / ±0.09 | traced |
-| PF30-01F, 30x30 de face | raster, p. 13 (135) | 628 | 4 | −1.11 % | −0.59 %, −0.87 % | ±0.013 / ±0.13 | traced |
-| PF30-11, 30x30 centro M8 | raster, p. 12 (117) | 694 | 5 | −1.29 % | −1.11 %, −1.27 % | ±0.011 / ±0.09 | traced |
-| PF40-02, 40x80 | raster, p. 17 (189) | 2037 | 7 | −0.11 % | −1.09 %, −0.58 % | ±0.012 / ±0.14 | traced |
-| PF45-01, 45x45 básico | raster, p. 18 (211) | 1022 | 5 | +0.77 % | +1.47 %, +1.48 % | ±0.012 / ±0.07 | traced |
-| PF45-11, 45x45 parafuso | raster, p. 19 (225) | 948 | 5 | −0.77 % | −0.71 %, −0.88 % | ±0.011 / ±0.13 | traced |
-| PF50-01, 50x50 | raster, p. 20 (240) | 798 | 5 | +0.44 % (from the shop's 2,448 kg/m) | none published | ±0.012 / ±0.15 | traced |
+| PF20-21, 20x20 | raster, p. 10 (image 88) | 585 | 1 | −1.34 % | −0.24 %, −0.62 % | ±0.012 / ±0.38 | traced |
+| PF30-01, 30x30 básico | raster, p. 13 (137) | 636 | 5 | −1.20 % | −1.27 %, −0.79 % | ±0.012 / ±0.26 | traced |
+| PF30-01F, 30x30 de face | raster, p. 13 (135) | 628 | 4 | −1.11 % | −0.59 %, −0.87 % | ±0.013 / ±0.38 | traced |
+| PF30-11, 30x30 centro M8 | raster, p. 12 (117) | 694 | 5 | −1.29 % | −1.11 %, −1.27 % | ±0.011 / ±0.26 | traced |
+| PF40-02, 40x80 | raster, p. 17 (189) | 2037 | 7 | −0.11 % | −1.09 %, −0.58 % | ±0.012 / ±0.42 | traced |
+| PF45-01, 45x45 básico | raster, p. 18 (211) | 1022 | 5 | +0.77 % | +1.47 %, +1.48 % | ±0.012 / ±0.22 | traced |
+| PF45-11, 45x45 parafuso | raster, p. 19 (225) | 948 | 5 | −0.77 % | −0.71 %, −0.88 % | ±0.011 / ±0.38 | traced |
+| PF50-01, 50x50 | raster, p. 20 (240) | 798 | 5 | +0.44 % (from the shop's 2,448 kg/m) | none published | ±0.012 / ±0.44 | traced |
 | PF20-12, 20x40 | raster, p. 11 (109) | – | – | +3.05 % | +2.08 %, +2.16 % | – | parametric |
 | PF30-01C, 30x30 de canto | raster, p. 14 (151) | – | – | −6.57 % | −7.31 %, −5.46 % | – | parametric |
 | PF30-01R, 30x30 abaulado | raster, p. 15 (163) | – | – | +3.26 % | +3.23 %, +3.10 % | – | parametric |

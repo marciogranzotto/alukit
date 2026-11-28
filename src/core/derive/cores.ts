@@ -43,7 +43,7 @@ export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void 
         "machining",
         id,
         `${sectionId} gives no core positions: the taps in ${ends.map((e) => `end ${e}`).join(" and ")} (${by.join(", ")}) are not checked against its cores`,
-        { refs: by },
+        { reason: "no-cores", refs: by },
       );
       continue;
     }
@@ -69,7 +69,7 @@ export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void 
           "machining",
           id,
           `${opText(b, t)} (${by.join(", ")}) runs across ${sectionId}'s cores, which lie along its axis: its thread is cut in no core`,
-          { refs: by },
+          { reason: "off-core", refs: by },
         );
         continue;
       }
@@ -93,7 +93,7 @@ export function coreTaps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): void 
         "machining",
         id,
         `${opText(b, t)} (${by.join(", ")}) is on no core of ${sectionId}${where}`,
-        { refs: by },
+        { reason: "off-core", refs: by },
       );
     }
   }
@@ -124,7 +124,7 @@ function tapFits(
       "machining",
       bar,
       `${what} (${by.join(", ")}) is on ${core}; its fit is not checked: AluKit has no tap drill and 6H tolerance for ${thread}`,
-      { refs: by },
+      { reason: "fit-unchecked", refs: by },
     );
     return;
   }
@@ -137,9 +137,7 @@ function tapFits(
     "machining",
     bar,
     `${what} (${by.join(", ")}) does not fit ${core} it is on: ${why}`,
-    {
-      refs: by,
-    },
+    { reason: "core-fit", refs: by },
   );
 }
 

@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core", 115–119 in "Editing polish, app", 120–124 in "Review fixes, joins", 125–129 in "Review fixes, machining and speed", 130–134 in "Review fixes, app" and 138–140 in "Re-check fixes, app"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "Re-check fixes, app". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core", 115–119 in "Editing polish, app", 120–124 in "Review fixes, joins", 125–129 in "Review fixes, machining and speed", 130–134 in "Review fixes, app", 135–137 in "Re-check fixes, core" and 138–140 in "Re-check fixes, app"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "Re-check fixes, core". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -960,6 +960,30 @@ open-end reason and the machining problems' titles. Each fix has a test that fai
 - §8 The inspector: **switching a hole's reference keeps the hole where it is** and converts its
   distance, an expression staying one (xa 4; N6). Call 140.
 
+### Re-check fixes, core
+
+The editing review's re-check (§9.4 of [`ux/review-editing.md`](ux/review-editing.md)), its
+core findings N1, N3 and N5, and two follow-ups from the app round, N10's titles and N2's step
+words, in the core ([`ux/recheck-fixes-core-decisions.md`](ux/recheck-fixes-core-decisions.md),
+cited as "xc"). One section field, one diagnostic code, one order rule and three answer fields are
+added. No golden value moves; over the 59 fixture projects, only the order's rules table and its
+unpriced-machining reason do (xc, what moved). Each fix has a test that failed first.
+
+- §3.5, §4.7: **a traced section is symmetric within its stated uncertainty**, twice its local
+  uncertainty, which the Forseti importer now measures (1.5 px, `check-traces`) and states as
+  `from.uncertainty`; `catalog check` requires it of a traced section. Forseti's 40 × 80 mirrors
+  and reverses, and A6 mirrors after A4 (xc 1–3; N1). Call 135.
+- §6: **`mirror`'s advice is tried before it is given**, naming the whole chain, or the refusal
+  says why including it is refused too (xc 4–6; N1). **`mirror` makes no twin**: a bar whose image
+  already stands is not copied, references land on it, the answer says `there`, and a mirror that
+  would make nothing is refused (xc 9–11; N5). §5.5: **two bars in one place** are a check warning
+  and an order warning, `coincident` (xc 12–14; N5). Call 136.
+- §5.1: **every message about a hole names it from its own reference** (xc 7, 8; N3). A
+  diagnostic says which finding it is in `reason`, and §5.5's problem list titles machining by it,
+  and words unpriced machining from the order reason's `services`, matching no text (xc 15). §6:
+  **a step gives each end one outcome**, never "left open" for an end the step joins (xc 16). Call
+  137.
+
 ## Draft 2.2 — what changed (2026-11-26)
 
 - **A shoe mitred square to a strut (gap G-A; §4.5, §16).** A plane's `normal` may name a bar:
@@ -1436,7 +1460,7 @@ A section file holds one section, in mm, about its nominal centre (local x = wid
 | `fidelity` | What it is | Drawn | Computed properties stand in for missing published ones |
 |---|---|---|---|
 | `exact` | vector outline from the vendor's drawing or CAD | yes | yes, tagged `calc` |
-| `traced` | traced from a raster image, accepted only within 2 % of the published area and, *2.3*, 4 % of the published inertias where there are any (call 65) | yes | yes, tagged `est` |
+| `traced` | traced from a raster image, accepted only within 2 % of the published area and, *2.3*, 4 % of the published inertias where there are any (call 65); *2.3* it states its uncertainty as data, `from.uncertainty: { overall_mm, local_mm }`, which `catalog check` requires of it (re-check N1, [xc](ux/recheck-fixes-core-decisions.md) 2, 3; call 135) | yes | yes, tagged `est` |
 | `parametric` | built by a generator from published dimensions | yes | steel shapes: yes (`props_ok: true`); a T-slot envelope: **no** (`props_ok: false`) |
 | `box` | the bounding box only | as a box | no |
 
@@ -2290,6 +2314,11 @@ G22–G24 (§4.6) are the worked cases.
   are written once.
 - Patterns are translations only in v1. `mirror` and `array` are commands that create ordinary
   entities (§6); a mirrored asymmetric section takes the item's other `hand`, or is an error.
+  *2.3* (re-check N1; [xc](ux/recheck-fixes-core-decisions.md) 1; call 135): a section is
+  symmetric across a line when each vertex of its outline, reflected, lies on the outline within
+  0.1 mm (M1's outline tolerance), or, for an outline that states its local uncertainty (a traced one, §3.5),
+  within twice that, since each of two mirrored edges may be off by it. So Forseti's traced
+  40 × 80 mirrors and reverses as itself, as its catalogue draws it.
 
 ### 4.8 Project items
 
@@ -2547,7 +2576,13 @@ which gives its stored outputs (*2.3*).
 
 **Nothing throws on content** (review m10). An unknown reference, a cycle, an invalid connection
 or a zero-length bar becomes a diagnostic `{ severity, code, entity, message }`; the entity is
-skipped or drawn at its default, and the rest derives.
+skipped or drawn at its default, and the rest derives. *2.3* (re-check fixes, core;
+[xc](ux/recheck-fixes-core-decisions.md) 15; call 137): a code that covers several findings says
+which in `reason`: each `machining` diagnostic gives one of `off-piece` (a hole past a cut face),
+`tap-in-groove`, `repeated`, `no-cores`, `off-core`, `core-fit` and `fit-unchecked`. The problem
+list titles it by that (§5.5), and it is in every output that lists diagnostics. *2.3* (N3, xc 7):
+**every message about a hole names it from the hole's own reference**, as written ("the tap M6
+20.00 from end a's cut on face -x"); a generated hole from design point a.
 
 ### 5.2 Numbers and determinism (review M4)
 
@@ -2700,6 +2735,7 @@ sleeve). What the build machines on a context bar is on the machining sheet, mad
 | Ends and connections | the validation column of §4.5, two providers, an undeclared angled cut, a chain of end providers, a station on a run's joint, a run not spliced in order; a `held_by` that does not hold, a connector position that falls off its end or face (*2.3*); an end hole whose screw leaves the block by a side, or whose wall breaks out of one; a screw into a butting end that meets a side face at an angle; a butting bar that goes into the body it bears on beyond the face (*2.3*, after acceptance run 4); a blind hole in the butting bar's side that does not reach its position; a connector in a fastener set whose mount's plane is not the joint's, or that has fastener sets of its own; a headed connector counted by `qty` above one (*2.3*, after the round-3 acceptance, X7, X8) | error |
 | Ends and connections (*2.3*) | a butting end face that reaches past the face it bears on by more than the connector's `overhang_mm`, else `defaults.butt.overhang_mm`, else 0 (§4.5) | warn |
 | Unconnected ends | a point shared by two or more bar ends with no connection; an end a provider claims is connected even when the claim fails, which is its own error (*2.3*, E1.2); *2.3* a free end that lies on another bar, on its face or inside it, where a butt through that bar would bear on it (§4.5, the default connection's rule; not an end a butt bears on, nor between two context bars): "b13.a lies on b3's +x face with no connection", or "runs 40 mm into b5, past its +x face" (review fixes, joins; call 123) | warn |
+| Two bars in one place (*2.3*, re-check N5) | a bar standing where another of its section stands: on the same line, its design points the other's either way within `tol.len`, and the same body, its placed outline on the other's within the section's tolerance (§3.5); on the later id, naming the first: "b13 stands where b9 does: the same section on the same line, one body in one place, so the BOM counts it twice; remove one of them" ([xc](ux/recheck-fixes-core-decisions.md) 12; call 136) | warn |
 | Fit | a connector that holds a joined bar in no way it may (§3.4, by role; *2.3*); a T-nut that does not fit its groove; a carriage on another rail system; a `face` with no contact; a head, nut or washer that bears on none of its face's material (*2.3*); a blind fastener whose grip lies outside its maker's range (*2.3*, §4.5) | error |
 | Fit (*2.3*) | a head, nut or washer that bears on less than half of its annulus (§4.5, its seat) | warn |
 | Fit (*2.3*) | a head, nut or washer whose item gives no bearing diameter, so its seats are not checked | info |
@@ -2758,6 +2794,7 @@ error.
 | `stale-price` (older than 30 days before the order's date) | warn | that supplier |
 | `no-connector` (butts that name no connector, while the project names no default butt connector: nothing is bought to join them; [polish](ux/polish-decisions.md) 1) | warn | the suppliers of the butted bars |
 | `unconnected` (*2.3*: an unconnected end of the check, a corner's or one on a bar, quoted: nothing holds it and nothing is bought to; [rj](ux/review-fixes-joins-decisions.md) 9; call 124; its line alone, [xa](ux/recheck-fixes-app-decisions.md) 6) | warn | the suppliers of its bars |
+| `coincident` (*2.3*: two bars in one place, the check's line alone: one bar bought too many; [xc](ux/recheck-fixes-core-decisions.md) 13; call 136) | warn | the suppliers of both bars |
 
 The order list reports **READY** or **BLOCKED** per supplier, with every reason. `alukit order`
 exits non-zero when any supplier is blocked, so an agent cannot hand over a blocked list by
@@ -2806,13 +2843,17 @@ end is joined at its template's end, whose copies follow (§4.7). With the order
 *2.3* (the re-check fixes; [xa](ux/recheck-fixes-app-decisions.md) 6, 7; call 139): the order's
 reason quotes the check's line alone ("unconnected: b17.b lies on b4's -x face with no
 connection"), since the rule already says what it is; **a `machining` problem is titled by what
-is wrong**, read from the outcome its check writes: "A hole off its piece at b5", "A tap with too
-little wall at b5", "A tap on no core", "The same machining made twice at one place"; else
-"Machining to check".
+is wrong**: "A hole off its piece at b5", "A tap with too little wall at b5", "A tap on no core",
+"The same machining made twice at one place"; else "Machining to check". *2.3* (re-check fixes,
+core; [xc](ux/recheck-fixes-core-decisions.md) 15; call 137): the title is keyed by the
+diagnostic's `reason` (§5.1), never read from its words, so a check's wording can change and its
+title stays; "Two bars in one place at b13" is one problem, the check's and the order's
+(`coincident`, xc 14).
 
 *2.3* (review M1; [rm](ux/review-fixes-machining-decisions.md) 1, 2; call 125). **A supplier's
 unpriced machining reads as itself**: the order's "no price for N machining services" is "N
-machining services on <item> have no price", targeting the bars that carry them, its detail naming
+machining services on <item> have no price" (*2.3*, xc 15: from the reason's `services`,
+`{ of, count }`, not its message), targeting the bars that carry them, its detail naming
 the services and giving the cost line that prices them (`addCost` with `covers: { supplier,
 services: true }`), with no fix, since costs have no app path (§8). **"Set a price" is offered
 only for a project's own item**, the only price the app sets; a catalog item is priced in its
@@ -2962,6 +3003,19 @@ the answer and the next snapshot (§7.1). A state whose lock pins what it names 
   words ("b14.a and b14.b left open"); `joined` gives each connection made and the bar it joins
   to. `array` and `explodePattern` copy the own joints of the bars they copy, as derive's
   patterns do, and `array` answers `joined` too (rj 3).
+  *2.3* (re-check fixes, core; [xc](ux/recheck-fixes-core-decisions.md) 4–6, 9–11, 16; call
+  136): **a refusal's advice is tried before it is given**: "include b1" is said only when the
+  mirror with b1 goes through; it names every bar that inclusion needs in turn ("include b13 and
+  b1"), and where including one is refused for another reason the refusal says so instead
+  ("mirroring b1 with it is refused too: …"). **No twin**: a bar of the set whose image already
+  stands, itself (a plane through its axis) or another bar of the same section and placement, is
+  not copied; references land on it, the answer names it (`there`: `{ "b9": "b9" }`) and the
+  words say "b9 is its own image" or "b11's image is b12". A mirror that would make nothing is
+  refused, as is one whose bar at its image lacks its holes' images (a mirror adds no hole to a
+  bar). **The ends left open are the step's to say**: an end any command of the step joins (an
+  `autoConnect` after the mirror) is not said to be open, so the words read "mirror b13, making
+  b14, joined at 2 ends", and "b14.b left open" only for an end nothing in the step joins.
+  `autoConnect` answers the through bar's own end at a corner, which its butt covers (`covers`).
 - **A dry run** (*2.3*) applies a batch and derives it, and writes, logs and broadcasts nothing.
   It answers as the step would, with what it would do to what is derived: the bars whose cut
   moves (`cuts`, before and after), the bars it adds with their cuts, the parts it adds (`parts`,
@@ -4638,6 +4692,26 @@ reasons. Marking the room is the run's own change, in its project.
      the tool rail when the rail reaches it; a bar's face is named "face -y (world +X)" wherever a
      person reads it, a snap keeping its section-axis label for machines; a Mac's caps are
      ⌥ ⇧ ⌘ by the user agent (rfa 3, 8, 9, 10, 12).
+135. *New in 2.3, re-check fixes (core), open.* A section is symmetric within its outline's
+     stated uncertainty: each reflected vertex on the outline within 0.1 mm, or twice the stated
+     local uncertainty where that is more (approximate symmetry, as Alt et al. 1988 define it for
+     measured points). A traced edge's local uncertainty is 1.5 of its image's pixels, the
+     farthest a trace lay from the vector outline over its raster on the catalogue's four such
+     pages (1.45 px at worst), not the half pixel stated before; the importer states it as
+     `from.uncertainty`, which `catalog check` requires of a traced section (xc 1–3).
+136. *New in 2.3, re-check fixes (core), open.* `mirror` gives an advice to include something only
+     after trying it, naming the whole chain, and otherwise says why including it is refused too;
+     it copies no bar whose image already stands (itself or another bar), lands references on that
+     bar and says so, and refuses a mirror that would make nothing. Two bars of one section, one
+     line and one body are a check warning, `coincident`, on the later id, and an order warning
+     under a rule of the same name, warn by default, as Tekla's clash check and Revit's
+     identical-instances warning treat them (xc 4–6, 9–14).
+137. *New in 2.3, re-check fixes (core), open.* A diagnostic whose code covers several findings
+     says which in `reason` (`machining`'s seven), and the unpriced-machining order reason gives
+     `services: { of, count }`; the problem list titles and words them from those fields, matching
+     no text. A step's words give each bar end one outcome: an end any command of the step joins is
+     not said to be left open, and `autoConnect` names the corner end its butt covers (`covers`)
+     (xc 15, 16).
 138. *New in 2.3, re-check fixes (app), open.* Every previewed commit asks one gate: a refusal the
      preview shows for exactly the commands about to be sent, at the revision the app held when it
      asked, is not sent, in every gesture's one commit path, Draw and the length label; the bar
@@ -4646,10 +4720,12 @@ reasons. Marking the room is the run's own change, in its project.
      commands, still in flight, or of an older revision holds nothing (xa 1, 2).
 139. *New in 2.3, re-check fixes (app), open.* Words follow what the core will do: Mirror's preview
      says an image's end stays open only when the dry run's `effects.claimed` does not hold it
-     (the step's own words, the core's `mirror` describe, are left to the core); Draw's second
+     (the step's own words, the core's `mirror` describe, are left to the core; call 137 makes
+     them agree); Draw's second
      point names its face with the world direction; the order's `unconnected` reason quotes the
-     check's line alone; a `machining` problem is titled by the outcome its check writes ("A hole
-     off its piece", "A tap with too little wall"), else "Machining to check" (xa 3, 5, 6, 7).
+     check's line alone; a `machining` problem is titled by what is wrong ("A hole
+     off its piece", "A tap with too little wall"), else "Machining to check" (xa 3, 5, 6, 7);
+     since call 137 the title is keyed by the diagnostic's `reason`, not read from its words.
 140. *New in 2.3, re-check fixes (app), open.* Switching a hole's reference keeps the hole where it
      is and converts its distance, `(o₁ − o₂)·w₂ + w₁·w₂·x` over the reference's origin and way
      along the axis (design points, or the long points derive counts a cut from), with the core's

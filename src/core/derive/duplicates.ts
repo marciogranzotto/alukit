@@ -1,7 +1,8 @@
 import { compareIds } from "../ids.ts";
+import type { From } from "../project/schema.ts";
 import { QUANTUM, quantize } from "../quantum.ts";
 import type { Ctx } from "./context.ts";
-import type { DerivedBar, ResolvedOp } from "./derive.ts";
+import type { DerivedBar, HoleOp, ResolvedOp } from "./derive.ts";
 
 /**
  * Coincident machining (acceptance gap A8): two ops of one bar that are one op in the shop, the
@@ -34,7 +35,7 @@ export function duplicateOps(ctx: Ctx, bars: ReadonlyMap<string, DerivedBar>): v
         "machining",
         id,
         `${opText(b, first)} is made ${ops.length} times at one place (${who}): give each its own position, or make it once`,
-        by.length > 0 ? { refs: by } : {},
+        { reason: "repeated", ...(by.length > 0 ? { refs: by } : {}) },
       );
     }
   }
@@ -85,8 +86,25 @@ export function opText(b: DerivedBar, o: ResolvedOp): string {
     }
     return `the ${what} in end ${o.from} along the axis, ${at(o.off)}`;
   }
-  const s = o.from === "a" ? o.at : b.lengths.len - o.at;
+  const [s, from] = holePlace(b, o);
   const across = o.across === undefined ? "" : `, ${mm(o.across)} across`;
   const through = o.depth === undefined && !o.csk && !o.cbore ? ", through" : "";
-  return `the ${what} ${mm(s)} from design point a on face ${o.face}${across}${through}`;
+  return `the ${what} ${mm(s)} from ${from} on face ${o.face}${across}${through}`;
+}
+
+const REFERENCE: Record<From, string> = {
+  a: "design point a",
+  b: "design point b",
+  "a.cut": "end a's cut",
+  "b.cut": "end b's cut",
+};
+
+/**
+ * Where a hole in a bar's side lies, in its own reference (re-check N3): a written hole's
+ * distance from what it counts from, as written (§4.4); a generated one's from design point a.
+ * Every message about a hole names it so, whatever the check measures from.
+ */
+export function holePlace(b: DerivedBar, o: HoleOp): [number, string] {
+  if (o.written) return [o.written.at, REFERENCE[o.written.from]];
+  return [o.from === "a" ? o.at : b.lengths.len - o.at, REFERENCE.a];
 }

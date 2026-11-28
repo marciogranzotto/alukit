@@ -5,14 +5,21 @@ import { checkedOrder, modelOutputs, outputAccessors } from "../check/outputs.ts
 import { applyBatch } from "../commands/apply.ts";
 import type { RawDoc, State } from "../commands/types.ts";
 import { derive } from "../derive/derive.ts";
-import { DIAGNOSTIC_CODES, sortDiagnostics } from "../diagnostics.ts";
+import {
+  DIAGNOSTIC_CODES,
+  type Diagnostic,
+  MACHINING_REASONS,
+  type MachiningReason,
+  sortDiagnostics,
+} from "../diagnostics.ts";
 import { lockHash, pinLock } from "../lock/pin.ts";
 import { documentRefs } from "../lock/refs.ts";
 import { LockFile } from "../lock/schema.ts";
 import { lockItems } from "../lock/source.ts";
+import type { Reason } from "../order/types.ts";
 import { openLiveCatalogs } from "../project/open.ts";
 import { FIXTURES, mergePatch, readJson } from "../testing.ts";
-import { type ModelState, problemsAt } from "./problems.ts";
+import { type ModelState, problemsAt, problemsOf } from "./problems.ts";
 import type { Fix, Problem, ProblemGroup } from "./types.ts";
 import { checkTitle } from "./words.ts";
 
@@ -305,42 +312,74 @@ describe("plain words for every diagnostic code (E1.3)", () => {
   });
 });
 
-describe("machining problems say which (the re-check's N10)", () => {
-  // Each of derive's machining checks, its message as it writes it (derive/on-piece.ts,
-  // face-taps.ts, duplicates.ts, cores.ts), and the title it reads as.
-  it.each([
-    [
-      "the Ø7.00 hole on face +y, 2.00 mm from end a's cut, reaches 1.50 mm past end a's cut face: off the piece, a shop cannot make it there",
+describe("machining problems say which, by the check's reason (the re-check's N10)", () => {
+  // Each reason a machining check gives (derive/on-piece.ts, face-taps.ts, duplicates.ts,
+  // cores.ts), and the title it reads as. The type of the title table takes every reason, and
+  // MACHINING_REASONS lists them all, so this sweeps them.
+  const TITLES: Record<MachiningReason, string> = {
+    "off-piece": "A hole off its piece at b5",
+    "tap-in-groove": "A tap with too little wall at b5",
+    repeated: "The same machining made twice at one place at b5",
+    "no-cores": "Taps not checked against the section's cores at b5",
+    "off-core": "A tap on no core at b5",
+    "core-fit": "A tap that does not fit its core at b5",
+    "fit-unchecked": "A tap whose fit is not checked at b5",
+  };
+  it.each([...MACHINING_REASONS])("%s has a title of its own", (reason) => {
+    expect(checkTitle("machining", ["b5"], reason)).toBe(TITLES[reason]);
+  });
+  it("gives a machining diagnostic with no reason the code's own words", () => {
+    expect(checkTitle("machining", ["b5"])).toBe("Machining to check at b5");
+  });
+
+  it("titles by the reason, not the words: a reworded message keeps its title, and words alone give none", async () => {
+    // The brace fixture's model, its check's diagnostics replaced by one machining diagnostic.
+    const { m } = await model(join(FIXTURES, "brace"));
+    const diagnostic = (message: string, reason?: MachiningReason): Diagnostic => ({
+      severity: "error",
+      code: "machining",
+      entity: "b5",
+      message,
+      ...(reason ? { reason } : {}),
+    });
+    const titleOf = (d: Diagnostic) => {
+      const p = problemsAt({ ...m, check: { ...m.check, diagnostics: [d] } }, AS_OF);
+      return p.problems.find((x) => x.code === "machining")?.title;
+    };
+    // The off-piece check's message as it is written today, then reworded: the title follows the
+    // reason in both, whatever the words.
+    const today =
+      "the Ø7.00 hole on face +y, 2.00 mm from end a's cut, reaches 1.50 mm past end a's cut face: off the piece, a shop cannot make it there";
+    expect(titleOf(diagnostic(today, "off-piece"))).toBe("A hole off its piece at b5");
+    expect(titleOf(diagnostic("b5's hole would not be on the piece", "off-piece"))).toBe(
       "A hole off its piece at b5",
-    ],
-    [
-      "the tap M6 on face +y: its Ø5.00 tap drill lies 100.0 % in the 8.20 opening of the groove on face +y at 0.00, 0.00 off its centre line, so its thread has less than half its circle of wall",
-      "A tap with too little wall at b5",
-    ],
-    [
-      "the Ø7.00 hole on face +y is made 2 times at one place (c1, 1 written in ops): give each its own position, or make it once",
-      "The same machining made twice at one place at b5",
-    ],
-    [
-      "test:X gives no core positions: the taps in end a (c1) are not checked against its cores",
-      "Taps not checked against the section's cores at b5",
-    ],
-    [
-      "the tap M8 in end a (c1) runs across test:X's cores, which lie along its axis: its thread is cut in no core",
-      "A tap on no core at b5",
-    ],
-    ["the tap M8 in end a (c1) is on no core of test:X", "A tap on no core at b5"],
-    [
-      "the tap M8 in end a (c1) does not fit core 1 it is on: its drill is wider than the core",
-      "A tap that does not fit its core at b5",
-    ],
-    [
-      "the tap M8 in end a (c1) is on core 1; its fit is not checked: AluKit has no tap drill and 6H tolerance for M8",
-      "A tap whose fit is not checked at b5",
-    ],
-    ["something no check writes", "Machining to check at b5"],
-  ])("%s", (message, title) => {
-    expect(checkTitle("machining", ["b5"], message)).toBe(title);
+    );
+    // The same words with no reason are only machining to check: nothing reads the text.
+    expect(titleOf(diagnostic(today))).toBe("Machining to check at b5");
+  });
+
+  it("words a supplier's unpriced machining from the order reason's data, not its message", async () => {
+    const hole = { op: "hole", face: "+y", at_mm: 100, d_mm: 6.6 };
+    const { m } = await model(ORDER, { bars: { b1: { ops: [hole] } } });
+    const order = checkedOrder(m.outputs, m.check.diagnostics, { asOf: AS_OF });
+    const titleOf = (reword: (r: Reason) => Reason) => {
+      const o = {
+        ...order,
+        suppliers: order.suppliers.map((s) => ({ ...s, reasons: s.reasons.map(reword) })),
+      };
+      const p = problemsOf({
+        rev: 0,
+        derived: m.derived,
+        items: m.items,
+        diagnostics: m.check.diagnostics,
+        order: o,
+      });
+      return p.problems.find((x) => x.rule === "missing-price")?.title;
+    };
+    const today = titleOf((r) => r);
+    expect(today).toMatch(/^1 machining service on .+ \(test-order:FLAT-O\) has no price$/);
+    // Reworded, it keeps its title: the count and the offer are the reason's data.
+    expect(titleOf((r) => ({ ...r, message: "shop-a's holes are not priced" }))).toBe(today);
   });
 });
 

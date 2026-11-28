@@ -501,7 +501,8 @@ describe("alukit do", () => {
     expect(lines.find((l) => l.sources.includes("b9"))?.machining).toEqual([
       { op: "hole", face: "+y", from: "a", at_mm: 20, d_mm: 7 },
     ]);
-    // 20 from design point a is 20 inside the post b1, off the piece: an error `check` reports.
+    // 20 from design point a is 20 inside the post b1, off the piece: an error `check` reports,
+    // naming the hole as it is written (re-check N3).
     const design = await capture(["do", dir, JSON.stringify(hole()), "--json"]);
     expect(design.code, design.err).toBe(0);
     expect(
@@ -513,7 +514,7 @@ describe("alukit do", () => {
     const check = await capture(["check", dir]);
     expect(check.code).toBe(1);
     expect(check.out).toContain(
-      "the Ø7.00 hole on face +y, -20.00 mm from end a's cut, reaches 23.50 mm past end a's cut face: off the piece, a shop cannot make it there",
+      "the Ø7.00 hole on face +y, 20.00 mm from design point a, reaches 23.50 mm past end a's cut face: off the piece, a shop cannot make it there",
     );
   });
 

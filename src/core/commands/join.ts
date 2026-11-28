@@ -35,6 +35,11 @@ export interface JoinPlan {
   ends: string[];
   /** Set when the through bar's end at the point belongs to another butt already. */
   throughEnd?: "none";
+  /**
+   * The through bar's own free end at the point (a corner): the butt covers it (§4.5), so it is
+   * joined as the butting ends are, and a step's words say so (the re-check's follow-up to N2).
+   */
+  covers?: string;
   /** The butting ends the through bar cuts at an angle and that declare no cut. */
   angled: string[];
 }
@@ -89,7 +94,10 @@ export function planJoin(d: Derived, P: V3, prefer: CornerRule): JoinAnswer {
   const through =
     passing[0] ?? bearing[0] ?? preferred[prefer] ?? atEnds.find(along(2)) ?? (atEnds[0] as string);
   const butting = free.filter((e) => barOf(e) !== through);
-  if (butting.length > 0) return { ok: true, plan: plan(d, through, butting) };
+  if (butting.length > 0) {
+    const covers = free.find((e) => barOf(e) === through);
+    return { ok: true, plan: { ...plan(d, through, butting), ...(covers ? { covers } : {}) } };
+  }
 
   // Every other end here is joined: the free ends butt on the corner's through bar (E-UX-12).
   const corner = cornerThrough(d, met);

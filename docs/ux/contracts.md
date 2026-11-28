@@ -865,3 +865,23 @@ drawn and checked against but not built or bought. Each adds.*
   count from another reference and keeps it where it is, or why it cannot (xa 4).
 - **Core words** (E1's `core/problems/words.ts`): `machiningTitle(message)`;
   `checkTitle(code, where, message?)` reads a `machining` message for its title (xa 7).
+  Superseded by the core's round, below.
+
+## Re-check fixes, core
+
+*The editing review's re-check, the core's findings and two follow-ups
+([recheck-fixes-core-decisions.md](recheck-fixes-core-decisions.md), "xc"). Each adds to or
+replaces an interface above; the owner stays the stream that made it.*
+
+- **Core words** (E1's `core/problems/words.ts`): `checkTitle(code, where, reason?)` titles a
+  `machining` diagnostic by its `reason` (`MACHINING_REASONS`, `core/diagnostics.ts`), never by
+  its message; `machiningTitle(message)` is removed (xc 15).
+- **Diagnostics** (`core/diagnostics.ts`): `Diagnostic.reason?`, a machining check's finding. The
+  order's `Reason.services?: { of, count }` on the unpriced-machining reason (xc 15).
+- **Step words** (`core/commands/words.ts`): a command's phrase may be a `Said`, a sentence with
+  the bar ends it leaves `open` or `joins`; `joinPhrases` says each end once, never "left open"
+  for an end the step joins (xc 16).
+- **Answers**: `mirror`'s `info.there` (a bar of the set not copied, and the bar at its image);
+  `autoConnect`'s `info.covers` and the arrangement endpoint's `CornerPlan.covers` (the corner
+  end its butt covers) (xc 9, 16).
+- **Order rules**: `coincident`, warn by default; the app's rule labels need it (xc 13).

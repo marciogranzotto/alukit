@@ -5,6 +5,7 @@ PyMuPDF (see README.md):
     python3 -I importers/forseti/import_forseti.py build <raw folder> <catalogue PDF> [<out>]
     python3 -I importers/forseti/import_forseti.py skus <raw folder>
     python3 -I importers/forseti/import_forseti.py read-groove <catalogue PDF> <page> <xref> <w> <h> <face> <at> [<crop>]
+    python3 -I importers/forseti/import_forseti.py check-traces <catalogue PDF>
 
 `fetch` takes a fresh snapshot of the shop (GET only, at most one request per second) into a new
 folder. `skus` prints the orderable SKUs of a snapshot (the variations, and the products without
@@ -13,6 +14,8 @@ the PDF catalogue and writes catalogs/forseti/catalog.json, offers.json and sect
 <out>: catalogs/forseti beside this repository's importers/). The same inputs give byte-identical
 output. `read-groove` prints the raw edges of a groove read off a profile drawn as a raster image,
 which the reviewed readings in tables.GROOVE_READ come from (forseti_importer/raster.py).
+`check-traces` traces the rasters drawn under vector outlines (tables.TRACE_GROUND_TRUTH) and
+prints how far each trace lies from its outline, which tables.TRACE_LOCAL_PX comes from.
 """
 
 from __future__ import annotations
@@ -53,6 +56,21 @@ def main(argv: list[str]) -> int:
                                        float(argv[7]), crop):
             print(line)
         return 0
+    if len(argv) == 2 and argv[0] == "check-traces":
+        from forseti_importer import pdfcat, tables, trace
+
+        doc = pdfcat.open_pdf(argv[1])
+        worst = 0.0
+        for stem, page, xref in tables.TRACE_GROUND_TRUTH:
+            spec = tables.PROFILES[stem]
+            if spec["page"] != page:
+                raise SystemExit(f"{stem}: drawn on p. {spec['page']}, not p. {page}")
+            r = trace.check_against_vector(doc, spec, xref, float(stem[2:4]))
+            worst = max(worst, r["px"])
+            print(f"{stem} (p. {page}, image {xref}, {r['px_per_mm']:.3f} px/mm): the trace and the "
+                  f"vector outline lie up to {r['mm']:.3f} mm apart, {r['px']:.2f} px")
+        print(f"worst {worst:.2f} px; tables.TRACE_LOCAL_PX is {tables.TRACE_LOCAL_PX}")
+        return 0 if worst <= tables.TRACE_LOCAL_PX else 1
     print(f"usage:\n{USAGE}", file=sys.stderr)
     return 2
 

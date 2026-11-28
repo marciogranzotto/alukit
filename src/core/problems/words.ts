@@ -1,5 +1,5 @@
 import { idList } from "../commands/words.ts";
-import type { DiagnosticCode } from "../diagnostics.ts";
+import type { DiagnosticCode, MachiningReason } from "../diagnostics.ts";
 
 /**
  * The plain words of a problem (D-UX-12, BE-3; B §5.1's principle 5): a title that says what is
@@ -22,6 +22,7 @@ const CHECK_TITLE: Readonly<Record<DiagnosticCode, string>> = {
   chain: "An end that reads another end's plane",
   check: "A project check",
   "check-pending": "A project check that cannot run yet",
+  coincident: "Two bars in one place",
   connection: "A joint problem",
   "cover-none": "A through end with nothing to cover",
   covers: "A cost line's cover",
@@ -69,35 +70,34 @@ const CHECK_TITLE: Readonly<Record<DiagnosticCode, string>> = {
 };
 
 /**
- * What a `machining` diagnostic says is wrong, read from the outcome clause each of derive's
- * machining checks writes (the re-check's N10: a tap in a groove's opening and a hole off its
- * piece on one bar were both "Machining to check at b5"). The clauses are the outcomes, not how
- * the hole is named, so a change to a hole's naming keeps them; a message none matches keeps the
- * code's own words.
+ * Which machining problem a `machining` diagnostic is, by the `reason` its check gives it (the
+ * re-check's N10: a tap in a groove's opening and a hole off its piece on one bar were both
+ * "Machining to check at b5"). The title follows the reason, never the message's words, so a
+ * check's wording can change and its title stays (docs/ux/recheck-fixes-core-decisions.md 15).
+ * The type takes every reason, so a check cannot give one without its words.
  */
-const MACHINING_TITLE: readonly (readonly [RegExp, string])[] = [
-  [/: off the piece, /, "A hole off its piece"], // derive/on-piece.ts
-  [/ less than half its circle of wall$/, "A tap with too little wall"], // derive/face-taps.ts
-  [/ is made \d+ times at one place /, "The same machining made twice at one place"], // derive/duplicates.ts
-  [/ gives no core positions: /, "Taps not checked against the section's cores"], // derive/cores.ts
-  [/: its thread is cut in no core$| is on no core of /, "A tap on no core"],
-  [/ does not fit .+ it is on: /, "A tap that does not fit its core"],
-  [/; its fit is not checked: /, "A tap whose fit is not checked"],
-];
-
-/** A machining diagnostic's title before where it is, by what its message says is wrong. */
-export function machiningTitle(message: string): string | undefined {
-  return MACHINING_TITLE.find(([said]) => said.test(message))?.[1];
-}
+const MACHINING_TITLE: Readonly<Record<MachiningReason, string>> = {
+  "off-piece": "A hole off its piece",
+  "tap-in-groove": "A tap with too little wall",
+  repeated: "The same machining made twice at one place",
+  "no-cores": "Taps not checked against the section's cores",
+  "off-core": "A tap on no core",
+  "core-fit": "A tap that does not fit its core",
+  "fit-unchecked": "A tap whose fit is not checked",
+};
 
 /**
  * "A joint problem at c21". A code AluKit does not know (a newer project's, read by an older
- * build) reads as its kind of problem. A `machining` diagnostic's `message`, when given, names
- * which machining problem it is (`machiningTitle`).
+ * build) reads as its kind of problem. A `machining` diagnostic's `reason`, when it gives one,
+ * names which machining problem it is; without one, it is the code's "Machining to check".
  */
-export function checkTitle(code: string, where: readonly string[], message?: string): string {
+export function checkTitle(
+  code: string,
+  where: readonly string[],
+  reason?: MachiningReason,
+): string {
   const what =
-    (code === "machining" && message !== undefined ? machiningTitle(message) : undefined) ??
+    (code === "machining" && reason !== undefined ? MACHINING_TITLE[reason] : undefined) ??
     (CHECK_TITLE as Readonly<Record<string, string>>)[code] ??
     `A ${code.replaceAll("-", " ")} problem`;
   return where.length > 0 ? `${what} at ${idList(where)}` : what;
