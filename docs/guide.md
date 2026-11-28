@@ -240,7 +240,9 @@ When another source edits the project (an agent through the CLI, a hand edit, an
 toast says who and what, with **Show** and **Undo it**; the outline marks what it made, "new ·
 claude", until your next step. Your own step gets a toast when it did more than it made: a cut
 that auto-connect moved, an entity removed. A refused command says why where you made it, or in a
-toast with the whole message, **Copy** and **Select the places** it names.
+toast with the whole message, **Copy** and **Select the places** it names. A step whose preview
+already says it would be refused is not sent: `Enter` leaves the gesture on and the command bar
+says why, once, and Pattern's **Create** stays disabled with the reason as its tip.
 
 The tools are a column on the 3D view's left edge, each with its key on a cap; a tool that cannot
 be used now is disabled and says why.
@@ -439,7 +441,8 @@ is hidden.
   bars at their images, and its other ends join what they land on: the brace butted on the back
   posts, mirrored at `=W / 2`, is cut as the brace and butted on the opposite posts, and the
   preview says so before the click ("makes b18 · joins b4 (c15) · joins b3 (c16) · cut 1049.97").
-  An end whose joint has no bar at its image stays open, and the preview says that too.
+  An end that nothing joins, its joint having no bar at its image and nothing to butt on there,
+  stays open, and the preview says that too; an end the step joins is said joined, never both.
 
 ### Lengths and ends
 
@@ -474,8 +477,10 @@ is hidden.
   through), then **Add the hole**. A distance counts from **end a's cut** or **end b's cut**, as
   the cut list prints it and a shop measures, or from a design point, which stays put when the
   ends are cut back or extended. Each hole is then a row that edits and removes it ("20 mm from
-  end a's cut"). A hole that reaches past a cut is an error: off the piece, no shop can make it
-  there. In the document, `"from": "a.cut"`; without `from`, a hole counts from design point a.
+  end a's cut"). Changing what a hole counts from keeps it where it is and shows the new number:
+  a hole 300 from design point a on a rail cut back 40 reads 260 from end a's cut. A hole that
+  reaches past a cut is an error: off the piece, no shop can make it there. In the document,
+  `"from": "a.cut"`; without `from`, a hole counts from design point a.
 
 ### Several selected, profiles and nodes
 

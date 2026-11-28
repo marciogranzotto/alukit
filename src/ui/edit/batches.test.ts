@@ -2,6 +2,7 @@ import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { scratchFixtures } from "#core/testing.ts";
+import type { DryRun } from "../client/dryrun.ts";
 import type { Model } from "../model.ts";
 import { hostOf, viewOf } from "../testing.ts";
 import { copyWords, moveSet } from "../tools/moves.ts";
@@ -138,6 +139,77 @@ describe("copies keep their joints (docs/ux/review-editing.md B1, B2)", () => {
     } finally {
       await h.close();
     }
+  });
+});
+
+describe("a mirror's preview says one outcome per end (docs/ux/review-editing.md N2)", () => {
+  /** The brace of the block above, joined to the back posts b3 and b4 by c9 and c10. */
+  const BRACE = [
+    { cmd: "addBar", args: { a: [0, 600, 100], b: [1000, 600, 650], anchor: "+x" } },
+    { cmd: "autoConnect", args: { at: [0, 600, 100], optional: true } },
+    { cmd: "autoConnect", args: { at: [1000, 600, 650], optional: true } },
+  ];
+  let own: string;
+  beforeAll(async () => {
+    own = await scratchFixtures();
+  });
+  afterAll(async () => {
+    await rm(own, { recursive: true, force: true });
+  });
+
+  it("an end the mirror leaves open and the step's join closes is joined, never also open", async () => {
+    const h = await hostOf(join(own, "brace"));
+    try {
+      await h.apply(BRACE);
+      // One back post of another section: neither post is the other's mirror image, so `mirror`
+      // lands neither of the brace's joints and reports both of its image's ends open; the
+      // step's joins then butt each end on the post standing there. Whatever lands the joints,
+      // the words follow what the dry run says the step claims.
+      await h.apply([{ cmd: "setBar", args: { id: "b3", set: { item: "test:TS4080" } } }]);
+      const r = await h.dry(mirrorBatch(h.view(), ["b13"], { axis: "x", at_mm: 500 }) as unknown[]);
+      if (!r.ok) throw new Error(r.why);
+      expect(r.created).toEqual(["b14", "c11", "c12"]);
+      expect(r.effects.claimed).toEqual(expect.arrayContaining(["b14.a", "b14.b"]));
+      const text = mirrorWords(r).text;
+      expect(text).toMatch(/^makes b14 · joins b4 \(c11\) · joins b3 \(c12\) · cut [\d.]+$/);
+      expect(text).not.toContain("open");
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("reads 'stays open' from what the step claims, not from the mirror's own report", () => {
+    const dry = (claimed: string[]): DryRun => ({
+      ok: true,
+      rev: 3,
+      created: ["b20", "c19"],
+      diagnostics: [],
+      effects: { cuts: {}, added: { b20: 958.67 }, parts: {}, removed: [], claimed },
+      results: [
+        {
+          cmd: "mirror",
+          created: ["b20"],
+          removed: [],
+          changed: [],
+          info: { copies: { b17: "b20" }, open: ["b20.a", "b20.b"] },
+        },
+        {
+          cmd: "autoConnect",
+          created: ["c19"],
+          removed: [],
+          changed: [],
+          info: { through: "b4", ends: ["b20.a"], angled: [] },
+        },
+        { cmd: "autoConnect", created: [], removed: [], changed: [] },
+      ],
+    });
+    // One end joined by the step, the other left as the mirror left it.
+    expect(mirrorWords(dry(["b20.a"])).text).toBe(
+      "makes b20 · joins b4 (c19) · b20.b stays open · cut 958.67",
+    );
+    expect(mirrorWords(dry(["b20.a", "b20.b"])).text).toBe(
+      "makes b20 · joins b4 (c19) · cut 958.67",
+    );
   });
 });
 

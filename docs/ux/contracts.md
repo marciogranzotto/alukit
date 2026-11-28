@@ -842,3 +842,26 @@ drawn and checked against but not built or bought. Each adds.*
   `CORNER_FAMILIES` (rfa 15).
 - **Test ids**: `row-joints`, `joint-<id>`, `joint-edit-<id>`, `join-end-why-<e>`,
   `delete-cancel`, `pattern-preview`, `selection-label`.
+
+## Re-check fixes, app
+
+*The editing review's re-check, the app's findings ([recheck-fixes-app-decisions.md](recheck-fixes-app-decisions.md),
+"xa"). Each adds to an interface above; the owner stays the stream that made it.*
+
+- **The commit gate** (S5's `tools/preview.ts`): `ShownAnswer` (`key`, `rev`, `refused`),
+  `refusalOf(cmds, shown)` (the refusal a preview shows for exactly these commands at the
+  revision the app holds), `shownRefusal(cmds)` (the joint preview's), `heldByPreview(cmds)`
+  (holds a commit, setting `lastResult.held`). `JointPreviewer.refused` is kept, as
+  `shownRefusal`. `drag.ts`'s commit asks it for every gesture; Draw's `commitBar`, the length
+  label and Pattern's Create ask it too (xa 1).
+- **Tool state** (`tools/state.ts`): `JointPreview.rev`, the revision the app held when it asked;
+  `lastResult.held`, the commands a held Enter met, as JSON, which `CommandBar.tsx` shows once, as
+  the result, while that preview stands (xa 1, 2).
+- **Pattern** (`tools/wire/pattern.ts`): `patternPreview.shown`, its answer as the gate reads it
+  (xa 1).
+- **Draw** (S3's `viewer/draw.ts`): `DrawPoint.tip`, the person's words for a face end, from the
+  snap's `tip` (xa 5).
+- **Holes** (E4's `inspector/holes.ts`): `switchFrom(m, bar, i, to)`, the step that makes a hole
+  count from another reference and keeps it where it is, or why it cannot (xa 4).
+- **Core words** (E1's `core/problems/words.ts`): `machiningTitle(message)`;
+  `checkTitle(code, where, message?)` reads a `machining` message for its title (xa 7).

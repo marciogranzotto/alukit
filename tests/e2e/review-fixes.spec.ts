@@ -94,6 +94,8 @@ test("m3: a move the preview refuses is not sent on Enter; the bar says why in t
   // Nothing posted: the gesture is still on, and its bar says why, never the API's syntax.
   await expect(page.getByTestId("tool-result")).toContainText("would break a joint");
   await expect(page.getByTestId("tool-result")).not.toContainText('joined: "detach"');
+  // Said once (re-check N9): as Enter's answer, no longer also as the preview.
+  await expect(page.getByTestId("joint-preview")).toHaveCount(0);
   expect(await page.evaluate(() => window.__alukit?.gesture()?.kind)).toBe("move");
   await page.keyboard.press("Escape");
   await page.mouse.up();

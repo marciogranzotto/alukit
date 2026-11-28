@@ -308,17 +308,15 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
           return { why: "click a base point, then where the copy goes, or type an offset" };
         }
         if (norm(now.d) < 0.005) return "nothing";
-        // What the preview's dry run already refused stays a refusal here, in its words, and the
-        // gesture stays on to change it (review m3); nothing is sent to be refused again.
+        // What the preview's dry run already refused is held by the gestures' one gate
+        // (drag.ts, `heldByPreview`; review m3, re-check N4): nothing is sent to be refused again.
         if (copy) {
           const b = copyBatch();
           if ("why" in b) return b;
-          const refused = preview.refused(b);
-          return refused ? { why: refused } : { commands: b, what: `copy ${idList(set.ids)}` };
+          return { commands: b, what: `copy ${idList(set.ids)}` };
         }
         const commands = transformBatch(set, now.written, detach, rule(), { m, by: now.d });
-        const refused = preview.refused(commands);
-        return refused ? { why: refused } : { commands, what: `move ${idList(set.ids)}` };
+        return { commands, what: `move ${idList(set.ids)}` };
       },
       press(e) {
         // Duplicate: the first click is the base point (point to point, E3.5), the next commits.

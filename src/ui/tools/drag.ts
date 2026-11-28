@@ -1,7 +1,7 @@
 import type { ToolPointer, Viewer } from "../../viewer/scene.ts";
 import { chord, typingIn } from "../keys.ts";
 import { type CommandOutcome, model, sendCommands } from "../store.ts";
-import type { Cmd } from "./preview.ts";
+import { type Cmd, heldByPreview } from "./preview.ts";
 import { fieldDone, fieldWanted, type Gesture, gesture, lastResult, typed } from "./state.ts";
 
 /**
@@ -120,6 +120,9 @@ export function createGestures(_viewer: Viewer): Gestures {
       lastResult.value = { rev: model.peek()?.rev ?? 0, created: [], error: c.why };
       return;
     }
+    // A step the preview already shows refused is not sent, whichever gesture it is: the gesture
+    // stays on to change it, and the bar says the refusal once (re-check N4, N9).
+    if (heldByPreview(c.commands)) return;
     end();
     const o = await sendCommands(c.commands, c.what);
     lastResult.value = o.ok
