@@ -66,7 +66,8 @@ test("Duplicate: the top front rail 300 down, joined to the posts; then /3 on an
   await expect(page.getByTestId("joint-preview")).toContainText("makes b13");
   await page.keyboard.press("Enter");
   await waitDrawn(page, 1);
-  expect(await lastStepWords(served.dir)).toBe("copy b9, making b13, joined at 2 ends");
+  // The copy carries the top rail's tag, and the step says so (docs/ux/review-editing.md m2).
+  expect(await lastStepWords(served.dir)).toBe("copy b9, making b13, tagged top, joined at 2 ends");
   const d = await doc(served.dir);
   expect(d.bars.b13).toMatchObject({ a: [0, 0, 450], b: [1000, 0, 450] });
   const butts = Object.values(d.connections).filter((c) => c.type === "butt");
@@ -83,7 +84,7 @@ test("Duplicate: the top front rail 300 down, joined to the posts; then /3 on an
   await page.keyboard.press("Enter");
   await waitDrawn(page, 2);
   expect(await lastStepWords(served.dir)).toBe(
-    "copy b10, making b14, b15 and b16, joined at 6 ends",
+    "copy b10, making b14, b15 and b16, tagged top, joined at 6 ends",
   );
 
   // The same two batches from the CLI: the same cut list, byte for byte.

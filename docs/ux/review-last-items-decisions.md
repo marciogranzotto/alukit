@@ -222,6 +222,9 @@ Existing tests changed because their words changed, each kept exact:
 
 - `batches.test.ts`: Duplicate's preview of the brace's top rail gains "tagged top".
 - `edit.spec`: the four posts' finish reads "change the options of b1, b2, b3 and b4".
+- `copy.spec`: the brace's top rails duplicated read "copy b9, making b13, tagged top, joined at
+  2 ends" and "copy b10, making b14, b15 and b16, tagged top, joined at 6 ends"; the cut lists it
+  compares with the CLI's stay byte for byte the same.
 - `editing.spec` A7: the step reads "copy b13, making b17, tagged top, joined at 2 ends", and the
   test now also holds the preview's "tagged top" and the copy's label "top rail, front (2)".
 - `ends.spec`: a cut typed as `=L - 40` on the length label writes b3's end `640 - L`, which was
