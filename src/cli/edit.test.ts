@@ -478,6 +478,45 @@ describe("alukit do", () => {
     expect(JSON.parse(read(join(dir, "alukit.json")))).toEqual(doc);
   });
 
+  it("writes a hole from end a's cut, which the cut list prints as written, and flags a hole off the piece (review M3)", async () => {
+    // base-frame/cli's b9, the front base rail, is cut back 40 at each end where it butts on
+    // the posts.
+    const root = await scratchFixtures();
+    const dir = join(root, "base-frame", "cli");
+    const hole = (from?: string) => ({
+      cmd: "setBar",
+      args: {
+        id: "b9",
+        set: { ops: [{ op: "hole", face: "+y", at_mm: 20, ...(from ? { from } : {}), d_mm: 7 }] },
+      },
+    });
+    const cut = await capture(["do", dir, JSON.stringify(hole("a.cut")), "--json"]);
+    expect(cut.code, cut.err).toBe(0);
+    expect(JSON.parse(cut.out).diagnostics.new).toEqual([]);
+    const list = await capture(["cutlist", dir, "--format", "json"]);
+    const lines = JSON.parse(list.out).groups.flatMap((g: { lines: unknown[] }) => g.lines) as {
+      sources: string[];
+      machining: unknown[];
+    }[];
+    expect(lines.find((l) => l.sources.includes("b9"))?.machining).toEqual([
+      { op: "hole", face: "+y", from: "a", at_mm: 20, d_mm: 7 },
+    ]);
+    // 20 from design point a is 20 inside the post b1, off the piece: an error `check` reports.
+    const design = await capture(["do", dir, JSON.stringify(hole()), "--json"]);
+    expect(design.code, design.err).toBe(0);
+    expect(
+      JSON.parse(design.out).diagnostics.new.map((d: { code: string; entity: string }) => [
+        d.code,
+        d.entity,
+      ]),
+    ).toEqual([["machining", "b9"]]);
+    const check = await capture(["check", dir]);
+    expect(check.code).toBe(1);
+    expect(check.out).toContain(
+      "the Ø7.00 hole on face +y, -20.00 mm from end a's cut, reaches 23.50 mm past end a's cut face: off the piece, a shop cannot make it there",
+    );
+  });
+
   it("marks a member context with setPart and setBar, and the BOM, order and bbox follow (X11)", async () => {
     const root = await scratchFixtures();
     const dir = join(root, "golden-gen", "G51");

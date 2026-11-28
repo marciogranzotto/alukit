@@ -51,7 +51,11 @@ describe("holes (E4.4)", () => {
     await cp(join(root, "base-frame", "cli"), dir, { recursive: true });
     const m = await viewOf(dir, [step]);
     expect(holesOf(m, "b1")).toEqual([HOLE]);
-    expect(holeWords(HOLE)).toBe("Ø7 on face +x, 20 mm from end a");
+    expect(holeWords(HOLE)).toBe("Ø7 on face +x, 20 mm from design point a");
+    // Where it counts from, in the row's words (review M3).
+    expect(holeWords({ ...HOLE, from: "a.cut" })).toBe("Ø7 on face +x, 20 mm from end a's cut");
+    expect(holeWords({ ...HOLE, from: "b.cut" })).toBe("Ø7 on face +x, 20 mm from end b's cut");
+    expect(holeWords({ ...HOLE, from: "b" })).toBe("Ø7 on face +x, 20 mm from design point b");
     // A thread for the drill, from end b, 12 deep: what the row shows changes; the rest stays.
     const withCsk = {
       ...m,
@@ -84,7 +88,19 @@ describe("holes (E4.4)", () => {
     expect(removeHole(m, "b1", 0).args).toEqual({ id: "b1", set: { ops: null } });
   });
 
-  it("offers Add a hole here on a side face where the menu opened", () => {
+  it("writes a hole counted from a cut end as it is counted (review M3)", () => {
+    const op = holeOp({ face: "+y", at_mm: 260, from: "a.cut", size: { d_mm: 7 } });
+    expect(op).toEqual({ op: "hole", face: "+y", at_mm: 260, from: "a.cut", d_mm: 7 });
+    expect(holeOp({ face: "+y", at_mm: 30, from: "b.cut", size: { thread: "M6" } })).toEqual({
+      op: "hole",
+      face: "+y",
+      at_mm: 30,
+      from: "b.cut",
+      thread: "M6",
+    });
+  });
+
+  it("offers Add a hole here on a side face where the menu opened, from end a's cut", () => {
     offs.push(barActions());
     const at: V3 = [20, 40, 300];
     const c: ActionContext = {
@@ -93,10 +109,29 @@ describe("holes (E4.4)", () => {
       hit: { id: "b1", p: at, normal: [0, 1, 0], face: "+y", station: { bar: "b1", at_mm: 300.4 } },
       from: "view",
     };
-    expect(holeHere(c)).toEqual({ bar: "b1", face: "+y", at_mm: 300 });
+    // b1 stands on the floor, square at its design point: its cut is there.
+    expect(holeHere(c)).toEqual({ bar: "b1", face: "+y", at_mm: 300, from: "a.cut" });
     const entry = actionsFor(c).find((x) => x.action.id === "add-hole");
     expect(entry && titleOf(entry.action, c)).toBe(
-      "Add a hole on b1's face +y, 300 mm from end a…",
+      "Add a hole on b1's face +y, 300 mm from end a's cut…",
+    );
+    // b9, the front base rail, is cut back 40 at each end where it butts on the posts: the
+    // station 300.4 from its design point is 260 from its cut, as the cut list will say.
+    const rail: ActionContext = {
+      ...c,
+      selection: new Set(["b9"]),
+      hit: {
+        id: "b9",
+        p: [300, 0, 100],
+        normal: [0, 0, 1],
+        face: "+y",
+        station: { bar: "b9", at_mm: 300.4 },
+      },
+    };
+    expect(holeHere(rail)).toEqual({ bar: "b9", face: "+y", at_mm: 260, from: "a.cut" });
+    const railEntry = actionsFor(rail).find((x) => x.action.id === "add-hole");
+    expect(railEntry && titleOf(railEntry.action, rail)).toBe(
+      "Add a hole on b9's face +y, 260 mm from end a's cut…",
     );
     // On an end face, no hole: holes go in a side.
     const hit = c.hit;

@@ -108,7 +108,7 @@ test("a right-click opens the menu on b1 with the seeded actions; Esc closes it"
   await expect(item("split-at")).toHaveText(/^Split b1 at…/);
   await expect(item("reverse")).toHaveText(/^Reverse b1/);
   await expect(item("add-hole")).toHaveText(
-    /^Add a hole on b1's face [+-][xy], \d+ mm from end a…/,
+    /^Add a hole on b1's face [+-][xy], \d+ mm from end a's cut…/,
   );
   await expect(item("fit")).toHaveText(/^Fit to the selection\s*F/);
   await expect(item("select-all")).toHaveText(/^Select all\s*Ctrl\+A/);

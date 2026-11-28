@@ -97,6 +97,12 @@ it, or `ends.<a|b>.plane` (`{ "point", "normal" }`, `{ "face": { "bar", "face" }
 `{ "of": "b2.a" }`), else square at its design point. An angled plane needs `"cut": "angle"`
 or `"square"`; `extend_mm` lengthens an end.
 
+**Holes** a person adds go in `ops`: `{ "op": "hole", "face": "+y", "at_mm": 20, "from":
+"a.cut", "d_mm": 7 }`. Count them from an end's cut (`"a.cut"`, `"b.cut"`: from its long point,
+as the cut list and the shop measure, so the number you write is the one the cut list prints);
+`"a"` (the default) and `"b"` count from a design point, which on a bar cut back to a post is
+not where the piece starts. A hole whose material is not all on its piece is a `machining` error.
+
 **Connections**:
 
 | `type` | What it does |
@@ -413,7 +419,7 @@ string; `<…>` is a string of that form; `?` marks an optional field.
   - `roll_deg` (optional): `expr`
   - `up` (optional): `"+x" | "-x" | "+y" | "-y" | "+z" | "-z" | [expr, expr, expr]`
   - `ends` (optional): `{ a?: { plane?: {point, normal} | {face} | {of}, cut?: "angle" | "square", extend_mm?: expr }, b?: { plane?: {point, normal} | {face} | {of}, cut?: "angle" | "square", extend_mm?: expr } }`
-  - `ops` (optional): `[{ op: "hole", face: "+x" | "-x" | "+y" | "-y", at_mm: expr, from?: "a" | "b", d_mm?: expr, thread?: string, depth_mm?: expr, csk?: {d_mm, angle_deg}, cbore?: {d_mm, depth_mm} }, …]`
+  - `ops` (optional): `[{ op: "hole", face: "+x" | "-x" | "+y" | "-y", at_mm: expr, from?: "a" | "b" | "a.cut" | "b.cut", d_mm?: expr, thread?: string, depth_mm?: expr, csk?: {d_mm, angle_deg}, cbore?: {d_mm, depth_mm} }, …]`
   - `holes` (optional): `{ factory: "a" | "b", stock_mm?: number } | { drilled: true } | { E_a_mm: expr } | { E_b_mm: expr }` — rails: the hole layout
   - `after_assembly` (optional): `true` — placed after the frame's joints are made (a wall it is set against, a panel fitted last): it does not cover a cross hole while a joint made before it is tightened, only afterwards (a warning)
   - `context` (optional): `true` — context, not part of the build (a wall, a floor, a bench it stands beside): drawn and checked against, but not cut, counted, bought or weighed, nor in bbox()

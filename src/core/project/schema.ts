@@ -89,7 +89,10 @@ const Common = {
   not_in: z.array(z.string().min(1)).optional().describe("variants that exclude it (§4.10)"),
 };
 
-/** Where `at_mm` counts from: a design point, or (parts only) a cut end's long point. */
+/**
+ * Where `at_mm` counts from: a design point, or a cut end's long point, which only what nothing
+ * depends on may use (a part, a hole a person writes; §4.3, §4.4).
+ */
 export const From = z.enum(["a", "b", "a.cut", "b.cut"]);
 
 /** A station (§4.3): a position along a bar or a run, on a face or groove, offset. */
@@ -169,7 +172,9 @@ export const Op = z
     op: z.literal("hole"),
     face: Face,
     at_mm: Expr,
-    from: z.enum(["a", "b"]).optional(),
+    from: From.optional().describe(
+      "where at_mm counts from: end a's or b's cut (a.cut, b.cut: from the end's long point, as the cut list and the shop measure), or design point a (the default) or b",
+    ),
     ...HoleFields,
   })
   .refine((o) => (o.d_mm === undefined) !== (o.thread === undefined), {

@@ -119,6 +119,7 @@ export function meshDisplay(derived: Derived, items: ItemSource): MeshInput["dis
     bars[id] = {
       section: item.sectionId,
       shift: [len(b.placed.off[0] - b.placed.anchor[0]), len(b.placed.off[1] - b.placed.anchor[1])],
+      long_mm: [len(b.lengths.la), len(b.lengths.lb)],
       ...(pm ? { mass_kg: mass((b.lengths.centre * pm.v) / 1000), mass_src: pm.src } : {}),
     };
   }

@@ -5,6 +5,7 @@ import type { CatalogSet } from "#catalog/link.ts";
 import { modelExtent } from "../../mesh/extent.ts";
 import { checkModel } from "../check/check.ts";
 import { modelOutputs, outputAccessors } from "../check/outputs.ts";
+import { cutList } from "../cutlist/cutlist.ts";
 import { type Derived, derive } from "../derive/derive.ts";
 import { LockFile, lockText } from "../lock/schema.ts";
 import { lockItems } from "../lock/source.ts";
@@ -54,6 +55,10 @@ function no(state: State, command: object) {
 
 function derived(state: State): Derived {
   return derive(state.doc, lockItems(state.lock));
+}
+
+function cutListOf(state: State) {
+  return cutList({ derived: derived(state), items: lockItems(state.lock) });
 }
 
 /** Every bar's design points and lengths, rounded to the output quantum, by id. */
@@ -223,6 +228,24 @@ describe("reverseBar (§4.4)", () => {
     expect(errorsOf(derived(after))).toEqual(errorsOf(derived(before)));
   });
 
+  it("counts a hole from the other end's cut when it counted from a cut (review M3)", () => {
+    const hole = (from: string) => ({ op: "hole", face: "+y", at_mm: 30, from, d_mm: 7 });
+    const before = ok(cart(), {
+      cmd: "setBar",
+      args: { id: "b5", set: { ops: [hole("a.cut"), hole("b.cut")] } },
+    }).state;
+    const after = ok(before, { cmd: "reverseBar", args: { id: "b5" } }).state;
+    const ops = (after.doc.bars as Record<string, Record<string, unknown>>).b5?.ops as {
+      from: string;
+    }[];
+    expect(ops.map((o) => o.from)).toEqual(["b.cut", "a.cut"]);
+    const cut = (s: State) =>
+      cutListOf(s)
+        .groups.flatMap((g) => g.lines)
+        .find((l) => l.sources.includes("b5"))?.machining;
+    expect(cut(after)).toEqual(cut(before));
+  });
+
   it("reverses a run: every piece, its order and the stations on it", () => {
     const before = cart();
     const r = ok(before, { cmd: "reverseBar", args: { id: "r1" } });
@@ -310,6 +333,42 @@ describe("splitBar", () => {
       ["a", 300],
       ["b", 100],
     ]);
+  });
+
+  it("keeps a hole counted from a cut end where it was, on whichever piece it lands (review M3)", () => {
+    // b9's holes 50 from end a's cut and 50 from end b's cut, and one past the split point
+    // counted from end a's cut: each stays at its place in space, the one past the point on the
+    // new piece, counted from its end a's cut, the split point.
+    const hole = (at_mm: number, from: "a.cut" | "b.cut") => ({
+      op: "hole",
+      face: "+y",
+      at_mm,
+      from,
+      d_mm: 5,
+    });
+    const before = ok(cart(), {
+      cmd: "setBar",
+      args: { id: "b9", set: { ops: [hole(50, "a.cut"), hole(500, "a.cut"), hole(50, "b.cut")] } },
+    }).state;
+    const la = derived(before).bars.get("b9")?.lengths.la as number;
+    const r = ok(before, { cmd: "splitBar", args: { id: "b9", at_mm: 300, run: true } });
+    const bars = r.state.doc.bars as Record<string, Record<string, unknown>>;
+    expect(bars.b9?.ops).toEqual([hole(50, "a.cut")]);
+    expect(bars.b35?.ops).toEqual([hole(500 - (300 - la), "a.cut"), hole(50, "b.cut")]);
+    const places = (s: State) => {
+      const d = derived(s);
+      return ["b9", "b35"].flatMap((id) => {
+        const b = d.bars.get(id);
+        if (!b) return [];
+        return b.ops.flatMap((o) => {
+          if (o.op !== "hole") return [];
+          const t = b.placed.frame.t;
+          const s0 = o.from === "a" ? o.at : b.lengths.len - o.at;
+          return [b.placed.A.map((c, i) => Math.round((c + (t[i] as number) * s0) * 100) / 100)];
+        });
+      });
+    };
+    expect(places(r.state)).toEqual(places(before));
   });
 
   it("refuses a point outside the bar, and a face layer without a run", () => {

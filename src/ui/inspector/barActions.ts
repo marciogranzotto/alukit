@@ -18,10 +18,20 @@ import { isObject, written } from "./words.ts";
 /** The bar the inspector's Split form is open for, as the Split at… action asks. */
 export const splitAsked = signal<string | undefined>(undefined);
 
-/** The hole the inspector's hole form is open for, prefilled where the menu was opened. */
-export const holeAsked = signal<{ bar: string; face: Face; at_mm: number } | undefined>(undefined);
+/**
+ * The hole the inspector's hole form is open for, prefilled where the menu was opened: its face,
+ * and its distance from where it counts (end a's cut when the menu offers it; review M3).
+ */
+export const holeAsked = signal<HoleAsked | undefined>(undefined);
 
 type Face = "+x" | "-x" | "+y" | "-y";
+
+export interface HoleAsked {
+  bar: string;
+  face: Face;
+  at_mm: number;
+  from: "a.cut" | "b.cut" | "a" | "b";
+}
 
 /** The one bar the context is about, a pattern copy being no bar of its own. */
 export function oneBar(c: ActionContext): string | undefined {
@@ -116,14 +126,19 @@ const REVERSE: Action = {
   },
 };
 
-/** Where Add a hole here drills: the side face and station the view's menu opened on. */
-export function holeHere(c: ActionContext): { bar: string; face: Face; at_mm: number } | undefined {
+/**
+ * Where Add a hole here drills: the side face and station the view's menu opened on, counted from
+ * end a's cut, its long point, as the cut list and the shop measure (review M3). The station is
+ * from design point a; the bar's view says where its cut lies from there.
+ */
+export function holeHere(c: ActionContext): HoleAsked | undefined {
   const bar = oneBar(c);
   const hit = c.hit;
   const face = hit?.face;
   if (!bar || hit?.id !== bar || !hit.station || hit.station.bar !== bar) return undefined;
   if (face !== "+x" && face !== "-x" && face !== "+y" && face !== "-y") return undefined;
-  return { bar, face, at_mm: Math.round(hit.station.at_mm) };
+  const la = c.m.display.bars[bar]?.long_mm?.[0] ?? 0;
+  return { bar, face, at_mm: Math.round(hit.station.at_mm - la), from: "a.cut" };
 }
 
 const ADD_HOLE: Action = {
@@ -131,7 +146,7 @@ const ADD_HOLE: Action = {
   title: (c) => {
     const h = holeHere(c);
     return h
-      ? `Add a hole on ${h.bar}'s face ${h.face}, ${h.at_mm} mm from end a…`
+      ? `Add a hole on ${h.bar}'s face ${h.face}, ${h.at_mm} mm from end a's cut…`
       : "Add a hole here…";
   },
   group: "bar",
