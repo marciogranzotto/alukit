@@ -273,7 +273,9 @@ letting go then changes nothing. `Ctrl/Cmd+Z` undoes the last step, and `Shift` 
 type and what it comes to, and the tool's options. Start typing a number (or `[`, `(`, a sign)
 and it goes there; start with `=` to begin with a param. A value is an expression of the
 project's params with `mm`, `cm` or `m`: `1.2m`, `W / 2 + 20`, `-300`. A value that reads a param
-is written as the expression, so the param keeps driving it.
+is written as the expression, so the param keeps driving it. Moving, mirroring or copying what is
+written over a param keeps the expression, its numbers added up: the rail at `H - 300` moved 100
+down is written `H - 400`, never `H - 300 - 100`.
 
 **Drawing a bar.** Click a start point (or type `[x, y, z]` and `Enter`, or select a corner and
 press `Enter`), then click the end or type a length and `Enter`; a click while a length is typed
@@ -431,7 +433,12 @@ is hidden.
   joined to the legs: select b13, `Ctrl/Cmd+D`, `↑`, `-300`, `Enter`. Type `4x` after the offset
   for four copies at that spacing, or `/4` for four dividing it (`0, 0, -600 /3`). A copy keeps
   the joints that are its bar's own (a slat's butts on the rails), and each new bar's other ends
-  join what they land on.
+  join what they land on. It is named after its original with the next free number, "top rail,
+  front (2)", and keeps its tags; the preview says which ("makes b17 · tagged top · joins b1 …"),
+  since a tag such as `top` no longer fits a rail 300 below the top, and **Select tagged top**
+  would take it: remove it in the inspector's tags field and rename the copy in its label. The
+  same holds for Paste, for Mirror's images and for a pattern's copies once exploded; a live
+  pattern's copies are its template repeated, with the template's label and tags.
 - **Copy (`Ctrl/Cmd+C`) and Paste (`Ctrl/Cmd+V`)**: paste hangs the copy from the pointer by its
   lowest corner; click where it goes.
 - **Mirror…** (the menu): the plane is square to X (press `Y` or `Z`, or `→ ← ↑`, to turn it) and
@@ -497,7 +504,7 @@ is hidden.
 
 - **Several bars** share fields in the inspector: options (when they are one profile), anchor,
   roll, label and tags, each showing the value they share or "varies". A change is one step for
-  all of them.
+  all of them, and Undo names it once: "change the options of b1, b2, b3 and b4".
 - **The anchor** is picked on the section's dots beside its list (or from the list): each dot is
   a press of its own on any section, a 40 × 80 drawn to scale.
 - **A roll by a quarter turn keeps the bar on its anchor's side**: the anchor turns with it, so a

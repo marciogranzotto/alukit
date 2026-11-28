@@ -42,7 +42,10 @@ Every row has a test written before the fix and seen failing for the reason the 
 is the core's `array` command (`core/commands/patterns.ts`), and the CLI's copy must number it the
 same way. n2, an undo name that does not repeat its verb: the names are the core's
 (`core/commands/words.ts`, `changed`). n3's folding of "H - 300 - 100" into "H - 400": the
-expression is the core transform's (its `kept` list).
+expression is the core transform's (its `kept` list). *All three since closed in the core
+(2026-11-28, [the review's last items](review-last-items-decisions.md)): the copy is "top rail,
+front (2)" and says the tags it carries, one change of many is said once, and composed
+expressions fold their constants.*
 
 **Guarded tests**: `draw.spec`, `view.spec` and `live.spec` are unchanged and pass. No new lasting
 material: Pattern's ghosts use the ghost material Move and Duplicate already compile at startup
@@ -282,7 +285,8 @@ gizmo's drag now carries Shift (`GizmoDrag.shift`).
 ## 18. The nits (n3–n5)
 
 - **n3**: Move's reading said "keeps b18.a z: H - 300 - 100", which reads as "unchanged"; it says
-  "writes" now. Folding the sum to "H - 400" is the core's (above).
+  "writes" now. Folding the sum to "H - 400" is the core's (above); *since done
+  ([the review's last items](review-last-items-decisions.md) 5–7)*.
 - **n4**: Duplicate, Paste, Mirror and Align, disabled under another tool, said "in Select or
   Move"; they say "works in Select or Move: press Esc first", Delete's wording.
 - **n5**: the hover tip is hidden while a gesture runs; the readout by the pointer is what matters

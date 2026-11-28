@@ -885,3 +885,20 @@ replaces an interface above; the owner stays the stream that made it.*
   `autoConnect`'s `info.covers` and the arrangement endpoint's `CornerPlan.covers` (the corner
   end its butt covers) (xc 9, 16).
 - **Order rules**: `coincident`, warn by default; the app's rule labels need it (xc 13).
+
+## The review's last items
+
+*The editing review's m2, n2 and n3, in the core
+([review-last-items-decisions.md](review-last-items-decisions.md), "rl"). Each adds to an
+interface above; the owner stays the stream that made it.*
+
+- **Copies** (`core/commands/copies.ts`, new): `copyLabel(doc, label)`, `asCopy(doc, value)`,
+  `tagsOf(value)` and `taggedWords(tagged)`, the words "tagged top" that `copyWords`,
+  `mirrorWords` and `alukit do` all use (rl 1–3).
+- **Answers**: `array`'s and `mirror`'s `info.tagged`, each copy's tags by its id, absent when
+  none carries any (rl 2).
+- **Step words** (`core/commands/words.ts`): a command's phrase may be a `Change` (`change`, the
+  fields in words; `ids`); `changed(id, set)` returns one, and `joinPhrases` merges consecutive
+  changes of the same fields (rl 4).
+- **Expressions** (`core/expr.ts`): `foldConstants(src)` and `formatExpr(ast)`; every composer in
+  `core/commands/numbers.ts` folds what it writes (rl 5–7).
