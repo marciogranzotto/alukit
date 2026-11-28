@@ -230,8 +230,13 @@ export function ReplaceForm({
 }) {
   const current = useCard(item);
   const size = current?.entry.size_mm;
-  const [q, setQ] = useState<string | undefined>(undefined);
-  const query = q ?? (size ? `${size[0]}x${size[1]}` : "");
+  // The field holds only what the person types; the bar's own size is the suggestion, shown as
+  // the placeholder and searched while the field is empty. Bound to the suggestion, the field
+  // changed under the person when the card arrived after they had started: typing then went on
+  // after it ("40x40" + "40x80").
+  const [q, setQ] = useState("");
+  const suggested = size ? `${size[0]}x${size[1]}` : "";
+  const query = q.trim() !== "" ? q : suggested;
   const [found, setFound] = useState<ListedEntry[]>([]);
   const [why, setWhy] = useState<string>();
   const [chosen, setChosen] = useState<string>();
@@ -278,8 +283,12 @@ export function ReplaceForm({
         <input
           class="insp-input"
           data-testid="replace-query"
-          value={query}
-          placeholder="a code, a name or a size: 40x40"
+          value={q}
+          placeholder={
+            suggested
+              ? `${suggested}, its size; or a code or a name`
+              : "a code, a name or a size: 40x40"
+          }
           onInput={(e) => setQ((e.currentTarget as HTMLInputElement).value)}
         />
       </label>

@@ -127,6 +127,36 @@ test("a bar's length: driven by its param, or typed; the cut list follows the CL
   expect(errors).toEqual([]);
 });
 
+test("Replace's Find keeps what is typed when the bar's card arrives late (no '40x40' prepended)", async ({
+  page,
+}) => {
+  // The card of the bar's item (its size, the suggested search) held until the field has focus:
+  // a person who clicks Find and then types, with the card arriving in between.
+  let release: () => void = () => {};
+  const held = new Promise<void>((r) => {
+    release = r;
+  });
+  await page.route(/\/api\/catalog\/item\?id=test%3ATS40$/, async (route) => {
+    await held;
+    await route.continue();
+  });
+  served = await serve("base-frame/cli");
+  await openTab(page, served, 0);
+  await pick(page, "b7");
+  await page.getByTestId("replace-open").click();
+  const find = page.getByTestId("replace-form").getByTestId("replace-query");
+  await find.click();
+  const card = page.waitForResponse((r) => /\/api\/catalog\/item\?id=test%3ATS40$/.test(r.url()));
+  release();
+  // The card has come and been drawn into the form (two frames after its answer).
+  await card;
+  await page.evaluate(
+    () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+  );
+  await page.keyboard.type("40x80");
+  await expect(find).toHaveValue("40x80");
+});
+
 test("Replace profile, all like it, moves the BOM line in one step that one Undo takes back", async ({
   page,
 }) => {
@@ -141,7 +171,12 @@ test("Replace profile, all like it, moves the BOM line in one step that one Undo
   await pick(page, "b7");
   await page.getByTestId("replace-open").click();
   const form = page.getByTestId("replace-form");
-  await expect(form.getByTestId("replace-query")).toHaveValue("40x40");
+  // The bar's own size is offered as the field's suggestion, searched while the field is empty.
+  await expect(form.getByTestId("replace-query")).toHaveValue("");
+  await expect(form.getByTestId("replace-query")).toHaveAttribute(
+    "placeholder",
+    /^40x40, its size/,
+  );
   await form.getByTestId("replace-item").selectOption("test:TS40E");
   await form.getByTestId("replace-like").check();
   await expect(form.getByTestId("replace-like").locator("xpath=..")).toContainText("all 8 like it");
