@@ -23,8 +23,8 @@ with the version that takes it up. Calls left for the owner's review are marked 
 and calls 31–34; after the second acceptance run, 36–38; after the third, 39; after the fourth,
 40–44; call 6 has since been decided, under "UX redesign, S1" below; the later groups add theirs,
 up to 63–64 after the decided frame's ninth run, 65–67 for the traced sections, 68–71 for the end
-handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core" and 115–119 in "Editing polish, app"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
-groups below record, from "After acceptance run 2" to "Editing polish, app". Notes are cited by
+handles and the Move tool, 72–77 in "3D editing, E1", 78–79 in "3D editing, E0", 80–84 in "Gap X11", 85–89 in "3D editing, E2", 90–94 in "3D editing, E3", 95–99 in "3D editing, E4", 100–104 in "3D editing, E5", 105–107 in "3D editing, integration", 108 in "An end a failing joint claims", 109–114 in "Editing polish, core", 115–119 in "Editing polish, app" and 125–129 in "Review fixes, machining and speed"). Changed text is marked *2.3*. The build was not changed for this draft, except as the
+groups below record, from "After acceptance run 2" to "Review fixes, machining and speed". Notes are cited by
 name and decision number ("m4a 13" is decision 13 of
 [`notes/m4a-decisions.md`](notes/m4a-decisions.md)).
 
@@ -847,6 +847,36 @@ CLI sends the same way. `editing.spec`'s A1, A4 and A8 now assert §12's targets
   commits with its pattern as one step, named by the id the document gives next and sent strict,
   then Select with the pattern selected. A8: 2 steps to 1, five in 1 click (pu 4). Call 119.
 
+### Review fixes, machining and speed
+
+Three majors of the designer review of the editing round
+([`ux/review-editing.md`](ux/review-editing.md): M1, M3, M6), each fixed at its cause, with the
+decisions, sources and measurements in
+[`ux/review-fixes-machining-decisions.md`](ux/review-fixes-machining-decisions.md) ("rm"). No
+golden value, cut list, BOM, machining sheet, order or diagnostic moved (measured on all 192
+fixture and golden outputs); problems moved where M1 says.
+
+- §5.5, §8: **a supplier's unpriced machining reads as itself** (M1): "2 machining services on
+  Profile 40x40 have no price", on the bars that carry it, its detail giving the cost line that
+  prices it (`addCost` covering the supplier's services), and no fix button, since costs have no
+  app path. "Set a price…" is offered only for a project's own item; no fix is shown disabled for
+  a reason it does not give (rm 1, 2). Call 125.
+- §4.4, §5.3, §8: **a hole counts from an end's cut** (M3): `ops` take `"from": "a.cut"` or
+  `"b.cut"`, the long point the cut list measures from, as the shop does (MISUMI, Systeal); an
+  absent `from` stays design point a, so no document's hole moves. The app's form and menu write
+  the cut and say it ("300 mm from end a's cut"); reverse and split keep such a hole where it is
+  (rm 3–5, 7, 8). Call 126.
+- §5.5: **a hole off its piece is a `machining` error** (M3): one of its circles (the drill along
+  its depth, a counterbore's or countersink's mouth, a thread's major diameter) reaching past a
+  cut face, exactly for an angled end too (rm 6). Call 127.
+- §6: **a batch derives each state once** (M6), the server reusing the derives it has, and
+  a state's pins are looked at once: a Move on the 1,008-bar lattice answers in about 130 ms at
+  the server, against about 840 on main under the same load (rm 9–11). Call 128.
+- §8: **Move asks for a join only at a moved end that can take one**: free, freed with Alt, or
+  brought onto a free end; a frame moved whole is one `transform`. `autoConnect`'s rule is
+  unchanged (rm 12, 13); `move.spec` holds the preview and the step under 500 ms at the server.
+  Call 129.
+
 ## Draft 2.2 — what changed (2026-11-26)
 
 - **A shoe mitred square to a strut (gap G-A; §4.5, §16).** A plane's `normal` may name a bar:
@@ -1561,10 +1591,18 @@ use the smallest roll in [0°, 360°) that places the body with the faces they m
 that differ only this way derive the same outputs.
 
 **Machining** a person adds goes in `ops`
-(`{ "op": "hole", "face": "+y", "at_mm": 20, "from": "a", "d_mm": 7 }`); connections, rails and
-connectors generate more (§5.1). A hole goes through the whole section along the face's normal
+(`{ "op": "hole", "face": "+y", "at_mm": 20, "from": "a.cut", "d_mm": 7 }`); connections, rails
+and connectors generate more (§5.1). A hole goes through the whole section along the face's normal
 unless it gives `depth_mm`, and takes §4.8's hole fields: `d_mm` or `thread`, `csk`, `cbore`
-(*2.1*).
+(*2.1*). *2.3* (review M3; [rm](ux/review-fixes-machining-decisions.md) 3–7; calls 126, 127):
+**`at_mm` counts from an end's cut** with `"from": "a.cut"` or `"b.cut"`: from that end's long
+point, where the cut list measures (§5.3) and the shop does, so "20 from end a's cut" is printed
+20. Without `from`, or with `"a"` or `"b"`, it counts from a design point, as a station does
+(§4.3), so documents written before keep their holes where they were; the app, the guide and the
+skill write the cut. Derive places a cut-counted hole once, from the end's long point, and every
+output reads it there. `reverseBar` turns `a.cut` into `b.cut`; `splitBar` counts a hole on the
+piece it lands on, from the same kind of reference. A hole whose circle reaches past a cut is a
+`machining` error (§5.5).
 
 **Placed after assembly** (*2.3*, after the decided frame's ninth run; gap F11). A bar fitted once
 the frame's joints are made (a brace or a guard rail added last, a wall modelled as a bar) takes
@@ -2479,7 +2517,8 @@ the same piece; the canonical orientation is the one whose sorted machining list
 
 Every piece lists its machining **from a named end**, measured along the axis from that end's long
 point, so a hole's distances from the two ends add up to the span, not to `cut_mm` where they
-differ (*2.3*): "tap M8 at end a; Ø7 access hole 20 mm from end a on face +y; Ø9 hole in end b
+differ (*2.3*), the number a hole written from that end's cut gives (§4.4; *2.3*, review M3): "tap M8
+at end a; Ø7 access hole 20 mm from end a on face +y; Ø9 hole in end b
 along the axis, 10 off its centre" (an end hole, *2.3*, whose x turns over when the piece is turned end for
 end); "Ø9.00 hole in end a at x 10.18, y 0.00 from the centre, 7.59° off square, exiting end b at
 x -11.16, y 0.00, through" (one following a screw at an angle, *2.3*, its exit turning over with
@@ -2566,7 +2605,7 @@ sleeve). What the build machines on a context bar is on the machining sheet, mad
 | Fit (*2.3*, F2b) | a butt connector's screw with no clearance hole and no groove to pass the through bar; under a groove's lips, a shank the opening does not pass, a head (and its T-nut seat) past the groove's depth, or a head wider than the chamber where it reaches (§4.5); *2.3* the same for a connector's own head, and a domed head (`rf_mm`) checked as its dome, not as a cylinder (after the round-3 acceptance, X8) | error |
 | Fit (*2.3*, F2b) | a butt connector's screw whose item gives no bearing diameter, or no head height where it sits under a groove's lips (nor its T-nut seat a body height), so it is not checked | info |
 | Machining (*2.3*, X5) | a tapped hole in a bar's face whose tap drill's circle lies more than half in a groove's opening: its thread has less than half its circle of wall (§4.5) | error |
-| Machining (*2.3*) | two ops of one bar of the same kind and size at one place, one op made twice (§5.1): a requirement written once per screw, a splice whose studs have no positions, two ends that each pass a hole through one axis. Places compare as the cut list's identity does, a through hole by its axis. A tap into a bar's end on none of its section's cores (its centre more than `tol.len` from every core's): an end tap, a connector's in a butting or a through bar's end or a splice's, or a tapped end hole (a drilled one is not checked); the error names the bar, the end, the place and the nearest cores (*2.3*). A tap on a core its thread does not fit (the tap rule below): an M16 in an 80x80's Ø5 corner hole (*2.3*); a tapped end hole at an angle to the bar's axis, which runs across its cores (*2.3*) | error |
+| Machining (*2.3*) | two ops of one bar of the same kind and size at one place, one op made twice (§5.1): a requirement written once per screw, a splice whose studs have no positions, two ends that each pass a hole through one axis. Places compare as the cut list's identity does, a through hole by its axis. A tap into a bar's end on none of its section's cores (its centre more than `tol.len` from every core's): an end tap, a connector's in a butting or a through bar's end or a splice's, or a tapped end hole (a drilled one is not checked); the error names the bar, the end, the place and the nearest cores (*2.3*). A tap on a core its thread does not fit (the tap rule below): an M16 in an 80x80's Ø5 corner hole (*2.3*); a tapped end hole at an angle to the bar's axis, which runs across its cores (*2.3*). A hole on a bar's face off its piece: one of its circles (the drill along its depth, a counterbore's or countersink's mouth, a thread's major diameter) reaching more than `tol.len` past an end's cut face, exactly where the end is cut at an angle; written and generated holes alike, the error giving its distance from the cut (*2.3*, review M3; rm 6) | error |
 | Machining (*2.3*) | a tap into the end of a bar whose section gives no core positions, so it is not checked: a `tslot`'s `bores` and a drawn section's `cores` give them (§3.5), a box section or one that lists none does not; a tap on a core whose thread is none of its labels and has no tap drill or 6H tolerance in AluKit (not metric, or a pitch over 2.5 mm), its place checked and its fit not | info |
 | Lengths | cut length ≤ 0, outside the offer's range, a cut angle outside the supplier's service range | error |
 | Rails | end distance E outside the rail's range; a factory end that is not square | error |
@@ -2660,6 +2699,14 @@ each one `setBar` on the end's `cut`. **An open corner's fix is offered only whe
 would join it**, by the rule `autoConnect` applies (§4.5); otherwise the detail says why, so a fix
 the list offers is never refused.
 
+*2.3* (review M1; [rm](ux/review-fixes-machining-decisions.md) 1, 2; call 125). **A supplier's
+unpriced machining reads as itself**: the order's "no price for N machining services" is "N
+machining services on <item> have no price", targeting the bars that carry them, its detail naming
+the services and giving the cost line that prices them (`addCost` with `covers: { supplier,
+services: true }`), with no fix, since costs have no app path (§8). **"Set a price" is offered
+only for a project's own item**, the only price the app sets; a catalog item is priced in its
+catalog. The app shows no fix disabled for a reason it does not give.
+
 ## 6. Commands (the one edit path)
 
 Every edit is a JSON command, `{ "cmd": "addBar", "args": {…} }`: a pure function from document
@@ -2667,6 +2714,13 @@ to document. Batches apply atomically. The UI, the CLI and agents use the same c
 
 **Undo keeps the previous document** (review m1): documents are immutable and share structure, so
 each step costs little and undo cannot be wrong. No command needs an inverse.
+
+**A batch derives each state once** (*2.3*, review M6; [rm](ux/review-fixes-machining-decisions.md)
+9–11; call 128). Since a state is immutable and derive pure, the commands of a batch share one
+derive per state: a command that leaves the state as it found it (an `autoConnect` with nothing
+to join) and the next one read the same derive, and `transform` hands on the derive of the state
+its guard checked. The server gives a batch its snapshot's derive and keeps the batch's last for
+the answer and the next snapshot (§7.1). A state whose lock pins what it names is looked at once.
 
 | Group | Commands |
 |---|---|
@@ -2774,7 +2828,8 @@ each step costs little and undo cannot be wrong. No command needs an inverse.
   line moves. The answer lists the ends (`stretched`) and the words say "stretching b5"
   ([pe](ux/polish-editing-decisions.md) 4–7; calls 110, 111). The app's Move, Rotate, Align and
   a part's slide send it, followed by an `autoConnect` at each moved end (the first 24: both ends
-  of each bar moved whole, then the ends stretched) (§8).
+  of each bar moved whole, then the ends stretched) (§8); *2.3* (review M6), Move leaves out the
+  ends no join can take.
 - **`mirror`** (§4.7; *2.3*, the editing polish) copies entities as their image in a plane square
   to a world axis. **A reference to a bar outside the set lands on the bar at its image**: the
   bar itself when the plane maps it onto itself, else an existing bar of the same section whose
@@ -3217,6 +3272,12 @@ the way the pointer went (`200`, `=D`), the offset (`0, 200, 0`) or where the ba
 one ghost material; after a snap or a pause, the dry run says what follows, frees, joins or is
 cut ("b2.a, p1 follow · cut b2 580 → 680"), or why the move is refused. The release is one step:
 `transform`, then an `autoConnect` at each moved bar's end. Joined ends follow; Alt frees them.
+*2.3* (review M6; [rm](ux/review-fixes-machining-decisions.md) 9–13; calls 128, 129): the
+`autoConnect`s go only to the moved ends a join can take, free, freed by Alt, or brought onto a
+free end (one landing where it lands, or one of a bar that stays that was where it was), since
+`autoConnect` joins the free ends at a point and finds nothing where none is; a frame moved whole
+is one `transform`. The step is the same as with every end asked, and a batch derives each state
+once, so a Move on the 1,008-bar lattice answers in about 130 ms at the server.
 *2.3* (the editing round): the first click on a snap is the base point, so a bar moved from its
 end to another bar's end lands on it exactly (point to point, E3.5); with a selection and no
 drag, a value typed starts a move from the selection's centre, and Enter, or a click, commits it.
@@ -3330,9 +3391,12 @@ overwritten.
   station, rounded to the millimetre (the menu has no snap: built otherwise than E-UX-21's
   snapped station); **Split at…** a typed distance, with a splice when asked, a bar in a run
   always spliced; **Reverse**, which says first why not (a bar in a run, a free end b); and **Add a
-  hole on b1's face +x, 20 mm from end a…**, offered over a bar's side face only, which opens the
-  hole form there. **Each hole is a row** (face, distance, end, size as a drill or a thread such as
-  `M6`, depth, empty for through) that edits and removes it; each change is one `setBar` of the
+  hole on b1's face +x, 20 mm from end a's cut…**, offered over a bar's side face only, which opens
+  the hole form there. **Each hole is a row** (face, distance, end, size as a drill or a thread such
+  as `M6`, depth, empty for through) that edits and removes it; *2.3* (review M3, rm 8; call 126):
+  the distance counts from end a's cut, end b's cut, design point a or design point b, the row
+  saying which ("194 mm from end a's cut"), and a new hole counts from end a's cut, the menu
+  offering that distance as the cut list will print it; each change is one `setBar` of the
   whole `ops` list, keeping a countersink or counterbore the row does not show (E-UX-21, E-UX-22;
   e4 9–12). Call 97.
 - **Several selected** (E-UX-15): with several bars, their options (when they share one profile),
@@ -3386,7 +3450,7 @@ added two commands, `moveEnd` and `transform`. An agent makes the same edit with
 
 | Edit in the app | Step |
 |---|---|
-| Move, a part's arrow, Align | `transform { by }`, then `autoConnect` at each moved end (the first 24: both ends of each bar moved whole, then the ends a crossing box stretches, *2.3*, the editing polish) |
+| Move, a part's arrow, Align | `transform { by }`, then `autoConnect` at each moved end (the first 24: both ends of each bar moved whole, then the ends a crossing box stretches, *2.3*, the editing polish); Move only at those a join can take (*2.3*, review M6) |
 | Rotate | `transform { rotate }`, then the same joins |
 | An end handle, the length label | `moveEnd`, then `autoConnect { end }` |
 | Duplicate, Paste | `array` along the offset, then `autoConnect` at each new bar's end (the first 48) |
@@ -3394,7 +3458,7 @@ added two commands, `moveEnd` and `transform`. An agent makes the same edit with
 | Delete | `removeEntity` (with `cascade`, strict, when the dialog listed more) |
 | Split here, Split at… | `splitBar` |
 | Reverse | `reverseBar` |
-| A hole row, Add a hole | `setBar { ops }`, the whole list |
+| A hole row, Add a hole | `setBar { ops }`, the whole list; a new hole `"from": "a.cut"` (*2.3*, review M3) |
 | An end's cut, extension | `setBar { ends }` |
 | An end's plane, Free | `setBar { ends }` with `setConnection` or `removeEntity` of the joint it leaves |
 | Length, offset, anchor, roll, options, Replace, Context | `setBar` (several selected: one per bar); a quarter roll writes `roll_deg` with the turned `anchor` and `off_mm` |
@@ -4328,6 +4392,30 @@ reasons. Marking the room is the run's own change, in its project.
      its pattern one step: the batch names the bar by the id the document gives next and is sent
      strict, as a pivot's is; after it the app is in Select with the pattern selected. Amending
      the draw step after it commits (SketchUp's `x4`) stays out (D-UX-16) (pu 4).
+125. *New in 2.3, review fixes (machining), open.* A supplier's unpriced machining is its own
+     problem, on the bars that carry it, with the cost line's CLI form in its detail and no fix
+     button, since costs have no app path; a form for a cost line covering services is left to
+     the costs work (§8). "Set a price" is offered only for a project's own item, and no fix is
+     shown disabled (rm 1, 2).
+126. *New in 2.3, review fixes (machining), open.* A hole may count from an end's cut (`a.cut`,
+     `b.cut`, the long point), and every writer AluKit ships writes it so; an absent `from` stays
+     design point a, so documents written before keep their holes. Making the cut the schema's
+     default would match the shop with no `from` written, at the price of moving existing holes
+     silently with nothing to migrate them (rm 3–5, 7, 8).
+127. *New in 2.3, review fixes (machining), open.* A hole off its piece is a `machining` error when
+     any of its circles (drill along its depth, counterbore or countersink mouth, thread major
+     diameter) reaches past a cut face by more than `tol.len`, an edge touching the cut allowed.
+     A minimum distance from the end (MISUMI's range 7~(L−7), say) is not checked: it is the
+     shop's rule, not a geometric one (rm 6).
+128. *New in 2.3, review fixes (speed), open.* A batch shares one derive per state (states are
+     immutable, derive pure), the server handing in its snapshot's and keeping the batch's;
+     `autoConnect` keeps its rule and gets no spatial index, its own plan taking 0.3 ms on the
+     lattice (rm 9–11).
+129. *New in 2.3, review fixes (speed), open.* Move sends `autoConnect` only at the moved ends a
+     join can take, judged in the app against the rule `planJoin` applies (free ends at a point);
+     a change of which ends `autoConnect` takes must change the app's rule with it, which
+     `moves.test` checks against a join at every end. Rotate, Align and Duplicate still ask
+     every end (rm 12, 13).
 
 ## 15. Review 1 resolution
 

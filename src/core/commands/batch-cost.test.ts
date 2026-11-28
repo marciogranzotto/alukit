@@ -68,7 +68,7 @@ describe("a step on the 1,008-bar lattice (review M6)", () => {
       if (!r.ok) throw new Error(JSON.stringify(r.failed));
     });
     // The transform reads the state and checks the one it leaves: two derives, and the rest is
-    // small. Five is a generous budget; before, the ratio was about 25.
+    // small. Five is a generous budget: it measures 2.3 here, and 27.7 on main before the fix.
     expect(step / one, `step ${step.toFixed(0)} ms, one derive ${one.toFixed(0)} ms`).toBeLessThan(
       5,
     );

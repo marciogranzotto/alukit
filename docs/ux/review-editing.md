@@ -173,6 +173,9 @@ nothing warns.** (A8)
   (the holes, the angled cuts), naming the bars that carry them, with the fix the app can give
   (the cost line's CLI form, since costs have no app path yet, design §8). A fix that is always
   disabled is no fix.
+- *Fixed* ([rm](review-fixes-machining-decisions.md) 1, 2): "2 machining services on Profile 40x40
+  have no price", on the bars that carry them, the `addCost` cost line in its detail, no fix
+  button; "Set a price…" only for a project's own item, and no fix shown disabled.
 
 ![One hole: "No supplier sells … No catalog offers it" with a disabled Set a price](img/review-editing/04-hole-blocks-order-1440-dark.png)
 
@@ -197,6 +200,10 @@ nothing warns.** (A8)
 - *Fix:* count a hole from the cut end by default (what the cut list, the shop and the guide's
   "20 mm from end a" mean), say which in the row ("194 mm from end a's cut"), and make a hole off
   the piece an error, as design §4.8 already does for a plate's hole a shop could not make.
+- *Fixed* ([rm](review-fixes-machining-decisions.md) 3–8): `ops` take `"from": "a.cut"` or
+  `"b.cut"`, which the form, the menu, the guide and the skill write; the row says "… mm from end
+  a's cut", the menu offers the cut list's number, and a hole reaching past a cut is a
+  `machining` error. An absent `from` stays design point a, so no existing hole moves.
 
 ![The hole typed as 20 is stored as 2 (M2), and the cut list puts it at -38 (M3)](img/review-editing/05-hole-at-2-cut-list-38-1440-dark.png)
 
@@ -236,6 +243,11 @@ nothing warns.** (A8)
 - *Fix:* send `autoConnect` only for the ends the transform freed or moved off their joint (its
   answer lists what followed and what was freed), or let `autoConnect` take a list of ends and
   derive once. Then time it in `move.spec` on the lattice.
+- *Fixed* ([rm](review-fixes-machining-decisions.md) 9–14): the cost was a derive per command, not
+  the joins' rule. A batch now derives each state once, and Move asks for a join only at an end
+  that can take one, so a frame moved whole is one `transform`: at the server, about 130 ms for
+  the dry run and 140 ms for the step, against 840 and 880 on main under the same load.
+  `move.spec` holds both under 500 ms on the lattice, built by commands.
 
 **M7. A face joint cannot be reached from the bars it holds, and their ends claim to be open.**
 (A12)

@@ -769,3 +769,20 @@ drawn and checked against but not built or bought. Each adds.*
 - **Test ids**: `frame-joint-suggested` (the box frame's bracket, a radio), `pattern-draw` (Pattern's
   Draw the bar to repeat), `draw-repeat` (the command bar's pending repeat); `frame-shelf` and
   `frame-params` are now outside More options (pu 3, 4).
+
+## Review fixes changes (machining and speed)
+
+*Three majors of the editing review ([review-fixes-machining-decisions.md](review-fixes-machining-decisions.md),
+"rm"). Each adds to an interface above; the owner stays the stream that made it.*
+
+- **The batches** (E3's `batches.ts`): `transformBatch(set, written, detach, prefer, at?)`, `at`
+  being `{ m, by }`, the model and the offset in numbers; with it, the joins go only to the moved
+  ends a join can take (`joinable`), without it to every moved end as before. The Move wire passes
+  it (rm 12).
+- **The view model** (`src/mesh/model.ts`): `ViewBar.long_mm?`, each end's long point along the
+  axis from design point a, where a hole counted from a cut end measures (rm 8).
+- **Holes** (E4's `holes.ts`, `Holes.tsx`, `barActions.ts`): `From` (`a.cut`, `b.cut`, `a`, `b`),
+  `FROMS` (their words), `fromOf(op)`; `HoleAsked.from`; `holeHere` offers the distance from end
+  a's cut (rm 8).
+- **Problems** (S1's `Fixes.tsx`): a fix button is disabled only while a step is in flight or the
+  app is read-only (rm 2).
