@@ -769,3 +769,21 @@ drawn and checked against but not built or bought. Each adds.*
 - **Test ids**: `frame-joint-suggested` (the box frame's bracket, a radio), `pattern-draw` (Pattern's
   Draw the bar to repeat), `draw-repeat` (the command bar's pending repeat); `frame-shelf` and
   `frame-params` are now outside More options (pu 3, 4).
+
+## Review fixes, joins
+
+*The editing review's blockers B1–B3 ([review-fixes-joins-decisions.md](review-fixes-joins-decisions.md),
+"rj"). Each adds to an interface above; the owner stays the stream that made it.*
+
+- **Batches** (E3's `src/ui/edit/batches.ts`): `mirrorBatch(m, ids, plane, { removeOriginals?,
+  prefer? })` adds an `autoConnect` at each image's end (the first 48, after any removal), as
+  `duplicateBatch` does (rj 5).
+- **Rules** (E3's `src/ui/tools/moves.ts`): `copiedJoins(dryRun)`, a copying step's joints in
+  words, those its first command carried (`info.joined` of `array` or `mirror`) and then each
+  `autoConnect`'s; `copyWords` and `mirrorWords` (E3's `wire/mirror.ts`) use it, and a carried
+  joint is a join in the words, not an entity made (rj 6).
+- **The joint preview** (S5's `tools/joint.ts`): `touchesBars(m, p)` also says yes for a point on
+  a bar's bounding box or inside it, between its end faces, where `autoConnect` may now butt an
+  end (rj 7).
+- **Words** (`shell/Settings.tsx`'s rule labels, `problems/ProblemRow.tsx`'s rule words): the
+  order rule `unconnected` ("An end with no connection", "Open end") (rj 9).

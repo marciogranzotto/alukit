@@ -164,6 +164,10 @@ pattern selected, its fields in the inspector: five is one field (A8's second pa
   and `alukit problems` say nothing of it (**measured**, `alukit cutlist` on the CLI's batch). The
   template would need the joints `autoConnect` makes, whose ids a batch cannot know before it
   runs (it may add the end to a butt that exists); left for the designer review and the core.
+  *Since fixed* (the review's B1; [review-fixes-joins-decisions.md](review-fixes-joins-decisions.md)
+  1–3): a pattern's template carries its bars' own joints in derive, listed or not, so the same
+  batch now gives four slats of 520, each joined, with no names to predict. (`autoConnect` always
+  makes a butt of its own, **read**: `connectAt`; it never adds an end to one that exists.)
 
 ## 5. Across the pass
 
