@@ -61,12 +61,19 @@ export async function scratchProject(
   return { dir, remove: () => rm(base, { recursive: true, force: true }) };
 }
 
-/** A scratch copy of a fixture project, served by `alukit serve`. */
-export async function serve(project = "cart"): Promise<Served> {
+/**
+ * A scratch copy of a fixture project, served by `alukit serve`. `prepare`, when given, runs on
+ * the copy before the server starts (CLI edits that build it, say), so it opens at revision 0.
+ */
+export async function serve(
+  project = "cart",
+  prepare?: (dir: string) => Promise<void>,
+): Promise<Served> {
   const base = await mkdtemp(join(tmpdir(), "alukit-e2e-"));
   await cp(join(FIXTURES, "catalogs"), join(base, "catalogs"), { recursive: true });
   const dir = join(base, ...project.split("/"));
   await cp(join(FIXTURES, ...project.split("/")), dir, { recursive: true });
+  if (prepare) await prepare(dir);
   return serveAt(dir, base);
 }
 

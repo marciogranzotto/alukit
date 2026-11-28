@@ -468,10 +468,14 @@ is hidden.
 - **Split and Reverse.** Right-click a bar where it should be cut: **Split b9 here, 400 mm from end
   a** splits it there (rounded to the millimetre); **Split b9 at…** takes a typed distance and adds
   a splice when asked. **Reverse b9** swaps its ends. Both are also buttons in the inspector.
-- **Holes.** Right-click a bar's side: **Add a hole on b1's face +x (world +Y), 20 mm from end a…**
-  opens the hole form there, its distance ready to type over; set the distance, the end, the size (a drill such as `7`, or a thread such as
-  `M6`) and the depth (empty for through), then **Add the hole**. Each hole is then a row that edits and
-  removes it.
+- **Holes.** Right-click a bar's side: **Add a hole on b1's face +x (world +Y), 20 mm from end a's
+  cut…** opens the hole form there, its distance ready to type over; set the distance, what it
+  counts from, the size (a drill such as `7`, or a thread such as `M6`) and the depth (empty for
+  through), then **Add the hole**. A distance counts from **end a's cut** or **end b's cut**, as
+  the cut list prints it and a shop measures, or from a design point, which stays put when the
+  ends are cut back or extended. Each hole is then a row that edits and removes it ("20 mm from
+  end a's cut"). A hole that reaches past a cut is an error: off the piece, no shop can make it
+  there. In the document, `"from": "a.cut"`; without `from`, a hole counts from design point a.
 
 ### Several selected, profiles and nodes
 
@@ -566,14 +570,17 @@ angles weigh from their material.
 **Order** (`alukit order`) is the buying list per supplier: the offer, quantity, unit price, low
 to high, and what each line is for. Each supplier is **READY** or **BLOCKED**, with every reason,
 and the totals follow, in the project's currency. A cost line that covers an item (a fabricator
-drilling it, say) replaces the item's price. The rules, and what each blocks:
+drilling it, say) replaces the item's price. A supplier's machining (holes, taps, angled cuts)
+has no price until a cost line covers its services: Problems says "2 machining services on
+Profile 40x40 have no price", selects the bars that carry them, and gives the cost line to add
+with `alukit do`'s `addCost` (`"covers": { "supplier": "…", "services": true }`). The rules, and what each blocks:
 
 | Rule | Blocks by default | When |
 |---|---|---|
 | `check-error` | yes | a check failed; blocks the suppliers of the entities it names |
 | `open-item` | yes | an open item with `"blocks": "order"`, within its `scope` |
 | `placeholder` | yes | a placeholder is on the list; blocks its own line under "unsourced" |
-| `missing-price` | yes | no offer or no price, or no exchange rate |
+| `missing-price` | yes | no offer or no price, no exchange rate, or a supplier's machining no cost line covers |
 | `est-price` | yes | the price is an estimate |
 | `out-of-stock` | yes | the offer was read as out of stock |
 | `option-not-sold` | yes | the option (a finish) is not sold |

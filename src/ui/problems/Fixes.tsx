@@ -17,11 +17,6 @@ const readOnly = () => summary.value?.status.readOnly === true;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-/** The project item the price form sets, or `undefined` when the item is not the project's. */
-function projectItem(item: string): boolean {
-  return item.startsWith("project:");
-}
-
 function SetPriceForm({ item, done }: { item: string; done: () => void }) {
   const [price, setPrice] = useState("");
   const [ref, setRef] = useState("");
@@ -179,27 +174,20 @@ export function FixControls({ p, children }: { p: Problem; children?: preact.Com
     <>
       <div class="problem-actions">
         {children}
-        {p.fixes.map((fix) => {
-          // A catalog item's price is the catalog's: only a project item's is set here.
-          const blocked =
-            fix.kind === "set-price" && !projectItem(fix.item)
-              ? "A catalog item's price comes from its catalog"
-              : undefined;
-          return (
-            <button
-              type="button"
-              class="btn"
-              key={fix.label}
-              data-fix={fix.kind}
-              disabled={busy.value || readOnly() || blocked !== undefined}
-              title={blocked}
-              aria-expanded={form === fix}
-              onClick={() => void run(fix)}
-            >
-              {fix.label}
-            </button>
-          );
-        })}
+        {/* The problems offer a price form only for a project item (review M1). */}
+        {p.fixes.map((fix) => (
+          <button
+            type="button"
+            class="btn"
+            key={fix.label}
+            data-fix={fix.kind}
+            disabled={busy.value || readOnly()}
+            aria-expanded={form === fix}
+            onClick={() => void run(fix)}
+          >
+            {fix.label}
+          </button>
+        ))}
       </div>
       {form?.kind === "resolve-open" && (
         <div class="fix-panel">

@@ -238,7 +238,8 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
         return;
       }
       preview.ask({
-        commands: (prefer) => transformBatch(set, now.written, detach, prefer ?? rule()),
+        commands: (prefer) =>
+          transformBatch(set, now.written, detach, prefer ?? rule(), { m, by: now.d }),
         at: dest,
         soon,
         words: (r) => moveWords(r, detach),
@@ -315,7 +316,7 @@ export function createMoveTool(viewer: Viewer, gestures: Gestures, deps: MoveDep
           const refused = preview.refused(b);
           return refused ? { why: refused } : { commands: b, what: `copy ${idList(set.ids)}` };
         }
-        const commands = transformBatch(set, now.written, detach, rule());
+        const commands = transformBatch(set, now.written, detach, rule(), { m, by: now.d });
         const refused = preview.refused(commands);
         return refused ? { why: refused } : { commands, what: `move ${idList(set.ids)}` };
       },

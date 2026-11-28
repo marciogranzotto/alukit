@@ -37,7 +37,8 @@ import { applyVariant } from "./variant.ts";
 
 /**
  * A hole on a bar (§4.4): one a person adds in `ops`, or one stage 4 generates (§5.1), valued:
- * along the axis from the named design point.
+ * along the axis from the named design point. A hole written from a cut end (`a.cut`, `b.cut`)
+ * is resolved here to its place from that end's design point (review M3).
  */
 export interface HoleOp {
   op: "hole";
@@ -213,7 +214,7 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
   const bars = new Map<string, DerivedBar>();
   for (const [id, pb] of placed) {
     const l = s3.lengths.get(id);
-    if (l) bars.set(id, { placed: pb, ...l, ops: resolveOps(ctx, id), ...flag(id) });
+    if (l) bars.set(id, { placed: pb, ...l, ops: resolveOps(ctx, id, l.lengths), ...flag(id) });
   }
   // Last, each butt's end faces on the faces they bear on, on the trimmed bars.
   const butts = buttSeats(ctx, bars, s3.seats);
@@ -256,15 +257,25 @@ export function derive(raw: unknown, items: ItemSource, opts: DeriveOptions = {}
   };
 }
 
-function resolveOps(ctx: Ctx, id: string): ResolvedOp[] {
+/**
+ * The holes a person wrote, valued. One counted from a cut end (`a.cut`, `b.cut`: from the end's
+ * long point, where the cut list and the shop measure from, review M3) is resolved to its place
+ * along the axis from the same end's design point, as every op is held: end a's long point lies
+ * `la` from design point a, end b's `lb`.
+ */
+function resolveOps(ctx: Ctx, id: string, l: BarLengths): ResolvedOp[] {
   const ops = ctx.bars.get(id)?.spec.ops ?? [];
   const out: ResolvedOp[] = [];
   ops.forEach((op, i) => {
     const f = `ops[${i}]`;
     const n = (x: Expr | undefined, name: string) =>
       x === undefined ? undefined : ctx.num(id, `${f}/${name}`, x);
-    const at = n(op.at_mm, "at_mm");
-    if (at === undefined) return;
+    const written = n(op.at_mm, "at_mm");
+    if (written === undefined) return;
+    const from = op.from ?? "a";
+    const end = from === "a" || from === "a.cut" ? "a" : "b";
+    const at =
+      from === "a.cut" ? l.la + written : from === "b.cut" ? l.len - l.lb + written : written;
     const d = n(op.d_mm, "d_mm");
     const depth = n(op.depth_mm, "depth_mm");
     const csk = op.csk && {
@@ -278,7 +289,7 @@ function resolveOps(ctx: Ctx, id: string): ResolvedOp[] {
     out.push({
       op: "hole",
       face: op.face,
-      from: op.from ?? "a",
+      from: end,
       at,
       ...(d !== undefined ? { d } : {}),
       ...(op.thread ? { thread: op.thread } : {}),

@@ -7,6 +7,7 @@ import { duplicateOps } from "./duplicates.ts";
 import { faceTaps } from "./face-taps.ts";
 import { type GenOut, generateFaces } from "./fastenings.ts";
 import { connectorHardware } from "./hardware.ts";
+import { holesOnPiece } from "./on-piece.ts";
 import { placeParts } from "./parts.ts";
 import { layoutRails } from "./rails.ts";
 import type {
@@ -28,7 +29,8 @@ import type {
  *    `bolt` or `screw` needs (§4.5);
  * 4. connectors' hardware sets by system and their machining (§3.4), a hole in a butting bar's
  *    side from a face no other member covers (X9);
- * 5. coincident machining: one op made twice at one place is an error (acceptance gap A8).
+ * 5. coincident machining: one op made twice at one place is an error (acceptance gap A8); so
+ *    is a hole whose material is not all on its piece (review M3).
  *
  * Generated machining is appended to each bar's `ops`, after the holes a person wrote, in a fixed
  * order: by connection id, then station. Nothing here moves a bar or changes a cut.
@@ -64,6 +66,7 @@ export function attach(
   duplicateOps(ctx, bars);
   coreTaps(ctx, bars);
   faceTaps(ctx, bars);
+  holesOnPiece(ctx, bars);
   return {
     parts,
     fastenings: out.fastenings,

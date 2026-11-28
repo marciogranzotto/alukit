@@ -65,7 +65,7 @@ now focuses once, in a layout effect with no dependencies, so the focus is there
 paint.
 
 - **The distance takes the focus, not the size.** The menu entry that opens the form names the
-  distance it offers ("Add a hole on b1's face +x (world +Y), 300 mm from end a…"), and it is
+  distance it offers ("Add a hole on b1's face +x (world +Y), 300 mm from end a's cut…"), and it is
   the field a person corrects first; it is selected, so typing replaces it. A person who wants
   the size tabs to it.
 - **The test types.** `edit.spec`'s hole test used `fill`, which sets a value without
@@ -208,7 +208,7 @@ and Connect's base.
 - **The snap keeps its machine label.** `Snap.label` ("b9 +y face at 300") is what scripts, the
   status line's `snap` and the tests key on; a new `Snap.tip` carries the person's words ("b9 +y
   face (world +Z) at 300"), and the tools show `tip ?? label`.
-- **The hole row keeps its words** ("Ø7 on face +x, 20 mm from end a"): the core's pass changes
+- **The hole row keeps its words** ("Ø7 on face +x, 20 mm from end a's cut"): the core's pass changed
   that row for M3 (which end a distance counts from), and the select beside it names the world
   direction.
 

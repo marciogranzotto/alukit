@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { CatalogSet } from "#catalog/link.ts";
-import { makeContext, pinNew } from "./helpers.ts";
+import { makeContext, pinNew, sharedDerives } from "./helpers.ts";
 import { COMMANDS } from "./registry.ts";
 import type {
   Command,
@@ -124,15 +124,21 @@ function fold(
   return out.state;
 }
 
+/**
+ * A batch, each command on the state the one before it left. The commands share one derive per
+ * state (`sharedDerives`): a batch of a move and the joins after it derives what changed, not
+ * once per command (review M6).
+ */
 export function applyBatch(
   state: State,
   commands: readonly unknown[],
   env: CommandEnv,
 ): BatchResult {
+  const shared = sharedDerives(env);
   let current = state;
   const results: CommandResult[] = [];
   for (const [index, command] of commands.entries()) {
-    const next = fold(results, index, applyCommand(current, command, env));
+    const next = fold(results, index, applyCommand(current, command, shared));
     if (!("doc" in next)) return { ok: false, failed: next };
     current = next;
   }
@@ -163,12 +169,13 @@ export async function applyBatchLive(
   open: (catalogs: readonly string[]) => Promise<CatalogSet>,
 ): Promise<BatchResult & { live?: CatalogSet }> {
   let current = state;
-  let e = env;
+  let e: CommandEnv = sharedDerives(env);
   const results: CommandResult[] = [];
   for (const [index, command] of commands.entries()) {
     const p = parse(command);
     if (!p.ok) return { ok: false, failed: failure(index, p) };
     const after = p.def.catalogsAfter?.(p.args, current.doc);
+    // New catalogs change what is pinned, not what a state derives: the derives stay shared.
     if (after && !sameList(after, namedCatalogs(current.doc)))
       e = { ...e, live: await open(after) };
     const next = fold(results, index, run(current, p, e));

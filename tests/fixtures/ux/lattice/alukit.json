@@ -1,0 +1,8 @@
+{
+  "schema": "alukit.project/1",
+  "name": "Lattice: nothing yet; the tests build 84 box frames in it by commands (review M6)",
+  "catalogs": ["../../catalogs/test"],
+  "defaults": {
+    "bar": { "item": "test:TS40", "opt": { "finish": "anodised" } }
+  }
+}

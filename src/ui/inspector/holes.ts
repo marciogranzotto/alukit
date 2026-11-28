@@ -5,7 +5,8 @@ import { isObject, written } from "./words.ts";
 
 /**
  * The holes a person adds to a bar (`ops`, design §4.4; docs/ux/editing-audit.md E4.4, E-UX-22):
- * each a hole on a side face, at a distance from end a or b, drilled (`d_mm`) or tapped
+ * each a hole on a side face, at a distance from an end's cut (where the cut list and the shop
+ * measure from, the app's default; review M3) or from a design point, drilled (`d_mm`) or tapped
  * (`thread`), through or to a depth. Adding, changing and removing one is one `setBar` of the
  * whole list, as `alukit do` would send it. Pure. Owner: E4.
  */
@@ -13,6 +14,22 @@ import { isObject, written } from "./words.ts";
 type O = Record<string, unknown>;
 export type Face = "+x" | "-x" | "+y" | "-y";
 export const FACES: readonly Face[] = ["+x", "-x", "+y", "-y"];
+
+/** Where a hole's distance counts from (§4.3's `from`): an end's cut, or a design point. */
+export type From = "a.cut" | "b.cut" | "a" | "b";
+
+/** The choices, the cuts first: what the cut list prints and the shop measures from. */
+export const FROMS: readonly { value: From; label: string }[] = [
+  { value: "a.cut", label: "end a's cut" },
+  { value: "b.cut", label: "end b's cut" },
+  { value: "a", label: "design point a" },
+  { value: "b", label: "design point b" },
+];
+
+/** A hole's `from` as written; absent is design point a (§4.3). */
+export function fromOf(op: O): From {
+  return FROMS.some((f) => f.value === op.from) ? (op.from as From) : "a";
+}
 
 /** A bar's holes as written. */
 export function holesOf(m: Model, bar: string): O[] {
@@ -25,11 +42,12 @@ export function sizeText(op: O): string {
   return typeof op.thread === "string" ? op.thread : op.d_mm === undefined ? "" : String(op.d_mm);
 }
 
-/** A hole in words: "Ø7 on face +x, 20 mm from end a", "M6 … 12 deep". */
+/** A hole in words: "Ø7 on face +x, 20 mm from end a's cut", "M6 … 12 deep". */
 export function holeWords(op: O): string {
   const size = typeof op.thread === "string" ? op.thread : `Ø${String(op.d_mm)}`;
   const depth = op.depth_mm === undefined ? "" : `, ${String(op.depth_mm)} deep`;
-  return `${size} on face ${String(op.face)}, ${String(op.at_mm)} mm from end ${String(op.from ?? "a")}${depth}`;
+  const from = FROMS.find((f) => f.value === fromOf(op))?.label as string;
+  return `${size} on face ${String(op.face)}, ${String(op.at_mm)} mm from ${from}${depth}`;
 }
 
 /**
@@ -67,7 +85,7 @@ export function parseLength(
 export function holeOp(h: {
   face: Face;
   at_mm: number | string;
-  from?: "a" | "b";
+  from?: From;
   size: { thread: string } | { d_mm: number | string };
   depth_mm?: number | string | undefined;
 }): O {
@@ -75,7 +93,7 @@ export function holeOp(h: {
     op: "hole",
     face: h.face,
     at_mm: h.at_mm,
-    ...(h.from === "b" ? { from: "b" } : {}),
+    ...(h.from !== undefined && h.from !== "a" ? { from: h.from } : {}),
     ...h.size,
     ...(h.depth_mm !== undefined && h.depth_mm !== "" ? { depth_mm: h.depth_mm } : {}),
   };

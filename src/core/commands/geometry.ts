@@ -459,18 +459,31 @@ function split(ctx: CommandContext, a: z.infer<typeof SplitBar>): Outcome {
     }
   };
 
-  // The pieces: the first keeps end a, the second takes end b.
+  // The pieces: the first keeps end a, the second takes end b. A hole stays where it is: one
+  // past the point is counted on the second piece from its end a, the point, as it was counted
+  // (from a design point, or from a cut: the new end is the point, its cut there; review M3).
+  // A hole counted from end b and before the point, likewise, on the first.
   const ops = Array.isArray(spec.ops) ? (spec.ops as O[]) : [];
   const firstOps: O[] = [];
   const secondOps: O[] = [];
+  const { la, lb } = db.lengths;
   ops.forEach((op, i) => {
     const at = value(op.at_mm as Expr, `${a.id}/ops[${i}]/at_mm`);
-    const fromB = (op.from ?? "a") === "b";
-    if (!fromB) {
-      if (at <= s) firstOps.push(op);
-      else secondOps.push({ ...op, at_mm: plus(op.at_mm as Expr, -s) });
-    } else if (at < L - s) secondOps.push(op);
-    else firstOps.push({ ...op, at_mm: plus(op.at_mm as Expr, -(L - s)) });
+    const from = (op.from as string | undefined) ?? "a";
+    // Where the hole lies along the axis from design point a, and how far its end is from there.
+    const [x, origin] =
+      from === "a"
+        ? [at, 0]
+        : from === "a.cut"
+          ? [la + at, la]
+          : from === "b"
+            ? [L - at, L]
+            : [lb - at, lb];
+    if (from === "a" || from === "a.cut") {
+      if (x <= s) firstOps.push(op);
+      else secondOps.push({ ...op, at_mm: plus(op.at_mm as Expr, -len(s - origin)) });
+    } else if (x > s) secondOps.push(op);
+    else firstOps.push({ ...op, at_mm: plus(op.at_mm as Expr, -len(origin - s)) });
   });
   const ends = isObject(spec.ends) ? spec.ends : {};
   const { ends: _e, ops: _o, holes: _h, b: oldB, ...shared } = spec;
