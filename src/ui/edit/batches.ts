@@ -211,25 +211,49 @@ export function duplicateBatch(
  * Mirror (E-UX-8): copies of `ids` across the plane square to `axis` at `at_mm`, one `mirror`
  * step; `removeOriginals` removes what was mirrored in the same step, referrers first, each with
  * what refers to it (the Delete cascade, `removeEntity { cascade }`). E3.2.
+ *
+ * The core's `mirror` carries the bars' own joints (design §6); then, as Duplicate does, an
+ * `autoConnect` at each image's end (the first 48 ends, after any removal), so an image end that
+ * a joint shared with other bars held (a rail's corner) joins by the corner rule, and one landing
+ * on a bar's face butts on it (docs/ux/review-fixes-joins-decisions.md 5).
  */
 export function mirrorBatch(
-  _m: Model,
+  m: Model,
   ids: readonly string[],
   plane: { axis: "x" | "y" | "z"; at_mm: number },
-  opts: { removeOriginals?: boolean } = {},
+  opts: { removeOriginals?: boolean; prefer?: string | undefined } = {},
 ): Batch {
   const no = refusedIds(ids, "mirror");
   if (no) return no;
+  const at = q2(plane.at_mm);
   const mirror: Cmd = {
     cmd: "mirror",
-    args: { ids: [...ids], plane: { axis: plane.axis, at_mm: q2(plane.at_mm) } },
+    args: { ids: [...ids], plane: { axis: plane.axis, at_mm: at } },
   };
-  if (!opts.removeOriginals) return [mirror];
-  return [
-    mirror,
-    ...removalOrder(ids).map((id) => ({ cmd: "removeEntity", args: { id, cascade: true } })),
-  ];
+  const k = AXES.indexOf(plane.axis);
+  const joins: Cmd[] = [];
+  for (const id of ids) {
+    const b = m.derived.bars[id];
+    if (!b) continue;
+    for (const p of [b.a, b.b]) {
+      if (joins.length >= MAX_JOINS) break;
+      joins.push({
+        cmd: "autoConnect",
+        args: {
+          at: p.map((c, i) => q2(i === k ? 2 * at - c : c)),
+          optional: true,
+          ...(opts.prefer ? { prefer: opts.prefer } : {}),
+        },
+      });
+    }
+  }
+  const removals = opts.removeOriginals
+    ? removalOrder(ids).map((id) => ({ cmd: "removeEntity", args: { id, cascade: true } }))
+    : [];
+  return [mirror, ...removals, ...joins];
 }
+
+const AXES = ["x", "y", "z"] as const;
 
 /**
  * An array as plain copies (E-UX-6): `ids` copied along a bar, a run or a direction, at a pitch

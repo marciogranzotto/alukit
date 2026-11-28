@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { claimedEnds, ownJoints } from "../derive/own-joints.ts";
 import { poseAxes } from "../derive/place.ts";
 import { compareIds } from "../ids.ts";
 import type { Expr, Face } from "../project/schema.ts";
@@ -19,7 +20,8 @@ import { checkAll, derivedBar, guard, runBars, sectionOf } from "./geometry.ts";
 import { failed, requireEntity, withDoc } from "./helpers.ts";
 import { type BarMap, mapBarFields, mapOps, mapStation, swapEnd, turnedRoll } from "./maps.ts";
 import { ang, minus, negate, reflect } from "./numbers.ts";
-import { type Rewriter, refusal, rewriteEntity } from "./rewrite.ts";
+import { joinedTo } from "./patterns.ts";
+import { Refusal, type Rewriter, refusal, rewriteEntity } from "./rewrite.ts";
 import { flipsU, hasSymmetry, type Map2, mapFace, type Sym, symmetries } from "./sections.ts";
 import { type CommandContext, type CommandDef, done, type Outcome } from "./types.ts";
 import { idList } from "./words.ts";
@@ -32,6 +34,10 @@ import { idList } from "./words.ts";
  * plane or crosses it symmetrically (the bar a mirrored brace attaches to), else an existing bar
  * of the same section standing exactly where its image would (the opposite leg a bracket lands
  * on). Anything else outside the set is refused, naming what to include.
+ *
+ * The set's bars' own joints (`ownJoints`: those that claim only their ends) are mirrored with
+ * them, landed the same way (design §6, *2.3*, review fixes, joins); one whose member has no image
+ * is left out, and the image's ends it claimed are reported open.
  *
  * A mirrored bar keeps its item when its section has a mirror symmetry (§4.4's four lines, the
  * same a reversed bar uses); otherwise it takes the item's other `hand`, read as the section
@@ -78,8 +84,10 @@ export const mirror: CommandDef<z.infer<typeof Mirror>> = {
     "copy entities as their mirror image in a plane square to a world axis, as ordinary entities",
   args: Mirror,
   describe(a, d) {
-    const onto = Object.values((d.info as MirrorInfo | undefined)?.onto ?? {});
-    return `mirror ${idList(a.ids)}, making ${idList(d.created)}${onto.length > 0 ? ` on ${idList([...new Set(onto)])}` : ""}`;
+    const info = d.info as MirrorInfo | undefined;
+    const onto = Object.values(info?.onto ?? {});
+    const open = info?.open ?? [];
+    return `mirror ${idList(a.ids)}, making ${idList(d.created)}${onto.length > 0 ? ` on ${idList([...new Set(onto)])}` : ""}${open.length > 0 ? `; ${idList(open)} left open` : ""}`;
   },
   apply: (ctx, a) => guard(() => mirrorSet(ctx, a)),
 };
@@ -333,34 +341,71 @@ function mirrorSet(ctx: CommandContext, a: z.infer<typeof Mirror>): Outcome {
       entityImage(ctx, kind, id, v, { maps, rollC, hand, mapOf, mapOfImage }),
   };
 
+  // The set's own joints come with it (*2.3*, review fixes, joins; call 121): each connection
+  // that claims only ends of the mirrored bars, its members outside the set landed on the bars at
+  // their images, as references are. A joint whose member has no image is left out, as a copy
+  // that finds no new main part for a connected object leaves it, and the image's ends it would
+  // have claimed are reported open. One the set names is mirrored as any member, or refused.
+  const own = ownJoints(
+    isObject(doc0.connections) ? doc0.connections : {},
+    new Set(set.filter((x) => x.startsWith("b"))),
+  ).filter((c) => !copyOf.has(c));
+  const implied: string[] = [];
+  const open: string[] = [];
+  for (const c of own) {
+    try {
+      rewriteEntity("connections", c, getEntity(doc0, c), rw);
+      implied.push(c);
+    } catch (e) {
+      if (!(e instanceof Refusal)) throw e;
+      for (const end of claimedEnds(getEntity(doc0, c))) open.push(rw.end?.(end) ?? end);
+    }
+  }
+  for (const c of implied) {
+    const n = nextId(doc, KIND_PREFIX.connections);
+    doc = n.doc;
+    copyOf.set(c, n.id);
+  }
+
   const created: string[] = [];
-  for (const id of set) {
+  const joined: Record<string, string> = {};
+  for (const id of [...set, ...implied]) {
     const kind = kindOf(id) as Kind;
     const copy = copyOf.get(id) as string;
-    doc = withEntity(doc, copy, rewriteEntity(kind, id, getEntity(doc0, id), rw));
+    const value = rewriteEntity(kind, id, getEntity(doc0, id), rw);
+    doc = withEntity(doc, copy, value);
     created.push(copy);
+    const to = kind === "connections" ? joinedTo(value, copyOf) : undefined;
+    if (to !== undefined) joined[copy] = to;
   }
   checkAll(ctx, doc, created);
   // The bars outside the set that the images landed on other than themselves.
   const rehomed = [...homes.entries()].flatMap(([bar, h]) =>
     "map" in h && h.map.to !== bar ? [[bar, h.map.to] as const] : [],
   );
+  open.sort(compareIds);
   return done(
     withDoc(ctx, doc),
     { created },
     {
       copies: Object.fromEntries(copyOf),
       ...(rehomed.length > 0 ? { onto: Object.fromEntries(rehomed) } : {}),
+      ...(Object.keys(joined).length > 0 ? { joined } : {}),
+      ...(open.length > 0 ? { open } : {}),
     },
   );
 }
 
 /** What a mirror did beyond its copies: the bars outside the set its images landed on. */
 export interface MirrorInfo {
-  /** Each entity mirrored, and its copy. */
+  /** Each entity mirrored, and its copy; the set's own joints included. */
   copies: Record<string, string>;
   /** A bar outside the set whose image another bar stands at, and that bar; absent when none. */
   onto?: Record<string, string>;
+  /** Each connection made, and the bar it joins the images to (a butt's through bar). */
+  joined?: Record<string, string>;
+  /** The images' ends left open: their joint's member has no image to land on. */
+  open?: string[];
 }
 
 interface Env {

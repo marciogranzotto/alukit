@@ -122,15 +122,16 @@ export function problemsOf(input: ProblemsInput): ProblemsAnswer {
   };
   const drafts: Draft[] = [];
 
-  // 1. The check's diagnostics, in its order. A `check-error` reason quotes an error this way;
-  // a `no-connector` reason names the butts the check notes one by one.
+  // 1. The check's diagnostics, in its order. A `check-error` reason quotes an error this way,
+  // and an `unconnected` reason an open end; a `no-connector` reason names the butts the check
+  // notes one by one.
   const quoted = new Map<string, Draft>();
   const noted = new Map<string, Draft>();
   for (const d of input.diagnostics) {
     const p = fromDiagnostic(d, ctx);
     drafts.push(p);
     const as = `${d.code}${d.entity ? ` ${d.entity}` : ""}: ${d.message}`;
-    if (d.severity === "error" && !quoted.has(as)) quoted.set(as, p);
+    if ((d.severity === "error" || d.code === "unconnected") && !quoted.has(as)) quoted.set(as, p);
     if (d.code === "butt-no-connector" && d.entity) noted.set(d.entity, p);
   }
 
@@ -139,7 +140,12 @@ export function problemsOf(input: ProblemsInput): ProblemsAnswer {
   for (const s of order.suppliers) {
     for (const r of s.reasons) {
       const key = `${r.rule}\u0000${r.message}`;
-      let p = r.rule === "check-error" ? quoted.get(r.message) : reasons.get(key);
+      let p =
+        r.rule === "check-error"
+          ? quoted.get(r.message)
+          : r.rule === "unconnected"
+            ? (quoted.get(r.message) ?? reasons.get(key))
+            : reasons.get(key);
       if (!p) {
         p = fromReason(r, ctx);
         if (r.rule === "no-connector") foldNotes(p, r.entities ?? [], noted, drafts);
@@ -246,18 +252,33 @@ function fromDiagnostic(d: Diagnostic, ctx: Ctx): Draft {
   };
   if (d.code === "unconnected" && d.entity) {
     const others = (d.refs ?? []).filter((r) => r !== d.entity);
-    p.title = `Open corner: ${d.entity} meets ${idList(others)} with no connection`;
+    // An end on a bar names the bar, not its ends (B3): "lies on b3", or "runs into b5".
+    const onBar = others.length === 1 && !others[0]?.includes(".");
+    const runs = / runs [\d.]+ mm into /.test(d.message);
+    p.title = onBar
+      ? `Open end: ${d.entity} ${runs ? "runs into" : "lies on"} ${others[0]} with no connection`
+      : `Open corner: ${d.entity} meets ${idList(others)} with no connection`;
+    const what = onBar
+      ? `The end ${runs ? "runs into" : "lies on"} ${others[0]} with nothing to hold it, and nothing is bought to`
+      : "The ends meet with nothing to join them";
     // The fix is offered only where autoConnect would make it: the same rule decides (E-UX-12).
-    const join = joinAtEnd(d.entity, ctx);
+    // A pattern's copy is joined through its template, whose own joints its copies carry (B1).
+    const [bar, e] = d.entity.split(".") as [string, string];
+    const template = bar.includes("@") ? `${bar.slice(0, bar.indexOf("@"))}.${e}` : undefined;
+    const end = template ?? d.entity;
+    const join = joinAtEnd(end, ctx);
+    const copy = template
+      ? `${bar} is a copy of ${template.split(".")[0]}: its copies follow it. `
+      : "";
     if (join.ok) {
-      p.detail = "The ends meet with nothing to join them: add a connection there.";
+      p.detail = `${copy}${what}: add a connection there${template ? ` at ${template}` : ""}.`;
       p.fixes.push({
         label: "Join with the default butt",
         kind: "commands",
-        commands: [{ cmd: "autoConnect", args: { end: d.entity } }],
+        commands: [{ cmd: "autoConnect", args: { end } }],
       });
     } else {
-      p.detail = `The ends meet with nothing to join them, and the default butt cannot join them here (${join.why}): add a connection there.`;
+      p.detail = `${copy}${what}, and the default butt cannot join ${template ?? "them"} here (${join.why}): add a connection there.`;
     }
   }
   if (d.code === "angled-end" && d.entity) Object.assign(p, angledWords(d, d.entity));
