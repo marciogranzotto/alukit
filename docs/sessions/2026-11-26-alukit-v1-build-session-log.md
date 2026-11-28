@@ -1027,3 +1027,15 @@ anything, and each has a default in place.
   - **Joints:** a bar's ends and its Join follow the core's `unconnected` verdict, and a plate reaches its face joint.
   - **Minors and nits:** 14 of 15 minors and 4 of 5 nits fixed. The rest need the core and are recorded.
   - **Importer:** it now classes the 180° extender as a splice (regenerated from the cached snapshot).
+- **00:12**: The designer re-check merged (`review-editing.md` §9). It confirmed, through the app, that all 3 blockers and 7 majors are fixed; Move on 1,008 bars now previews in about 0.2 s, against 3.2 s. It found one new major, N1: Mirror refused traced sections such as the 40×80. It also found 5 minors and 4 nits.
+- **00:55**: Re-check fixes, app, merged.
+  - **Refusals:** one shared check means a refused preview never posts on Enter, in Mirror, Rotate, Align, end drags, Draw and Pattern.
+  - **Mirror:** its preview words follow the dry run.
+  - **Holes:** changing a hole's reference keeps the hole where it is.
+- **01:36**: Re-check fixes, core, merged.
+  - **Symmetry:** a traced section's symmetry is judged within its measured uncertainty. The importer now states 1.5 px, measured against the catalogue's vector outlines; the earlier half-pixel claim was wrong and is corrected.
+  - **Refusal advice:** it is tried before it is given.
+  - **Hole messages:** they use the hole's own reference.
+  - **Mirror and duplicates:** a bar that is its own image is not copied, and coincident bars warn.
+  - **Machining problems:** they carry a structured reason, so the app no longer matches message text.
+- **01:45**: N1–N10 verified fixed by repeating each one's reproduction through the app (§9.7). With the steps chained A1 → A4 → A5 → A6, the 40×80 mirror lands joined. No scenario regressed. **The editing round's review is closed.**
