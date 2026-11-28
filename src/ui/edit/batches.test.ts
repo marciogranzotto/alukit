@@ -1,5 +1,6 @@
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { scratchFixtures } from "#core/testing.ts";
 import type { Model } from "../model.ts";
 import { hostOf, viewOf } from "../testing.ts";
@@ -73,6 +74,70 @@ describe("mirror (E3.2)", () => {
     expect(mirrorBatch(move, ["b7@2"], { axis: "x", at_mm: 0 })).toEqual({
       why: "b7@2 is a pattern copy: mirror b7, its template, or explode the pattern",
     });
+  });
+});
+
+describe("copies keep their joints (docs/ux/review-editing.md B1, B2)", () => {
+  /** The audit's A5 brace, joined at both ends, and a slat butted between the base rails. */
+  const BRACE = [
+    { cmd: "addBar", args: { a: [0, 600, 100], b: [1000, 600, 650], anchor: "+x" } },
+    { cmd: "autoConnect", args: { at: [0, 600, 100], optional: true } },
+    { cmd: "autoConnect", args: { at: [1000, 600, 650], optional: true } },
+  ];
+  const SLAT = [
+    { cmd: "addBar", args: { a: [200, 0, 0], b: [200, 600, 0], anchor: "-y" } },
+    { cmd: "autoConnect", args: { at: [200, 0, 0], optional: true } },
+    { cmd: "autoConnect", args: { at: [200, 600, 0], optional: true } },
+  ];
+  let own: string;
+  beforeAll(async () => {
+    own = await scratchFixtures();
+  });
+  afterAll(async () => {
+    await rm(own, { recursive: true, force: true });
+  });
+
+  it("a joined brace mirrors joined: its joints come with it, then a join at each image's end", async () => {
+    const h = await hostOf(join(own, "brace"));
+    try {
+      await h.apply(BRACE);
+      const batch = mirrorBatch(h.view(), ["b13"], { axis: "x", at_mm: 500 });
+      expect(batch).toEqual([
+        { cmd: "mirror", args: { ids: ["b13"], plane: { axis: "x", at_mm: 500 } } },
+        { cmd: "autoConnect", args: { at: [1000, 600, 100], optional: true } },
+        { cmd: "autoConnect", args: { at: [0, 600, 650], optional: true } },
+      ]);
+      const r = await h.dry(batch as unknown[]);
+      if (!r.ok) throw new Error(r.why);
+      expect(r.created).toEqual(["b14", "c11", "c12"]);
+      // The brace's cut, not the 1141.27 of its design line run through both posts.
+      expect(r.effects.added.b14).toBe(1049.97);
+      expect(mirrorWords(r).text).toBe("makes b14 · joins b4 (c11) · joins b3 (c12) · cut 1049.97");
+      expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);
+      // Across y = 0 no post stands at the posts' images: the image's ends stay open, and say so.
+      const open = await h.dry(
+        mirrorBatch(h.view(), ["b13"], { axis: "y", at_mm: 0 }) as unknown[],
+      );
+      if (!open.ok) throw new Error(open.why);
+      expect(mirrorWords(open).text).toBe("makes b14 · b14.a and b14.b stay open · cut 1141.27");
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("a duplicated slat carries its butts, and the preview says what they join", async () => {
+    const h = await hostOf(join(own, "brace"));
+    try {
+      // The brace above made b13, c9 and c10: the slat is b14, butted by c11 and c12.
+      await h.apply(SLAT);
+      const r = await h.dry(duplicateBatch(h.view(), ["b14"], [150, 0, 0]) as unknown[]);
+      if (!r.ok) throw new Error(r.why);
+      expect(r.created).toEqual(["b15", "c13", "c14"]);
+      expect(r.effects.added.b15).toBe(520);
+      expect(copyWords(r).text).toBe("makes b15 · joins b5 (c13) · joins b6 (c14) · cut 520");
+    } finally {
+      await h.close();
+    }
   });
 });
 

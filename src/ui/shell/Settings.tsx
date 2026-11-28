@@ -173,6 +173,7 @@ const RULE_LABELS: Readonly<Record<string, string>> = {
   "option-not-sold": "An option is not sold",
   "stale-price": "A price is over 30 days old",
   "no-connector": "Butts with no connector",
+  unconnected: "An end with no connection",
 };
 const CORNER_WORDS: Readonly<Record<string, string>> = {
   "": "the default: a vertical bar runs through",
